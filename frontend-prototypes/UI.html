@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FastAPI 완전 UI 시스템</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .app-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        /* 사이드바 */
+        .sidebar {
+            width: 250px;
+            background: white;
+            border-right: 1px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+        }
+        
+        .sidebar-title {
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .sidebar-nav {
+            flex: 1;
+            padding: 20px 0;
+        }
+        
+        .nav-section {
+            margin-bottom: 30px;
+        }
+        
+        .nav-section-title {
+            padding: 0 20px 10px;
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: #374151;
+            text-decoration: none;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+        
+        .nav-item:hover {
+            background: #f3f4f6;
+        }
+        
+        .nav-item.active {
+            background: #eff6ff;
+            color: #2563eb;
+            border-right: 3px solid #2563eb;
+        }
+        
+        .nav-icon {
+            margin-right: 12px;
+            font-size: 1.1em;
+        }
+        
+        /* 메인 콘텐츠 */
+        .main-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        .content-header {
+            background: white;
+            padding: 20px 30px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        
+        .page-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        
+        .page-subtitle {
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .auth-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+        
+        .auth-user {
+            padding: 8px 16px;
+            background: #f0f9ff;
+            color: #0369a1;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .btn-logout {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .content-body {
+            padding: 30px;
+        }
+        
+        /* 페이지별 스타일 */
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        /* 대시보드 */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .stat-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .stat-title {
+            font-size: 0.9em;
+            color: #6b7280;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #1f2937;
+        }
+        
+        /* 인증 폼 */
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+        }
+        
+        .auth-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .auth-title {
+            text-align: center;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1f2937;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.9em;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 5px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        
+        .form-input:focus {
+            outline: none;
+            border-color: #2563eb;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        .btn-primary {
+            width: 100%;
+            padding: 12px;
+            background: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .auth-switch {
+            text-align: center;
+            margin-top: 20px;
+            color: #6b7280;
+        }
+        
+        .auth-switch a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        
+        /* 게시글 */
+        .posts-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .btn-new-post {
+            padding: 10px 20px;
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .posts-filters {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .filters-row {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .filter-label {
+            font-size: 0.8em;
+            font-weight: 600;
+            color: #6b7280;
+        }
+        
+        .filter-select {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9em;
+        }
+        
+        .posts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .post-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            border: 1px solid #e5e7eb;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .post-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .post-meta {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+            font-size: 0.8em;
+            color: #6b7280;
+        }
+        
+        .post-type {
+            background: #eff6ff;
+            color: #1d4ed8;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .post-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        
+        .post-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 0.9em;
+            color: #6b7280;
+        }
+        
+        /* 게시글 상세 */
+        .post-detail {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            overflow: hidden;
+        }
+        
+        .post-detail-header {
+            padding: 25px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .post-detail-title {
+            font-size: 1.8em;
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 15px;
+        }
+        
+        .post-detail-meta {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-size: 0.9em;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+        
+        .post-reactions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .reaction-btn {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .reaction-btn:hover {
+            background: #f3f4f6;
+        }
+        
+        .reaction-btn.active {
+            background: #eff6ff;
+            border-color: #2563eb;
+            color: #2563eb;
+        }
+        
+        .post-content {
+            padding: 25px;
+            line-height: 1.7;
+            color: #374151;
+        }
+        
+        /* 댓글 */
+        .comments-section {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            margin-top: 20px;
+        }
+        
+        .comments-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 1.2em;
+            font-weight: 600;
+        }
+        
+        .comment-form {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .comment-textarea {
+            width: 100%;
+            min-height: 80px;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        .comment-actions {
+            display: flex;
+            justify-content: end;
+            margin-top: 10px;
+        }
+        
+        .btn-comment {
+            padding: 8px 16px;
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .comments-list {
+            padding: 20px 25px;
+        }
+        
+        .comment-item {
+            padding: 15px 0;
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+        
+        .comment-author {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+        }
+        
+        .comment-content {
+            color: #374151;
+            margin-bottom: 10px;
+        }
+        
+        .comment-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.8em;
+            color: #6b7280;
+        }
+        
+        /* 모달 */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            visibility: hidden;
+            opacity: 0;
+            transition: all 0.3s;
+        }
+        
+        .modal-overlay.active {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 12px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            padding: 20px 25px;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 1.3em;
+            font-weight: 600;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .modal-body {
+            padding: 25px;
+        }
+        
+        /* 알림 */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            z-index: 1001;
+            transform: translateX(100%);
+            transition: transform 0.3s;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: #059669;
+        }
+        
+        .notification.error {
+            background: #dc2626;
+        }
+        
+        /* 로딩 */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-radius: 50%;
+            border-top-color: #2563eb;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* API 테스트 스타일 */
+        .api-test-section {
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .api-section-title {
+            background: #f8fafc;
+            padding: 15px 20px;
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #1f2937;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .api-endpoint-item {
+            border-bottom: 1px solid #f3f4f6;
+        }
+        
+        .api-endpoint-item:last-child {
+            border-bottom: none;
+        }
+        
+        .endpoint-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .endpoint-header:hover {
+            background: #f9fafb;
+        }
+        
+        .endpoint-toggle {
+            margin-left: auto;
+            transition: transform 0.2s;
+            font-size: 0.8em;
+        }
+        
+        .endpoint-toggle.expanded {
+            transform: rotate(90deg);
+        }
+        
+        .api-test-panel {
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            overflow: hidden;
+            max-height: 0;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .api-test-panel.expanded {
+            max-height: 600px;
+            opacity: 1;
+        }
+        
+        .test-panel-content {
+            padding: 20px;
+        }
+        
+        .test-form {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 0.9em;
+            font-family: 'Monaco', 'Consolas', monospace;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .btn-test {
+            background: #059669;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-test:hover {
+            background: #047857;
+        }
+        
+        .btn-test:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        .btn-clear {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85em;
+            cursor: pointer;
+        }
+        
+        .api-response-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .response-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .response-tab {
+            padding: 6px 12px;
+            background: #e5e7eb;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            font-size: 0.8em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .response-tab.active {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .response-content {
+            background: #1f2937;
+            color: #e5e7eb;
+            padding: 15px;
+            border-radius: 0 6px 6px 6px;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.8em;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .method-badge {
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75em;
+            font-weight: 600;
+            min-width: 45px;
+            text-align: center;
+        }
+        
+        .method-get { background: #dbeafe; color: #1e40af; }
+        .method-post { background: #dcfce7; color: #166534; }
+        .method-put { background: #fef3c7; color: #92400e; }
+        .method-delete { background: #fee2e2; color: #991b1b; }
+        
+        .endpoint-path {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+            color: #374151;
+            flex: 1;
+        }
+        
+        .endpoint-status {
+            font-size: 1.2em;
+        }
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                left: -250px;
+                top: 0;
+                height: 100vh;
+                z-index: 100;
+                transition: left 0.3s;
+            }
+            
+            .sidebar.open {
+                left: 0;
+            }
+            
+            .main-content {
+                width: 100%;
+            }
+            
+            .content-header {
+                padding: 15px 20px;
+            }
+            
+            .content-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 사이드바 -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">🚀 FastAPI UI</div>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <div class="nav-section">
+                    <div class="nav-section-title">메인</div>
+                    <a class="nav-item active" onclick="showPage('dashboard')">
+                        <span class="nav-icon">📊</span>
+                        대시보드
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">인증</div>
+                    <a class="nav-item" onclick="showPage('login')">
+                        <span class="nav-icon">🔐</span>
+                        로그인
+                    </a>
+                    <a class="nav-item" onclick="showPage('register')">
+                        <span class="nav-icon">📝</span>
+                        회원가입
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">콘텐츠</div>
+                    <a class="nav-item" onclick="showPage('posts')">
+                        <span class="nav-icon">📄</span>
+                        게시글 목록
+                    </a>
+                    <a class="nav-item" onclick="showPage('post-detail')">
+                        <span class="nav-icon">📖</span>
+                        게시글 상세
+                    </a>
+                    <a class="nav-item" onclick="showPage('post-create')">
+                        <span class="nav-icon">✍️</span>
+                        게시글 작성
+                    </a>
+                </div>
+            </nav>
+        </aside>
+        
+        <!-- 메인 콘텐츠 -->
+        <main class="main-content">
+            <!-- 헤더 -->
+            <header class="content-header">
+                <div>
+                    <h1 class="page-title" id="pageTitle">대시보드</h1>
+                    <p class="page-subtitle" id="pageSubtitle">API 개발 현황 및 테스트</p>
+                </div>
+                
+                <div class="auth-status">
+                    <div class="auth-user" id="authUser" style="display: none;">
+                        👤 사용자
+                    </div>
+                    <button class="btn-logout" onclick="logout()" style="display: none;">
+                        로그아웃
+                    </button>
+                </div>
+            </header>
+            
+            <!-- 콘텐츠 영역 -->
+            <div class="content-body">
+                <!-- 대시보드 페이지 -->
+                <div class="page active" id="dashboard">
+                    <div class="dashboard-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">✅</div>
+                            <div class="stat-title">완료된 API</div>
+                            <div class="stat-value">14</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">⏳</div>
+                            <div class="stat-title">진행중 API</div>
+                            <div class="stat-value">3</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-title">전체 진행률</div>
+                            <div class="stat-value">85%</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">🧪</div>
+                            <div class="stat-title">테스트 케이스</div>
+                            <div class="stat-value">42</div>
+                        </div>
+                    </div>
+                    
+                    <!-- API 테스트 섹션 -->
+                    <div style="margin-top: 30px;">
+                        <h2 style="margin-bottom: 20px; font-size: 1.4em; color: #1f2937;">🧪 API 테스트</h2>
+                        
+                        <!-- 인증 API -->
+                        <div class="api-test-section">
+                            <h3 class="api-section-title">🔐 인증 API</h3>
+                            
+                            <div class="api-endpoint-item">
+                                <div class="endpoint-header" onclick="toggleApiTest(this)">
+                                    <span class="method-badge method-post">POST</span>
+                                    <span class="endpoint-path">/auth/login</span>
+                                    <span class="endpoint-status">✅</span>
+                                    <span class="endpoint-toggle">▶</span>
+                                </div>
+                                <div class="api-test-panel">
+                                    <div class="test-panel-content">
+                                        <div class="test-form">
+                                            <div class="form-group">
+                                                <label class="form-label">이메일</label>
+                                                <input type="email" class="form-input" placeholder="user@example.com" value="test@test.com">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">비밀번호</label>
+                                                <input type="password" class="form-input" placeholder="password" value="password123">
+                                            </div>
+                                            <div class="test-buttons">
+                                                <button class="btn-test" onclick="testApiCall(this, 'POST', '/auth/login')">
+                                                    🚀 API 호출
+                                                </button>
+                                                <button class="btn-clear" onclick="clearApiForm(this)">지우기</button>
+                                            </div>
+                                        </div>
+                                        <div class="api-response-section" style="display:none;">
+                                            <div class="response-tabs">
+                                                <button class="response-tab active">응답</button>
+                                                <button class="response-tab">헤더</button>
+                                                <button class="response-tab">요청</button>
+                                            </div>
+                                            <div class="response-content">
+                                                <pre>응답 대기중...</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="api-endpoint-item">
+                                <div class="endpoint-header" onclick="toggleApiTest(this)">
+                                    <span class="method-badge method-post">POST</span>
+                                    <span class="endpoint-path">/auth/register</span>
+                                    <span class="endpoint-status">✅</span>
+                                    <span class="endpoint-toggle">▶</span>
+                                </div>
+                                <div class="api-test-panel">
+                                    <div class="test-panel-content">
+                                        <div class="test-form">
+                                            <div class="form-group">
+                                                <label class="form-label">이메일</label>
+                                                <input type="email" class="form-input" placeholder="user@example.com">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">사용자 핸들</label>
+                                                <input type="text" class="form-input" placeholder="user_handle">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">표시 이름 (선택)</label>
+                                                <input type="text" class="form-input" placeholder="Display Name">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">비밀번호</label>
+                                                <input type="password" class="form-input" placeholder="password">
+                                            </div>
+                                            <div class="test-buttons">
+                                                <button class="btn-test" onclick="testApiCall(this, 'POST', '/auth/register')">
+                                                    🚀 API 호출
+                                                </button>
+                                                <button class="btn-clear" onclick="clearApiForm(this)">지우기</button>
+                                            </div>
+                                        </div>
+                                        <div class="api-response-section" style="display:none;">
+                                            <div class="response-tabs">
+                                                <button class="response-tab active">응답</button>
+                                                <button class="response-tab">헤더</button>
+                                                <button class="response-tab">요청</button>
+                                            </div>
+                                            <div class="response-content">
+                                                <pre>응답 대기중...</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 게시글 API -->
+                        <div class="api-test-section">
+                            <h3 class="api-section-title">📝 게시글 API</h3>
+                            
+                            <div class="api-endpoint-item">
+                                <div class="endpoint-header" onclick="toggleApiTest(this)">
+                                    <span class="method-badge method-get">GET</span>
+                                    <span class="endpoint-path">/posts</span>
+                                    <span class="endpoint-status">✅</span>
+                                    <span class="endpoint-toggle">▶</span>
+                                </div>
+                                <div class="api-test-panel">
+                                    <div class="test-panel-content">
+                                        <div class="test-form">
+                                            <div class="form-group">
+                                                <label class="form-label">페이지</label>
+                                                <input type="number" class="form-input" placeholder="1" value="1">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">개수</label>
+                                                <input type="number" class="form-input" placeholder="10" value="10">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">타입 (선택)</label>
+                                                <input type="text" class="form-input" placeholder="자유게시판">
+                                            </div>
+                                            <div class="test-buttons">
+                                                <button class="btn-test" onclick="testApiCall(this, 'GET', '/posts')">
+                                                    🚀 API 호출
+                                                </button>
+                                                <button class="btn-clear" onclick="clearApiForm(this)">지우기</button>
+                                            </div>
+                                        </div>
+                                        <div class="api-response-section" style="display:none;">
+                                            <div class="response-tabs">
+                                                <button class="response-tab active">응답</button>
+                                                <button class="response-tab">헤더</button>
+                                                <button class="response-tab">요청</button>
+                                            </div>
+                                            <div class="response-content">
+                                                <pre>응답 대기중...</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="api-endpoint-item">
+                                <div class="endpoint-header" onclick="toggleApiTest(this)">
+                                    <span class="method-badge method-post">POST</span>
+                                    <span class="endpoint-path">/posts</span>
+                                    <span class="endpoint-status">✅</span>
+                                    <span class="endpoint-toggle">▶</span>
+                                </div>
+                                <div class="api-test-panel">
+                                    <div class="test-panel-content">
+                                        <div class="test-form">
+                                            <div class="form-group">
+                                                <label class="form-label">제목</label>
+                                                <input type="text" class="form-input" placeholder="게시글 제목">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">내용</label>
+                                                <textarea class="form-textarea" placeholder="게시글 내용을 입력하세요..."></textarea>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">서비스</label>
+                                                <select class="form-input">
+                                                    <option value="community">community</option>
+                                                    <option value="shopping">shopping</option>
+                                                    <option value="apartment">apartment</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">Authorization Header</label>
+                                                <input type="text" class="form-input" placeholder="Bearer your_token_here">
+                                            </div>
+                                            <div class="test-buttons">
+                                                <button class="btn-test" onclick="testApiCall(this, 'POST', '/posts')">
+                                                    🚀 API 호출
+                                                </button>
+                                                <button class="btn-clear" onclick="clearApiForm(this)">지우기</button>
+                                            </div>
+                                        </div>
+                                        <div class="api-response-section" style="display:none;">
+                                            <div class="response-tabs">
+                                                <button class="response-tab active">응답</button>
+                                                <button class="response-tab">헤더</button>
+                                                <button class="response-tab">요청</button>
+                                            </div>
+                                            <div class="response-content">
+                                                <pre>응답 대기중...</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 댓글 API -->
+                        <div class="api-test-section">
+                            <h3 class="api-section-title">💬 댓글 API</h3>
+                            
+                            <div class="api-endpoint-item">
+                                <div class="endpoint-header" onclick="toggleApiTest(this)">
+                                    <span class="method-badge method-get">GET</span>
+                                    <span class="endpoint-path">/posts/{slug}/comments</span>
+                                    <span class="endpoint-status">✅</span>
+                                    <span class="endpoint-toggle">▶</span>
+                                </div>
+                                <div class="api-test-panel">
+                                    <div class="test-panel-content">
+                                        <div class="test-form">
+                                            <div class="form-group">
+                                                <label class="form-label">게시글 Slug</label>
+                                                <input type="text" class="form-input" placeholder="post-slug-here">
+                                            </div>
+                                            <div class="form-group">
+                                                <label class="form-label">페이지</label>
+                                                <input type="number" class="form-input" placeholder="1" value="1">
+                                            </div>
+                                            <div class="test-buttons">
+                                                <button class="btn-test" onclick="testApiCall(this, 'GET', '/posts/{slug}/comments')">
+                                                    🚀 API 호출
+                                                </button>
+                                                <button class="btn-clear" onclick="clearApiForm(this)">지우기</button>
+                                            </div>
+                                        </div>
+                                        <div class="api-response-section" style="display:none;">
+                                            <div class="response-tabs">
+                                                <button class="response-tab active">응답</button>
+                                                <button class="response-tab">헤더</button>
+                                                <button class="response-tab">요청</button>
+                                            </div>
+                                            <div class="response-content">
+                                                <pre>응답 대기중...</pre>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 로그인 페이지 -->
+                <div class="page" id="login">
+                    <div class="auth-container">
+                        <div class="auth-card">
+                            <h2 class="auth-title">로그인</h2>
+                            <form onsubmit="handleLogin(event)">
+                                <div class="form-group">
+                                    <label class="form-label">이메일</label>
+                                    <input type="email" class="form-input" name="email" required 
+                                           placeholder="example@email.com" value="test@test.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">비밀번호</label>
+                                    <input type="password" class="form-input" name="password" required 
+                                           placeholder="비밀번호" value="password123">
+                                </div>
+                                <button type="submit" class="btn-primary" id="loginBtn">
+                                    로그인
+                                </button>
+                            </form>
+                            <div class="auth-switch">
+                                계정이 없으신가요? <a href="#" onclick="showPage('register')">회원가입</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 회원가입 페이지 -->
+                <div class="page" id="register">
+                    <div class="auth-container">
+                        <div class="auth-card">
+                            <h2 class="auth-title">회원가입</h2>
+                            <form onsubmit="handleRegister(event)">
+                                <div class="form-group">
+                                    <label class="form-label">이메일</label>
+                                    <input type="email" class="form-input" name="email" required 
+                                           placeholder="example@email.com">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">사용자 핸들</label>
+                                    <input type="text" class="form-input" name="user_handle" required 
+                                           placeholder="user_handle">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">표시 이름</label>
+                                    <input type="text" class="form-input" name="display_name" 
+                                           placeholder="표시 이름 (선택사항)">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">비밀번호</label>
+                                    <input type="password" class="form-input" name="password" required 
+                                           placeholder="비밀번호">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">비밀번호 확인</label>
+                                    <input type="password" class="form-input" name="confirm_password" required 
+                                           placeholder="비밀번호 확인">
+                                </div>
+                                <button type="submit" class="btn-primary" id="registerBtn">
+                                    회원가입
+                                </button>
+                            </form>
+                            <div class="auth-switch">
+                                이미 계정이 있으신가요? <a href="#" onclick="showPage('login')">로그인</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 게시글 목록 페이지 -->
+                <div class="page" id="posts">
+                    <div class="posts-header">
+                        <h2>게시글 목록</h2>
+                        <button class="btn-new-post" onclick="showPage('post-create')">
+                            ✍️ 새 게시글
+                        </button>
+                    </div>
+                    
+                    <div class="posts-filters">
+                        <div class="filters-row">
+                            <div class="filter-group">
+                                <label class="filter-label">타입</label>
+                                <select class="filter-select" onchange="filterPosts()">
+                                    <option value="">전체</option>
+                                    <option value="자유게시판">자유게시판</option>
+                                    <option value="질문답변">질문답변</option>
+                                    <option value="공지사항">공지사항</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">정렬</label>
+                                <select class="filter-select" onchange="sortPosts()">
+                                    <option value="created_at">최신순</option>
+                                    <option value="views">조회수순</option>
+                                    <option value="likes">좋아요순</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">검색</label>
+                                <input type="text" class="form-input" placeholder="제목 검색..." 
+                                       onkeyup="searchPosts(this.value)" style="width: 200px;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="posts-list" id="postsList">
+                        <!-- 게시글들이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                </div>
+                
+                <!-- 게시글 상세 페이지 -->
+                <div class="page" id="post-detail">
+                    <div class="post-detail">
+                        <div class="post-detail-header">
+                            <div class="post-detail-title" id="postDetailTitle">
+                                게시글 제목
+                            </div>
+                            <div class="post-detail-meta">
+                                <span class="post-type">자유게시판</span>
+                                <span>•</span>
+                                <span>작성자: user123</span>
+                                <span>•</span>
+                                <span>2024-01-15 14:30</span>
+                            </div>
+                            <div class="post-reactions">
+                                <button class="reaction-btn" onclick="toggleReaction('like')">
+                                    👍 <span id="likeCount">15</span>
+                                </button>
+                                <button class="reaction-btn" onclick="toggleReaction('dislike')">
+                                    👎 <span id="dislikeCount">2</span>
+                                </button>
+                                <button class="reaction-btn" onclick="toggleReaction('bookmark')">
+                                    🔖 <span id="bookmarkCount">8</span>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="post-content" id="postDetailContent">
+                            <p>게시글 내용이 여기에 표시됩니다...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- 댓글 섹션 -->
+                    <div class="comments-section">
+                        <div class="comments-header">
+                            댓글 <span id="commentCount">12</span>개
+                        </div>
+                        
+                        <div class="comment-form">
+                            <textarea class="comment-textarea" placeholder="댓글을 작성해주세요..." id="commentTextarea"></textarea>
+                            <div class="comment-actions">
+                                <button class="btn-comment" onclick="addComment()">
+                                    댓글 작성
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="comments-list" id="commentsList">
+                            <!-- 댓글들이 여기에 동적으로 추가됩니다 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 게시글 작성 페이지 -->
+                <div class="page" id="post-create">
+                    <div class="auth-container" style="max-width: 800px;">
+                        <div class="auth-card">
+                            <h2 class="auth-title">새 게시글 작성</h2>
+                            <form onsubmit="handleCreatePost(event)">
+                                <div class="form-group">
+                                    <label class="form-label">제목</label>
+                                    <input type="text" class="form-input" name="title" required 
+                                           placeholder="게시글 제목을 입력하세요">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">서비스</label>
+                                    <select class="form-input" name="service" required>
+                                        <option value="community">커뮤니티</option>
+                                        <option value="shopping">쇼핑</option>
+                                        <option value="apartment">아파트</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">타입</label>
+                                    <select class="form-input" name="type" required>
+                                        <option value="자유게시판">자유게시판</option>
+                                        <option value="질문답변">질문답변</option>
+                                        <option value="공지사항">공지사항</option>
+                                        <option value="후기">후기</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">내용</label>
+                                    <textarea class="form-input" name="content" required 
+                                              placeholder="게시글 내용을 입력하세요..." 
+                                              style="min-height: 200px; resize: vertical;"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">태그 (쉼표로 구분)</label>
+                                    <input type="text" class="form-input" name="tags" 
+                                           placeholder="태그1, 태그2, 태그3">
+                                </div>
+                                <button type="submit" class="btn-primary" id="createPostBtn">
+                                    게시글 작성
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 관리자 페이지 제거됨 -->
+                
+                <!-- API 테스트 페이지 제거됨 -->
+            </div>
+        </main>
+    </div>
+    
+    <!-- 모달 -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalTitle">제목</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                내용
+            </div>
+        </div>
+    </div>
+    
+    <!-- 알림 -->
+    <div class="notification" id="notification"></div>
+    
+    <script>
+        // 전역 상태
+        let currentUser = null;
+        let posts = [];
+        let comments = [];
+        let reactions = {};
+        
+        // 모의 데이터
+        const mockPosts = [
+            {
+                id: 1,
+                title: "FastAPI 개발 가이드",
+                content: "FastAPI를 사용한 효율적인 API 개발 방법에 대해 설명합니다...",
+                author: "developer1",
+                type: "자유게시판",
+                service: "community",
+                created_at: "2024-01-15T14:30:00",
+                stats: { views: 124, likes: 15, dislikes: 2, comments: 8, bookmarks: 12 }
+            },
+            {
+                id: 2,
+                title: "UI 컴포넌트 디자인 패턴",
+                content: "재사용 가능한 UI 컴포넌트 설계에 대한 모범 사례...",
+                author: "designer1",
+                type: "질문답변",
+                service: "community",
+                created_at: "2024-01-14T09:15:00",
+                stats: { views: 89, likes: 12, dislikes: 1, comments: 5, bookmarks: 8 }
+            },
+            {
+                id: 3,
+                title: "API 테스트 자동화",
+                content: "API 테스트를 자동화하는 방법과 도구들...",
+                author: "tester1",
+                type: "공지사항",
+                service: "community",
+                created_at: "2024-01-13T16:45:00",
+                stats: { views: 67, likes: 9, dislikes: 0, comments: 3, bookmarks: 5 }
+            }
+        ];
+        
+        const mockComments = [
+            {
+                id: 1,
+                postId: 1,
+                author: "user1",
+                content: "정말 유용한 정보네요! 감사합니다.",
+                created_at: "2024-01-15T15:30:00",
+                likes: 3,
+                dislikes: 0
+            },
+            {
+                id: 2,
+                postId: 1,
+                author: "user2",
+                content: "실제로 적용해보니 많은 도움이 되었습니다.",
+                created_at: "2024-01-15T16:15:00",
+                likes: 2,
+                dislikes: 0
+            }
+        ];
+        
+        // 초기화
+        function init() {
+            posts = [...mockPosts];
+            comments = [...mockComments];
+            renderPosts();
+            renderComments();
+            
+            // 로그인 상태 확인
+            const token = localStorage.getItem('authToken');
+            if (token) {
+                currentUser = { email: 'test@test.com', display_name: 'Test User' };
+                updateAuthUI();
+            }
+        }
+        
+        // 페이지 전환
+        function showPage(pageId) {
+            // 모든 페이지 숨기기
+            document.querySelectorAll('.page').forEach(page => {
+                page.classList.remove('active');
+            });
+            
+            // 선택된 페이지 보이기
+            document.getElementById(pageId).classList.add('active');
+            
+            // 네비게이션 업데이트
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // 페이지 제목 업데이트
+            const titles = {
+                dashboard: '대시보드',
+                login: '로그인',
+                register: '회원가입',
+                posts: '게시글 목록',
+                'post-detail': '게시글 상세',
+                'post-create': '게시글 작성'
+            };
+            
+            const subtitles = {
+                dashboard: 'API 개발 현황 및 테스트',
+                login: '계정에 로그인하세요',
+                register: '새 계정을 만드세요',
+                posts: '모든 게시글을 확인하세요',
+                'post-detail': '게시글 내용 및 댓글',
+                'post-create': '새로운 게시글을 작성하세요'
+            };
+            
+            document.getElementById('pageTitle').textContent = titles[pageId] || '';
+            document.getElementById('pageSubtitle').textContent = subtitles[pageId] || '';
+        }
+        
+        // 인증 관련
+        async function handleLogin(event) {
+            event.preventDefault();
+            const btn = document.getElementById('loginBtn');
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 로그인 중...';
+            
+            try {
+                // API 호출 시뮬레이션
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const email = formData.get('email');
+                const password = formData.get('password');
+                
+                // 모의 로그인 검증
+                if (email === 'test@test.com' && password === 'password123') {
+                    const token = 'mock_jwt_token_' + Date.now();
+                    localStorage.setItem('authToken', token);
+                    
+                    currentUser = { 
+                        email: email, 
+                        display_name: 'Test User',
+                        id: '12345'
+                    };
+                    
+                    updateAuthUI();
+                    showNotification('로그인 성공!', 'success');
+                    showPage('dashboard');
+                } else {
+                    throw new Error('잘못된 이메일 또는 비밀번호입니다.');
+                }
+            } catch (error) {
+                showNotification(error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '로그인';
+            }
+        }
+        
+        async function handleRegister(event) {
+            event.preventDefault();
+            const btn = document.getElementById('registerBtn');
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 가입 중...';
+            
+            try {
+                // 비밀번호 확인
+                if (formData.get('password') !== formData.get('confirm_password')) {
+                    throw new Error('비밀번호가 일치하지 않습니다.');
+                }
+                
+                // API 호출 시뮬레이션
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                
+                showNotification('회원가입 완료! 로그인해주세요.', 'success');
+                showPage('login');
+            } catch (error) {
+                showNotification(error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '회원가입';
+            }
+        }
+        
+        function logout() {
+            localStorage.removeItem('authToken');
+            currentUser = null;
+            updateAuthUI();
+            showNotification('로그아웃되었습니다.', 'success');
+            showPage('login');
+        }
+        
+        function updateAuthUI() {
+            const authUser = document.getElementById('authUser');
+            const logoutBtn = document.querySelector('.btn-logout');
+            
+            if (currentUser) {
+                authUser.textContent = `👤 ${currentUser.display_name || currentUser.email}`;
+                authUser.style.display = 'block';
+                logoutBtn.style.display = 'block';
+            } else {
+                authUser.style.display = 'none';
+                logoutBtn.style.display = 'none';
+            }
+        }
+        
+        // 게시글 관련
+        function renderPosts() {
+            const postsList = document.getElementById('postsList');
+            if (!postsList) return;
+            
+            postsList.innerHTML = posts.map(post => `
+                <div class="post-card" onclick="showPostDetail(${post.id})">
+                    <div class="post-meta">
+                        <span class="post-type">${post.type}</span>
+                        <span>•</span>
+                        <span>${formatDate(post.created_at)}</span>
+                        <span>•</span>
+                        <span>작성자: ${post.author}</span>
+                    </div>
+                    <div class="post-title">${post.title}</div>
+                    <div class="post-stats">
+                        <span>👁 ${post.stats.views}</span>
+                        <span>👍 ${post.stats.likes}</span>
+                        <span>👎 ${post.stats.dislikes}</span>
+                        <span>💬 ${post.stats.comments}</span>
+                        <span>🔖 ${post.stats.bookmarks}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function showPostDetail(postId) {
+            const post = posts.find(p => p.id === postId);
+            if (!post) return;
+            
+            document.getElementById('postDetailTitle').textContent = post.title;
+            document.getElementById('postDetailContent').innerHTML = `<p>${post.content}</p>`;
+            document.getElementById('likeCount').textContent = post.stats.likes;
+            document.getElementById('dislikeCount').textContent = post.stats.dislikes;
+            document.getElementById('bookmarkCount').textContent = post.stats.bookmarks;
+            
+            showPage('post-detail');
+        }
+        
+        async function handleCreatePost(event) {
+            event.preventDefault();
+            
+            if (!currentUser) {
+                showNotification('로그인이 필요합니다.', 'error');
+                showPage('login');
+                return;
+            }
+            
+            const btn = document.getElementById('createPostBtn');
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 작성 중...';
+            
+            try {
+                // API 호출 시뮬레이션
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const newPost = {
+                    id: posts.length + 1,
+                    title: formData.get('title'),
+                    content: formData.get('content'),
+                    author: currentUser.email,
+                    type: formData.get('type'),
+                    service: formData.get('service'),
+                    created_at: new Date().toISOString(),
+                    stats: { views: 0, likes: 0, dislikes: 0, comments: 0, bookmarks: 0 }
+                };
+                
+                posts.unshift(newPost);
+                renderPosts();
+                
+                showNotification('게시글이 작성되었습니다!', 'success');
+                showPage('posts');
+                form.reset();
+            } catch (error) {
+                showNotification(error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '게시글 작성';
+            }
+        }
+        
+        // 댓글 관련
+        function renderComments() {
+            const commentsList = document.getElementById('commentsList');
+            if (!commentsList) return;
+            
+            const postComments = comments.filter(c => c.postId === 1); // 현재 게시글
+            
+            commentsList.innerHTML = postComments.map(comment => `
+                <div class="comment-item">
+                    <div class="comment-author">${comment.author}</div>
+                    <div class="comment-content">${comment.content}</div>
+                    <div class="comment-meta">
+                        <span>${formatDate(comment.created_at)}</span>
+                        <span>👍 ${comment.likes}</span>
+                        <span>👎 ${comment.dislikes}</span>
+                        <span style="cursor: pointer;">답글</span>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('commentCount').textContent = postComments.length;
+        }
+        
+        async function addComment() {
+            if (!currentUser) {
+                showNotification('로그인이 필요합니다.', 'error');
+                showPage('login');
+                return;
+            }
+            
+            const textarea = document.getElementById('commentTextarea');
+            const content = textarea.value.trim();
+            
+            if (!content) {
+                showNotification('댓글 내용을 입력해주세요.', 'error');
+                return;
+            }
+            
+            try {
+                // API 호출 시뮬레이션
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                const newComment = {
+                    id: comments.length + 1,
+                    postId: 1, // 현재 게시글
+                    author: currentUser.display_name || currentUser.email,
+                    content: content,
+                    created_at: new Date().toISOString(),
+                    likes: 0,
+                    dislikes: 0
+                };
+                
+                comments.push(newComment);
+                renderComments();
+                textarea.value = '';
+                
+                showNotification('댓글이 추가되었습니다!', 'success');
+            } catch (error) {
+                showNotification(error.message, 'error');
+            }
+        }
+        
+        // 반응 관련
+        function toggleReaction(type) {
+            if (!currentUser) {
+                showNotification('로그인이 필요합니다.', 'error');
+                showPage('login');
+                return;
+            }
+            
+            const post = posts[0]; // 현재 게시글
+            const countElement = document.getElementById(type + 'Count');
+            const currentCount = parseInt(countElement.textContent);
+            
+            // 토글 로직 (이미 눌렀으면 취소, 아니면 추가)
+            const userReacted = reactions[type] || false;
+            
+            if (userReacted) {
+                post.stats[type + 's'] = Math.max(0, currentCount - 1);
+                reactions[type] = false;
+            } else {
+                post.stats[type + 's'] = currentCount + 1;
+                reactions[type] = true;
+            }
+            
+            countElement.textContent = post.stats[type + 's'];
+            
+            // 버튼 스타일 업데이트
+            const button = countElement.closest('.reaction-btn');
+            if (reactions[type]) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+            
+            showNotification(`${type === 'like' ? '좋아요' : type === 'dislike' ? '싫어요' : '북마크'}가 ${reactions[type] ? '추가' : '취소'}되었습니다.`, 'success');
+        }
+        
+        // 필터링 및 검색
+        function filterPosts() {
+            const select = event.target;
+            const filterType = select.value;
+            
+            const filteredPosts = filterType 
+                ? mockPosts.filter(post => post.type === filterType)
+                : mockPosts;
+            
+            posts = [...filteredPosts];
+            renderPosts();
+        }
+        
+        function sortPosts() {
+            const select = event.target;
+            const sortBy = select.value;
+            
+            posts.sort((a, b) => {
+                if (sortBy === 'created_at') {
+                    return new Date(b.created_at) - new Date(a.created_at);
+                } else if (sortBy === 'views') {
+                    return b.stats.views - a.stats.views;
+                } else if (sortBy === 'likes') {
+                    return b.stats.likes - a.stats.likes;
+                }
+                return 0;
+            });
+            
+            renderPosts();
+        }
+        
+        function searchPosts(query) {
+            const filteredPosts = query.trim()
+                ? mockPosts.filter(post => 
+                    post.title.toLowerCase().includes(query.toLowerCase()) ||
+                    post.content.toLowerCase().includes(query.toLowerCase())
+                  )
+                : mockPosts;
+            
+            posts = [...filteredPosts];
+            renderPosts();
+        }
+        
+        // API 테스트 관련 함수들
+        function toggleApiTest(element) {
+            const toggle = element.querySelector('.endpoint-toggle');
+            const panel = element.parentElement.querySelector('.api-test-panel');
+            
+            const isExpanded = panel.classList.contains('expanded');
+            
+            if (isExpanded) {
+                panel.classList.remove('expanded');
+                toggle.classList.remove('expanded');
+                toggle.textContent = '▶';
+            } else {
+                panel.classList.add('expanded');
+                toggle.classList.add('expanded');
+                toggle.textContent = '▼';
+            }
+        }
+        
+        async function testApiCall(button, method, endpoint) {
+            const panel = button.closest('.test-panel-content');
+            const form = panel.querySelector('.test-form');
+            const responseSection = panel.querySelector('.api-response-section');
+            const responseContent = panel.querySelector('.response-content pre');
+            
+            // 버튼 로딩 상태
+            const originalText = button.textContent;
+            button.textContent = '⏳ 요청중...';
+            button.disabled = true;
+            
+            // 폼 데이터 수집
+            const formData = {};
+            const inputs = form.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                if (input.value && !input.placeholder.includes('Bearer')) {
+                    const key = input.previousElementSibling.textContent.toLowerCase().replace(' ', '_');
+                    formData[key] = input.value;
+                }
+            });
+            
+            // Authorization 헤더 처리
+            const authInput = form.querySelector('input[placeholder*="Bearer"]');
+            const headers = {
+                'Content-Type': 'application/json'
+            };
+            if (authInput && authInput.value) {
+                headers['Authorization'] = authInput.value;
+            }
+            
+            try {
+                // 실제 API 호출 시뮬레이션
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                
+                const mockResponse = {
+                    status: 200,
+                    data: method === 'GET' ? 
+                        { message: "조회 성공", items: [formData], total: 1 } : 
+                        { message: "처리 완료", id: "api_test_" + Date.now(), ...formData },
+                    timestamp: new Date().toISOString()
+                };
+                
+                // 응답 표시
+                responseContent.textContent = JSON.stringify(mockResponse, null, 2);
+                responseSection.style.display = 'block';
+                
+                showNotification(`${endpoint} API 테스트 성공!`, 'success');
+                
+            } catch (error) {
+                const errorResponse = {
+                    error: "API 호출 실패",
+                    message: error.message,
+                    timestamp: new Date().toISOString()
+                };
+                
+                responseContent.textContent = JSON.stringify(errorResponse, null, 2);
+                responseSection.style.display = 'block';
+                
+                showNotification(`${endpoint} API 테스트 실패`, 'error');
+            } finally {
+                // 버튼 복원
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+        
+        function clearApiForm(button) {
+            const form = button.closest('.test-form');
+            const inputs = form.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                if (input.type === 'number') {
+                    input.value = input.placeholder || '1';
+                } else if (input.tagName === 'SELECT') {
+                    input.selectedIndex = 0;
+                } else {
+                    input.value = '';
+                }
+            });
+            
+            const responseSection = button.closest('.test-panel-content').querySelector('.api-response-section');
+            if (responseSection) {
+                responseSection.style.display = 'none';
+            }
+        }
+        
+        // 응답 탭 전환 (API 테스트용)
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('response-tab')) {
+                const tabs = e.target.parentElement.querySelectorAll('.response-tab');
+                tabs.forEach(tab => tab.classList.remove('active'));
+                e.target.classList.add('active');
+                
+                const content = e.target.closest('.api-response-section').querySelector('.response-content pre');
+                if (e.target.textContent === '헤더') {
+                    content.textContent = JSON.stringify({
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer token...',
+                        'User-Agent': 'FastAPI-Dashboard/1.0',
+                        'Accept': 'application/json'
+                    }, null, 2);
+                } else if (e.target.textContent === '요청') {
+                    content.textContent = JSON.stringify({
+                        method: 'POST',
+                        url: '/api/endpoint',
+                        headers: {'Content-Type': 'application/json'},
+                        body: {'test': 'data'}
+                    }, null, 2);
+                }
+            }
+        });
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        function showModal(title, content) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = content;
+            document.getElementById('modalOverlay').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+        
+        // 모달 배경 클릭 시 닫기
+        document.getElementById('modalOverlay').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+        
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // 모바일 사이드바 토글
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
+        
+        // 창 크기 변경 시 사이드바 자동 닫기
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        });
+    </script>
+</body>
+</html>

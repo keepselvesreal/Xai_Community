@@ -1,28 +1,59 @@
 import pytest
-from fastapi.testclient import TestClient
-from httpx import AsyncClient
+import asyncio
+from typing import AsyncGenerator
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+import os
+import sys
 
-from backend.main import app
-
-
-@pytest.fixture
-def client():
-    """동기 테스트 클라이언트"""
-    with TestClient(app) as test_client:
-        yield test_client
+# Add project root to Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 
-@pytest.fixture
-async def async_client():
-    """비동기 테스트 클라이언트"""
-    from httpx import ASGITransport
-
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create an event loop for the entire test session."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest.fixture
-def sample_user_data():
-    """샘플 사용자 데이터"""
-    return {"name": "Test User", "email": "test@example.com"}
+async def test_db() -> AsyncGenerator[AsyncIOMotorDatabase, None]:
+    """
+    Provide a test database connection.
+    Uses the actual MongoDB Atlas connection from environment variables.
+    """
+    from src.config import settings
+    
+    # Use test database name
+    test_db_name = f"{settings.database_name}_test"
+    
+    # Create test client
+    client = AsyncIOMotorClient(settings.mongodb_url)
+    db = client[test_db_name]
+    
+    # Ensure connection is established
+    await client.admin.command("ping")
+    
+    yield db
+    
+    # Cleanup: Drop all collections in test database after tests
+    collections = await db.list_collection_names()
+    for collection_name in collections:
+        await db[collection_name].drop()
+    
+    # Close connection
+    client.close()
+
+
+@pytest.fixture
+async def clean_db(test_db: AsyncIOMotorDatabase) -> AsyncIOMotorDatabase:
+    """
+    Provide a clean test database by dropping all collections before the test.
+    """
+    # Drop all collections before test
+    collections = await test_db.list_collection_names()
+    for collection_name in collections:
+        await test_db[collection_name].drop()
+    
+    return test_db

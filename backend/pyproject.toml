@@ -13,6 +13,7 @@ dependencies = [
     "passlib[bcrypt]>=1.7.4",
     "pydantic-settings>=2.8.0",
     "python-multipart>=0.0.20",
+    "certifi>=2025.4.26",
 ]
 
 [project.optional-dependencies]
@@ -82,3 +83,13 @@ extend-exclude = '''
 max-line-length = 88
 extend-ignore = ["E203", "W503"]
 exclude = [".git", "__pycache__", ".venv", "build", "dist"]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "flake8>=7.2.0",
+    "httpx>=0.28.1",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "pytest-cov>=6.1.1",
+]
