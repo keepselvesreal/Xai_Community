@@ -7,10 +7,10 @@ install:  ## 의존성 설치
 	uv sync
 
 dev:  ## 개발 서버 시작
-	uv run uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
+	cd src && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 start:  ## 프로덕션 서버 시작
-	uv run uvicorn backend.main:app --host 0.0.0.0 --port 8000
+	cd src && uv run uvicorn main:app --host 0.0.0.0 --port 8000
 
 test:  ## 모든 테스트 실행
 	uv run pytest
@@ -25,13 +25,13 @@ test-cov:  ## 커버리지와 함께 테스트 실행
 	uv run pytest --cov=backend --cov-report=html --cov-report=term
 
 lint:  ## 코드 린팅
-	uv run flake8 backend tests
+	uv run flake8 src tests
 
 format:  ## 코드 포맷팅
-	uv run black backend tests
+	uv run black src tests
 
 format-check:  ## 코드 포맷팅 체크
-	uv run black --check backend tests
+	uv run black --check src tests
 
 clean:  ## 캐시 및 임시 파일 정리
 	find . -type f -name "*.pyc" -delete

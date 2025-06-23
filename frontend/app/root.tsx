@@ -8,11 +8,13 @@ import {
 import type { LinksFunction } from "@remix-run/node";
 
 import "./tailwind.css";
+import { AuthProvider } from "~/contexts/AuthContext";
+import { NotificationProvider } from "~/contexts/NotificationContext";
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
   {
-    rel: "preconnect",
+    rel: "preconnect", 
     href: "https://fonts.gstatic.com",
     crossOrigin: "anonymous",
   },
@@ -24,14 +26,14 @@ export const links: LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="ko">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
       </head>
-      <body>
+      <body className="bg-gray-50">
         {children}
         <ScrollRestoration />
         <Scripts />
@@ -41,5 +43,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <AuthProvider>
+      <NotificationProvider>
+        <Outlet />
+      </NotificationProvider>
+    </AuthProvider>
+  );
 }
