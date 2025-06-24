@@ -660,8 +660,9 @@
         }
         
         .api-test-panel.expanded {
-            max-height: 600px;
+            max-height: none;
             opacity: 1;
+            overflow: visible;
         }
         
         .test-panel-content {
@@ -724,6 +725,7 @@
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #e2e8f0;
+            min-height: 250px;
         }
         
         .response-tabs {
@@ -755,8 +757,11 @@
             border-radius: 0 6px 6px 6px;
             font-family: 'Monaco', 'Consolas', monospace;
             font-size: 0.8em;
-            max-height: 300px;
+            min-height: 200px;
+            max-height: 500px;
             overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         
         .method-badge {
@@ -807,6 +812,24 @@
             
             .content-body {
                 padding: 20px;
+            }
+            
+            .api-test-panel.expanded {
+                max-height: none;
+                overflow: visible;
+            }
+            
+            .response-content {
+                font-size: 0.7em;
+                max-height: 400px;
+            }
+            
+            .test-panel-content {
+                padding: 15px;
+            }
+            
+            .endpoint-header {
+                padding: 12px 15px;
             }
         }
     </style>
@@ -1843,8 +1866,55 @@
             const inputs = form.querySelectorAll('input, textarea, select');
             inputs.forEach(input => {
                 if (input.value && !input.placeholder.includes('Bearer')) {
-                    const key = input.previousElementSibling.textContent.toLowerCase().replace(' ', '_');
-                    formData[key] = input.value;
+                    // 한글 라벨을 영문 필드명으로 매핑
+                    const labelText = input.previousElementSibling.textContent.trim();
+                    let key = '';
+                    
+                    // 라벨별 필드명 매핑
+                    switch(labelText) {
+                        case '이메일':
+                            key = 'email';
+                            break;
+                        case '사용자 핸들':
+                            key = 'user_handle';
+                            break;
+                        case '표시 이름':
+                        case '표시 이름 (선택)':
+                            key = 'display_name';
+                            break;
+                        case '비밀번호':
+                            key = 'password';
+                            break;
+                        case '제목':
+                            key = 'title';
+                            break;
+                        case '내용':
+                            key = 'content';
+                            break;
+                        case '서비스':
+                            key = 'service';
+                            break;
+                        case '페이지':
+                            key = 'page';
+                            break;
+                        case '개수':
+                            key = 'limit';
+                            break;
+                        case '타입 (선택)':
+                        case '타입':
+                            key = 'type';
+                            break;
+                        case '게시글 Slug':
+                            key = 'slug';
+                            break;
+                        default:
+                            // 기본적으로 영문 변환
+                            key = labelText.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                    }
+                    
+                    if (key) {
+                        formData[key] = input.value.trim();
+                    }
                 }
             });
             
@@ -1858,22 +1928,56 @@
             }
             
             try {
-                // 실제 API 호출 시뮬레이션
-                await new Promise(resolve => setTimeout(resolve, 1000));
+                // 실제 FastAPI 서버 호출
+                const apiUrl = `http://localhost:8000${endpoint}`;
+                let response;
                 
-                const mockResponse = {
-                    status: 200,
-                    data: method === 'GET' ? 
-                        { message: "조회 성공", items: [formData], total: 1 } : 
-                        { message: "처리 완료", id: "api_test_" + Date.now(), ...formData },
+                if (method === 'GET') {
+                    // GET 요청의 경우 쿼리 파라미터로 전달
+                    const params = new URLSearchParams(formData);
+                    response = await fetch(`${apiUrl}?${params}`, {
+                        method: 'GET',
+                        headers: headers
+                    });
+                } else {
+                    // POST 요청의 경우 JSON body로 전달
+                    response = await fetch(apiUrl, {
+                        method: method,
+                        headers: headers,
+                        body: JSON.stringify(formData)
+                    });
+                }
+                
+                const data = await response.json();
+                
+                const apiResponse = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data,
                     timestamp: new Date().toISOString()
                 };
                 
                 // 응답 표시
-                responseContent.textContent = JSON.stringify(mockResponse, null, 2);
+                responseContent.textContent = JSON.stringify(apiResponse, null, 2);
                 responseSection.style.display = 'block';
                 
-                showNotification(`${endpoint} API 테스트 성공!`, 'success');
+                // 응답 섹션으로 스크롤
+                setTimeout(() => {
+                    responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+                
+                if (response.ok) {
+                    showNotification(`${endpoint} API 테스트 성공!`, 'success');
+                    
+                    // 로그인 성공 시 토큰 저장
+                    if (endpoint === '/auth/login' && data.access_token) {
+                        localStorage.setItem('authToken', data.access_token);
+                        currentUser = data.user || { email: formData.email };
+                        updateAuthUI();
+                    }
+                } else {
+                    showNotification(`${endpoint} API 테스트 실패: ${data.detail || '알 수 없는 오류'}`, 'error');
+                }
                 
             } catch (error) {
                 const errorResponse = {
@@ -1885,7 +1989,12 @@
                 responseContent.textContent = JSON.stringify(errorResponse, null, 2);
                 responseSection.style.display = 'block';
                 
-                showNotification(`${endpoint} API 테스트 실패`, 'error');
+                // 응답 섹션으로 스크롤
+                setTimeout(() => {
+                    responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+                
+                showNotification(`${endpoint} API 테스트 실패: ${error.message}`, 'error');
             } finally {
                 // 버튼 복원
                 button.textContent = originalText;
@@ -1909,6 +2018,10 @@
             const responseSection = button.closest('.test-panel-content').querySelector('.api-response-section');
             if (responseSection) {
                 responseSection.style.display = 'none';
+                const responseContent = responseSection.querySelector('.response-content pre');
+                if (responseContent) {
+                    responseContent.textContent = '응답 대기중...';
+                }
             }
         }
         

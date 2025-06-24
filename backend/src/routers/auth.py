@@ -98,7 +98,7 @@ async def register_user(
         user = await auth_service.register_user(user_data)
         return {
             "message": "User registered successfully",
-            "user": user.model_dump()
+            "user": user
         }
     except EmailAlreadyExistsError as e:
         raise HTTPException(

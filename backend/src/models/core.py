@@ -16,19 +16,17 @@ TargetType = Literal["post", "comment"]
 # Pydantic Models for Requests/Responses
 class UserBase(BaseModel):
     """Base user model for shared fields."""
-    name: str = Field(..., min_length=1, max_length=100)
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
     email: EmailStr
-    handle: Optional[str] = Field(None, min_length=3, max_length=30)
+    user_handle: str = Field(..., min_length=3, max_length=30)
+    display_name: Optional[str] = Field(None, max_length=100)
     bio: Optional[str] = Field(None, max_length=500)
     avatar_url: Optional[str] = None
     
-    @field_validator("handle")
+    @field_validator("user_handle")
     @classmethod
-    def validate_handle(cls, v: Optional[str]) -> Optional[str]:
+    def validate_user_handle(cls, v: str) -> str:
         """Validate user handle format."""
-        if v is None:
-            return v
-        
         # Handle should be alphanumeric with underscores
         if not v.replace("_", "").isalnum():
             raise ValueError("Handle must contain only letters, numbers, and underscores")
@@ -85,7 +83,7 @@ class User(Document, UserBase):
         name = "users"
         indexes = [
             [("email", ASCENDING)],
-            [("handle", ASCENDING)],
+            [("user_handle", ASCENDING)],
             [("status", ASCENDING), ("created_at", DESCENDING)]
         ]
     
@@ -94,7 +92,8 @@ class User(Document, UserBase):
             "example": {
                 "name": "John Doe",
                 "email": "john@example.com",
-                "handle": "johndoe",
+                "user_handle": "johndoe",
+                "display_name": "John Doe",
                 "bio": "Software developer and tech enthusiast",
                 "status": "active"
             }

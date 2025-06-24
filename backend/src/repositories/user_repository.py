@@ -23,16 +23,7 @@ class UserRepository:
         Raises:
             DuplicateUserError: If email or handle already exists
         """
-        # Check for duplicate email
-        existing_user = await User.find_one({"email": user_create.email})
-        if existing_user:
-            raise DuplicateUserError("email", user_create.email)
-        
-        # Check for duplicate handle if provided
-        if user_create.handle:
-            existing_user = await User.find_one({"handle": user_create.handle})
-            if existing_user:
-                raise DuplicateUserError("handle", user_create.handle)
+        # Note: Duplicate checks are handled in service layer
         
         # Create user
         user_data = user_create.model_dump(exclude={"password"})
@@ -71,16 +62,16 @@ class UserRepository:
         """
         return await User.find_one({"email": email})
     
-    async def get_by_handle(self, handle: str) -> Optional[User]:
-        """Get user by handle.
+    async def get_by_user_handle(self, user_handle: str) -> Optional[User]:
+        """Get user by user_handle.
         
         Args:
-            handle: User handle
+            user_handle: User handle
             
         Returns:
             User instance or None if not found
         """
-        return await User.find_one({"handle": handle})
+        return await User.find_one({"user_handle": user_handle})
     
     async def update(self, user_id: str, user_update: UserUpdate) -> User:
         """Update user information.
@@ -187,16 +178,16 @@ class UserRepository:
         user = await User.find_one({"email": email})
         return user is not None
     
-    async def check_handle_exists(self, handle: str) -> bool:
-        """Check if handle already exists.
+    async def check_user_handle_exists(self, user_handle: str) -> bool:
+        """Check if user_handle already exists.
         
         Args:
-            handle: Handle to check
+            user_handle: Handle to check
             
         Returns:
-            True if handle exists, False otherwise
+            True if user_handle exists, False otherwise
         """
-        user = await User.find_one({"handle": handle})
+        user = await User.find_one({"user_handle": user_handle})
         return user is not None
     
     async def update_status(self, user_id: str, status: str) -> User:

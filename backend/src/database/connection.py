@@ -83,7 +83,7 @@ class Database:
         Args:
             document_models: List of Beanie Document classes
         """
-        if not self.database:
+        if self.database is None:
             raise RuntimeError("Database not connected")
         
         try:
@@ -106,7 +106,7 @@ class Database:
         Raises:
             RuntimeError: If database is not connected
         """
-        if not self.database:
+        if self.database is None:
             raise RuntimeError("Database not connected")
         return self.database
     

@@ -50,25 +50,30 @@ class AuthService:
             HandleAlreadyExistsError: If handle already exists
         """
         # Check if email already exists
-        try:
-            await self.user_repository.get_by_email(user_data.email)
+        existing_user = await self.user_repository.get_by_email(user_data.email)
+        if existing_user:
             raise EmailAlreadyExistsError(user_data.email)
-        except UserNotFoundError:
-            pass  # Email doesn't exist, which is good
         
-        # Check if handle already exists (only if handle is provided)
-        if user_data.handle:
-            try:
-                await self.user_repository.get_by_handle(user_data.handle)
-                raise HandleAlreadyExistsError(user_data.handle)
-            except UserNotFoundError:
-                pass  # Handle doesn't exist, which is good
+        # Check if user_handle already exists
+        existing_user = await self.user_repository.get_by_user_handle(user_data.user_handle)
+        if existing_user:
+            raise HandleAlreadyExistsError(user_data.user_handle)
         
         # Hash password
         password_hash = self.password_manager.hash_password(user_data.password)
         
         # Create user using repository
-        return await self.user_repository.create(user_data, password_hash)
+        user = await self.user_repository.create(user_data, password_hash)
+        
+        # Return user data without sensitive fields
+        return {
+            "id": str(user.id),
+            "email": user.email,
+            "user_handle": user.user_handle,
+            "display_name": user.display_name,
+            "status": user.status,
+            "created_at": user.created_at.isoformat() if user.created_at else None
+        }
     
     async def authenticate_user(self, email: str, password: str) -> User:
         """Authenticate user with email and password.
@@ -343,17 +348,17 @@ class AuthService:
         except UserNotFoundError:
             return False
     
-    async def check_handle_exists(self, handle: str) -> bool:
-        """Check if handle already exists.
+    async def check_user_handle_exists(self, user_handle: str) -> bool:
+        """Check if user_handle already exists.
         
         Args:
-            handle: Handle to check
+            user_handle: Handle to check
             
         Returns:
-            True if handle exists, False otherwise
+            True if user_handle exists, False otherwise
         """
         try:
-            await self.user_repository.get_by_handle(handle)
+            await self.user_repository.get_by_user_handle(user_handle)
             return True
         except UserNotFoundError:
             return False
