@@ -27,6 +27,9 @@
   - parentCommentId 설정 (대댓글인 경우)
   - 댓글 내용 검증 (최소/최대 길이)
   - 게시글 댓글 수 자동 증가
+- **테스트 명령어**: `uv run pytest tests/unit/test_comments_service.py::test_create_comment_with_auth -v`
+- **성공 기준**: 테스트 명령어 실행 시 exit code 0 (어떤 이유든 실패 시 subtask 실패로 간주)
+- **진행 조건**: 이 subtask 테스트 통과 후에만 다음 subtask 진행 가능
 
 ### 2. 댓글 조회 서비스
 - **테스트 함수**: `test_get_comments_with_user_data`
@@ -37,6 +40,9 @@
   - 사용자별 좋아요 정보 포함 (로그인한 경우)
   - 댓글 상태별 필터링 (active/deleted)
   - 정렬 옵션 (시간순, 좋아요순)
+- **테스트 명령어**: `uv run pytest tests/unit/test_comments_service.py::test_get_comments_with_user_data -v`
+- **성공 기준**: 테스트 명령어 실행 시 exit code 0 (어떤 이유든 실패 시 subtask 실패로 간주)
+- **진행 조건**: 이 subtask 테스트 통과 후에만 다음 subtask 진행 가능
 
 ### 3. 대댓글 처리 서비스
 - **테스트 함수**: `test_reply_comments`
@@ -46,6 +52,9 @@
   - 대댓글 깊이 제한 (최대 2단계)
   - 상위 댓글의 replyCount 자동 증가
   - 대댓글 알림 처리 (향후 확장)
+- **테스트 명령어**: `uv run pytest tests/unit/test_comments_service.py::test_reply_comments -v`
+- **성공 기준**: 테스트 명령어 실행 시 exit code 0 (어떤 이유든 실패 시 subtask 실패로 간주)
+- **진행 조건**: 이 subtask 테스트 통과 후에만 다음 subtask 진행 가능
 
 ### 4. 댓글 수정/삭제 서비스
 - **테스트 함수**: `test_update_comment_with_permission`, `test_delete_comment_with_permission`
@@ -56,6 +65,9 @@
   - 소프트 삭제 (status를 'deleted'로 변경)
   - 대댓글이 있는 댓글 삭제 처리
   - 게시글 댓글 수 자동 감소
+- **테스트 명령어**: `uv run pytest tests/unit/test_comments_service.py::test_update_comment_with_permission tests/unit/test_comments_service.py::test_delete_comment_with_permission -v`
+- **성공 기준**: 테스트 명령어 실행 시 exit code 0 (어떤 이유든 실패 시 subtask 실패로 간주)
+- **진행 조건**: 이 subtask 테스트 통과 후에만 다음 subtask 진행 가능
 
 ### 5. 댓글 API 라우터
 - **테스트 함수**: `test_comments_router_with_auth`
@@ -66,6 +78,9 @@
   - POST /posts/{slug}/comments/{comment_id}/replies (대댓글 생성) - 인증 필요
   - PUT /posts/{slug}/comments/{comment_id} (수정) - 권한 확인
   - DELETE /posts/{slug}/comments/{comment_id} (삭제) - 권한 확인
+- **테스트 명령어**: `uv run pytest tests/integration/test_comments_router.py::test_comments_router_with_auth -v`
+- **성공 기준**: 테스트 명령어 실행 시 exit code 0 (어떤 이유든 실패 시 subtask 실패로 간주)
+- **진행 조건**: 이 subtask 테스트 통과 후에만 task 완료 가능
 
 ## 🔗 의존성
 - **선행 조건**: 
@@ -119,8 +134,47 @@
 ```
 
 ## ✅ 완료 조건
-- [ ] 모든 테스트 케이스 통과
-- [ ] 댓글/대댓글 계층 구조 완전 구현
-- [ ] 게시글 시스템과 완전 통합
-- [ ] 인증/권한 시스템과 완전 통합
-- [ ] 댓글 CRUD 전체 플로우 동작 확인
+
+### 개별 Subtask 검증 (순차 진행 필수)
+```bash
+# Subtask 1: 댓글 생성 서비스
+uv run pytest tests/unit/test_comments_service.py::test_create_comment_with_auth -v
+# ↑ exit code 0 확인 후 다음 진행
+
+# Subtask 2: 댓글 조회 서비스
+uv run pytest tests/unit/test_comments_service.py::test_get_comments_with_user_data -v
+# ↑ exit code 0 확인 후 다음 진행
+
+# Subtask 3: 대댓글 처리 서비스
+uv run pytest tests/unit/test_comments_service.py::test_reply_comments -v
+# ↑ exit code 0 확인 후 다음 진행
+
+# Subtask 4: 댓글 수정/삭제 서비스
+uv run pytest tests/unit/test_comments_service.py::test_update_comment_with_permission tests/unit/test_comments_service.py::test_delete_comment_with_permission -v
+# ↑ exit code 0 확인 후 다음 진행
+
+# Subtask 5: 댓글 API 라우터
+uv run pytest tests/integration/test_comments_router.py::test_comments_router_with_auth -v
+# ↑ exit code 0 확인 후 task 완료
+```
+
+### Task 전체 성공 판단
+```bash
+# 모든 subtask 테스트 한번에 실행 (모든 subtask 개별 통과 후)
+uv run pytest tests/unit/test_comments_service.py tests/integration/test_comments_router.py -v
+
+# 또는 comments 관련 테스트 전체 실행
+uv run pytest tests/ -k "comments" -v
+```
+
+**성공 기준**:
+- [ ] 모든 subtask 테스트가 순차적으로 exit code 0으로 통과
+- [ ] 어떤 이유든 테스트 실패 시 해당 subtask 실패로 간주
+- [ ] 이전 subtask 통과 없이 다음 subtask 진행 금지
+- [ ] 모든 subtask 완료 후에만 다음 task 진행 가능
+- [ ] Task 1, 2, 3 선행 완료 필수
+
+**실패 처리**:
+- 네트워크, 환경 설정, 외부 의존성 등 어떤 이유든 테스트 실패 시 subtask 실패
+- 실패한 subtask는 문제 해결 후 재테스트 필요
+- 순차 진행 원칙 준수 (이전 subtask 성공 후 다음 진행)

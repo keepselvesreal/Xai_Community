@@ -1,0 +1,423 @@
+"""Authentication router for FastAPI endpoints."""
+
+from typing import Dict, Any, List
+from fastapi import APIRouter, Depends, HTTPException, status, Form
+from fastapi.security import OAuth2PasswordRequestForm
+from pydantic import BaseModel, EmailStr
+from src.models.core import User, UserCreate, UserUpdate, UserResponse
+from src.services.auth_service import AuthService
+from src.dependencies.auth import (
+    CurrentActiveUser, 
+    AdminUser,
+    get_jwt_manager,
+    get_password_manager,
+    get_user_repository
+)
+from src.exceptions.auth import InvalidCredentialsError, InvalidTokenError, ExpiredTokenError
+from src.exceptions.user import (
+    UserNotFoundError,
+    EmailAlreadyExistsError,
+    HandleAlreadyExistsError
+)
+
+
+# Create router
+router = APIRouter(
+    tags=["authentication"],
+    responses={404: {"description": "Not found"}}
+)
+
+
+# Request/Response Models
+class LoginResponse(BaseModel):
+    """Login response model."""
+    access_token: str
+    refresh_token: str
+    token_type: str
+    user: UserResponse
+
+
+class RefreshTokenRequest(BaseModel):
+    """Refresh token request model."""
+    refresh_token: str
+
+
+class RefreshTokenResponse(BaseModel):
+    """Refresh token response model."""
+    access_token: str
+    token_type: str
+
+
+class ChangePasswordRequest(BaseModel):
+    """Change password request model."""
+    current_password: str
+    new_password: str
+
+
+class MessageResponse(BaseModel):
+    """Generic message response model."""
+    message: str
+
+
+class UserListResponse(BaseModel):
+    """User list response model."""
+    users: List[UserResponse]
+    total: int
+
+
+# Dependency to get auth service
+def get_auth_service(
+    user_repository=Depends(get_user_repository),
+    jwt_manager=Depends(get_jwt_manager),
+    password_manager=Depends(get_password_manager)
+) -> AuthService:
+    """Get auth service dependency."""
+    return AuthService(user_repository, jwt_manager, password_manager)
+
+
+@router.post("/register", 
+             response_model=Dict[str, Any], 
+             status_code=status.HTTP_201_CREATED)
+async def register_user(
+    user_data: UserCreate,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Register a new user.
+    
+    Args:
+        user_data: User registration data
+        auth_service: Authentication service
+        
+    Returns:
+        Dictionary with success message and user data
+        
+    Raises:
+        HTTPException: If email or handle already exists
+    """
+    try:
+        user = await auth_service.register_user(user_data)
+        return {
+            "message": "User registered successfully",
+            "user": user.model_dump()
+        }
+    except EmailAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except HandleAlreadyExistsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+
+
+@router.post("/login", response_model=LoginResponse)
+async def login_user(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Login user and return tokens.
+    
+    Args:
+        form_data: OAuth2 form data (username=email, password)
+        auth_service: Authentication service
+        
+    Returns:
+        Login response with tokens and user data
+        
+    Raises:
+        HTTPException: If credentials are invalid
+    """
+    try:
+        login_result = await auth_service.login(form_data.username, form_data.password)
+        
+        return LoginResponse(
+            access_token=login_result["access_token"],
+            refresh_token=login_result["refresh_token"],
+            token_type=login_result["token_type"],
+            user=UserResponse(**login_result["user"].model_dump())
+        )
+    except InvalidCredentialsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+
+@router.post("/refresh", response_model=RefreshTokenResponse)
+async def refresh_access_token(
+    refresh_data: RefreshTokenRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Refresh access token using refresh token.
+    
+    Args:
+        refresh_data: Refresh token data
+        auth_service: Authentication service
+        
+    Returns:
+        New access token
+        
+    Raises:
+        HTTPException: If refresh token is invalid
+    """
+    try:
+        result = await auth_service.refresh_access_token(refresh_data.refresh_token)
+        
+        return RefreshTokenResponse(
+            access_token=result["access_token"],
+            token_type=result["token_type"]
+        )
+    except (InvalidTokenError, ExpiredTokenError) as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=str(e),
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"}
+        )
+
+
+@router.get("/profile", response_model=UserResponse)
+async def get_user_profile(
+    current_user: User = CurrentActiveUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Get current user profile.
+    
+    Args:
+        current_user: Current authenticated user
+        auth_service: Authentication service
+        
+    Returns:
+        User profile data
+        
+    Raises:
+        HTTPException: If user not found
+    """
+    try:
+        user = await auth_service.get_user_profile(current_user.id)
+        return UserResponse(**user.model_dump())
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_user_profile(
+    user_update: UserUpdate,
+    current_user: User = CurrentActiveUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Update current user profile.
+    
+    Args:
+        user_update: Updated user data
+        current_user: Current authenticated user
+        auth_service: Authentication service
+        
+    Returns:
+        Updated user profile data
+        
+    Raises:
+        HTTPException: If user not found
+    """
+    try:
+        user = await auth_service.update_user_profile(current_user.id, user_update)
+        return UserResponse(**user.model_dump())
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.post("/change-password", response_model=MessageResponse)
+async def change_password(
+    password_data: ChangePasswordRequest,
+    current_user: User = CurrentActiveUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Change user password.
+    
+    Args:
+        password_data: Password change data
+        current_user: Current authenticated user
+        auth_service: Authentication service
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: If current password is wrong or user not found
+    """
+    try:
+        await auth_service.change_password(
+            current_user.id,
+            password_data.current_password,
+            password_data.new_password
+        )
+        return MessageResponse(message="Password changed successfully")
+    except InvalidCredentialsError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.post("/deactivate", response_model=MessageResponse)
+async def deactivate_account(
+    current_user: User = CurrentActiveUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Deactivate current user account.
+    
+    Args:
+        current_user: Current authenticated user
+        auth_service: Authentication service
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: If user not found
+    """
+    try:
+        await auth_service.deactivate_user(current_user.id)
+        return MessageResponse(message="Account deactivated successfully")
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+# Admin endpoints
+@router.get("/admin/users", response_model=UserListResponse)
+async def list_users(
+    admin_user: User = AdminUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """List all users (admin only).
+    
+    Args:
+        admin_user: Current admin user
+        auth_service: Authentication service
+        
+    Returns:
+        List of all users
+    """
+    users = await auth_service.list_users()
+    user_responses = [UserResponse(**user.model_dump()) for user in users]
+    
+    return UserListResponse(
+        users=user_responses,
+        total=len(user_responses)
+    )
+
+
+@router.post("/admin/users/{user_id}/suspend", response_model=MessageResponse)
+async def suspend_user(
+    user_id: str,
+    admin_user: User = AdminUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Suspend user account (admin only).
+    
+    Args:
+        user_id: ID of user to suspend
+        admin_user: Current admin user
+        auth_service: Authentication service
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: If user not found
+    """
+    try:
+        await auth_service.suspend_user(user_id)
+        return MessageResponse(message="User suspended successfully")
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.post("/admin/users/{user_id}/activate", response_model=MessageResponse)
+async def activate_user(
+    user_id: str,
+    admin_user: User = AdminUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Activate user account (admin only).
+    
+    Args:
+        user_id: ID of user to activate
+        admin_user: Current admin user
+        auth_service: Authentication service
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: If user not found
+    """
+    try:
+        await auth_service.activate_user(user_id)
+        return MessageResponse(message="User activated successfully")
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+@router.delete("/admin/users/{user_id}", response_model=MessageResponse)
+async def delete_user(
+    user_id: str,
+    admin_user: User = AdminUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Delete user account (admin only).
+    
+    Args:
+        user_id: ID of user to delete
+        admin_user: Current admin user
+        auth_service: Authentication service
+        
+    Returns:
+        Success message
+        
+    Raises:
+        HTTPException: If user not found
+    """
+    try:
+        await auth_service.delete_user(user_id)
+        return MessageResponse(message="User deleted successfully")
+    except UserNotFoundError as e:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(e)
+        )
+
+
+# Health check endpoint
+@router.get("/health")
+async def health_check():
+    """Health check endpoint for auth service."""
+    return {"status": "healthy", "service": "authentication"}

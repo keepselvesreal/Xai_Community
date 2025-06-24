@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 from typing import List, Literal
+from datetime import timedelta
 import os
 
 
@@ -30,8 +31,23 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = Field(
         default=30,
         gt=0,
-        description="JWT token expiration time in minutes"
+        description="JWT access token expiration time in minutes"
     )
+    refresh_token_expire_days: int = Field(
+        default=7,
+        gt=0,
+        description="JWT refresh token expiration time in days"
+    )
+    
+    @property
+    def access_token_expire(self) -> timedelta:
+        """Get access token expiration as timedelta."""
+        return timedelta(minutes=self.access_token_expire_minutes)
+    
+    @property
+    def refresh_token_expire(self) -> timedelta:
+        """Get refresh token expiration as timedelta."""
+        return timedelta(days=self.refresh_token_expire_days)
     
     # API Configuration
     api_title: str = Field(
@@ -136,3 +152,12 @@ class Settings(BaseSettings):
 
 # Create global settings instance
 settings = Settings()
+
+
+def get_settings() -> Settings:
+    """Get application settings.
+    
+    Returns:
+        Settings instance
+    """
+    return settings

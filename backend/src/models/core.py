@@ -75,6 +75,9 @@ class User(Document, UserBase):
     # Password hash (not included in UserBase for security)
     password_hash: str
     
+    # Admin privileges
+    is_admin: bool = False
+    
     # Social media profiles
     social_profiles: Dict[ServiceType, str] = Field(default_factory=dict)
     

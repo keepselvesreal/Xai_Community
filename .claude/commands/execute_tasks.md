@@ -1,7 +1,7 @@
 # task 수행
 
 ## 수행 방법
-- TDD에 기반해 task 수행.
+- task list(@$ARGUMENTS) 확인 후 TDD에 기반해 task 수행.
     - 반드시 red -> green -> refactor 단계에 따라 개발 진행. 테스트 코드 작성 없이 개발부터 진행하면 안 됨
 - 모든 항목 구현이 완료되면, **문서 상단에** **완료 시각** 기재
     - subtask에 명시된 테스트 함수를 통과해야만 해당 Subtask 수행 완료로 간주
