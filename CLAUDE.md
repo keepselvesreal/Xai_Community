@@ -279,8 +279,10 @@ The application automatically adjusts behavior based on the `environment` settin
 - **Production**: API docs disabled, optimized settings
 - **Testing**: Uses test database and mock configurations
 
-## Response Guide
-### 수행 작업 요약 제시
-- 응답 마지막에는 아래 내용을 간략히 정리하여 제시
-    - 수행한 작업
-    - 진행 과정: 성공과 실패 여부가 아니라 진행 과정 자체 기술에 초점 
+## Language Preferences
+
+### Multilingual Support
+- 한국어로 답변 가능 (can respond in Korean)
+- Will use Korean when specifically requested
+- Default communication is in English
+- Supports code and technical discussions in multiple languages

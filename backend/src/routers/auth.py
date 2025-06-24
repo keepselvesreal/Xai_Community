@@ -132,11 +132,15 @@ async def login_user(
     try:
         login_result = await auth_service.login(form_data.username, form_data.password)
         
+        # 사용자 정보에서 ObjectId를 문자열로 변환
+        user_data = login_result["user"].model_dump()
+        user_data["id"] = str(user_data["id"])  # ObjectId를 문자열로 변환
+        
         return LoginResponse(
             access_token=login_result["access_token"],
             refresh_token=login_result["refresh_token"],
             token_type=login_result["token_type"],
-            user=UserResponse(**login_result["user"].model_dump())
+            user=UserResponse(**user_data)
         )
     except InvalidCredentialsError as e:
         raise HTTPException(

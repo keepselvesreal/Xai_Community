@@ -312,3 +312,27 @@ class PermissionChecker:
                 permissions.append(permission)
         
         return permissions
+
+
+# Convenience functions for direct usage
+permission_checker = PermissionChecker()
+
+def check_post_permission(user, post, action: str) -> bool:
+    """Convenience function to check post permissions.
+    
+    Args:
+        user: User object
+        post: Post object
+        action: Action string ('read', 'update', 'delete')
+        
+    Returns:
+        True if user has permission
+    """
+    if action == "read":
+        return permission_checker.check_post_permission(user, post, ResourcePermission.READ)
+    elif action in ["update", "write"]:
+        return permission_checker.check_post_permission(user, post, ResourcePermission.WRITE)
+    elif action == "delete":
+        return permission_checker.check_post_permission(user, post, ResourcePermission.DELETE)
+    else:
+        return False

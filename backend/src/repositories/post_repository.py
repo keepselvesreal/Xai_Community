@@ -1,0 +1,293 @@
+"""Post repository for data access layer."""
+
+from typing import List, Dict, Optional, Tuple, Any
+from datetime import datetime
+import re
+from beanie import PydanticObjectId
+from src.models.core import Post, PostCreate, PostUpdate, PaginationParams
+from src.exceptions.post import PostNotFoundError, PostSlugAlreadyExistsError
+
+
+class PostRepository:
+    """Repository for post data access operations."""
+    
+    async def create(self, post_data: PostCreate, author_id: str) -> Post:
+        """Create a new post.
+        
+        Args:
+            post_data: Post creation data
+            author_id: ID of the post author
+            
+        Returns:
+            Created post instance
+            
+        Raises:
+            PostSlugAlreadyExistsError: If slug already exists
+        """
+        # Generate slug from title
+        slug = self._generate_slug(post_data.title)
+        
+        # Check if slug already exists and make it unique if necessary
+        unique_slug = await self._ensure_unique_slug(slug)
+        
+        # Create post document
+        post = Post(
+            title=post_data.title,
+            content=post_data.content,
+            service=post_data.service,
+            metadata=post_data.metadata,
+            slug=unique_slug,
+            author_id=author_id,
+            status="published",
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow(),
+            published_at=datetime.utcnow(),
+            view_count=0,
+            like_count=0,
+            dislike_count=0,
+            comment_count=0
+        )
+        
+        # Save to database
+        await post.save()
+        return post
+    
+    async def get_by_id(self, post_id: str) -> Post:
+        """Get post by ID.
+        
+        Args:
+            post_id: Post ID
+            
+        Returns:
+            Post instance
+            
+        Raises:
+            PostNotFoundError: If post not found
+        """
+        try:
+            post = await Post.get(PydanticObjectId(post_id))
+            if post is None:
+                raise PostNotFoundError(post_id=post_id)
+            return post
+        except Exception:
+            raise PostNotFoundError(post_id=post_id)
+    
+    async def get_by_slug(self, slug: str) -> Post:
+        """Get post by slug.
+        
+        Args:
+            slug: Post slug
+            
+        Returns:
+            Post instance
+            
+        Raises:
+            PostNotFoundError: If post not found
+        """
+        post = await Post.find_one(Post.slug == slug)
+        if post is None:
+            raise PostNotFoundError(slug=slug)
+        return post
+    
+    async def update(self, post_id: str, update_data: PostUpdate) -> Post:
+        """Update post.
+        
+        Args:
+            post_id: Post ID
+            update_data: Update data
+            
+        Returns:
+            Updated post instance
+            
+        Raises:
+            PostNotFoundError: If post not found
+        """
+        post = await self.get_by_id(post_id)
+        
+        # Update fields
+        update_dict = update_data.model_dump(exclude_unset=True)
+        if update_dict:
+            update_dict["updated_at"] = datetime.utcnow()
+            
+            # If title is updated, update slug as well
+            if "title" in update_dict:
+                new_slug = self._generate_slug(update_dict["title"])
+                if new_slug != post.slug:
+                    unique_slug = await self._ensure_unique_slug(new_slug)
+                    update_dict["slug"] = unique_slug
+            
+            # Update post
+            await post.update({"$set": update_dict})
+            
+            # Refresh post data
+            updated_post = await self.get_by_id(post_id)
+            return updated_post
+        
+        return post
+    
+    async def delete(self, post_id: str) -> bool:
+        """Delete post.
+        
+        Args:
+            post_id: Post ID
+            
+        Returns:
+            True if deletion successful
+            
+        Raises:
+            PostNotFoundError: If post not found
+        """
+        post = await self.get_by_id(post_id)
+        await post.delete()
+        return True
+    
+    async def list_posts(
+        self, 
+        page: int = 1, 
+        page_size: int = 20,
+        service_type: Optional[str] = None,
+        author_id: Optional[str] = None,
+        status: str = "published",
+        sort_by: str = "created_at"
+    ) -> Tuple[List[Post], int]:
+        """List posts with pagination and filters.
+        
+        Args:
+            page: Page number (1-based)
+            page_size: Number of items per page
+            service_type: Filter by service type
+            author_id: Filter by author ID
+            status: Filter by status
+            sort_by: Sort field
+            
+        Returns:
+            Tuple of (posts list, total count)
+        """
+        # Build query
+        query = {"status": status}
+        if service_type:
+            query["service"] = service_type
+        if author_id:
+            query["author_id"] = author_id
+        
+        # Count total
+        total = await Post.find(query).count()
+        
+        # Get posts with pagination
+        skip = (page - 1) * page_size
+        sort_field = f"-{sort_by}" if sort_by in ["created_at", "updated_at", "view_count", "like_count"] else sort_by
+        
+        posts = await Post.find(query).sort(sort_field).skip(skip).limit(page_size).to_list()
+        
+        return posts, total
+    
+    async def search_posts(
+        self,
+        query: str,
+        service_type: Optional[str] = None,
+        sort_by: str = "created_at",
+        page: int = 1,
+        page_size: int = 20
+    ) -> Tuple[List[Post], int]:
+        """Search posts by text query.
+        
+        Args:
+            query: Search query string
+            service_type: Filter by service type
+            sort_by: Sort field
+            page: Page number
+            page_size: Number of items per page
+            
+        Returns:
+            Tuple of (posts list, total count)
+        """
+        # Build search query
+        search_filter = {
+            "status": "published",
+            "$or": [
+                {"title": {"$regex": query, "$options": "i"}},
+                {"content": {"$regex": query, "$options": "i"}},
+                {"metadata.tags": {"$in": [re.compile(query, re.IGNORECASE)]}}
+            ]
+        }
+        
+        if service_type:
+            search_filter["service"] = service_type
+        
+        # Count total
+        total = await Post.find(search_filter).count()
+        
+        # Get posts with pagination
+        skip = (page - 1) * page_size
+        sort_field = f"-{sort_by}" if sort_by in ["created_at", "updated_at", "view_count", "like_count"] else sort_by
+        
+        posts = await Post.find(search_filter).sort(sort_field).skip(skip).limit(page_size).to_list()
+        
+        return posts, total
+    
+    async def increment_view_count(self, post_id: str) -> bool:
+        """Increment post view count.
+        
+        Args:
+            post_id: Post ID
+            
+        Returns:
+            True if successful
+        """
+        try:
+            await Post.find_one(Post.id == PydanticObjectId(post_id)).update({"$inc": {"view_count": 1}})
+            return True
+        except Exception:
+            return False
+    
+    async def get_user_reactions(self, user_id: str, post_ids: List[str]) -> Dict[str, str]:
+        """Get user reactions for posts.
+        
+        Args:
+            user_id: User ID
+            post_ids: List of post IDs
+            
+        Returns:
+            Dictionary mapping post_id to reaction_type
+        """
+        # This would typically query the Reaction collection
+        # For now, return empty dict as placeholder
+        return {}
+    
+    def _generate_slug(self, title: str) -> str:
+        """Generate URL slug from title.
+        
+        Args:
+            title: Post title
+            
+        Returns:
+            URL-friendly slug
+        """
+        # Convert to lowercase and replace spaces with hyphens
+        slug = title.lower().strip()
+        # Remove special characters except hyphens and alphanumeric
+        slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+        # Replace multiple spaces/hyphens with single hyphen
+        slug = re.sub(r"[\s-]+", "-", slug)
+        # Remove leading/trailing hyphens
+        slug = slug.strip("-")
+        
+        return slug or "untitled"
+    
+    async def _ensure_unique_slug(self, base_slug: str) -> str:
+        """Ensure slug is unique by appending number if necessary.
+        
+        Args:
+            base_slug: Base slug to make unique
+            
+        Returns:
+            Unique slug
+        """
+        slug = base_slug
+        counter = 1
+        
+        while await Post.find_one(Post.slug == slug) is not None:
+            slug = f"{base_slug}-{counter}"
+            counter += 1
+        
+        return slug

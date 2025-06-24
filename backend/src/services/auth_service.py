@@ -113,7 +113,7 @@ class AuthService:
             JWT access token
         """
         payload = {
-            "sub": user.id,
+            "sub": str(user.id),  # ObjectId를 문자열로 변환
             "email": user.email
         }
         return self.jwt_manager.create_token(payload, TokenType.ACCESS)
@@ -128,7 +128,7 @@ class AuthService:
             JWT refresh token
         """
         payload = {
-            "sub": user.id,
+            "sub": str(user.id),  # ObjectId를 문자열로 변환
             "email": user.email
         }
         return self.jwt_manager.create_token(payload, TokenType.REFRESH)

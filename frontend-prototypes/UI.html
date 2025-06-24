@@ -845,7 +845,7 @@
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">메인</div>
-                    <a class="nav-item active" onclick="showPage('dashboard')">
+                    <a class="nav-item active" onclick="showPage('dashboard', this)">
                         <span class="nav-icon">📊</span>
                         대시보드
                     </a>
@@ -853,11 +853,11 @@
                 
                 <div class="nav-section">
                     <div class="nav-section-title">인증</div>
-                    <a class="nav-item" onclick="showPage('login')">
+                    <a class="nav-item" onclick="showPage('login', this)">
                         <span class="nav-icon">🔐</span>
                         로그인
                     </a>
-                    <a class="nav-item" onclick="showPage('register')">
+                    <a class="nav-item" onclick="showPage('register', this)">
                         <span class="nav-icon">📝</span>
                         회원가입
                     </a>
@@ -865,15 +865,15 @@
                 
                 <div class="nav-section">
                     <div class="nav-section-title">콘텐츠</div>
-                    <a class="nav-item" onclick="showPage('posts')">
+                    <a class="nav-item" onclick="showPage('posts', this)">
                         <span class="nav-icon">📄</span>
                         게시글 목록
                     </a>
-                    <a class="nav-item" onclick="showPage('post-detail')">
+                    <a class="nav-item" onclick="showPage('post-detail', this)">
                         <span class="nav-icon">📖</span>
                         게시글 상세
                     </a>
-                    <a class="nav-item" onclick="showPage('post-create')">
+                    <a class="nav-item" onclick="showPage('post-create', this)">
                         <span class="nav-icon">✍️</span>
                         게시글 작성
                     </a>
@@ -954,7 +954,7 @@
                                                 <input type="password" class="form-input" placeholder="password" value="password123">
                                             </div>
                                             <div class="test-buttons">
-                                                <button class="btn-test" onclick="testApiCall(this, 'POST', '/auth/login')">
+                                                <button class="btn-test" id="loginApiButton" data-method="POST" data-endpoint="/auth/login">
                                                     🚀 API 호출
                                                 </button>
                                                 <button class="btn-clear" onclick="clearApiForm(this)">지우기</button>
@@ -1248,12 +1248,21 @@
                     <div class="posts-filters">
                         <div class="filters-row">
                             <div class="filter-group">
-                                <label class="filter-label">타입</label>
-                                <select class="filter-select" onchange="filterPosts()">
+                                <label class="filter-label">서비스</label>
+                                <select class="filter-select" id="serviceFilter" onchange="updateTypeFilter()">
                                     <option value="">전체</option>
-                                    <option value="자유게시판">자유게시판</option>
-                                    <option value="질문답변">질문답변</option>
-                                    <option value="공지사항">공지사항</option>
+                                    <option value="apartment" selected>아파트</option>
+                                    <option value="shopping">쇼핑</option>
+                                    <option value="community">커뮤니티</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">타입</label>
+                                <select class="filter-select" id="typeFilter" onchange="filterPosts()">
+                                    <option value="">전체</option>
+                                    <option value="입주 정보">입주 정보</option>
+                                    <option value="생활 정보">생활 정보</option>
+                                    <option value="이야기">이야기</option>
                                 </select>
                             </div>
                             <div class="filter-group">
@@ -1342,19 +1351,18 @@
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">서비스</label>
-                                    <select class="form-input" name="service" required>
-                                        <option value="community">커뮤니티</option>
-                                        <option value="shopping">쇼핑</option>
+                                    <select class="form-input" name="service" id="createPostService" required onchange="updateCreatePostType()">
                                         <option value="apartment">아파트</option>
+                                        <option value="shopping">쇼핑</option>
+                                        <option value="community">커뮤니티</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">타입</label>
-                                    <select class="form-input" name="type" required>
-                                        <option value="자유게시판">자유게시판</option>
-                                        <option value="질문답변">질문답변</option>
-                                        <option value="공지사항">공지사항</option>
-                                        <option value="후기">후기</option>
+                                    <select class="form-input" name="type" id="createPostType" required>
+                                        <option value="입주 정보">입주 정보</option>
+                                        <option value="생활 정보">생활 정보</option>
+                                        <option value="이야기">이야기</option>
                                     </select>
                                 </div>
                                 <div class="form-group">
@@ -1400,43 +1408,134 @@
     <div class="notification" id="notification"></div>
     
     <script>
+        // API 설정
+        const API_BASE_URL = 'http://localhost:8000';
+        
         // 전역 상태
         let currentUser = null;
         let posts = [];
         let comments = [];
         let reactions = {};
         
+        // API 헬퍼 함수
+        function getAuthHeaders() {
+            const token = localStorage.getItem('authToken');
+            console.log('Current auth token:', token ? token.substring(0, 20) + '...' : 'null');
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+        
+        async function apiCall(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...getAuthHeaders(),
+                    ...options.headers
+                }
+            };
+            
+            console.log('Making API call to:', url);
+            console.log('Options:', { ...defaultOptions, ...options });
+            
+            try {
+                const response = await fetch(url, { ...defaultOptions, ...options });
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('API error response:', errorText);
+                    
+                    // Handle authentication errors
+                    if (response.status === 401) {
+                        // Clear invalid token and redirect to login
+                        localStorage.removeItem('authToken');
+                        localStorage.removeItem('currentUser');
+                        currentUser = null;
+                        updateAuthUI();
+                        showNotification('인증이 만료되었습니다. 다시 로그인해주세요.', 'error');
+                        showPage('login');
+                        return;
+                    }
+                    
+                    // Try to parse as JSON for better error messages
+                    try {
+                        const errorData = JSON.parse(errorText);
+                        throw new Error(`HTTP ${response.status}: ${errorData.detail || errorText}`);
+                    } catch {
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    }
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('API call failed:', error);
+                showNotification('API 호출 실패: ' + error.message, 'error');
+                throw error;
+            }
+        }
+        
+        // 서비스별 타입 정의
+        const serviceTypes = {
+            apartment: ["입주 정보", "생활 정보", "이야기"],
+            shopping: ["상품 문의", "배송 문의", "교환/환불", "기타"],
+            community: ["자유게시판", "질문답변", "공지사항", "후기"]
+        };
+        
         // 모의 데이터
         const mockPosts = [
             {
-                id: 1,
-                title: "FastAPI 개발 가이드",
-                content: "FastAPI를 사용한 효율적인 API 개발 방법에 대해 설명합니다...",
-                author: "developer1",
-                type: "자유게시판",
-                service: "community",
+                id: "post1",
+                title: "입주자 모집 안내문",
+                content: "2024년 3월 입주예정인 신규 아파트 입주자를 모집합니다. 자세한 내용은...",
+                author_id: "user1",
+                slug: "apt-move-in-guide-2024",
+                service: "apartment",
+                metadata: {
+                    type: "입주 정보",
+                    tags: ["신규입주", "2024년"],
+                    visibility: "public"
+                },
                 created_at: "2024-01-15T14:30:00",
-                stats: { views: 124, likes: 15, dislikes: 2, comments: 8, bookmarks: 12 }
+                view_count: 324,
+                like_count: 45,
+                dislike_count: 2,
+                comment_count: 18
             },
             {
-                id: 2,
-                title: "UI 컴포넌트 디자인 패턴",
-                content: "재사용 가능한 UI 컴포넌트 설계에 대한 모범 사례...",
-                author: "designer1",
-                type: "질문답변",
-                service: "community",
+                id: "post2",
+                title: "주차장 이용 규정 변경 안내",
+                content: "아파트 주차장 이용 규정이 다음과 같이 변경됩니다...",
+                author_id: "user2",
+                slug: "parking-rule-change-2024",
+                service: "apartment",
+                metadata: {
+                    type: "생활 정보",
+                    tags: ["주차", "규정"],
+                    visibility: "public"
+                },
                 created_at: "2024-01-14T09:15:00",
-                stats: { views: 89, likes: 12, dislikes: 1, comments: 5, bookmarks: 8 }
+                view_count: 189,
+                like_count: 22,
+                dislike_count: 5,
+                comment_count: 12
             },
             {
-                id: 3,
-                title: "API 테스트 자동화",
-                content: "API 테스트를 자동화하는 방법과 도구들...",
-                author: "tester1",
-                type: "공지사항",
-                service: "community",
+                id: "post3",
+                title: "관리비 절약 노하우",
+                content: "매달 나가는 관리비를 절약하는 방법들을 공유합니다...",
+                author_id: "user3",
+                slug: "save-management-fee-tips",
+                service: "apartment",
+                metadata: {
+                    type: "이야기",
+                    tags: ["절약", "관리비"],
+                    visibility: "public"
+                },
                 created_at: "2024-01-13T16:45:00",
-                stats: { views: 67, likes: 9, dislikes: 0, comments: 3, bookmarks: 5 }
+                view_count: 567,
+                like_count: 89,
+                dislike_count: 1,
+                comment_count: 34
             }
         ];
         
@@ -1461,23 +1560,83 @@
             }
         ];
         
+        // 게시글 API 함수들
+        async function loadPosts() {
+            try {
+                const response = await apiCall('/api/posts/');
+                posts = response.items || [];
+                renderPosts();
+            } catch (error) {
+                // API 실패시 모의 데이터 사용
+                console.warn('Failed to load posts from API, using mock data');
+                posts = [...mockPosts];
+                renderPosts();
+            }
+        }
+        
+        async function createPost(postData) {
+            try {
+                const newPost = await apiCall('/api/posts/', {
+                    method: 'POST',
+                    body: JSON.stringify(postData)
+                });
+                showNotification('게시글이 성공적으로 작성되었습니다!', 'success');
+                await loadPosts(); // 목록 새로고침
+                return newPost;
+            } catch (error) {
+                showNotification('게시글 작성에 실패했습니다.', 'error');
+                throw error;
+            }
+        }
+        
+        async function searchPosts(query) {
+            try {
+                const response = await apiCall(`/api/posts/search?q=${encodeURIComponent(query)}`);
+                posts = response.items || [];
+                renderPosts();
+            } catch (error) {
+                showNotification('검색에 실패했습니다.', 'error');
+            }
+        }
+        
         // 초기화
-        function init() {
-            posts = [...mockPosts];
+        async function init() {
+            // 게시글 로드
+            await loadPosts();
+            
+            // 댓글은 모의 데이터 사용 (아직 구현 안됨)
             comments = [...mockComments];
-            renderPosts();
             renderComments();
             
             // 로그인 상태 확인
             const token = localStorage.getItem('authToken');
             if (token) {
-                currentUser = { email: 'test@test.com', display_name: 'Test User' };
-                updateAuthUI();
+                try {
+                    // 토큰이 있으면 사용자 정보를 localStorage에서 가져오거나 기본값 설정
+                    const storedUser = localStorage.getItem('currentUser');
+                    if (storedUser) {
+                        currentUser = JSON.parse(storedUser);
+                    } else {
+                        // 기본 사용자 정보 설정 (실제로는 토큰에서 디코드하거나 API 호출)
+                        currentUser = { 
+                            email: 'user@example.com', 
+                            display_name: 'User'
+                        };
+                    }
+                    updateAuthUI();
+                } catch (error) {
+                    console.error('Login state check error:', error);
+                    // 토큰이 유효하지 않으면 제거
+                    localStorage.removeItem('authToken');
+                    localStorage.removeItem('currentUser');
+                    currentUser = null;
+                    updateAuthUI();
+                }
             }
         }
         
         // 페이지 전환
-        function showPage(pageId) {
+        function showPage(pageId, targetElement = null) {
             // 모든 페이지 숨기기
             document.querySelectorAll('.page').forEach(page => {
                 page.classList.remove('active');
@@ -1490,7 +1649,20 @@
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('active');
             });
-            event.target.classList.add('active');
+            
+            // targetElement가 전달되면 활성화, 아니면 pageId로 찾기
+            if (targetElement) {
+                targetElement.classList.add('active');
+            } else {
+                // pageId에 해당하는 nav-item 찾기
+                const navItems = document.querySelectorAll('.nav-item');
+                navItems.forEach(item => {
+                    const onclick = item.getAttribute('onclick');
+                    if (onclick && onclick.includes(`'${pageId}'`)) {
+                        item.classList.add('active');
+                    }
+                });
+            }
             
             // 페이지 제목 업데이트
             const titles = {
@@ -1526,28 +1698,42 @@
             btn.innerHTML = '<span class="loading"></span> 로그인 중...';
             
             try {
-                // API 호출 시뮬레이션
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
                 const email = formData.get('email');
                 const password = formData.get('password');
                 
-                // 모의 로그인 검증
-                if (email === 'test@test.com' && password === 'password123') {
-                    const token = 'mock_jwt_token_' + Date.now();
-                    localStorage.setItem('authToken', token);
-                    
-                    currentUser = { 
-                        email: email, 
-                        display_name: 'Test User',
-                        id: '12345'
-                    };
-                    
-                    updateAuthUI();
-                    showNotification('로그인 성공!', 'success');
-                    showPage('dashboard');
+                if (!email || !password) {
+                    throw new Error('이메일과 비밀번호를 모두 입력해주세요.');
+                }
+                
+                // 실제 API 호출 (OAuth2 FormData 형식)
+                const loginFormData = new FormData();
+                loginFormData.append('username', email);  // OAuth2에서는 username 필드 사용
+                loginFormData.append('password', password);
+                
+                const response = await fetch(`${API_BASE_URL}/auth/login`, {
+                    method: 'POST',
+                    body: loginFormData  // FormData는 Content-Type 헤더를 자동으로 설정
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // 로그인 성공
+                    if (data.access_token) {
+                        localStorage.setItem('authToken', data.access_token);
+                        currentUser = data.user || { email: email, display_name: email.split('@')[0] };
+                        
+                        // 사용자 정보도 localStorage에 저장
+                        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+                        
+                        updateAuthUI();
+                        showNotification('로그인 성공!', 'success');
+                        showPage('dashboard');
+                    } else {
+                        throw new Error('토큰을 받지 못했습니다.');
+                    }
                 } else {
-                    throw new Error('잘못된 이메일 또는 비밀번호입니다.');
+                    throw new Error(data.detail || '로그인에 실패했습니다.');
                 }
             } catch (error) {
                 showNotification(error.message, 'error');
@@ -1572,11 +1758,43 @@
                     throw new Error('비밀번호가 일치하지 않습니다.');
                 }
                 
-                // API 호출 시뮬레이션
-                await new Promise(resolve => setTimeout(resolve, 1500));
+                const email = formData.get('email');
+                const userHandle = formData.get('user_handle');
+                const displayName = formData.get('display_name');
+                const password = formData.get('password');
                 
-                showNotification('회원가입 완료! 로그인해주세요.', 'success');
-                showPage('login');
+                if (!email || !userHandle || !password) {
+                    throw new Error('필수 정보를 모두 입력해주세요.');
+                }
+                
+                // 실제 API 호출
+                const registerData = {
+                    email: email,
+                    user_handle: userHandle,
+                    password: password
+                };
+                
+                // display_name이 있으면 추가
+                if (displayName && displayName.trim()) {
+                    registerData.display_name = displayName.trim();
+                }
+                
+                const response = await fetch(`${API_BASE_URL}/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(registerData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showNotification('회원가입 완료! 로그인해주세요.', 'success');
+                    showPage('login');
+                } else {
+                    throw new Error(data.detail || '회원가입에 실패했습니다.');
+                }
             } catch (error) {
                 showNotification(error.message, 'error');
             } finally {
@@ -1587,6 +1805,7 @@
         
         function logout() {
             localStorage.removeItem('authToken');
+            localStorage.removeItem('currentUser');
             currentUser = null;
             updateAuthUI();
             showNotification('로그아웃되었습니다.', 'success');
@@ -1594,16 +1813,26 @@
         }
         
         function updateAuthUI() {
-            const authUser = document.getElementById('authUser');
-            const logoutBtn = document.querySelector('.btn-logout');
-            
-            if (currentUser) {
-                authUser.textContent = `👤 ${currentUser.display_name || currentUser.email}`;
-                authUser.style.display = 'block';
-                logoutBtn.style.display = 'block';
-            } else {
-                authUser.style.display = 'none';
-                logoutBtn.style.display = 'none';
+            try {
+                const authUser = document.getElementById('authUser');
+                const logoutBtn = document.querySelector('.btn-logout');
+                
+                if (!authUser || !logoutBtn) {
+                    console.error('Auth UI elements not found');
+                    return;
+                }
+                
+                if (currentUser) {
+                    const displayText = currentUser.display_name || currentUser.email || 'User';
+                    authUser.textContent = `👤 ${displayText}`;
+                    authUser.style.display = 'block';
+                    logoutBtn.style.display = 'block';
+                } else {
+                    authUser.style.display = 'none';
+                    logoutBtn.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Error updating auth UI:', error);
             }
         }
         
@@ -1612,44 +1841,74 @@
             const postsList = document.getElementById('postsList');
             if (!postsList) return;
             
-            postsList.innerHTML = posts.map(post => `
-                <div class="post-card" onclick="showPostDetail(${post.id})">
-                    <div class="post-meta">
-                        <span class="post-type">${post.type}</span>
-                        <span>•</span>
-                        <span>${formatDate(post.created_at)}</span>
-                        <span>•</span>
-                        <span>작성자: ${post.author}</span>
+            postsList.innerHTML = posts.map(post => {
+                const tags = post.metadata?.tags || [];
+                const type = post.metadata?.type || '';
+                
+                return `
+                    <div class="post-card" onclick="showPostDetail('${post.slug || post.id}')">
+                        <div class="post-meta">
+                            <span class="post-type">${type}</span>
+                            <span>•</span>
+                            <span>작성자: ${post.author_id || 'Unknown'}</span>
+                            <span>•</span>
+                            <span>${formatDate(post.created_at)}</span>
+                        </div>
+                        <div class="post-title">${post.title}</div>
+                        <div class="post-stats">
+                            <span>👁 ${post.view_count || 0}</span>
+                            <span>👍 ${post.like_count || 0}</span>
+                            <span>👎 ${post.dislike_count || 0}</span>
+                            <span>💬 ${post.comment_count || 0}</span>
+                            ${tags.length > 0 ? `<span>🏷️ ${tags.join(', ')}</span>` : ''}
+                        </div>
                     </div>
-                    <div class="post-title">${post.title}</div>
-                    <div class="post-stats">
-                        <span>👁 ${post.stats.views}</span>
-                        <span>👍 ${post.stats.likes}</span>
-                        <span>👎 ${post.stats.dislikes}</span>
-                        <span>💬 ${post.stats.comments}</span>
-                        <span>🔖 ${post.stats.bookmarks}</span>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
         
-        function showPostDetail(postId) {
-            const post = posts.find(p => p.id === postId);
+        function showPostDetail(postSlugOrId) {
+            const post = posts.find(p => p.slug === postSlugOrId || p.id === postSlugOrId);
             if (!post) return;
             
+            // 게시글 데이터 저장 (댓글 등에서 사용)
+            window.currentPost = post;
+            
+            // 상세 페이지 업데이트
             document.getElementById('postDetailTitle').textContent = post.title;
             document.getElementById('postDetailContent').innerHTML = `<p>${post.content}</p>`;
-            document.getElementById('likeCount').textContent = post.stats.likes;
-            document.getElementById('dislikeCount').textContent = post.stats.dislikes;
-            document.getElementById('bookmarkCount').textContent = post.stats.bookmarks;
             
+            // 메타 정보 업데이트
+            const detailMeta = document.querySelector('.post-detail-meta');
+            detailMeta.innerHTML = `
+                <span class="post-type">${post.metadata?.type || ''}</span>
+                <span>•</span>
+                <span>작성자: ${post.author_id || 'Unknown'}</span>
+                <span>•</span>
+                <span>${formatDate(post.created_at)}</span>
+            `;
+            
+            // 통계 업데이트
+            document.getElementById('likeCount').textContent = post.like_count || 0;
+            document.getElementById('dislikeCount').textContent = post.dislike_count || 0;
+            document.getElementById('bookmarkCount').textContent = post.bookmark_count || 0;
+            
+            // 페이지 전환
             showPage('post-detail');
+            
+            // 조회수 증가 (실제로는 API 호출)
+            post.view_count = (post.view_count || 0) + 1;
         }
         
         async function handleCreatePost(event) {
             event.preventDefault();
             
-            if (!currentUser) {
+            // Debug token status
+            const token = localStorage.getItem('authToken');
+            console.log('Create post - Token exists:', !!token);
+            console.log('Create post - Current user:', currentUser);
+            
+            if (!currentUser || !token) {
                 showNotification('로그인이 필요합니다.', 'error');
                 showPage('login');
                 return;
@@ -1663,24 +1922,20 @@
             btn.innerHTML = '<span class="loading"></span> 작성 중...';
             
             try {
-                // API 호출 시뮬레이션
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                
-                const newPost = {
-                    id: posts.length + 1,
+                const postData = {
                     title: formData.get('title'),
                     content: formData.get('content'),
-                    author: currentUser.email,
-                    type: formData.get('type'),
                     service: formData.get('service'),
-                    created_at: new Date().toISOString(),
-                    stats: { views: 0, likes: 0, dislikes: 0, comments: 0, bookmarks: 0 }
+                    metadata: {
+                        type: formData.get('type'),
+                        tags: formData.get('tags') ? formData.get('tags').split(',').map(tag => tag.trim().slice(0, 10)).slice(0, 3) : [],
+                        visibility: 'public'
+                    }
                 };
                 
-                posts.unshift(newPost);
-                renderPosts();
+                console.log('Sending post data:', postData);
                 
-                showNotification('게시글이 작성되었습니다!', 'success');
+                await createPost(postData);
                 showPage('posts');
                 form.reset();
             } catch (error) {
@@ -1789,16 +2044,67 @@
             showNotification(`${type === 'like' ? '좋아요' : type === 'dislike' ? '싫어요' : '북마크'}가 ${reactions[type] ? '추가' : '취소'}되었습니다.`, 'success');
         }
         
+        // 서비스별 타입 업데이트
+        function updateTypeFilter() {
+            const serviceFilter = document.getElementById('serviceFilter');
+            const typeFilter = document.getElementById('typeFilter');
+            const selectedService = serviceFilter.value;
+            
+            // 타입 옵션 초기화
+            typeFilter.innerHTML = '<option value="">전체</option>';
+            
+            // 선택된 서비스의 타입들 추가
+            if (selectedService && serviceTypes[selectedService]) {
+                serviceTypes[selectedService].forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type;
+                    typeFilter.appendChild(option);
+                });
+            }
+            
+            // 필터 적용
+            filterPosts();
+        }
+        
+        // 게시글 작성 폼의 타입 업데이트
+        function updateCreatePostType() {
+            const serviceSelect = document.getElementById('createPostService');
+            const typeSelect = document.getElementById('createPostType');
+            const selectedService = serviceSelect.value;
+            
+            // 타입 옵션 초기화
+            typeSelect.innerHTML = '';
+            
+            // 선택된 서비스의 타입들 추가
+            if (selectedService && serviceTypes[selectedService]) {
+                serviceTypes[selectedService].forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type;
+                    typeSelect.appendChild(option);
+                });
+            }
+        }
+        
         // 필터링 및 검색
         function filterPosts() {
-            const select = event.target;
-            const filterType = select.value;
+            const serviceFilter = document.getElementById('serviceFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
             
-            const filteredPosts = filterType 
-                ? mockPosts.filter(post => post.type === filterType)
-                : mockPosts;
+            let filteredPosts = [...mockPosts];
             
-            posts = [...filteredPosts];
+            // 서비스 필터
+            if (serviceFilter) {
+                filteredPosts = filteredPosts.filter(post => post.service === serviceFilter);
+            }
+            
+            // 타입 필터
+            if (typeFilter) {
+                filteredPosts = filteredPosts.filter(post => post.metadata?.type === typeFilter);
+            }
+            
+            posts = filteredPosts;
             renderPosts();
         }
         
@@ -1810,9 +2116,9 @@
                 if (sortBy === 'created_at') {
                     return new Date(b.created_at) - new Date(a.created_at);
                 } else if (sortBy === 'views') {
-                    return b.stats.views - a.stats.views;
+                    return (b.view_count || 0) - (a.view_count || 0);
                 } else if (sortBy === 'likes') {
-                    return b.stats.likes - a.stats.likes;
+                    return (b.like_count || 0) - (a.like_count || 0);
                 }
                 return 0;
             });
@@ -1821,14 +2127,29 @@
         }
         
         function searchPosts(query) {
-            const filteredPosts = query.trim()
-                ? mockPosts.filter(post => 
-                    post.title.toLowerCase().includes(query.toLowerCase()) ||
-                    post.content.toLowerCase().includes(query.toLowerCase())
-                  )
-                : mockPosts;
+            const serviceFilter = document.getElementById('serviceFilter').value;
+            const typeFilter = document.getElementById('typeFilter').value;
             
-            posts = [...filteredPosts];
+            let filteredPosts = [...mockPosts];
+            
+            // 먼저 서비스/타입 필터 적용
+            if (serviceFilter) {
+                filteredPosts = filteredPosts.filter(post => post.service === serviceFilter);
+            }
+            if (typeFilter) {
+                filteredPosts = filteredPosts.filter(post => post.metadata?.type === typeFilter);
+            }
+            
+            // 검색어 필터
+            if (query.trim()) {
+                filteredPosts = filteredPosts.filter(post => 
+                    post.title.toLowerCase().includes(query.toLowerCase()) ||
+                    post.content.toLowerCase().includes(query.toLowerCase()) ||
+                    (post.metadata?.tags || []).some(tag => tag.toLowerCase().includes(query.toLowerCase()))
+                );
+            }
+            
+            posts = filteredPosts;
             renderPosts();
         }
         
@@ -1851,6 +2172,9 @@
         }
         
         async function testApiCall(button, method, endpoint) {
+            console.log('=== API Call Started ===');
+            console.log('Method:', method, 'Endpoint:', endpoint);
+            
             const panel = button.closest('.test-panel-content');
             const form = panel.querySelector('.test-form');
             const responseSection = panel.querySelector('.api-response-section');
@@ -1861,125 +2185,145 @@
             button.textContent = '⏳ 요청중...';
             button.disabled = true;
             
-            // 폼 데이터 수집
-            const formData = {};
-            const inputs = form.querySelectorAll('input, textarea, select');
-            inputs.forEach(input => {
-                if (input.value && !input.placeholder.includes('Bearer')) {
-                    // 한글 라벨을 영문 필드명으로 매핑
-                    const labelText = input.previousElementSibling.textContent.trim();
-                    let key = '';
-                    
-                    // 라벨별 필드명 매핑
-                    switch(labelText) {
-                        case '이메일':
-                            key = 'email';
-                            break;
-                        case '사용자 핸들':
-                            key = 'user_handle';
-                            break;
-                        case '표시 이름':
-                        case '표시 이름 (선택)':
-                            key = 'display_name';
-                            break;
-                        case '비밀번호':
-                            key = 'password';
-                            break;
-                        case '제목':
-                            key = 'title';
-                            break;
-                        case '내용':
-                            key = 'content';
-                            break;
-                        case '서비스':
-                            key = 'service';
-                            break;
-                        case '페이지':
-                            key = 'page';
-                            break;
-                        case '개수':
-                            key = 'limit';
-                            break;
-                        case '타입 (선택)':
-                        case '타입':
-                            key = 'type';
-                            break;
-                        case '게시글 Slug':
-                            key = 'slug';
-                            break;
-                        default:
-                            // 기본적으로 영문 변환
-                            key = labelText.toLowerCase().replace(/[^a-z0-9]/g, '_');
-                    }
-                    
-                    if (key) {
-                        formData[key] = input.value.trim();
-                    }
-                }
-            });
-            
-            // Authorization 헤더 처리
-            const authInput = form.querySelector('input[placeholder*="Bearer"]');
-            const headers = {
-                'Content-Type': 'application/json'
-            };
-            if (authInput && authInput.value) {
-                headers['Authorization'] = authInput.value;
-            }
-            
             try {
-                // 실제 FastAPI 서버 호출
-                const apiUrl = `http://localhost:8000${endpoint}`;
-                let response;
+                let requestData = {};
                 
-                if (method === 'GET') {
-                    // GET 요청의 경우 쿼리 파라미터로 전달
-                    const params = new URLSearchParams(formData);
-                    response = await fetch(`${apiUrl}?${params}`, {
-                        method: 'GET',
-                        headers: headers
+                // 로그인 API의 경우 직접 데이터 수집
+                if (endpoint === '/auth/login') {
+                    const emailInput = form.querySelector('input[type="email"]');
+                    const passwordInput = form.querySelector('input[type="password"]');
+                    
+                    console.log('Email input:', emailInput ? emailInput.value : 'not found');
+                    console.log('Password input:', passwordInput ? passwordInput.value : 'not found');
+                    
+                    const email = emailInput ? emailInput.value.trim() : '';
+                    const password = passwordInput ? passwordInput.value.trim() : '';
+                    
+                    if (!email || !password) {
+                        throw new Error('이메일과 비밀번호를 모두 입력해주세요.');
+                    }
+                    
+                    // OAuth2 표준 FormData 형식
+                    const formData = new FormData();
+                    formData.append('username', email);  // OAuth2에서는 username 필드 사용
+                    formData.append('password', password);
+                    
+                    console.log('Login FormData created:', { username: email, password: '***' });
+                    
+                    const response = await fetch(`http://localhost:8000${endpoint}`, {
+                        method: 'POST',
+                        body: formData  // FormData는 Content-Type 헤더를 자동으로 설정
                     });
+                    
+                    console.log('Response status:', response.status);
+                    const data = await response.json();
+                    console.log('Response data:', data);
+                    
+                    const apiResponse = {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: data,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    // 응답 표시
+                    responseContent.textContent = JSON.stringify(apiResponse, null, 2);
+                    responseSection.style.display = 'block';
+                    
+                    if (response.ok) {
+                        showNotification('로그인 API 테스트 성공!', 'success');
+                        
+                        // 로그인 성공 시 토큰 저장
+                        if (data.access_token) {
+                            localStorage.setItem('authToken', data.access_token);
+                            currentUser = data.user || { email: email };
+                            updateAuthUI();
+                        }
+                    } else {
+                        showNotification(`로그인 API 테스트 실패: ${data.detail || '알 수 없는 오류'}`, 'error');
+                    }
+                    
                 } else {
-                    // POST 요청의 경우 JSON body로 전달
-                    response = await fetch(apiUrl, {
-                        method: method,
-                        headers: headers,
-                        body: JSON.stringify(formData)
+                    // 다른 API들을 위한 기존 로직
+                    const formData = {};
+                    const inputs = form.querySelectorAll('input, textarea, select');
+                    
+                    inputs.forEach(input => {
+                        if (input.value && !input.placeholder.includes('Bearer')) {
+                            const labelElement = input.previousElementSibling;
+                            const labelText = labelElement ? labelElement.textContent.trim() : '';
+                            let key = '';
+                            
+                            switch(labelText) {
+                                case '제목': key = 'title'; break;
+                                case '내용': key = 'content'; break;
+                                case '서비스': key = 'service'; break;
+                                case '페이지': key = 'page'; break;
+                                case '개수': key = 'limit'; break;
+                                case '타입 (선택)':
+                                case '타입': key = 'type'; break;
+                                case '게시글 Slug': key = 'slug'; break;
+                                default:
+                                    key = labelText.toLowerCase().replace(/[^a-z0-9]/g, '_');
+                            }
+                            
+                            if (key) {
+                                formData[key] = input.value.trim();
+                            }
+                        }
                     });
+                    
+                    const headers = { 'Content-Type': 'application/json' };
+                    
+                    // Authorization 헤더 처리
+                    const authInput = form.querySelector('input[placeholder*="Bearer"]');
+                    if (authInput && authInput.value) {
+                        headers['Authorization'] = authInput.value;
+                    }
+                    
+                    let response;
+                    const apiUrl = `http://localhost:8000${endpoint}`;
+                    
+                    if (method === 'GET') {
+                        const params = new URLSearchParams(formData);
+                        response = await fetch(`${apiUrl}?${params}`, {
+                            method: 'GET',
+                            headers: headers
+                        });
+                    } else {
+                        response = await fetch(apiUrl, {
+                            method: method,
+                            headers: headers,
+                            body: JSON.stringify(formData)
+                        });
+                    }
+                    
+                    const data = await response.json();
+                    const apiResponse = {
+                        status: response.status,
+                        statusText: response.statusText,
+                        data: data,
+                        timestamp: new Date().toISOString()
+                    };
+                    
+                    responseContent.textContent = JSON.stringify(apiResponse, null, 2);
+                    responseSection.style.display = 'block';
+                    
+                    if (response.ok) {
+                        showNotification(`${endpoint} API 테스트 성공!`, 'success');
+                    } else {
+                        showNotification(`${endpoint} API 테스트 실패: ${data.detail || '알 수 없는 오류'}`, 'error');
+                    }
                 }
-                
-                const data = await response.json();
-                
-                const apiResponse = {
-                    status: response.status,
-                    statusText: response.statusText,
-                    data: data,
-                    timestamp: new Date().toISOString()
-                };
-                
-                // 응답 표시
-                responseContent.textContent = JSON.stringify(apiResponse, null, 2);
-                responseSection.style.display = 'block';
                 
                 // 응답 섹션으로 스크롤
                 setTimeout(() => {
                     responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 100);
                 
-                if (response.ok) {
-                    showNotification(`${endpoint} API 테스트 성공!`, 'success');
-                    
-                    // 로그인 성공 시 토큰 저장
-                    if (endpoint === '/auth/login' && data.access_token) {
-                        localStorage.setItem('authToken', data.access_token);
-                        currentUser = data.user || { email: formData.email };
-                        updateAuthUI();
-                    }
-                } else {
-                    showNotification(`${endpoint} API 테스트 실패: ${data.detail || '알 수 없는 오류'}`, 'error');
-                }
-                
             } catch (error) {
+                console.error('API Call Error:', error);
+                
                 const errorResponse = {
                     error: "API 호출 실패",
                     message: error.message,
@@ -1989,16 +2333,16 @@
                 responseContent.textContent = JSON.stringify(errorResponse, null, 2);
                 responseSection.style.display = 'block';
                 
-                // 응답 섹션으로 스크롤
+                showNotification(`API 테스트 실패: ${error.message}`, 'error');
+                
                 setTimeout(() => {
                     responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                 }, 100);
-                
-                showNotification(`${endpoint} API 테스트 실패: ${error.message}`, 'error');
             } finally {
                 // 버튼 복원
                 button.textContent = originalText;
                 button.disabled = false;
+                console.log('=== API Call Ended ===');
             }
         }
         
@@ -2089,8 +2433,90 @@
             }
         });
         
+        // 로그인 API 호출 함수
+        async function testApiCallNew(button, method, endpoint) {
+            const originalText = button.textContent;
+            button.textContent = '⏳ 로그인 중...';
+            button.disabled = true;
+            
+            try {
+                // 로그인 데이터 수집
+                const formData = new FormData();
+                formData.append('username', 'test@test.com');
+                formData.append('password', 'password123');
+                
+                const response = await fetch('http://localhost:8000/auth/login', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // 응답 표시
+                const responseSection = button.closest('.test-panel-content').querySelector('.api-response-section');
+                const responseContent = responseSection.querySelector('.response-content pre');
+                
+                const apiResponse = {
+                    status: response.status,
+                    statusText: response.statusText,
+                    data: data,
+                    timestamp: new Date().toISOString()
+                };
+                
+                responseContent.textContent = JSON.stringify(apiResponse, null, 2);
+                responseSection.style.display = 'block';
+                
+                if (response.ok) {
+                    showNotification('로그인 성공!', 'success');
+                    
+                    // 로그인 성공 시 토큰 저장
+                    if (data.access_token) {
+                        localStorage.setItem('authToken', data.access_token);
+                        currentUser = data.user || { email: 'test@test.com' };
+                        updateAuthUI();
+                    }
+                } else {
+                    showNotification('로그인 실패: ' + (data.detail || '알 수 없는 오류'), 'error');
+                }
+                
+                // 응답 섹션으로 스크롤
+                setTimeout(() => {
+                    responseSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }, 100);
+                
+            } catch (error) {
+                const errorResponse = {
+                    error: "API 호출 실패",
+                    message: error.message,
+                    timestamp: new Date().toISOString()
+                };
+                
+                const responseSection = button.closest('.test-panel-content').querySelector('.api-response-section');
+                const responseContent = responseSection.querySelector('.response-content pre');
+                responseContent.textContent = JSON.stringify(errorResponse, null, 2);
+                responseSection.style.display = 'block';
+                
+                showNotification('API 호출 오류: ' + error.message, 'error');
+            } finally {
+                button.textContent = originalText;
+                button.disabled = false;
+            }
+        }
+        
         // 페이지 로드 시 초기화
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', function() {
+            // 로그인 API 버튼 이벤트 리스너 추가
+            const loginButton = document.getElementById('loginApiButton');
+            if (loginButton) {
+                loginButton.addEventListener('click', function() {
+                    const method = this.dataset.method;
+                    const endpoint = this.dataset.endpoint;
+                    testApiCallNew(this, method, endpoint);
+                });
+            }
+            
+            init();
+        });
         
         // 모바일 사이드바 토글
         function toggleSidebar() {

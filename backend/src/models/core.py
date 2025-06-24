@@ -6,11 +6,16 @@ from pymongo import ASCENDING, DESCENDING
 
 
 # Enums and Types
-ServiceType = Literal["X", "Threads", "Bluesky", "Mastodon"]
+ServiceType = Literal["shopping", "apartment", "community", "X", "Threads", "Bluesky", "Mastodon"]
 PostStatus = Literal["draft", "published", "archived", "deleted"]
 UserStatus = Literal["active", "inactive", "suspended"]
-ReactionType = Literal["like", "love", "laugh", "wow", "sad", "angry"]
+CommentStatus = Literal["active", "deleted", "hidden", "pending"]
 TargetType = Literal["post", "comment"]
+
+# Service-specific post types
+ShoppingPostType = Literal["상품 문의", "배송 문의", "교환/환불", "기타"]
+ApartmentPostType = Literal["입주 정보", "생활 정보", "이야기"]
+CommunityPostType = Literal["자유게시판", "질문답변", "공지사항", "후기"]
 
 
 # Pydantic Models for Requests/Responses
@@ -34,32 +39,41 @@ class UserBase(BaseModel):
         return v.lower()
 
 
-class PostBase(BaseModel):
-    """Base post model for shared fields."""
-    title: str = Field(..., min_length=1, max_length=200)
-    content: str = Field(..., min_length=1)
-    service: ServiceType
-    tags: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+class PostMetadata(BaseModel):
+    """Post metadata model."""
+    type: Optional[str] = None  # Service-specific post type
+    tags: Optional[List[str]] = Field(default_factory=list, max_items=3)
+    attachments: Optional[List[str]] = Field(default_factory=list)  # Image URLs
+    thumbnail: Optional[str] = None
+    visibility: Literal["public", "private"] = "public"
     
     @field_validator("tags")
     @classmethod
-    def validate_tags(cls, v: List[str]) -> List[str]:
-        """Validate and normalize tags."""
-        # Remove duplicates and empty tags
-        unique_tags = list(set(tag.strip().lower() for tag in v if tag.strip()))
-        
-        # Limit number of tags
-        if len(unique_tags) > 10:
-            raise ValueError("Maximum 10 tags allowed")
-        
-        return unique_tags
+    def validate_tags(cls, v: Optional[List[str]]) -> Optional[List[str]]:
+        """Validate tags."""
+        if v is None:
+            return []
+        # Limit each tag to 10 characters
+        validated_tags = []
+        for tag in v[:3]:  # Max 3 tags
+            tag = tag.strip()[:10]
+            if tag:
+                validated_tags.append(tag)
+        return validated_tags
+
+
+class PostBase(BaseModel):
+    """Base post model for shared fields."""
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1)  # min 30 is recommended but not enforced
+    service: ServiceType
+    metadata: PostMetadata
 
 
 class CommentBase(BaseModel):
     """Base comment model for shared fields."""
     content: str = Field(..., min_length=1, max_length=1000)
-    parent_id: Optional[str] = None
+    parent_comment_id: Optional[str] = None  # For replies
 
 
 # Beanie Document Models (ODM)
@@ -104,16 +118,16 @@ class Post(Document, PostBase):
     """Post document model for MongoDB."""
     slug: str = Indexed(unique=True)
     author_id: str
-    status: PostStatus = "draft"
+    status: PostStatus = "published"
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     published_at: Optional[datetime] = None
     
-    # Engagement metrics
+    # Basic stats (denormalized for performance)
     view_count: int = 0
     like_count: int = 0
+    dislike_count: int = 0
     comment_count: int = 0
-    share_count: int = 0
     
     class Settings:
         name = "posts"
@@ -151,25 +165,20 @@ class Post(Document, PostBase):
 
 class Comment(Document, CommentBase):
     """Comment document model for MongoDB."""
-    post_id: str
+    parent_type: Literal["post"] = "post"  # For extensibility
+    parent_id: str  # Post ID (not slug)
     author_id: str
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-    
-    # Engagement
-    like_count: int = 0
-    reply_count: int = 0
-    
-    # Moderation
-    is_edited: bool = False
-    is_deleted: bool = False
+    status: CommentStatus = "active"
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
     
     class Settings:
         name = "comments"
         indexes = [
-            [("post_id", ASCENDING), ("created_at", ASCENDING)],
+            [("parent_id", ASCENDING), ("created_at", ASCENDING)],
             [("author_id", ASCENDING), ("created_at", DESCENDING)],
-            [("parent_id", ASCENDING)]
+            [("parent_comment_id", ASCENDING)]
         ]
     
     class Config:
@@ -182,30 +191,38 @@ class Comment(Document, CommentBase):
         }
 
 
-class Reaction(Document):
-    """Reaction document model for MongoDB."""
-    user_id: str
-    target_id: str  # ID of post or comment
-    target_type: TargetType
-    reaction_type: ReactionType
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+class PostStats(Document):
+    """Post statistics document model."""
+    post_id: str = Indexed(unique=True)
+    view_count: int = 0
+    like_count: int = 0
+    dislike_count: int = 0
+    comment_count: int = 0
+    bookmark_count: int = 0
+    last_viewed_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Settings:
-        name = "reactions"
+        name = "post_stats"
         indexes = [
-            [("user_id", ASCENDING), ("target_id", ASCENDING), ("target_type", ASCENDING)],
-            [("target_id", ASCENDING), ("target_type", ASCENDING)]
+            [("post_id", ASCENDING)]
         ]
+
+
+class UserReaction(Document):
+    """User reaction document model."""
+    user_id: str
+    post_id: str
+    liked: bool = False
+    disliked: bool = False
+    bookmarked: bool = False
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
     
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "user_id": "507f1f77bcf86cd799439011",
-                "target_id": "507f1f77bcf86cd799439012",
-                "target_type": "post",
-                "reaction_type": "like"
-            }
-        }
+    class Settings:
+        name = "user_reactions"
+        indexes = [
+            [("user_id", ASCENDING), ("post_id", ASCENDING)]
+        ]
 
 
 class Stats(Document):
@@ -284,6 +301,40 @@ class PostUpdate(BaseModel):
     status: Optional[PostStatus] = None
 
 
+class PostListItem(BaseModel):
+    """Post list item for API responses."""
+    id: str = Field(alias="_id")
+    title: str
+    slug: str
+    author_id: str
+    service: ServiceType
+    metadata: PostMetadata
+    stats: Dict[str, int]  # view_count, like_count, dislike_count, comment_count
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        populate_by_name = True
+
+
+class PostDetailResponse(BaseModel):
+    """Post detail response model."""
+    id: str = Field(alias="_id")
+    title: str
+    slug: str
+    author_id: str
+    content: str
+    service: ServiceType
+    metadata: PostMetadata
+    stats: Dict[str, int]  # All stats including bookmark_count
+    user_reaction: Optional[Dict[str, bool]] = None  # liked, disliked, bookmarked
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        populate_by_name = True
+
+
 class PostResponse(PostBase):
     """Model for post API responses."""
     id: str = Field(alias="_id")
@@ -293,29 +344,31 @@ class PostResponse(PostBase):
     created_at: datetime
     updated_at: datetime
     published_at: Optional[datetime]
-    view_count: int
-    like_count: int
-    comment_count: int
     
     class Config:
         populate_by_name = True
 
 
-class CommentCreate(CommentBase):
+class CommentCreate(BaseModel):
     """Model for creating a new comment."""
-    post_id: str
+    content: str = Field(..., min_length=1, max_length=1000)
+    parent_comment_id: Optional[str] = None
 
 
-class CommentResponse(CommentBase):
-    """Model for comment API responses."""
+class CommentDetail(BaseModel):
+    """Comment detail model for API responses."""
     id: str = Field(alias="_id")
-    post_id: str
     author_id: str
+    content: str
+    parent_comment_id: Optional[str]
+    status: CommentStatus
+    like_count: int = 0
+    dislike_count: int = 0
+    reply_count: int = 0
+    user_reaction: Optional[Dict[str, bool]] = None  # liked, disliked
     created_at: datetime
     updated_at: datetime
-    like_count: int
-    reply_count: int
-    is_edited: bool
+    replies: Optional[List["CommentDetail"]] = None  # 1 level only
     
     class Config:
         populate_by_name = True
@@ -331,6 +384,28 @@ class PaginationParams(BaseModel):
     def skip(self) -> int:
         """Calculate skip value for database query."""
         return (self.page - 1) * self.page_size
+
+
+class PaginationInfo(BaseModel):
+    """Pagination information."""
+    page: int
+    limit: int
+    total: int
+    total_pages: int
+    has_next: bool
+    has_prev: bool
+
+
+class PostListResponse(BaseModel):
+    """Post list response with pagination."""
+    posts: List[PostListItem]
+    pagination: PaginationInfo
+
+
+class CommentListResponse(BaseModel):
+    """Comment list response with pagination."""
+    comments: List[CommentDetail]
+    pagination: PaginationInfo
 
 
 class PaginatedResponse(BaseModel):
