@@ -105,7 +105,7 @@ async def list_posts(
         )
 
 
-@router.get("/{slug}", response_model=PostResponse)
+@router.get("/{slug}", response_model=Dict[str, Any])
 async def get_post(
     slug: str,
     current_user: Optional[User] = Depends(get_optional_current_active_user),
@@ -114,20 +114,52 @@ async def get_post(
     """Get post by slug."""
     try:
         post = await posts_service.get_post(slug, current_user)
-        # Convert Post document to PostResponse with proper field mapping
-        return PostResponse(
-            id=str(post.id),
-            title=post.title,
-            content=post.content,
-            slug=post.slug,
-            service=post.service,
-            metadata=post.metadata,
-            author_id=str(post.author_id),
-            status=post.status,
-            created_at=post.created_at,
-            updated_at=post.updated_at,
-            published_at=post.published_at
-        )
+        
+        # Calculate real-time stats
+        real_stats = await posts_service._calculate_post_stats(str(post.id))
+        
+        # Get user reaction if authenticated
+        user_reaction = None
+        if current_user:
+            from src.models.core import UserReaction
+            reaction = await UserReaction.find_one({
+                "user_id": str(current_user.id),
+                "target_type": "post",
+                "target_id": str(post.id)
+            })
+            if reaction:
+                user_reaction = {
+                    "liked": reaction.liked,
+                    "disliked": reaction.disliked,
+                    "bookmarked": reaction.bookmarked
+                }
+        
+        # Build response with stats
+        response = {
+            "id": str(post.id),
+            "_id": str(post.id),
+            "title": post.title,
+            "content": post.content,
+            "slug": post.slug,
+            "service": post.service,
+            "metadata": post.metadata,
+            "author_id": str(post.author_id),
+            "status": post.status,
+            "created_at": post.created_at,
+            "updated_at": post.updated_at,
+            "published_at": post.published_at,
+            "stats": real_stats,
+            "view_count": real_stats["view_count"],
+            "like_count": real_stats["like_count"],
+            "dislike_count": real_stats["dislike_count"],
+            "comment_count": real_stats["comment_count"],
+            "bookmark_count": real_stats["bookmark_count"]
+        }
+        
+        if user_reaction:
+            response["user_reaction"] = user_reaction
+            
+        return response
     except PostNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -235,4 +267,58 @@ async def delete_post(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete post: {str(e)}"
+        )
+
+
+@router.post("/{slug}/like", status_code=status.HTTP_200_OK)
+async def like_post(
+    slug: str,
+    current_user: User = Depends(get_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """Like a post."""
+    try:
+        result = await posts_service.toggle_post_reaction(slug, "like", current_user)
+        return {
+            "message": "Post liked" if result["user_reaction"]["liked"] else "Post like removed",
+            "like_count": result["like_count"],
+            "dislike_count": result["dislike_count"],
+            "user_reaction": result["user_reaction"]
+        }
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to like post: {str(e)}"
+        )
+
+
+@router.post("/{slug}/dislike", status_code=status.HTTP_200_OK)
+async def dislike_post(
+    slug: str,
+    current_user: User = Depends(get_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """Dislike a post."""
+    try:
+        result = await posts_service.toggle_post_reaction(slug, "dislike", current_user)
+        return {
+            "message": "Post disliked" if result["user_reaction"]["disliked"] else "Post dislike removed",
+            "like_count": result["like_count"],
+            "dislike_count": result["dislike_count"],
+            "user_reaction": result["user_reaction"]
+        }
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to dislike post: {str(e)}"
         )

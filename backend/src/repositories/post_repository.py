@@ -235,9 +235,10 @@ class PostRepository:
             True if successful
         """
         try:
-            await Post.find_one(Post.id == PydanticObjectId(post_id)).update({"$inc": {"view_count": 1}})
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update({"$inc": {"view_count": 1}})
             return True
-        except Exception:
+        except Exception as e:
+            print(f"Error incrementing view count for post {post_id}: {e}")
             return False
     
     async def get_user_reactions(self, user_id: str, post_ids: List[str]) -> Dict[str, str]:

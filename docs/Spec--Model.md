@@ -49,6 +49,9 @@ interface Comment {
   createdAt: Date;              // 자동 생성
   updatedAt: Date;              // 자동 업데이트
   status: CommentStatus;        // default "active"
+  likeCount: number;            // 좋아요 수 (UserReaction에서 집계)
+  dislikeCount: number;         // 싫어요 수 (UserReaction에서 집계)
+  replyCount: number;           // 대댓글 수 (자식 댓글 개수)
   metadata?: Record<string, any>; // 확장 가능한 메타데이터
 }
 ```
@@ -57,27 +60,39 @@ interface Comment {
 ```typescript
 interface PostStats {
   postId: string;
-  viewCount: number;            // 조회수
-  likeCount: number;            // 좋아요 수
-  dislikeCount: number;         // 싫어요 수
-  commentCount: number;         // 댓글 수
-  bookmarkCount: number;        // 북마크 수
+  viewCount: number;            // 조회수 (Post 모델에서 관리)
+  likeCount: number;            // 좋아요 수 (UserReaction에서 실시간 집계)
+  dislikeCount: number;         // 싫어요 수 (UserReaction에서 실시간 집계)
+  commentCount: number;         // 댓글+대댓글 총 개수 (Comment에서 실시간 집계)
+  bookmarkCount: number;        // 북마크 수 (UserReaction에서 실시간 집계)
   lastViewedAt: Date;           // 마지막 조회 시간
 }
 ```
 
-### UserReaction 모델
+**집계 방식**:
+- `likeCount`: `UserReaction` 컬렉션에서 `targetType: "post"`, `targetId: postId`, `liked: true` 개수
+- `dislikeCount`: `UserReaction` 컬렉션에서 `targetType: "post"`, `targetId: postId`, `disliked: true` 개수  
+- `commentCount`: `Comment` 컬렉션에서 `parentId: postId`, `status: "active"` 개수 (대댓글 포함)
+- `bookmarkCount`: `UserReaction` 컬렉션에서 `targetType: "post"`, `targetId: postId`, `bookmarked: true` 개수
+
+### UserReaction 모델 (통합형)
 ```typescript
 interface UserReaction {
   userId: string;
-  postId: string;
+  targetType: "post" | "comment"; // 대상 타입 (게시글 또는 댓글)
+  targetId: string;             // 대상 ID (게시글 ID 또는 댓글 ID)
   liked: boolean;               // 좋아요 여부
   disliked: boolean;            // 싫어요 여부
-  bookmarked: boolean;          // 북마크 여부
+  bookmarked: boolean;          // 북마크 여부 (게시글만 해당)
   createdAt: Date;
   updatedAt: Date;
 }
 ```
+
+**설명**: 
+- `targetType`으로 게시글과 댓글 반응을 통합 관리
+- `targetId`는 게시글 ID 또는 댓글 ID를 저장
+- `bookmarked`는 게시글(`targetType: "post"`)에만 적용
 
 ## 3. 서비스별 게시글 타입 예시
 

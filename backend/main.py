@@ -75,9 +75,10 @@ def create_app() -> FastAPI:
     
     # 라우터 등록 (안전하게)
     try:
-        from src.routers import auth, posts
+        from src.routers import auth, posts, comments
         app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
         app.include_router(posts.router, tags=["Posts"])
+        app.include_router(comments.router, tags=["Comments"])
         logger.info("Routers loaded successfully!")
     except Exception as e:
         logger.error(f"Failed to load routers: {e}")

@@ -476,6 +476,13 @@
             padding: 20px 25px;
         }
         
+        .no-comments {
+            text-align: center;
+            color: #6b7280;
+            font-style: italic;
+            padding: 40px 20px;
+        }
+        
         .comment-item {
             padding: 15px 0;
             border-bottom: 1px solid #f3f4f6;
@@ -500,6 +507,99 @@
             display: flex;
             gap: 15px;
             font-size: 0.8em;
+            color: #6b7280;
+        }
+        
+        /* 답글 폼 스타일 */
+        .reply-form {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f9fafb;
+            border-radius: 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .reply-textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            resize: vertical;
+            font-family: inherit;
+            font-size: 0.9em;
+        }
+        
+        .reply-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 10px;
+        }
+        
+        .btn-reply-submit {
+            padding: 6px 12px;
+            background: #059669;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+        }
+        
+        .btn-reply-submit:hover {
+            background: #047857;
+        }
+        
+        .btn-reply-cancel {
+            padding: 6px 12px;
+            background: #6b7280;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+        
+        .btn-reply-cancel:hover {
+            background: #4b5563;
+        }
+        
+        /* 답글 표시 스타일 */
+        .replies-container {
+            margin-top: 15px;
+            margin-left: 20px;
+            padding-left: 15px;
+            border-left: 2px solid #e5e7eb;
+        }
+        
+        .reply-item {
+            padding: 10px 0;
+            border-bottom: 1px solid #f9fafb;
+        }
+        
+        .reply-item:last-child {
+            border-bottom: none;
+        }
+        
+        .reply-author {
+            font-weight: 600;
+            color: #1f2937;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+        
+        .reply-content {
+            color: #374151;
+            margin-bottom: 8px;
+            font-size: 0.9em;
+        }
+        
+        .reply-meta {
+            display: flex;
+            gap: 12px;
+            font-size: 0.75em;
             color: #6b7280;
         }
         
@@ -1290,6 +1390,11 @@
                 <div class="page" id="post-detail">
                     <div class="post-detail">
                         <div class="post-detail-header">
+                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                                <button onclick="showPage('posts')" style="background: #f3f4f6; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; color: #374151; font-size: 0.9em;">
+                                    ← 목록으로
+                                </button>
+                            </div>
                             <div class="post-detail-title" id="postDetailTitle">
                                 게시글 제목
                             </div>
@@ -1416,6 +1521,8 @@
         let posts = [];
         let comments = [];
         let reactions = {};
+        let currentPost = null; // 현재 보고 있는 게시글
+        let postsCache = new Map(); // 게시글 캐시 (slug -> post data)
         
         // API 헬퍼 함수
         function getAuthHeaders() {
@@ -1539,36 +1646,26 @@
             }
         ];
         
-        const mockComments = [
-            {
-                id: 1,
-                postId: 1,
-                author: "user1",
-                content: "정말 유용한 정보네요! 감사합니다.",
-                created_at: "2024-01-15T15:30:00",
-                likes: 3,
-                dislikes: 0
-            },
-            {
-                id: 2,
-                postId: 1,
-                author: "user2",
-                content: "실제로 적용해보니 많은 도움이 되었습니다.",
-                created_at: "2024-01-15T16:15:00",
-                likes: 2,
-                dislikes: 0
-            }
-        ];
         
         // 게시글 API 함수들
         async function loadPosts() {
             try {
                 const response = await apiCall('/api/posts/');
+                console.log('Posts API response:', response);
                 posts = response.items || [];
+                console.log('Loaded posts with stats:', posts);
+                
+                // 캐시 업데이트
+                postsCache.clear();
+                posts.forEach(post => {
+                    const key = post.slug || post._id || post.id;
+                    postsCache.set(key, post);
+                });
+                
                 renderPosts();
             } catch (error) {
                 // API 실패시 모의 데이터 사용
-                console.warn('Failed to load posts from API, using mock data');
+                console.warn('Failed to load posts from API, using mock data:', error);
                 posts = [...mockPosts];
                 renderPosts();
             }
@@ -1601,12 +1698,33 @@
         
         // 초기화
         async function init() {
+            // 전역 함수 등록 (onclick 이벤트에서 접근 가능하도록)
+            window.togglePostReaction = togglePostReaction;
+            window.toggleCommentReaction = toggleCommentReaction;
+            window.replyToComment = replyToComment;
+            window.addComment = addComment;
+            window.submitReply = submitReply;
+            window.cancelReply = cancelReply;
+            window.testCommentFunction = function() {
+                console.log('Test function called!');
+                console.log('toggleCommentReaction available:', typeof window.toggleCommentReaction);
+                console.log('replyToComment available:', typeof window.replyToComment);
+                console.log('addComment available:', typeof window.addComment);
+                console.log('submitReply available:', typeof window.submitReply);
+                console.log('cancelReply available:', typeof window.cancelReply);
+                console.log('Current user:', currentUser);
+                console.log('Current post:', currentPost);
+                console.log('Comments:', comments);
+            };
+            
+            console.log('Functions registered globally:', {
+                toggleCommentReaction: typeof window.toggleCommentReaction,
+                replyToComment: typeof window.replyToComment,
+                addComment: typeof window.addComment
+            });
+            
             // 게시글 로드
             await loadPosts();
-            
-            // 댓글은 모의 데이터 사용 (아직 구현 안됨)
-            comments = [...mockComments];
-            renderComments();
             
             // 로그인 상태 확인
             const token = localStorage.getItem('authToken');
@@ -1685,6 +1803,13 @@
             
             document.getElementById('pageTitle').textContent = titles[pageId] || '';
             document.getElementById('pageSubtitle').textContent = subtitles[pageId] || '';
+            
+            // 특정 페이지에 대한 추가 로직
+            if (pageId === 'posts') {
+                // 게시글 목록 페이지 표시 시 게시글 목록 새로고침
+                // 항상 최신 데이터를 가져오도록 강제
+                loadPosts();
+            }
         }
         
         // 인증 관련
@@ -1855,24 +1980,47 @@
                             <span>${formatDate(post.created_at)}</span>
                         </div>
                         <div class="post-title">${post.title}</div>
-                        <div class="post-stats">
-                            <span>👁 ${post.view_count || 0}</span>
-                            <span>👍 ${post.like_count || 0}</span>
-                            <span>👎 ${post.dislike_count || 0}</span>
-                            <span>💬 ${post.comment_count || 0}</span>
-                            ${tags.length > 0 ? `<span>🏷️ ${tags.join(', ')}</span>` : ''}
+                        <div class="post-stats" style="display: flex; align-items: center; justify-content: space-between; margin-top: 10px;">
+                            <div style="display: flex; gap: 15px;">
+                                <span style="color: #6b7280;">👁 ${(post.stats?.view_count || post.view_count) || 0}</span>
+                                <span style="color: #6b7280;">💬 ${(post.stats?.comment_count || post.comment_count) || 0}</span>
+                                ${tags.length > 0 ? `<span style="color: #6b7280;">🏷️ ${tags.join(', ')}</span>` : ''}
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button onclick="event.stopPropagation(); togglePostReaction('${post.slug || post.id}', 'like')" 
+                                        style="background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8em;">
+                                    👍 ${(post.stats?.like_count || post.like_count) || 0}
+                                </button>
+                                <button onclick="event.stopPropagation(); togglePostReaction('${post.slug || post.id}', 'dislike')" 
+                                        style="background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8em;">
+                                    👎 ${(post.stats?.dislike_count || post.dislike_count) || 0}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
         
-        function showPostDetail(postSlugOrId) {
-            const post = posts.find(p => p.slug === postSlugOrId || p.id === postSlugOrId);
-            if (!post) return;
+        async function showPostDetail(postSlugOrId) {
+            console.log('Showing post detail for:', postSlugOrId);
             
-            // 게시글 데이터 저장 (댓글 등에서 사용)
-            window.currentPost = post;
+            try {
+                // API에서 최신 게시글 데이터 가져오기 (조회수 증가 포함)
+                const response = await apiCall(`/api/posts/${postSlugOrId}`);
+                console.log('Post detail API response:', response);
+                
+                const post = response;
+                
+                // 게시글 데이터 저장 (댓글 등에서 사용)
+                window.currentPost = post;
+                currentPost = post; // 전역 변수도 설정
+                
+                // 캐시에 최신 데이터 업데이트
+                const key = post.slug || post._id || post.id;
+                postsCache.set(key, post)
+            
+            console.log('Current post set:', currentPost);
             
             // 상세 페이지 업데이트
             document.getElementById('postDetailTitle').textContent = post.title;
@@ -1888,16 +2036,23 @@
                 <span>${formatDate(post.created_at)}</span>
             `;
             
-            // 통계 업데이트
-            document.getElementById('likeCount').textContent = post.like_count || 0;
-            document.getElementById('dislikeCount').textContent = post.dislike_count || 0;
-            document.getElementById('bookmarkCount').textContent = post.bookmark_count || 0;
+            // 통계 업데이트 (stats 객체가 있으면 사용, 없으면 직접 필드 사용)
+            document.getElementById('likeCount').textContent = (post.stats?.like_count || post.like_count) || 0;
+            document.getElementById('dislikeCount').textContent = (post.stats?.dislike_count || post.dislike_count) || 0;
+            document.getElementById('bookmarkCount').textContent = (post.stats?.bookmark_count || post.bookmark_count) || 0;
             
-            // 페이지 전환
-            showPage('post-detail');
-            
-            // 조회수 증가 (실제로는 API 호출)
-            post.view_count = (post.view_count || 0) + 1;
+                // 페이지 전환
+                showPage('post-detail');
+                
+                // 댓글 초기화 및 로드
+                comments = []; // 이전 댓글 데이터 클리어
+                await loadComments(post.slug);
+                
+            } catch (error) {
+                console.error('Failed to load post detail:', error);
+                showNotification('게시글을 불러오는데 실패했습니다.', 'error');
+                showPage('posts');
+            }
         }
         
         async function handleCreatePost(event) {
@@ -1947,37 +2102,113 @@
         }
         
         // 댓글 관련
+        async function loadComments(postSlug) {
+            console.log('Loading comments for post:', postSlug);
+            if (!postSlug) {
+                console.warn('No post slug provided for loading comments');
+                return;
+            }
+            
+            try {
+                const response = await apiCall(`/api/posts/${postSlug}/comments`);
+                console.log('Comments loaded:', response);
+                comments = response.comments || [];
+                renderComments();
+            } catch (error) {
+                console.error('Failed to load comments:', error);
+                comments = [];
+                renderComments();
+                showNotification('댓글을 불러오는데 실패했습니다.', 'error');
+            }
+        }
+
         function renderComments() {
+            console.log('Rendering comments:', comments);
             const commentsList = document.getElementById('commentsList');
-            if (!commentsList) return;
+            if (!commentsList) {
+                console.warn('commentsList element not found');
+                return;
+            }
             
-            const postComments = comments.filter(c => c.postId === 1); // 현재 게시글
-            
-            commentsList.innerHTML = postComments.map(comment => `
-                <div class="comment-item">
-                    <div class="comment-author">${comment.author}</div>
-                    <div class="comment-content">${comment.content}</div>
-                    <div class="comment-meta">
-                        <span>${formatDate(comment.created_at)}</span>
-                        <span>👍 ${comment.likes}</span>
-                        <span>👎 ${comment.dislikes}</span>
-                        <span style="cursor: pointer;">답글</span>
+            if (comments.length === 0) {
+                commentsList.innerHTML = '<div class="no-comments">첫 번째 댓글을 작성해보세요!</div>';
+            } else {
+                commentsList.innerHTML = comments.map(comment => {
+                    const commentId = comment._id || comment.id;
+                    console.log('Rendering comment with ID:', commentId, 'Replies:', comment.replies);
+                    
+                    // 답글 렌더링
+                    let repliesHtml = '';
+                    if (comment.replies && comment.replies.length > 0) {
+                        repliesHtml = `
+                            <div class="replies-container">
+                                ${comment.replies.map(reply => {
+                                    const replyId = reply._id || reply.id;
+                                    return `
+                                        <div class="reply-item" data-comment-id="${replyId}">
+                                            <div class="reply-author">${reply.author_id}</div>
+                                            <div class="reply-content">${reply.content}</div>
+                                            <div class="reply-meta">
+                                                <span>${formatDate(reply.created_at)}</span>
+                                                <span class="comment-like-btn" onclick="try{ toggleCommentReaction('${replyId}', 'like'); }catch(e){ console.error('Like error:', e); }" style="cursor: pointer;">👍 ${reply.like_count || 0}</span>
+                                                <span class="comment-dislike-btn" onclick="try{ toggleCommentReaction('${replyId}', 'dislike'); }catch(e){ console.error('Dislike error:', e); }" style="cursor: pointer;">👎 ${reply.dislike_count || 0}</span>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }
+                    
+                    return `
+                    <div class="comment-item" data-comment-id="${commentId}">
+                        <div class="comment-author">${comment.author_id}</div>
+                        <div class="comment-content">${comment.content}</div>
+                        <div class="comment-meta">
+                            <span>${formatDate(comment.created_at)}</span>
+                            <span class="comment-like-btn" onclick="try{ toggleCommentReaction('${commentId}', 'like'); }catch(e){ console.error('Like error:', e); }" style="cursor: pointer;">👍 ${comment.like_count || 0}</span>
+                            <span class="comment-dislike-btn" onclick="try{ toggleCommentReaction('${commentId}', 'dislike'); }catch(e){ console.error('Dislike error:', e); }" style="cursor: pointer;">👎 ${comment.dislike_count || 0}</span>
+                            <span style="cursor: pointer;" onclick="try{ replyToComment('${commentId}'); }catch(e){ console.error('Reply error:', e); }">답글 (${comment.reply_count || 0})</span>
+                        </div>
+                        ${repliesHtml}
                     </div>
-                </div>
-            `).join('');
+                `;
+                }).join('');
+            }
             
-            document.getElementById('commentCount').textContent = postComments.length;
+            const commentCountElement = document.getElementById('commentCount');
+            if (commentCountElement) {
+                commentCountElement.textContent = comments.length;
+            }
+            
+            console.log('Comments rendered, count:', comments.length);
         }
         
         async function addComment() {
+            console.log('Adding comment...');
+            console.log('Current user:', currentUser);
+            console.log('Current post:', currentPost);
+            
             if (!currentUser) {
                 showNotification('로그인이 필요합니다.', 'error');
                 showPage('login');
                 return;
             }
             
+            if (!currentPost) {
+                showNotification('게시글 정보를 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
             const textarea = document.getElementById('commentTextarea');
+            if (!textarea) {
+                console.error('Comment textarea not found');
+                showNotification('댓글 입력창을 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
             const content = textarea.value.trim();
+            console.log('Comment content:', content);
             
             if (!content) {
                 showNotification('댓글 내용을 입력해주세요.', 'error');
@@ -1985,63 +2216,243 @@
             }
             
             try {
-                // API 호출 시뮬레이션
-                await new Promise(resolve => setTimeout(resolve, 500));
+                console.log('Sending comment to API...');
+                const response = await apiCall(`/api/posts/${currentPost.slug}/comments`, {
+                    method: 'POST',
+                    body: JSON.stringify({ content: content })
+                });
                 
-                const newComment = {
-                    id: comments.length + 1,
-                    postId: 1, // 현재 게시글
-                    author: currentUser.display_name || currentUser.email,
-                    content: content,
-                    created_at: new Date().toISOString(),
-                    likes: 0,
-                    dislikes: 0
-                };
+                console.log('Comment created:', response);
                 
-                comments.push(newComment);
-                renderComments();
+                // 댓글 목록 새로고침
+                await loadComments(currentPost.slug);
                 textarea.value = '';
                 
                 showNotification('댓글이 추가되었습니다!', 'success');
             } catch (error) {
-                showNotification(error.message, 'error');
+                console.error('Failed to add comment:', error);
+                showNotification(error.message || '댓글 추가에 실패했습니다.', 'error');
             }
         }
-        
-        // 반응 관련
-        function toggleReaction(type) {
+
+        // 게시글 좋아요/싫어요 기능
+        async function togglePostReaction(postSlug, type) {
+            console.log('Toggle post reaction:', postSlug, type);
+            
             if (!currentUser) {
                 showNotification('로그인이 필요합니다.', 'error');
                 showPage('login');
                 return;
             }
             
-            const post = posts[0]; // 현재 게시글
-            const countElement = document.getElementById(type + 'Count');
-            const currentCount = parseInt(countElement.textContent);
+            try {
+                // 실제 API 호출
+                const endpoint = type === 'like' ? 'like' : 'dislike';
+                const response = await apiCall(`/api/posts/${postSlug}/${endpoint}`, {
+                    method: 'POST'
+                });
+                
+                console.log('Post reaction API response:', response);
+                
+                // 게시글 목록 새로고침하여 최신 상태 반영
+                await loadPosts();
+                
+                showNotification(`게시글에 ${type === 'like' ? '좋아요' : '싫어요'}를 눌렀습니다.`, 'success');
+                
+            } catch (error) {
+                console.error('Failed to toggle post reaction:', error);
+                showNotification(error.message || '반응 처리에 실패했습니다.', 'error');
+            }
+        }
+
+        // 댓글 좋아요/싫어요 기능
+        async function toggleCommentReaction(commentId, type) {
+            console.log('Toggle comment reaction:', commentId, type);
             
-            // 토글 로직 (이미 눌렀으면 취소, 아니면 추가)
-            const userReacted = reactions[type] || false;
-            
-            if (userReacted) {
-                post.stats[type + 's'] = Math.max(0, currentCount - 1);
-                reactions[type] = false;
-            } else {
-                post.stats[type + 's'] = currentCount + 1;
-                reactions[type] = true;
+            if (!currentUser) {
+                showNotification('로그인이 필요합니다.', 'error');
+                showPage('login');
+                return;
             }
             
-            countElement.textContent = post.stats[type + 's'];
-            
-            // 버튼 스타일 업데이트
-            const button = countElement.closest('.reaction-btn');
-            if (reactions[type]) {
-                button.classList.add('active');
-            } else {
-                button.classList.remove('active');
+            if (!currentPost) {
+                showNotification('게시글 정보를 찾을 수 없습니다.', 'error');
+                return;
             }
             
-            showNotification(`${type === 'like' ? '좋아요' : type === 'dislike' ? '싫어요' : '북마크'}가 ${reactions[type] ? '추가' : '취소'}되었습니다.`, 'success');
+            try {
+                // 실제 API 호출
+                const endpoint = type === 'like' ? 'like' : 'dislike';
+                const response = await apiCall(`/api/posts/${currentPost.slug}/comments/${commentId}/${endpoint}`, {
+                    method: 'POST'
+                });
+                
+                console.log('Reaction API response:', response);
+                
+                // 댓글 목록 새로고침하여 최신 상태 반영
+                await loadComments(currentPost.slug);
+                
+                showNotification(`댓글에 ${type === 'like' ? '좋아요' : '싫어요'}를 눌렀습니다.`, 'success');
+                
+            } catch (error) {
+                console.error('Failed to toggle comment reaction:', error);
+                showNotification(error.message || '반응 처리에 실패했습니다.', 'error');
+            }
+        }
+
+        // 댓글 답글 기능
+        function replyToComment(commentId) {
+            console.log('Reply to comment:', commentId);
+            
+            if (!currentUser) {
+                showNotification('로그인이 필요합니다.', 'error');
+                showPage('login');
+                return;
+            }
+            
+            // 기존 답글 폼이 있으면 제거
+            const existingReplyForm = document.querySelector('.reply-form');
+            if (existingReplyForm) {
+                existingReplyForm.remove();
+            }
+            
+            // 해당 댓글 찾기
+            const commentElement = document.querySelector(`[data-comment-id="${commentId}"]`);
+            if (!commentElement) {
+                console.error('Comment element not found for ID:', commentId);
+                return;
+            }
+            
+            // 답글 입력 폼 생성
+            const replyForm = document.createElement('div');
+            replyForm.className = 'reply-form';
+            replyForm.innerHTML = `
+                <div class="reply-form-content">
+                    <textarea class="reply-textarea" placeholder="답글을 작성해주세요..." rows="3"></textarea>
+                    <div class="reply-actions">
+                        <button class="btn-reply-submit" onclick="submitReply('${commentId}')">답글 작성</button>
+                        <button class="btn-reply-cancel" onclick="cancelReply()">취소</button>
+                    </div>
+                </div>
+            `;
+            
+            // 댓글 아래에 답글 폼 추가
+            commentElement.appendChild(replyForm);
+            
+            // 답글 입력창에 포커스
+            const textarea = replyForm.querySelector('.reply-textarea');
+            textarea.focus();
+        }
+        
+        // 답글 작성 제출
+        async function submitReply(parentCommentId) {
+            console.log('Submit reply to comment:', parentCommentId);
+            
+            const replyForm = document.querySelector('.reply-form');
+            if (!replyForm) return;
+            
+            const textarea = replyForm.querySelector('.reply-textarea');
+            const content = textarea.value.trim();
+            
+            if (!content) {
+                showNotification('답글 내용을 입력해주세요.', 'error');
+                return;
+            }
+            
+            try {
+                console.log('Sending reply to API...');
+                const response = await apiCall(`/api/posts/${currentPost.slug}/comments/${parentCommentId}/replies`, {
+                    method: 'POST',
+                    body: JSON.stringify({ content: content })
+                });
+                
+                console.log('Reply created:', response);
+                
+                // 답글 폼 제거
+                replyForm.remove();
+                
+                // 댓글 목록 새로고침
+                await loadComments(currentPost.slug);
+                
+                showNotification('답글이 추가되었습니다!', 'success');
+                
+            } catch (error) {
+                console.error('Failed to submit reply:', error);
+                showNotification(error.message || '답글 작성에 실패했습니다.', 'error');
+            }
+        }
+        
+        // 답글 작성 취소
+        function cancelReply() {
+            const replyForm = document.querySelector('.reply-form');
+            if (replyForm) {
+                replyForm.remove();
+            }
+        }
+
+        
+        // 반응 관련
+        async function toggleReaction(type) {
+            if (!currentUser) {
+                showNotification('로그인이 필요합니다.', 'error');
+                showPage('login');
+                return;
+            }
+            
+            if (!currentPost) {
+                showNotification('게시글 정보를 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            // bookmark는 아직 구현되지 않음
+            if (type === 'bookmark') {
+                showNotification('북마크 기능은 준비 중입니다.', 'info');
+                return;
+            }
+            
+            try {
+                // 실제 API 호출
+                const endpoint = type === 'like' ? 'like' : 'dislike';
+                const response = await apiCall(`/api/posts/${currentPost.slug}/${endpoint}`, {
+                    method: 'POST'
+                });
+                
+                console.log('Post detail reaction API response:', response);
+                
+                // UI 업데이트
+                const countElement = document.getElementById(type + 'Count');
+                if (type === 'like') {
+                    countElement.textContent = response.like_count;
+                    document.getElementById('likeCount').textContent = response.like_count;
+                    document.getElementById('dislikeCount').textContent = response.dislike_count;
+                } else if (type === 'dislike') {
+                    countElement.textContent = response.dislike_count;
+                    document.getElementById('likeCount').textContent = response.like_count;
+                    document.getElementById('dislikeCount').textContent = response.dislike_count;
+                }
+                
+                // 버튼 스타일 업데이트
+                const likeBtn = document.getElementById('likeCount').closest('.reaction-btn');
+                const dislikeBtn = document.getElementById('dislikeCount').closest('.reaction-btn');
+                
+                if (response.user_reaction.liked) {
+                    likeBtn.classList.add('active');
+                } else {
+                    likeBtn.classList.remove('active');
+                }
+                
+                if (response.user_reaction.disliked) {
+                    dislikeBtn.classList.add('active');
+                } else {
+                    dislikeBtn.classList.remove('active');
+                }
+                
+                showNotification(`게시글에 ${type === 'like' ? '좋아요' : '싫어요'}를 눌렀습니다.`, 'success');
+                
+            } catch (error) {
+                console.error('Failed to toggle reaction:', error);
+                showNotification(error.message || '반응 처리에 실패했습니다.', 'error');
+            }
         }
         
         // 서비스별 타입 업데이트

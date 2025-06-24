@@ -1,7 +1,7 @@
 """Posts service layer for business logic."""
 
 from typing import List, Dict, Any, Optional
-from src.models.core import User, Post, PostCreate, PostUpdate, PostResponse, PaginatedResponse, PostMetadata
+from src.models.core import User, Post, PostCreate, PostUpdate, PostResponse, PaginatedResponse, PostMetadata, UserReaction, Comment
 from src.repositories.post_repository import PostRepository
 from src.exceptions.post import PostNotFoundError, PostPermissionError
 from src.utils.permissions import check_post_permission
@@ -55,7 +55,9 @@ class PostsService:
         post = await self.post_repository.get_by_slug(slug)
         
         # Increment view count
-        await self.post_repository.increment_view_count(str(post.id))
+        print(f"Incrementing view count for post {post.id}")
+        result = await self.post_repository.increment_view_count(str(post.id))
+        print(f"View count increment result: {result}")
         
         return post
     
@@ -107,13 +109,9 @@ class PostsService:
             post_dict["_id"] = str(post.id)
             post_dict["author_id"] = str(post.author_id)
             
-            # Add stats
-            post_dict["stats"] = {
-                "view_count": post.view_count,
-                "like_count": post.like_count,
-                "dislike_count": post.dislike_count,
-                "comment_count": post.comment_count
-            }
+            # Calculate real-time stats from UserReaction and Comment collections
+            real_stats = await self._calculate_post_stats(str(post.id))
+            post_dict["stats"] = real_stats
             
             # Add user reaction if available
             if str(post.id) in user_reactions:
@@ -228,13 +226,9 @@ class PostsService:
             post_dict["_id"] = str(post.id)
             post_dict["author_id"] = str(post.author_id)
             
-            # Add stats
-            post_dict["stats"] = {
-                "view_count": post.view_count,
-                "like_count": post.like_count,
-                "dislike_count": post.dislike_count,
-                "comment_count": post.comment_count
-            }
+            # Calculate real-time stats from UserReaction and Comment collections
+            real_stats = await self._calculate_post_stats(str(post.id))
+            post_dict["stats"] = real_stats
             
             formatted_posts.append(post_dict)
         
@@ -247,4 +241,134 @@ class PostsService:
             "page": page,
             "page_size": page_size,
             "total_pages": total_pages
+        }
+    
+    async def _calculate_post_stats(self, post_id: str) -> Dict[str, int]:
+        """Calculate real-time statistics for a post.
+        
+        Args:
+            post_id: Post ID
+            
+        Returns:
+            Dictionary with current stats
+        """
+        try:
+            # Get like count from UserReaction
+            like_count = await UserReaction.find({
+                "target_type": "post",
+                "target_id": post_id,
+                "liked": True
+            }).count()
+            
+            # Get dislike count from UserReaction
+            dislike_count = await UserReaction.find({
+                "target_type": "post",
+                "target_id": post_id,
+                "disliked": True
+            }).count()
+            
+            # Get bookmark count from UserReaction
+            bookmark_count = await UserReaction.find({
+                "target_type": "post",
+                "target_id": post_id,
+                "bookmarked": True
+            }).count()
+            
+            # Get total comment count (including replies) from Comment
+            comment_count = await Comment.find({
+                "parent_id": post_id,
+                "status": "active"
+            }).count()
+            
+            # Get view count from Post document (maintained in post model)
+            from beanie import PydanticObjectId
+            post = await Post.find_one({"_id": PydanticObjectId(post_id)})
+            view_count = post.view_count if post else 0
+            
+            return {
+                "view_count": view_count,
+                "like_count": like_count,
+                "dislike_count": dislike_count,
+                "comment_count": comment_count,
+                "bookmark_count": bookmark_count
+            }
+            
+        except Exception as e:
+            import traceback
+            print(f"Error calculating post stats for {post_id}: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
+            # Return default stats on error
+            return {
+                "view_count": 0,
+                "like_count": 0,
+                "dislike_count": 0,
+                "comment_count": 0,
+                "bookmark_count": 0
+            }
+    
+    async def toggle_post_reaction(
+        self,
+        slug: str,
+        reaction_type: str,  # "like" or "dislike"
+        current_user: User
+    ) -> Dict[str, Any]:
+        """Toggle post reaction (like/dislike) for a user.
+        
+        Args:
+            slug: Post slug
+            reaction_type: "like" or "dislike"
+            current_user: Authenticated user
+            
+        Returns:
+            Dict with reaction counts and user reaction state
+            
+        Raises:
+            PostNotFoundError: If post not found
+        """
+        # Get post by slug
+        post = await self.post_repository.get_by_slug(slug)
+        post_id = str(post.id)
+        
+        # Find or create user reaction
+        user_reaction = await UserReaction.find_one({
+            "user_id": str(current_user.id),
+            "target_type": "post",
+            "target_id": post_id
+        })
+        
+        if not user_reaction:
+            user_reaction = UserReaction(
+                user_id=str(current_user.id),
+                target_type="post",
+                target_id=post_id
+            )
+        
+        # Toggle reaction
+        if reaction_type == "like":
+            # Toggle like, clear dislike if setting like
+            was_liked = user_reaction.liked
+            user_reaction.liked = not was_liked
+            if user_reaction.liked:
+                user_reaction.disliked = False
+        elif reaction_type == "dislike":
+            # Toggle dislike, clear like if setting dislike
+            was_disliked = user_reaction.disliked
+            user_reaction.disliked = not was_disliked
+            if user_reaction.disliked:
+                user_reaction.liked = False
+        
+        # Save user reaction
+        await user_reaction.save()
+        
+        # Get updated stats
+        updated_stats = await self._calculate_post_stats(post_id)
+        
+        return {
+            "like_count": updated_stats["like_count"],
+            "dislike_count": updated_stats["dislike_count"],
+            "user_reaction": {
+                "liked": user_reaction.liked,
+                "disliked": user_reaction.disliked,
+                "bookmarked": user_reaction.bookmarked
+            }
         }

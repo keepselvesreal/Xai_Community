@@ -171,6 +171,9 @@ class Comment(Document, CommentBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     status: CommentStatus = "active"
+    like_count: int = 0  # Aggregated count from UserReaction
+    dislike_count: int = 0  # Aggregated count from UserReaction
+    reply_count: int = 0  # Count of replies to this comment
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
     
     class Settings:
@@ -209,19 +212,21 @@ class PostStats(Document):
 
 
 class UserReaction(Document):
-    """User reaction document model."""
+    """User reaction document model for posts and comments."""
     user_id: str
-    post_id: str
+    target_type: Literal["post", "comment"] = "post"  # Type of target (post or comment)
+    target_id: str  # ID of the post or comment
     liked: bool = False
     disliked: bool = False
-    bookmarked: bool = False
+    bookmarked: bool = False  # Only applicable for posts
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Settings:
         name = "user_reactions"
         indexes = [
-            [("user_id", ASCENDING), ("post_id", ASCENDING)]
+            [("user_id", ASCENDING), ("target_type", ASCENDING), ("target_id", ASCENDING)],
+            [("target_type", ASCENDING), ("target_id", ASCENDING)]
         ]
 
 
@@ -355,6 +360,11 @@ class CommentCreate(BaseModel):
     parent_comment_id: Optional[str] = None
 
 
+class CommentUpdate(BaseModel):
+    """Model for updating comment information."""
+    content: Optional[str] = Field(None, min_length=1, max_length=1000)
+
+
 class CommentDetail(BaseModel):
     """Comment detail model for API responses."""
     id: str = Field(alias="_id")
@@ -362,9 +372,9 @@ class CommentDetail(BaseModel):
     content: str
     parent_comment_id: Optional[str]
     status: CommentStatus
-    like_count: int = 0
-    dislike_count: int = 0
-    reply_count: int = 0
+    like_count: int = 0  # Calculated from UserReaction
+    dislike_count: int = 0  # Calculated from UserReaction
+    reply_count: int = 0  # Calculated from child comments
     user_reaction: Optional[Dict[str, bool]] = None  # liked, disliked
     created_at: datetime
     updated_at: datetime
