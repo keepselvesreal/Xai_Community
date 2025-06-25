@@ -685,6 +685,94 @@
             background: #dc2626;
         }
         
+        /* 게시글 액션 버튼 스타일 */
+        .post-actions {
+            display: flex;
+            align-items: center;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        /* 삭제 확인 다이얼로그 */
+        .confirm-dialog {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .confirm-dialog.active {
+            display: flex;
+        }
+        
+        .confirm-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .confirm-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #1f2937;
+        }
+        
+        .confirm-message {
+            color: #6b7280;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+        
+        .confirm-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+        
+        .btn-confirm {
+            background: #dc2626;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
+        .btn-cancel {
+            background: #f3f4f6;
+            color: #374151;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        
         /* 로딩 */
         .loading {
             display: inline-block;
@@ -1390,10 +1478,20 @@
                 <div class="page" id="post-detail">
                     <div class="post-detail">
                         <div class="post-detail-header">
-                            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px;">
                                 <button onclick="showPage('posts')" style="background: #f3f4f6; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; color: #374151; font-size: 0.9em;">
                                     ← 목록으로
                                 </button>
+                                
+                                <!-- 작성자만 보이는 수정/삭제 버튼 -->
+                                <div class="post-actions" id="postActions" style="display: none; gap: 10px;">
+                                    <button onclick="editCurrentPost()" style="background: #2563eb; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 0.9em;">
+                                        ✏️ 수정
+                                    </button>
+                                    <button onclick="deleteCurrentPost()" style="background: #dc2626; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 5px; font-size: 0.9em;">
+                                        🗑️ 삭제
+                                    </button>
+                                </div>
                             </div>
                             <div class="post-detail-title" id="postDetailTitle">
                                 게시글 제목
@@ -1439,6 +1537,55 @@
                         
                         <div class="comments-list" id="commentsList">
                             <!-- 댓글들이 여기에 동적으로 추가됩니다 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 게시글 수정 페이지 -->
+                <div class="page" id="post-edit">
+                    <div class="auth-container" style="max-width: 800px;">
+                        <div class="auth-card">
+                            <h2 class="auth-title">게시글 수정</h2>
+                            <form onsubmit="handleUpdatePost(event)" id="editPostForm">
+                                <div class="form-group">
+                                    <label class="form-label">제목</label>
+                                    <input type="text" class="form-input" name="title" id="editPostTitle" required 
+                                           placeholder="게시글 제목을 입력하세요">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">내용</label>
+                                    <textarea class="form-textarea" name="content" id="editPostContent" required 
+                                              placeholder="게시글 내용을 입력하세요" rows="8"></textarea>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">서비스</label>
+                                    <select class="form-input" name="service" id="editPostService" required onchange="updateEditPostType()">
+                                        <option value="">서비스 선택</option>
+                                        <option value="apartment">아파트</option>
+                                        <option value="shopping">쇼핑</option>
+                                        <option value="community">커뮤니티</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">타입</label>
+                                    <select class="form-input" name="type" id="editPostType" required>
+                                        <option value="">타입 선택</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">태그 (콤마로 구분, 최대 3개)</label>
+                                    <input type="text" class="form-input" name="tags" id="editPostTags" 
+                                           placeholder="태그1, 태그2, 태그3">
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <button type="submit" class="btn-primary" id="updatePostBtn">
+                                        수정 완료
+                                    </button>
+                                    <button type="button" class="btn-secondary" onclick="showPage('post-detail')">
+                                        취소
+                                    </button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -1512,6 +1659,21 @@
     <!-- 알림 -->
     <div class="notification" id="notification"></div>
     
+    <!-- 삭제 확인 다이얼로그 -->
+    <div class="confirm-dialog" id="deleteConfirmDialog">
+        <div class="confirm-content">
+            <div class="confirm-title">게시글 삭제</div>
+            <div class="confirm-message">
+                정말로 이 게시글을 삭제하시겠습니까?<br>
+                삭제된 게시글은 복구할 수 없습니다.
+            </div>
+            <div class="confirm-buttons">
+                <button class="btn-confirm" onclick="confirmDeletePost()">삭제</button>
+                <button class="btn-cancel" onclick="cancelDeletePost()">취소</button>
+            </div>
+        </div>
+    </div>
+    
     <script>
         // API 설정
         const API_BASE_URL = 'http://localhost:8000';
@@ -1573,7 +1735,20 @@
                         throw new Error(`HTTP ${response.status}: ${errorText}`);
                     }
                 }
-                return await response.json();
+                
+                // Handle 204 No Content responses (like DELETE operations)
+                if (response.status === 204) {
+                    return { success: true };
+                }
+                
+                // Check if response has content before parsing JSON
+                const contentType = response.headers.get('content-type');
+                if (contentType && contentType.includes('application/json')) {
+                    return await response.json();
+                } else {
+                    // Return success object for non-JSON responses
+                    return { success: true };
+                }
             } catch (error) {
                 console.error('API call failed:', error);
                 showNotification('API 호출 실패: ' + error.message, 'error');
@@ -1683,6 +1858,10 @@
                 });
                 showNotification('게시글이 성공적으로 작성되었습니다!', 'success');
                 await loadPosts(); // 목록 새로고침
+                
+                console.log('새로 작성된 게시글:', newPost);
+                console.log('현재 사용자:', currentUser);
+                
                 return newPost;
             } catch (error) {
                 showNotification('게시글 작성에 실패했습니다.', 'error');
@@ -1709,23 +1888,14 @@
             window.addComment = addComment;
             window.submitReply = submitReply;
             window.cancelReply = cancelReply;
-            window.testCommentFunction = function() {
-                console.log('Test function called!');
-                console.log('toggleCommentReaction available:', typeof window.toggleCommentReaction);
-                console.log('replyToComment available:', typeof window.replyToComment);
-                console.log('addComment available:', typeof window.addComment);
-                console.log('submitReply available:', typeof window.submitReply);
-                console.log('cancelReply available:', typeof window.cancelReply);
-                console.log('Current user:', currentUser);
-                console.log('Current post:', currentPost);
-                console.log('Comments:', comments);
-            };
+            window.editCurrentPost = editCurrentPost;
+            window.deleteCurrentPost = deleteCurrentPost;
+            window.confirmDeletePost = confirmDeletePost;
+            window.cancelDeletePost = cancelDeletePost;
+            window.updatePostActions = updatePostActions;
+            // 테스트 함수 제거 - 콘솔 스팸 방지
             
-            console.log('Functions registered globally:', {
-                toggleCommentReaction: typeof window.toggleCommentReaction,
-                replyToComment: typeof window.replyToComment,
-                addComment: typeof window.addComment
-            });
+            // 전역 함수 등록 완료
             
             // 게시글 로드
             await loadPosts();
@@ -1738,12 +1908,12 @@
                     const storedUser = localStorage.getItem('currentUser');
                     if (storedUser) {
                         currentUser = JSON.parse(storedUser);
+                        console.log('사용자 정보 복원됨:', currentUser);
                     } else {
-                        // 기본 사용자 정보 설정 (실제로는 토큰에서 디코드하거나 API 호출)
-                        currentUser = { 
-                            email: 'user@example.com', 
-                            display_name: 'User'
-                        };
+                        console.warn('localStorage에 사용자 정보가 없습니다. 다시 로그인이 필요할 수 있습니다.');
+                        // 토큰만 있고 사용자 정보가 없는 경우 토큰 제거
+                        localStorage.removeItem('authToken');
+                        currentUser = null;
                     }
                     updateAuthUI();
                 } catch (error) {
@@ -2052,6 +2222,11 @@
                 // 페이지 전환
                 showPage('post-detail');
                 
+                // 작성자 권한 체크 및 수정/삭제 버튼 표시 업데이트
+                setTimeout(() => {
+                    updatePostActions();
+                }, 100);
+                
                 // 댓글 초기화 및 로드
                 comments = []; // 이전 댓글 데이터 클리어
                 await loadComments(post.slug);
@@ -2098,9 +2273,15 @@
                 
                 console.log('Sending post data:', postData);
                 
-                await createPost(postData);
-                showPage('posts');
+                const newPost = await createPost(postData);
                 form.reset();
+                
+                // 새로 작성된 게시글 상세 페이지로 이동
+                if (newPost && (newPost.slug || newPost.id)) {
+                    await showPostDetail(newPost.slug || newPost.id);
+                } else {
+                    showPage('posts');
+                }
             } catch (error) {
                 showNotification(error.message, 'error');
             } finally {
@@ -2979,6 +3160,206 @@
                 document.getElementById('sidebar').classList.remove('open');
             }
         });
+        
+        // =========================
+        // 게시글 수정/삭제 기능
+        // =========================
+        
+        // 게시글 수정 버튼 클릭
+        function editCurrentPost() {
+            if (!currentPost) {
+                showNotification('게시글 정보를 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            // 수정 폼에 기존 데이터 채우기
+            document.getElementById('editPostTitle').value = currentPost.title || '';
+            document.getElementById('editPostContent').value = currentPost.content || '';
+            document.getElementById('editPostService').value = currentPost.service || '';
+            
+            // 서비스에 따른 타입 옵션 업데이트
+            updateEditPostType();
+            document.getElementById('editPostType').value = currentPost.metadata?.type || '';
+            
+            // 태그 설정
+            const tags = currentPost.metadata?.tags || [];
+            document.getElementById('editPostTags').value = tags.join(', ');
+            
+            // 수정 페이지로 이동
+            showPage('post-edit');
+        }
+        
+        // 게시글 삭제 버튼 클릭
+        function deleteCurrentPost() {
+            if (!currentPost) {
+                showNotification('게시글 정보를 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            // 삭제 확인 다이얼로그 표시
+            document.getElementById('deleteConfirmDialog').classList.add('active');
+        }
+        
+        // 삭제 확인
+        async function confirmDeletePost() {
+            if (!currentPost) return;
+            
+            try {
+                await apiCall(`/api/posts/${currentPost.slug}`, {
+                    method: 'DELETE'
+                });
+                
+                showNotification('게시글이 삭제되었습니다.', 'success');
+                
+                // 다이얼로그 닫기
+                document.getElementById('deleteConfirmDialog').classList.remove('active');
+                
+                // 게시글 목록으로 이동
+                showPage('posts');
+                
+                // 게시글 목록 새로고침
+                await loadPosts();
+                
+            } catch (error) {
+                console.error('Failed to delete post:', error);
+                showNotification('게시글 삭제에 실패했습니다.', 'error');
+            }
+        }
+        
+        // 삭제 취소
+        function cancelDeletePost() {
+            document.getElementById('deleteConfirmDialog').classList.remove('active');
+        }
+        
+        // 게시글 수정 제출
+        async function handleUpdatePost(event) {
+            event.preventDefault();
+            
+            if (!currentPost) {
+                showNotification('게시글 정보를 찾을 수 없습니다.', 'error');
+                return;
+            }
+            
+            const btn = document.getElementById('updatePostBtn');
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading"></span> 수정 중...';
+            
+            try {
+                const updateData = {
+                    title: formData.get('title'),
+                    content: formData.get('content'),
+                    service: formData.get('service'),
+                    metadata: {
+                        type: formData.get('type'),
+                        tags: formData.get('tags') ? formData.get('tags').split(',').map(tag => tag.trim().slice(0, 10)).slice(0, 3) : [],
+                        visibility: 'public'
+                    }
+                };
+                
+                console.log('Updating post with data:', updateData);
+                
+                const updatedPost = await apiCall(`/api/posts/${currentPost.slug}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(updateData)
+                });
+                
+                showNotification('게시글이 성공적으로 수정되었습니다!', 'success');
+                
+                // 현재 게시글 정보 업데이트
+                currentPost = updatedPost;
+                window.currentPost = updatedPost;
+                
+                // 게시글 상세 페이지로 이동하여 업데이트된 내용 표시
+                await showPostDetail(updatedPost.slug || updatedPost.id);
+                
+            } catch (error) {
+                console.error('Failed to update post:', error);
+                showNotification('게시글 수정에 실패했습니다.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '수정 완료';
+            }
+        }
+        
+        // 수정 폼의 서비스별 타입 업데이트
+        function updateEditPostType() {
+            const serviceSelect = document.getElementById('editPostService');
+            const typeSelect = document.getElementById('editPostType');
+            const selectedService = serviceSelect.value;
+            
+            // 타입 옵션 초기화
+            typeSelect.innerHTML = '<option value="">타입 선택</option>';
+            
+            // 선택된 서비스의 타입들 추가
+            if (selectedService && serviceTypes[selectedService]) {
+                serviceTypes[selectedService].forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type;
+                    typeSelect.appendChild(option);
+                });
+            }
+        }
+        
+        // 작성자 권한 체크 및 UI 업데이트
+        function updatePostActions() {
+            console.log('=== 게시글 수정/삭제 버튼 권한 체크 ===');
+            const postActions = document.getElementById('postActions');
+            
+            if (!postActions) {
+                console.error('❌ postActions 요소를 찾을 수 없습니다!');
+                return;
+            }
+            
+            // 로그인 상태 및 현재 게시글 체크
+            if (!currentUser) {
+                console.log('❌ 로그인되지 않음 - 버튼 숨김');
+                postActions.style.display = 'none';
+                return;
+            }
+            
+            if (!currentPost) {
+                console.log('❌ 게시글 데이터 없음 - 버튼 숨김');
+                postActions.style.display = 'none';
+                return;
+            }
+            
+            // 사용자와 작성자 정보 비교
+            const userEmail = currentUser.email;
+            const userHandle = currentUser.user_handle;
+            const postAuthor = currentPost.author_id;
+            
+            console.log('현재 사용자:', userEmail);
+            console.log('게시글 작성자:', postAuthor);
+            
+            // 작성자 체크 (User ID로 비교)
+            const userId = currentUser._id || currentUser.id;
+            const isAuthor = userId === postAuthor || userEmail === postAuthor || userHandle === postAuthor;
+            
+            console.log('User ID:', userId);
+            console.log('비교:', {
+                'ID 매치': userId === postAuthor,
+                '이메일 매치': userEmail === postAuthor,
+                '핸들 매치': userHandle === postAuthor
+            });
+            
+            console.log('작성자 여부:', isAuthor);
+            console.log('비교 결과:', {
+                '이메일 매치': userEmail === postAuthor,
+                '핸들 매치': userHandle === postAuthor
+            });
+            
+            if (isAuthor) {
+                console.log('✅ 작성자 확인! 수정/삭제 버튼 표시');
+                postActions.style.display = 'flex';
+            } else {
+                console.log('❌ 작성자가 아님. 버튼 숨김');
+                postActions.style.display = 'none';
+            }
+        }
     </script>
 </body>
 </html>

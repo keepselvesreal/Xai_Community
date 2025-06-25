@@ -135,7 +135,14 @@ class PermissionChecker:
                 return False
             
             # Owner can do anything with their post
-            if user_id == post_author_id:
+            # Convert both to strings for comparison (to handle ObjectId)
+            user_id_str = str(user_id)
+            post_author_id_str = str(post_author_id)
+            
+            print(f"Permission check: user_id={user_id_str}, post_author_id={post_author_id_str}")
+            print(f"Type of user_id: {type(user_id)}, Type of post_author_id: {type(post_author_id)}")
+            
+            if user_id_str == post_author_id_str:
                 return True
             
             # Non-owners have limited permissions
