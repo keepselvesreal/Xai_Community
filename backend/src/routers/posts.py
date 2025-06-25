@@ -322,3 +322,81 @@ async def dislike_post(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to dislike post: {str(e)}"
         )
+
+
+@router.post("/{slug}/bookmark", status_code=status.HTTP_200_OK)
+async def bookmark_post(
+    slug: str,
+    current_user: User = Depends(get_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """Bookmark a post."""
+    try:
+        result = await posts_service.toggle_post_reaction(slug, "bookmark", current_user)
+        return {
+            "action": "bookmarked" if result["user_reaction"]["bookmarked"] else "unbookmarked",
+            "bookmark_count": result["bookmark_count"],
+            "user_reaction": result["user_reaction"]
+        }
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to bookmark post: {str(e)}"
+        )
+
+
+@router.get("/{slug}/stats", status_code=status.HTTP_200_OK)
+async def get_post_stats(
+    slug: str,
+    current_user: Optional[User] = Depends(get_optional_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """Get post statistics."""
+    try:
+        # Get post by slug
+        post = await posts_service.get_post_by_slug(slug)
+        
+        # Get post stats
+        stats = await posts_service._calculate_post_stats(str(post.id))
+        
+        result = {
+            "view_count": stats["view_count"],
+            "like_count": stats["like_count"],
+            "dislike_count": stats["dislike_count"],
+            "comment_count": stats["comment_count"],
+            "bookmark_count": stats["bookmark_count"]
+        }
+        
+        # Add user reaction if authenticated
+        if current_user:
+            from src.models.core import UserReaction
+            user_reaction = await UserReaction.find_one({
+                "user_id": str(current_user.id),
+                "target_type": "post",
+                "target_id": str(post.id)
+            })
+            
+            if user_reaction:
+                result["user_reaction"] = {
+                    "liked": user_reaction.liked,
+                    "disliked": user_reaction.disliked,
+                    "bookmarked": user_reaction.bookmarked
+                }
+        
+        return result
+        
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get post stats: {str(e)}"
+        )

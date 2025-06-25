@@ -356,6 +356,9 @@ class PostsService:
             user_reaction.disliked = not was_disliked
             if user_reaction.disliked:
                 user_reaction.liked = False
+        elif reaction_type == "bookmark":
+            # Toggle bookmark (independent of like/dislike)
+            user_reaction.bookmarked = not user_reaction.bookmarked
         
         # Save user reaction
         await user_reaction.save()
@@ -366,6 +369,7 @@ class PostsService:
         return {
             "like_count": updated_stats["like_count"],
             "dislike_count": updated_stats["dislike_count"],
+            "bookmark_count": updated_stats["bookmark_count"],
             "user_reaction": {
                 "liked": user_reaction.liked,
                 "disliked": user_reaction.disliked,

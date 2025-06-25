@@ -2404,15 +2404,9 @@
                 return;
             }
             
-            // bookmark는 아직 구현되지 않음
-            if (type === 'bookmark') {
-                showNotification('북마크 기능은 준비 중입니다.', 'info');
-                return;
-            }
-            
             try {
                 // 실제 API 호출
-                const endpoint = type === 'like' ? 'like' : 'dislike';
+                const endpoint = type === 'like' ? 'like' : type === 'dislike' ? 'dislike' : 'bookmark';
                 const response = await apiCall(`/api/posts/${currentPost.slug}/${endpoint}`, {
                     method: 'POST'
                 });
@@ -2429,25 +2423,45 @@
                     countElement.textContent = response.dislike_count;
                     document.getElementById('likeCount').textContent = response.like_count;
                     document.getElementById('dislikeCount').textContent = response.dislike_count;
+                } else if (type === 'bookmark') {
+                    countElement.textContent = response.bookmark_count;
                 }
                 
                 // 버튼 스타일 업데이트
                 const likeBtn = document.getElementById('likeCount').closest('.reaction-btn');
                 const dislikeBtn = document.getElementById('dislikeCount').closest('.reaction-btn');
+                const bookmarkBtn = document.getElementById('bookmarkCount').closest('.reaction-btn');
                 
-                if (response.user_reaction.liked) {
-                    likeBtn.classList.add('active');
-                } else {
-                    likeBtn.classList.remove('active');
+                // Like/Dislike 버튼 스타일 업데이트 (user_reaction이 있는 경우에만)
+                if (response.user_reaction) {
+                    if (response.user_reaction.liked) {
+                        likeBtn.classList.add('active');
+                    } else {
+                        likeBtn.classList.remove('active');
+                    }
+                    
+                    if (response.user_reaction.disliked) {
+                        dislikeBtn.classList.add('active');
+                    } else {
+                        dislikeBtn.classList.remove('active');
+                    }
+                    
+                    if (response.user_reaction.bookmarked) {
+                        bookmarkBtn.classList.add('active');
+                    } else {
+                        bookmarkBtn.classList.remove('active');
+                    }
                 }
                 
-                if (response.user_reaction.disliked) {
-                    dislikeBtn.classList.add('active');
-                } else {
-                    dislikeBtn.classList.remove('active');
+                let message = '';
+                if (type === 'like') {
+                    message = `게시글에 좋아요를 눌렀습니다.`;
+                } else if (type === 'dislike') {
+                    message = `게시글에 싫어요를 눌렀습니다.`;
+                } else if (type === 'bookmark') {
+                    message = response.action === 'bookmarked' ? '북마크에 추가했습니다.' : '북마크를 제거했습니다.';
                 }
-                
-                showNotification(`게시글에 ${type === 'like' ? '좋아요' : '싫어요'}를 눌렀습니다.`, 'success');
+                showNotification(message, 'success');
                 
             } catch (error) {
                 console.error('Failed to toggle reaction:', error);
