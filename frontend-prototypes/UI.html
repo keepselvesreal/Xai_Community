@@ -1375,8 +1375,8 @@
                             </div>
                             <div class="filter-group">
                                 <label class="filter-label">검색</label>
-                                <input type="text" class="form-input" placeholder="제목 검색..." 
-                                       onkeyup="searchPosts(this.value)" style="width: 200px;">
+                                <input type="text" class="form-input" id="searchInput" placeholder="제목 및 내용 검색..." 
+                                       onkeyup="searchPosts(this.value)" oninput="filterPosts()" style="width: 200px;">
                             </div>
                         </div>
                     </div>
@@ -1655,6 +1655,9 @@
                 posts = response.items || [];
                 console.log('Loaded posts with stats:', posts);
                 
+                // 전체 posts 데이터를 글로벌 변수에 저장 (필터링용)
+                window.allPosts = [...posts];
+                
                 // 캐시 업데이트
                 postsCache.clear();
                 posts.forEach(post => {
@@ -1667,6 +1670,7 @@
                 // API 실패시 모의 데이터 사용
                 console.warn('Failed to load posts from API, using mock data:', error);
                 posts = [...mockPosts];
+                window.allPosts = [...mockPosts];
                 renderPosts();
             }
         }
@@ -1994,6 +1998,10 @@
                                 <button onclick="event.stopPropagation(); togglePostReaction('${post.slug || post.id}', 'dislike')" 
                                         style="background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8em;">
                                     👎 ${(post.stats?.dislike_count || post.dislike_count) || 0}
+                                </button>
+                                <button onclick="event.stopPropagation(); togglePostReaction('${post.slug || post.id}', 'bookmark')" 
+                                        style="background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8em;">
+                                    🔖 ${(post.stats?.bookmark_count || post.bookmark_count) || 0}
                                 </button>
                             </div>
                         </div>
@@ -2516,8 +2524,11 @@
         function filterPosts() {
             const serviceFilter = document.getElementById('serviceFilter').value;
             const typeFilter = document.getElementById('typeFilter').value;
+            const searchInput = document.getElementById('searchInput');
+            const searchQuery = searchInput ? searchInput.value.trim() : '';
             
-            let filteredPosts = [...mockPosts];
+            // 전체 posts 데이터에서 필터링 시작 (API 로드된 데이터 사용)
+            let filteredPosts = [...(window.allPosts || posts)];
             
             // 서비스 필터
             if (serviceFilter) {
@@ -2527,6 +2538,15 @@
             // 타입 필터
             if (typeFilter) {
                 filteredPosts = filteredPosts.filter(post => post.metadata?.type === typeFilter);
+            }
+            
+            // 검색어 필터
+            if (searchQuery) {
+                filteredPosts = filteredPosts.filter(post => 
+                    post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    post.content.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    (post.metadata?.tags || []).some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
+                );
             }
             
             posts = filteredPosts;
@@ -2541,9 +2561,9 @@
                 if (sortBy === 'created_at') {
                     return new Date(b.created_at) - new Date(a.created_at);
                 } else if (sortBy === 'views') {
-                    return (b.view_count || 0) - (a.view_count || 0);
+                    return ((b.stats?.view_count || b.view_count) || 0) - ((a.stats?.view_count || a.view_count) || 0);
                 } else if (sortBy === 'likes') {
-                    return (b.like_count || 0) - (a.like_count || 0);
+                    return ((b.stats?.like_count || b.like_count) || 0) - ((a.stats?.like_count || a.like_count) || 0);
                 }
                 return 0;
             });
@@ -2555,7 +2575,8 @@
             const serviceFilter = document.getElementById('serviceFilter').value;
             const typeFilter = document.getElementById('typeFilter').value;
             
-            let filteredPosts = [...mockPosts];
+            // API에서 로드된 posts 데이터 사용 (mockPosts 대신)
+            let filteredPosts = [...posts];
             
             // 먼저 서비스/타입 필터 적용
             if (serviceFilter) {
@@ -2565,7 +2586,7 @@
                 filteredPosts = filteredPosts.filter(post => post.metadata?.type === typeFilter);
             }
             
-            // 검색어 필터
+            // 검색어 필터 (제목과 내용에 대해서만)
             if (query.trim()) {
                 filteredPosts = filteredPosts.filter(post => 
                     post.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -2574,8 +2595,12 @@
                 );
             }
             
+            // 검색 결과를 posts에 할당하여 렌더링
+            const originalPosts = [...posts]; // 원본 데이터 백업
             posts = filteredPosts;
             renderPosts();
+            
+            // 검색이 끝나고 다시 원본 데이터로 복원하지 않음 (사용자가 필터를 해제할 때까지)
         }
         
         // API 테스트 관련 함수들
