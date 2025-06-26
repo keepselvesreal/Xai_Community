@@ -1066,6 +1066,14 @@
                         게시글 작성
                     </a>
                 </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">파일 관리</div>
+                    <a class="nav-item" onclick="showPage('file-upload', this)">
+                        <span class="nav-icon">📎</span>
+                        파일 업로드 테스트
+                    </a>
+                </div>
             </nav>
         </aside>
         
@@ -1636,6 +1644,103 @@
                     </div>
                 </div>
                 
+                <!-- 파일 업로드 테스트 페이지 -->
+                <div class="page" id="file-upload">
+                    <div class="auth-container" style="max-width: 800px;">
+                        <div class="auth-card">
+                            <h2 class="auth-title">📎 파일 업로드 테스트</h2>
+                            <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+                                파일 관리 API (Task 1-6) 통합 테스트
+                            </p>
+                            
+                            <!-- 업로드 섹션 -->
+                            <div style="border: 2px dashed #d1d5db; border-radius: 12px; padding: 30px; margin-bottom: 30px; text-align: center; transition: all 0.2s;" id="uploadArea">
+                                <div style="font-size: 3em; margin-bottom: 10px;">📤</div>
+                                <h3>파일을 선택하거나 드래그해서 업로드</h3>
+                                <p style="color: #6b7280; margin: 10px 0;">지원 형식: JPG, JPEG, PNG, GIF, WEBP (최대 5MB)</p>
+                                
+                                <form id="fileUploadForm" style="margin-top: 20px;">
+                                    <input type="file" id="fileInput" name="file" accept="image/*" style="display: none;" onchange="handleFileSelect(event)">
+                                    <button type="button" class="btn-primary" onclick="document.getElementById('fileInput').click()">
+                                        파일 선택
+                                    </button>
+                                    
+                                    <!-- 첨부 옵션 -->
+                                    <div style="margin-top: 20px; text-align: left;">
+                                        <label class="form-label">첨부 타입 (선택)</label>
+                                        <select class="form-input" id="attachmentType" name="attachment_type">
+                                            <option value="">선택 안함</option>
+                                            <option value="post">게시글</option>
+                                            <option value="comment">댓글</option>
+                                            <option value="profile">프로필</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div style="margin-top: 15px; text-align: left;">
+                                        <label class="form-label">첨부 ID (선택)</label>
+                                        <input type="text" class="form-input" id="attachmentId" name="attachment_id" placeholder="예: post_123, comment_456">
+                                    </div>
+                                </form>
+                            </div>
+                            
+                            <!-- 파일 정보 표시 -->
+                            <div id="fileInfo" style="display: none; background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                                <h4 style="color: #0369a1; margin-bottom: 10px;">📋 선택된 파일</h4>
+                                <div id="fileDetails"></div>
+                                <div style="margin-top: 15px;">
+                                    <button type="button" class="btn-primary" onclick="uploadSelectedFile()" id="uploadBtn">
+                                        업로드 시작
+                                    </button>
+                                    <button type="button" class="btn-secondary" onclick="clearFileSelection()">
+                                        취소
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 업로드 진행상황 -->
+                            <div id="uploadProgress" style="display: none; margin-bottom: 20px;">
+                                <div style="background: #f3f4f6; border-radius: 8px; padding: 4px;">
+                                    <div id="progressBar" style="background: #10b981; height: 8px; border-radius: 4px; width: 0%; transition: width 0.3s;"></div>
+                                </div>
+                                <p style="text-align: center; margin-top: 10px; color: #6b7280;" id="progressText">업로드 중...</p>
+                            </div>
+                            
+                            <!-- 업로드 결과 -->
+                            <div id="uploadResult" style="display: none;">
+                                <h4 style="color: #059669; margin-bottom: 15px;">✅ 업로드 성공!</h4>
+                                <div id="resultDetails" style="background: #f0fdf4; border: 1px solid #16a34a; border-radius: 8px; padding: 20px;"></div>
+                                <div style="margin-top: 15px;">
+                                    <button type="button" class="btn-primary" onclick="resetUploadForm()">
+                                        새 파일 업로드
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- 오류 표시 -->
+                            <div id="uploadError" style="display: none;">
+                                <h4 style="color: #dc2626; margin-bottom: 15px;">❌ 업로드 실패</h4>
+                                <div id="errorDetails" style="background: #fef2f2; border: 1px solid #ef4444; border-radius: 8px; padding: 20px; color: #dc2626;"></div>
+                                <div style="margin-top: 15px;">
+                                    <button type="button" class="btn-primary" onclick="resetUploadForm()">
+                                        다시 시도
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- API 테스트 로그 -->
+                            <div style="margin-top: 30px;">
+                                <h4 style="margin-bottom: 15px;">🔧 API 테스트 로그</h4>
+                                <div id="apiLog" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; max-height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9em;">
+                                    <div style="color: #6b7280;">API 호출 로그가 여기에 표시됩니다...</div>
+                                </div>
+                                <button type="button" class="btn-secondary" onclick="clearApiLog()" style="margin-top: 10px;">
+                                    로그 지우기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 관리자 페이지 제거됨 -->
                 
                 <!-- API 테스트 페이지 제거됨 -->
@@ -1963,7 +2068,8 @@
                 register: '회원가입',
                 posts: '게시글 목록',
                 'post-detail': '게시글 상세',
-                'post-create': '게시글 작성'
+                'post-create': '게시글 작성',
+                'file-upload': '파일 업로드 테스트'
             };
             
             const subtitles = {
@@ -1972,7 +2078,8 @@
                 register: '새 계정을 만드세요',
                 posts: '모든 게시글을 확인하세요',
                 'post-detail': '게시글 내용 및 댓글',
-                'post-create': '새로운 게시글을 작성하세요'
+                'post-create': '새로운 게시글을 작성하세요',
+                'file-upload': '파일 관리 API (Task 1-6) 통합 테스트'
             };
             
             document.getElementById('pageTitle').textContent = titles[pageId] || '';
@@ -3360,6 +3467,258 @@
                 postActions.style.display = 'none';
             }
         }
+        
+        // ====== 파일 업로드 관련 함수들 ======
+        let selectedFile = null;
+        
+        function logApi(message, type = 'info') {
+            const apiLog = document.getElementById('apiLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '5px';
+            logEntry.style.color = type === 'error' ? '#dc2626' : type === 'success' ? '#059669' : '#374151';
+            logEntry.innerHTML = `<span style="color: #6b7280;">[${timestamp}]</span> ${message}`;
+            apiLog.appendChild(logEntry);
+            apiLog.scrollTop = apiLog.scrollHeight;
+        }
+        
+        function clearApiLog() {
+            const apiLog = document.getElementById('apiLog');
+            apiLog.innerHTML = '<div style="color: #6b7280;">API 호출 로그가 여기에 표시됩니다...</div>';
+        }
+        
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            selectedFile = file;
+            logApi(`📁 파일 선택됨: ${file.name} (${formatFileSize(file.size)})`);
+            
+            // 파일 정보 표시
+            document.getElementById('fileDetails').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.9em;">
+                    <div><strong>파일명:</strong> ${file.name}</div>
+                    <div><strong>크기:</strong> ${formatFileSize(file.size)}</div>
+                    <div><strong>타입:</strong> ${file.type}</div>
+                    <div><strong>마지막 수정:</strong> ${new Date(file.lastModified).toLocaleDateString()}</div>
+                </div>
+            `;
+            
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('uploadArea').style.borderColor = '#10b981';
+            document.getElementById('uploadArea').style.backgroundColor = '#f0fdf4';
+            
+            // 다른 상태 숨기기
+            hideAllUploadStates();
+        }
+        
+        function clearFileSelection() {
+            selectedFile = null;
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('uploadArea').style.borderColor = '#d1d5db';
+            document.getElementById('uploadArea').style.backgroundColor = 'transparent';
+            hideAllUploadStates();
+            logApi('❌ 파일 선택 취소됨');
+        }
+        
+        function hideAllUploadStates() {
+            document.getElementById('uploadProgress').style.display = 'none';
+            document.getElementById('uploadResult').style.display = 'none';
+            document.getElementById('uploadError').style.display = 'none';
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        
+        async function uploadSelectedFile() {
+            if (!selectedFile) {
+                logApi('⚠️ 업로드할 파일이 선택되지 않았습니다.', 'error');
+                return;
+            }
+            
+            // UI 상태 업데이트
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('uploadProgress').style.display = 'block';
+            hideAllUploadStates();
+            document.getElementById('uploadProgress').style.display = 'block';
+            
+            const uploadBtn = document.getElementById('uploadBtn');
+            uploadBtn.disabled = true;
+            
+            try {
+                logApi(`🚀 업로드 시작: ${selectedFile.name}`);
+                
+                // FormData 생성
+                const formData = new FormData();
+                formData.append('file', selectedFile);
+                
+                // 첨부 정보 추가 (선택사항)
+                const attachmentType = document.getElementById('attachmentType').value;
+                const attachmentId = document.getElementById('attachmentId').value;
+                
+                if (attachmentType) {
+                    formData.append('attachment_type', attachmentType);
+                    logApi(`📎 첨부 타입: ${attachmentType}`);
+                }
+                if (attachmentId) {
+                    formData.append('attachment_id', attachmentId);
+                    logApi(`🔗 첨부 ID: ${attachmentId}`);
+                }
+                
+                // 진행상황 시뮬레이션
+                updateProgress(0, '업로드 준비 중...');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                updateProgress(25, '파일 검증 중...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                updateProgress(50, '서버에 업로드 중...');
+                
+                // API 호출
+                const response = await fetch(`${API_BASE_URL}/api/files/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                updateProgress(75, '서버 응답 처리 중...');
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                const result = await response.json();
+                
+                updateProgress(100, '업로드 완료!');
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                if (response.ok) {
+                    // 성공 처리
+                    logApi(`✅ 업로드 성공! 파일 ID: ${result.file_id}`, 'success');
+                    showUploadSuccess(result);
+                } else {
+                    // 오류 처리
+                    logApi(`❌ 업로드 실패: ${result.detail || '알 수 없는 오류'}`, 'error');
+                    showUploadError(result.detail || '알 수 없는 오류가 발생했습니다.');
+                }
+                
+            } catch (error) {
+                logApi(`💥 네트워크 오류: ${error.message}`, 'error');
+                showUploadError(`네트워크 오류: ${error.message}`);
+            } finally {
+                document.getElementById('uploadProgress').style.display = 'none';
+                uploadBtn.disabled = false;
+            }
+        }
+        
+        function updateProgress(percent, text) {
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressText').textContent = text;
+        }
+        
+        function showUploadSuccess(result) {
+            document.getElementById('uploadResult').style.display = 'block';
+            document.getElementById('resultDetails').innerHTML = `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9em;">
+                    <div><strong>파일 ID:</strong><br><code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">${result.file_id}</code></div>
+                    <div><strong>파일명:</strong><br>${result.filename}</div>
+                    <div><strong>파일 경로:</strong><br><code style="background: #e5e7eb; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">${result.file_path}</code></div>
+                    <div><strong>파일 크기:</strong><br>${formatFileSize(result.file_size)}</div>
+                    <div><strong>MIME 타입:</strong><br>${result.content_type}</div>
+                    <div><strong>상태:</strong><br><span style="color: #059669;">✅ 업로드 완료</span></div>
+                </div>
+                <div style="margin-top: 15px; padding: 10px; background: #ecfdf5; border-radius: 6px;">
+                    <strong>🎉 모든 검증 단계를 통과했습니다!</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px; color: #059669;">
+                        <li>파일 타입 검증 ✅</li>
+                        <li>파일 크기 검증 ✅</li>
+                        <li>확장자 일치성 검증 ✅</li>
+                        <li>디스크 저장 ✅</li>
+                        <li>데이터베이스 저장 ✅</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function showUploadError(message) {
+            document.getElementById('uploadError').style.display = 'block';
+            document.getElementById('errorDetails').innerHTML = `
+                <div style="margin-bottom: 15px;">
+                    <strong>오류 메시지:</strong><br>
+                    ${message}
+                </div>
+                <div style="font-size: 0.9em; color: #7f1d1d;">
+                    <strong>문제 해결 방법:</strong>
+                    <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>파일이 이미지 형식인지 확인 (JPG, PNG, GIF, WEBP)</li>
+                        <li>파일 크기가 5MB 이하인지 확인</li>
+                        <li>파일 확장자와 실제 파일 형식이 일치하는지 확인</li>
+                        <li>네트워크 연결 상태 확인</li>
+                        <li>서버가 실행 중인지 확인</li>
+                    </ul>
+                </div>
+            `;
+        }
+        
+        function resetUploadForm() {
+            clearFileSelection();
+            hideAllUploadStates();
+            
+            // 폼 초기화
+            document.getElementById('attachmentType').value = '';
+            document.getElementById('attachmentId').value = '';
+            
+            logApi('🔄 업로드 폼이 초기화되었습니다.');
+        }
+        
+        // 드래그 앤 드롭 지원
+        document.addEventListener('DOMContentLoaded', function() {
+            const uploadArea = document.getElementById('uploadArea');
+            
+            if (uploadArea) {
+                ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                    uploadArea.addEventListener(eventName, preventDefaults, false);
+                });
+                
+                function preventDefaults(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                
+                ['dragenter', 'dragover'].forEach(eventName => {
+                    uploadArea.addEventListener(eventName, highlight, false);
+                });
+                
+                ['dragleave', 'drop'].forEach(eventName => {
+                    uploadArea.addEventListener(eventName, unhighlight, false);
+                });
+                
+                function highlight(e) {
+                    uploadArea.style.borderColor = '#2563eb';
+                    uploadArea.style.backgroundColor = '#eff6ff';
+                }
+                
+                function unhighlight(e) {
+                    uploadArea.style.borderColor = '#d1d5db';
+                    uploadArea.style.backgroundColor = 'transparent';
+                }
+                
+                uploadArea.addEventListener('drop', handleDrop, false);
+                
+                function handleDrop(e) {
+                    const dt = e.dataTransfer;
+                    const files = dt.files;
+                    
+                    if (files.length > 0) {
+                        const file = files[0];
+                        document.getElementById('fileInput').files = files;
+                        handleFileSelect({ target: { files: [file] } });
+                    }
+                }
+            }
+        });
     </script>
 </body>
 </html>

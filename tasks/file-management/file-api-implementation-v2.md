@@ -3,6 +3,8 @@
 **Feature Group**: File Management  
 **Task List 제목**: 파일 API 구현 v2 (File API Implementation v2)  
 **최초 작성 시각**: 2025-06-26 15:00:00 KST  
+**Task 1 완료 시각**: 2025-06-26 10:28:00 KST  
+**1단계 전체 완료 시각**: 2025-06-26 11:06:00 KST  
 **버전**: 2.0 - 사용자 플로우 검증 기반 단계별 구현
 
 ## 개요
