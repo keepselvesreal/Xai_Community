@@ -7,10 +7,10 @@ install:  ## 의존성 설치
 	uv sync
 
 dev:  ## 개발 서버 시작
-	cd src && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+	PYTHONPATH=$(PWD) uv run python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
 start:  ## 프로덕션 서버 시작
-	cd src && uv run uvicorn main:app --host 0.0.0.0 --port 8000
+	PYTHONPATH=$(PWD) uv run python -m uvicorn main:app --host 0.0.0.0 --port 8000
 
 test:  ## 모든 테스트 실행
 	uv run pytest

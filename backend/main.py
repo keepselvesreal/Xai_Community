@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
+import os
 from src.config import settings
 
 # 로깅 설정
@@ -73,13 +75,20 @@ def create_app() -> FastAPI:
     async def root():
         return {"message": "Xai Community API", "status": "running"}
     
+    # 정적 파일 서빙 (프론트엔드용)
+    frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend-prototypes")
+    if os.path.exists(frontend_path):
+        app.mount("/static", StaticFiles(directory=frontend_path), name="static")
+        logger.info(f"Static files mounted from: {frontend_path}")
+    
     # 라우터 등록 (안전하게)
     try:
-        from src.routers import auth, posts, comments, file_upload
+        from src.routers import auth, posts, comments, file_upload, content
         app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
         app.include_router(posts.router, tags=["Posts"])
         app.include_router(comments.router, tags=["Comments"])
         app.include_router(file_upload.router, prefix="/api/files", tags=["Files"])
+        app.include_router(content.router, tags=["Content"])
         logger.info("Routers loaded successfully!")
     except Exception as e:
         logger.error(f"Failed to load routers: {e}")

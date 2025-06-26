@@ -3,7 +3,7 @@ name = "backend"
 version = "0.1.0"
 description = "FastAPI backend for development environment"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "fastapi[standard]>=0.115.12",
     "uvicorn>=0.34.3",
@@ -14,6 +14,11 @@ dependencies = [
     "pydantic-settings>=2.8.0",
     "python-multipart>=0.0.20",
     "certifi>=2025.4.26",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "markdown>=3.8.2",
+    "bleach>=6.2.0",
+    "beautifulsoup4>=4.13.4",
 ]
 
 [project.optional-dependencies]

@@ -11,6 +11,8 @@ PostStatus = Literal["draft", "published", "archived", "deleted"]
 UserStatus = Literal["active", "inactive", "suspended"]
 CommentStatus = Literal["active", "deleted", "hidden", "pending"]
 TargetType = Literal["post", "comment"]
+ContentType = Literal["text", "markdown", "html"]
+EditorType = Literal["plain", "markdown", "wysiwyg"]
 
 # Service-specific post types
 ShoppingPostType = Literal["상품 문의", "배송 문의", "교환/환불", "기타"]
@@ -45,6 +47,8 @@ class PostMetadata(BaseModel):
     tags: Optional[List[str]] = Field(default_factory=list, max_items=3)
     attachments: Optional[List[str]] = Field(default_factory=list)  # Image URLs
     file_ids: Optional[List[str]] = Field(default_factory=list)  # File upload IDs
+    inline_images: Optional[List[str]] = Field(default_factory=list)  # Inline image file_ids
+    editor_type: EditorType = "plain"
     thumbnail: Optional[str] = None
     visibility: Literal["public", "private"] = "public"
     
@@ -123,6 +127,13 @@ class Post(Document, PostBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     published_at: Optional[datetime] = None
+    
+    # Content processing fields
+    content_type: ContentType = "text"
+    content_rendered: Optional[str] = None  # Rendered HTML
+    content_text: Optional[str] = None  # Plain text for search
+    word_count: Optional[int] = None
+    reading_time: Optional[int] = None  # Minutes
     
     # Basic stats (denormalized for performance)
     view_count: int = 0
