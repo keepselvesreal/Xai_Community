@@ -1348,6 +1348,99 @@
             color: #1f2937;
         }
         
+        /* 마크다운 미리보기 스타일 */
+        .markdown-preview {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            background: #f8fafc;
+            margin-top: 15px;
+        }
+        
+        .preview-header {
+            background: #e2e8f0;
+            padding: 10px 15px;
+            border-bottom: 1px solid #d1d5db;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .preview-header h4 {
+            margin: 0;
+            color: #4a5568;
+            font-size: 14px;
+        }
+        
+        .preview-meta {
+            font-size: 12px;
+            color: #718096;
+        }
+        
+        .preview-content {
+            padding: 20px;
+            background: white;
+            border-radius: 0 0 8px 8px;
+            min-height: 300px;
+            line-height: 1.6;
+        }
+        
+        .preview-content h1, .preview-content h2, .preview-content h3 {
+            margin: 20px 0 10px 0;
+            color: #1f2937;
+        }
+        
+        .preview-content ul, .preview-content ol {
+            margin: 16px 0;
+            padding-left: 24px;
+        }
+        
+        .preview-content blockquote {
+            border-left: 4px solid #3b82f6;
+            margin: 16px 0;
+            padding-left: 16px;
+            color: #4a5568;
+            background: #f1f5f9;
+            padding: 10px 16px;
+            border-radius: 0 4px 4px 0;
+        }
+        
+        .preview-content code {
+            background: #f1f5f9;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+        }
+        
+        .preview-content pre {
+            background: #1f2937;
+            color: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .preview-content pre code {
+            background: none;
+            padding: 0;
+            color: inherit;
+        }
+        
+        .preview-content img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+            border-radius: 4px;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .btn-markdown-active {
+            background: #3b82f6 !important;
+            color: white !important;
+        }
+        
         .rich-text-editor h1 {
             font-size: 2em;
             font-weight: 700;
@@ -2282,11 +2375,34 @@
                                                 ↷
                                             </button>
                                         </div>
+                                        
+                                        <div class="toolbar-divider"></div>
+                                        
+                                        <!-- 마크다운 기능 -->
+                                        <div class="toolbar-group">
+                                            <button type="button" id="btn-markdown-mode" class="toolbar-btn" onclick="toggleMarkdownMode()" title="마크다운 모드">
+                                                📝 MD
+                                            </button>
+                                            <button type="button" id="btn-preview" class="toolbar-btn" onclick="previewContent()" title="미리보기">
+                                                👁️ 미리보기
+                                            </button>
+                                        </div>
                                     </div>
                                     
                                     <!-- 리치 텍스트 에디터 -->
                                     <div id="rich-text-editor" class="rich-text-editor" contenteditable="true">
                                         <p>여기에 내용을 작성하세요...</p>
+                                    </div>
+                                    
+                                    <!-- 마크다운 미리보기 -->
+                                    <div id="markdown-preview" class="markdown-preview" style="display: none;">
+                                        <div class="preview-header">
+                                            <h4>미리보기</h4>
+                                            <div class="preview-meta" id="preview-meta"></div>
+                                        </div>
+                                        <div id="preview-content" class="preview-content">
+                                            미리보기를 보려면 위의 미리보기 버튼을 클릭하세요.
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -2796,10 +2912,17 @@
         
         async function createPost(postData) {
             try {
+                console.log('API 호출 시작 - URL: /api/posts/');
+                console.log('요청 데이터:', postData);
+                console.log('현재 사용자:', currentUser);
+                console.log('인증 토큰:', localStorage.getItem('authToken') ? '있음' : '없음');
+                
                 const newPost = await apiCall('/api/posts/', {
                     method: 'POST',
                     body: JSON.stringify(postData)
                 });
+                
+                console.log('API 호출 성공! 응답:', newPost);
                 showNotification('게시글이 성공적으로 작성되었습니다!', 'success');
                 await loadPosts(); // 목록 새로고침
                 
@@ -2808,6 +2931,9 @@
                 
                 return newPost;
             } catch (error) {
+                console.error('API 호출 실패 상세 정보:', error);
+                console.error('에러 타입:', error.constructor.name);
+                console.error('에러 메시지:', error.message);
                 console.warn('API 호출 실패, 모의 게시글 생성:', error);
                 
                 // API 실패 시 모의 게시글 생성
@@ -5147,6 +5273,10 @@
             
             function initBasicEnhancedTiptapEditor() {
                 const editorElement = document.getElementById('enhanced-tiptap-editor');
+                if (!editorElement) {
+                    console.error('Enhanced Tiptap editor element not found');
+                    return;
+                }
                 editorElement.innerHTML = `
                     <div style="padding: 20px; min-height: 400px; line-height: 1.6;">
                         <div contenteditable="true" style="outline: none; min-height: 360px;" id="enhanced-basic-editor">
@@ -5156,6 +5286,10 @@
                 `;
                 
                 const basicEditor = document.getElementById('enhanced-basic-editor');
+                if (!basicEditor) {
+                    console.error('Enhanced basic editor element not found');
+                    return;
+                }
                 
                 // 가짜 에디터 객체
                 enhancedTiptapEditor = {
@@ -5869,29 +6003,37 @@
             }
         }
         
-        function handleImageUpload(event) {
+        async function handleImageUpload(event) {
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imageUrl = e.target.result;
+                try {
+                    logToEnhancedTiptap(`이미지 업로드 중: ${file.name}...`);
                     
+                    // 파일 API로 업로드
+                    const fileId = await uploadImageToFileAPI(file);
+                    const imageUrl = `${API_BASE_URL}/api/files/${fileId}`;
+                    
+                    // 파일 ID 추적
+                    if (!window.editorFileIds) window.editorFileIds = [];
+                    window.editorFileIds.push(fileId);
+                    
+                    // 에디터에 이미지 삽입
                     if (enhancedTiptapEditor && enhancedTiptapEditor.chain && typeof enhancedTiptapEditor.chain === 'function') {
-                        // Tiptap 에디터가 정상 작동하는 경우
                         try {
                             enhancedTiptapEditor.chain().focus().setImage({ src: imageUrl }).run();
                         } catch (error) {
-                            // 이미지 확장이 없는 경우 HTML로 직접 삽입
                             insertImageAsHTML(imageUrl);
                         }
                     } else {
-                        // 기본 에디터인 경우
                         insertImageAsHTML(imageUrl);
                     }
                     
-                    logToEnhancedTiptap('이미지 업로드 완료: ' + file.name);
-                };
-                reader.readAsDataURL(file);
+                    logToEnhancedTiptap(`✅ 이미지 업로드 완료: ${file.name} (파일 ID: ${fileId})`);
+                } catch (error) {
+                    console.error('이미지 업로드 실패:', error);
+                    logToEnhancedTiptap(`❌ 이미지 업로드 실패: ${error.message}`, 'error');
+                    showNotification('이미지 업로드에 실패했습니다.', 'error');
+                }
             } else {
                 logToEnhancedTiptap('유효하지 않은 이미지 파일입니다.');
             }
@@ -5900,12 +6042,76 @@
             event.target.value = '';
         }
         
+        // 파일 API 업로드 헬퍼 함수
+        async function uploadImageToFileAPI(file) {
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                throw new Error('로그인이 필요합니다.');
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('attachment_type', 'post');
+            
+            const response = await fetch(`${API_BASE_URL}/api/files/upload`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`파일 업로드 실패 (${response.status}): ${errorText}`);
+            }
+            
+            const result = await response.json();
+            return result.file_id;
+        }
+        
         function insertImageAsHTML(imageUrl) {
             const editorElement = document.getElementById('enhanced-basic-editor') || document.getElementById('enhanced-tiptap-editor');
             if (editorElement) {
                 editorElement.focus();
                 const img = `<img src="${imageUrl}" style="max-width: 100%; height: auto; margin: 10px 0;" alt="업로드된 이미지">`;
                 document.execCommand('insertHTML', false, img);
+            }
+        }
+        
+        // 붙여넣기 이벤트에서 이미지 처리
+        async function handlePasteImages(event) {
+            const items = event.clipboardData?.items;
+            if (!items) return;
+            
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    event.preventDefault();
+                    const file = item.getAsFile();
+                    if (file) {
+                        try {
+                            logToEnhancedTiptap(`붙여넣기로 이미지 업로드 중: ${file.name || 'unnamed'}...`);
+                            
+                            // 파일 API로 업로드
+                            const fileId = await uploadImageToFileAPI(file);
+                            const imageUrl = `${API_BASE_URL}/api/files/${fileId}`;
+                            
+                            // 파일 ID 추적
+                            if (!window.editorFileIds) window.editorFileIds = [];
+                            window.editorFileIds.push(fileId);
+                            
+                            // 에디터에 이미지 삽입
+                            insertImageAsHTML(imageUrl);
+                            
+                            logToEnhancedTiptap(`✅ 붙여넣기 이미지 업로드 완료 (파일 ID: ${fileId})`);
+                        } catch (error) {
+                            console.error('붙여넣기 이미지 업로드 실패:', error);
+                            logToEnhancedTiptap(`❌ 붙여넣기 이미지 업로드 실패: ${error.message}`, 'error');
+                            showNotification('붙여넣기 이미지 업로드에 실패했습니다.', 'error');
+                        }
+                    }
+                    break; // 첫 번째 이미지만 처리
+                }
             }
         }
         
@@ -6564,6 +6770,9 @@
             
             // 키보드 단축키
             editor.addEventListener('keydown', handleKeyboardShortcuts);
+            
+            // 붙여넣기 이미지 처리
+            editor.addEventListener('paste', handlePasteImages);
         }
         
         // 툴바 이벤트 바인딩
@@ -6716,15 +6925,30 @@
         }
         
         // 이미지 업로드 처리
-        function handleImageUpload(event) {
+        async function handleImageUpload(event) {
             const file = event.target.files[0];
             if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const img = `<img src="${e.target.result}" alt="업로드된 이미지" style="max-width: 100%; height: auto; margin: 10px 0;">`;
+                try {
+                    console.log(`이미지 업로드 중: ${file.name}...`);
+                    
+                    // 파일 API로 업로드
+                    const fileId = await uploadImageToFileAPI(file);
+                    const imageUrl = `${API_BASE_URL}/api/files/${fileId}`;
+                    
+                    // 파일 ID 추적
+                    if (!window.editorFileIds) window.editorFileIds = [];
+                    window.editorFileIds.push(fileId);
+                    
+                    // 이미지 삽입
+                    const img = `<img src="${imageUrl}" alt="업로드된 이미지" style="max-width: 100%; height: auto; margin: 10px 0;">`;
                     executeCommand('insertHTML', img);
-                };
-                reader.readAsDataURL(file);
+                    
+                    console.log(`✅ 이미지 업로드 완료: ${file.name} (파일 ID: ${fileId})`);
+                    showNotification('이미지가 업로드되었습니다.', 'success');
+                } catch (error) {
+                    console.error('이미지 업로드 실패:', error);
+                    showNotification('이미지 업로드에 실패했습니다.', 'error');
+                }
             }
         }
         
@@ -6776,6 +7000,9 @@
                 // 폼 필드 초기화
                 document.getElementById('editorTitle').value = '';
                 document.getElementById('editorService').value = '';
+                
+                // 파일 ID 추적 초기화
+                window.editorFileIds = [];
                 
                 logTest('에디터 초기화 완료');
             }
@@ -7136,6 +7363,317 @@
             }
         }
         
+        // ===================== 마크다운 에디터 기능 =====================
+        
+        let isMarkdownMode = false;
+        let originalHtmlContent = ''; // HTML 콘텐츠 백업용
+        
+        // 마크다운 모드 토글
+        function toggleMarkdownMode() {
+            isMarkdownMode = !isMarkdownMode;
+            const button = document.getElementById('btn-markdown-mode');
+            const editor = document.getElementById('rich-text-editor');
+            
+            if (isMarkdownMode) {
+                // 마크다운 모드 활성화
+                button.classList.add('btn-markdown-active');
+                button.innerHTML = '📝 MD ✓';
+                button.title = '리치 텍스트 모드로 전환';
+                
+                // 현재 HTML 콘텐츠 백업
+                originalHtmlContent = editor.innerHTML;
+                const markdownContent = htmlToMarkdown(originalHtmlContent);
+                
+                // contenteditable을 비활성화하고 textarea로 전환
+                editor.contentEditable = 'false';
+                editor.style.fontFamily = 'Monaco, "Courier New", monospace';
+                editor.style.whiteSpace = 'pre-wrap';
+                editor.innerText = markdownContent;
+                
+                // 다시 편집 가능하게 설정
+                setTimeout(() => {
+                    editor.contentEditable = 'true';
+                    editor.focus();
+                }, 10);
+                
+                logTest('마크다운 모드 활성화 - 서식 보존됨', 'info');
+            } else {
+                // 리치 텍스트 모드 활성화
+                button.classList.remove('btn-markdown-active');
+                button.innerHTML = '📝 MD';
+                button.title = '마크다운 모드';
+                
+                // 마크다운에서 변경사항이 있었는지 확인
+                const currentMarkdownText = editor.innerText || editor.textContent;
+                const originalMarkdownText = htmlToMarkdown(originalHtmlContent);
+                
+                // 스타일 원복
+                editor.style.fontFamily = 'inherit';
+                editor.style.whiteSpace = 'normal';
+                
+                if (currentMarkdownText.trim() === originalMarkdownText.trim()) {
+                    // 변경사항이 없으면 원본 HTML 복원 (서식 보존)
+                    editor.innerHTML = originalHtmlContent;
+                    logTest('리치 텍스트 모드 복원 - 원본 서식 유지', 'success');
+                } else {
+                    // 변경사항이 있으면 마크다운을 HTML로 변환
+                    if (currentMarkdownText.trim()) {
+                        let htmlContent = currentMarkdownText
+                            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                            .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                            .replace(/~~(.*?)~~/g, '<s>$1</s>')
+                            .replace(/^- (.*$)/gim, '<li>$1</li>')
+                            .replace(/^\d+\. (.*$)/gim, '<li>$1</li>')
+                            .replace(/\n\n/g, '</p><p>')
+                            .replace(/\n/g, '<br>');
+                        
+                        // li 태그들을 ul/ol로 감싸기
+                        htmlContent = htmlContent.replace(/(<li>.*?<\/li>\s*)+/gs, (match) => {
+                            return currentMarkdownText.includes('1.') ? `<ol>${match}</ol>` : `<ul>${match}</ul>`;
+                        });
+                        
+                        // p 태그로 감싸기
+                        if (!htmlContent.includes('<h') && !htmlContent.includes('<ul>') && !htmlContent.includes('<ol>')) {
+                            htmlContent = '<p>' + htmlContent + '</p>';
+                        }
+                        
+                        editor.innerHTML = htmlContent;
+                        logTest('리치 텍스트 모드 활성화 - 마크다운 변환 적용', 'info');
+                    } else {
+                        editor.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+                    }
+                }
+            }
+        }
+        
+        // HTML을 마크다운으로 간단 변환
+        function htmlToMarkdown(html) {
+            let markdown = html;
+            
+            // 기본적인 HTML → 마크다운 변환
+            markdown = markdown.replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n');
+            markdown = markdown.replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n');
+            markdown = markdown.replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n');
+            markdown = markdown.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**');
+            markdown = markdown.replace(/<b[^>]*>(.*?)<\/b>/gi, '**$1**');
+            markdown = markdown.replace(/<em[^>]*>(.*?)<\/em>/gi, '*$1*');
+            markdown = markdown.replace(/<i[^>]*>(.*?)<\/i>/gi, '*$1*');
+            markdown = markdown.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+            markdown = markdown.replace(/<br\s*\/?>/gi, '\n');
+            markdown = markdown.replace(/<ul[^>]*>(.*?)<\/ul>/gis, (match, content) => {
+                return content.replace(/<li[^>]*>(.*?)<\/li>/gi, '- $1\n') + '\n';
+            });
+            markdown = markdown.replace(/<ol[^>]*>(.*?)<\/ol>/gis, (match, content) => {
+                let counter = 1;
+                return content.replace(/<li[^>]*>(.*?)<\/li>/gi, () => `${counter++}. $1\n`) + '\n';
+            });
+            
+            // HTML 태그 제거
+            markdown = markdown.replace(/<[^>]*>/g, '');
+            
+            // 연속된 줄바꿈 정리
+            markdown = markdown.replace(/\n{3,}/g, '\n\n');
+            
+            return markdown.trim();
+        }
+        
+        // 콘텐츠 미리보기
+        async function previewContent() {
+            const editor = document.getElementById('rich-text-editor');
+            const previewDiv = document.getElementById('markdown-preview');
+            const previewContent = document.getElementById('preview-content');
+            const previewMeta = document.getElementById('preview-meta');
+            
+            let content = '';
+            let contentType = 'text';
+            
+            if (isMarkdownMode) {
+                content = editor.innerText || editor.textContent;
+                contentType = 'markdown';
+            } else {
+                content = editor.innerHTML;
+                contentType = 'html';
+            }
+            
+            if (!content.trim()) {
+                alert('미리보기할 콘텐츠가 없습니다.');
+                return;
+            }
+            
+            try {
+                logTest('미리보기 API 호출 중...', 'info');
+                
+                const response = await fetch('http://localhost:8000/api/content/preview', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        content: content,
+                        content_type: contentType
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.text();
+                    throw new Error(`API 오류 (${response.status}): ${errorData}`);
+                }
+                
+                const data = await response.json();
+                
+                // 미리보기 내용 업데이트
+                previewContent.innerHTML = data.content_rendered;
+                previewMeta.innerHTML = `단어 수: ${data.word_count} | 읽기 시간: ${data.reading_time}분`;
+                
+                // 미리보기 표시
+                previewDiv.style.display = 'block';
+                previewDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                
+                logTest('✅ 미리보기 생성 완료', 'success');
+                
+            } catch (error) {
+                console.error('미리보기 오류:', error);
+                logTest(`❌ 미리보기 오류: ${error.message}`, 'error');
+                
+                // 백엔드가 없을 때의 대체 미리보기
+                if (isMarkdownMode) {
+                    previewContent.innerHTML = `<div style="color: #e11d48; background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca;">
+                        <strong>백엔드 연결 오류</strong><br>
+                        미리보기 API에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.<br><br>
+                        <strong>입력한 마크다운:</strong><br>
+                        <pre style="margin-top: 10px; background: #f8fafc; padding: 10px; border-radius: 4px;">${content}</pre>
+                    </div>`;
+                } else {
+                    previewContent.innerHTML = content;
+                }
+                previewMeta.innerHTML = '백엔드 연결 필요';
+                previewDiv.style.display = 'block';
+            }
+        }
+        
+        // 에디터 폼 제출 처리 (마크다운 지원)
+        async function handleEditorPostSubmit(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('editorTitle').value.trim();
+            const service = document.getElementById('editorService').value;
+            const editor = document.getElementById('rich-text-editor');
+            
+            if (!title || !service) {
+                alert('제목과 서비스를 모두 입력해주세요.');
+                return;
+            }
+            
+            let content = '';
+            let contentType = 'text';
+            
+            if (isMarkdownMode) {
+                content = editor.innerText || editor.textContent;
+                contentType = 'markdown';
+            } else {
+                content = editor.innerHTML;
+                contentType = 'html';
+            }
+            
+            if (!content.trim()) {
+                alert('내용을 입력해주세요.');
+                return;
+            }
+            
+            try {
+                logTest('게시글 작성 API 호출 중...', 'info');
+                
+                // 여기서 실제 게시글 작성 API를 호출할 수 있습니다
+                const postData = {
+                    title: title,
+                    content: content,
+                    content_type: contentType,
+                    service: service,
+                    metadata: {
+                        type: null,
+                        tags: [],
+                        attachments: [],
+                        file_ids: window.editorFileIds || [],
+                        inline_images: [],
+                        editor_type: isMarkdownMode ? 'markdown' : 'plain',
+                        thumbnail: null,
+                        visibility: 'public'
+                    }
+                };
+                
+                logTest('📝 게시글 데이터 준비 완료', 'success');
+                logTest(`제목: ${title}`, 'info');
+                logTest(`서비스: ${service}`, 'info');
+                logTest(`콘텐츠 타입: ${contentType}`, 'info');
+                logTest(`콘텐츠 길이: ${content.length}자`, 'info');
+                
+                // 로그인 상태 확인
+                const token = localStorage.getItem('authToken');
+                logTest(`인증 토큰 상태: ${token ? '있음' : '없음'}`, 'info');
+                logTest(`현재 사용자: ${currentUser ? currentUser.email : '없음'}`, 'info');
+                
+                if (!token) {
+                    alert('로그인이 필요합니다.');
+                    showPage('login');
+                    return;
+                }
+                
+                // 실제 API 호출
+                logTest('API 서버에 게시글 전송 중...', 'info');
+                const response = await fetch(`${API_BASE_URL}/api/posts/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(postData)
+                });
+                
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+                
+                const newPost = await response.json();
+                logTest('✅ 게시글이 MongoDB에 성공적으로 저장되었습니다!', 'success');
+                logTest(`게시글 ID: ${newPost._id}`, 'info');
+                
+                alert('게시글이 성공적으로 작성되어 데이터베이스에 저장되었습니다!');
+                
+                // 성공 후 폼 초기화
+                document.getElementById('editorTitle').value = '';
+                document.getElementById('editorService').value = '';
+                clearEditor();
+                
+            } catch (error) {
+                console.error('게시글 작성 오류:', error);
+                logTest(`❌ 게시글 작성 오류: ${error.message}`, 'error');
+                alert('게시글 작성 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 에디터 초기화 시 마크다운 기능 추가
+        function clearEditor() {
+            const editor = document.getElementById('rich-text-editor');
+            const previewDiv = document.getElementById('markdown-preview');
+            
+            editor.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+            previewDiv.style.display = 'none';
+            
+            // 마크다운 모드 초기화
+            if (isMarkdownMode) {
+                toggleMarkdownMode();
+            }
+            
+            // 파일 ID 추적 초기화
+            window.editorFileIds = [];
+            
+            logTest('에디터가 초기화되었습니다.', 'info');
+        }
+        
         // 페이지 로드 시 에디터 초기화
         document.addEventListener('DOMContentLoaded', function() {
             // 에디터 페이지가 표시될 때 초기화
@@ -7148,6 +7686,10 @@
                                 if (!editorState.editor) {
                                     initializeEditor();
                                 }
+                                // 마크다운 기능 안내 메시지
+                                logTest('✨ 마크다운 에디터 기능이 추가되었습니다!', 'success');
+                                logTest('📝 MD 버튼으로 마크다운 모드 전환', 'info');
+                                logTest('👁️ 미리보기 버튼으로 실시간 미리보기', 'info');
                             }, 100);
                         }
                     }
