@@ -1235,6 +1235,159 @@
                 padding: 12px 15px;
             }
         }
+        
+        /* 리치 텍스트 에디터 스타일 */
+        .editor-toolbar {
+            border: 1px solid #d1d5db;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
+            padding: 15px;
+            background: #f9fafb;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .toolbar-group {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+        
+        .toolbar-btn {
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+        
+        .toolbar-btn:hover {
+            background: #f3f4f6;
+            border-color: #9ca3af;
+        }
+        
+        .toolbar-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .toolbar-select {
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 0.9em;
+            min-width: 80px;
+        }
+        
+        .toolbar-color {
+            width: 40px;
+            height: 35px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            cursor: pointer;
+            background: white;
+        }
+        
+        .toolbar-divider {
+            width: 1px;
+            height: 30px;
+            background: #d1d5db;
+            margin: 0 8px;
+        }
+        
+        .rich-text-editor {
+            border: 1px solid #d1d5db;
+            border-radius: 0 0 8px 8px;
+            min-height: 400px;
+            padding: 20px;
+            background: white;
+            outline: none;
+            font-family: inherit;
+            line-height: 1.6;
+            overflow-y: auto;
+        }
+        
+        .rich-text-editor:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .rich-text-editor blockquote {
+            border-left: 4px solid #e5e7eb;
+            margin: 16px 0;
+            padding-left: 16px;
+            color: #6b7280;
+            font-style: italic;
+        }
+        
+        .rich-text-editor ul, .rich-text-editor ol {
+            margin: 16px 0;
+            padding-left: 24px;
+        }
+        
+        .rich-text-editor li {
+            margin: 4px 0;
+        }
+        
+        .rich-text-editor img {
+            max-width: 100%;
+            height: auto;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        
+        .rich-text-editor h1, .rich-text-editor h2, .rich-text-editor h3 {
+            margin: 20px 0 10px 0;
+            color: #1f2937;
+        }
+        
+        .rich-text-editor h1 {
+            font-size: 2em;
+            font-weight: 700;
+        }
+        
+        .rich-text-editor h2 {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+        
+        .rich-text-editor h3 {
+            font-size: 1.25em;
+            font-weight: 600;
+        }
+        
+        .rich-text-editor p {
+            margin: 8px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .editor-toolbar {
+                padding: 10px;
+                gap: 6px;
+            }
+            
+            .toolbar-btn {
+                padding: 6px 10px;
+                font-size: 0.8em;
+            }
+            
+            .toolbar-select {
+                min-width: 60px;
+                font-size: 0.8em;
+            }
+            
+            .rich-text-editor {
+                min-height: 300px;
+                padding: 15px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -1280,6 +1433,10 @@
                         <span class="nav-icon">✍️</span>
                         게시글 작성
                     </a>
+                    <a class="nav-item" onclick="showPage('post-editor', this)">
+                        <span class="nav-icon">🖋️</span>
+                        에디터로 작성
+                    </a>
                 </div>
                 
                 <div class="nav-section">
@@ -1287,6 +1444,22 @@
                     <a class="nav-item" onclick="showPage('file-upload', this)">
                         <span class="nav-icon">📎</span>
                         파일 업로드 테스트
+                    </a>
+                </div>
+                
+                <div class="nav-section">
+                    <div class="nav-section-title">에디터 테스트</div>
+                    <a class="nav-item" onclick="showPage('editor-tiptap', this)">
+                        <span class="nav-icon">✏️</span>
+                        Tiptap 에디터
+                    </a>
+                    <a class="nav-item" onclick="showPage('editor-novel', this)">
+                        <span class="nav-icon">📝</span>
+                        Novel 에디터
+                    </a>
+                    <a class="nav-item" onclick="showPage('editor-quill', this)">
+                        <span class="nav-icon">🖊️</span>
+                        ReactQuill 에디터
                     </a>
                 </div>
             </nav>
@@ -1985,6 +2158,428 @@
                     </div>
                 </div>
                 
+                <!-- 리치 텍스트 에디터로 작성 페이지 -->
+                <div class="page" id="post-editor">
+                    <div class="auth-container" style="max-width: 1200px;">
+                        <div class="auth-card">
+                            <h2 class="auth-title">✍️ 리치 텍스트 에디터로 게시글 작성</h2>
+                            <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+                                다양한 서식을 활용하여 멋진 게시글을 작성해보세요
+                            </p>
+                            
+                            <form id="editorPostForm" onsubmit="handleEditorPostSubmit(event)">
+                                <div class="form-group">
+                                    <label class="form-label">제목</label>
+                                    <input type="text" class="form-input" id="editorTitle" placeholder="게시글 제목을 입력하세요" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">서비스</label>
+                                    <select class="form-input" id="editorService" required>
+                                        <option value="">서비스를 선택하세요</option>
+                                        <option value="apartment">아파트</option>
+                                        <option value="shopping">쇼핑</option>
+                                        <option value="community">커뮤니티</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">내용</label>
+                                    
+                                    <!-- 리치 텍스트 에디터 툴바 -->
+                                    <div id="editor-toolbar" class="editor-toolbar">
+                                        <!-- 기본 서식 -->
+                                        <div class="toolbar-group">
+                                            <button type="button" id="btn-bold" class="toolbar-btn" data-command="bold" title="굵게">
+                                                <strong>B</strong>
+                                            </button>
+                                            <button type="button" id="btn-italic" class="toolbar-btn" data-command="italic" title="기울임">
+                                                <em>I</em>
+                                            </button>
+                                            <button type="button" id="btn-underline" class="toolbar-btn" data-command="underline" title="밑줄">
+                                                <u>U</u>
+                                            </button>
+                                            <button type="button" id="btn-strike" class="toolbar-btn" data-command="strikethrough" title="취소선">
+                                                <s>S</s>
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="toolbar-divider"></div>
+                                        
+                                        <!-- 글씨체 및 크기 -->
+                                        <select id="fontFamily" class="toolbar-select" data-command="fontFamily" title="글씨체">
+                                            <option value="">글씨체</option>
+                                            <option value="Arial, sans-serif">Arial</option>
+                                            <option value="'Times New Roman', serif">Times New Roman</option>
+                                            <option value="'Courier New', monospace">Courier New</option>
+                                            <option value="Georgia, serif">Georgia</option>
+                                            <option value="Verdana, sans-serif">Verdana</option>
+                                            <option value="'Malgun Gothic', sans-serif">맑은 고딕</option>
+                                            <option value="'Noto Sans KR', sans-serif">Noto Sans KR</option>
+                                        </select>
+                                        
+                                        <select id="fontSize" class="toolbar-select" data-command="fontSize" title="글자 크기">
+                                            <option value="">크기</option>
+                                            <option value="12px">12px</option>
+                                            <option value="14px">14px</option>
+                                            <option value="16px">16px</option>
+                                            <option value="18px">18px</option>
+                                            <option value="20px">20px</option>
+                                            <option value="24px">24px</option>
+                                            <option value="28px">28px</option>
+                                            <option value="32px">32px</option>
+                                        </select>
+                                        
+                                        <input type="color" id="textColor" class="toolbar-color" data-command="foreColor" title="글자 색상" value="#000000">
+                                        
+                                        <div class="toolbar-divider"></div>
+                                        
+                                        <!-- 리스트 -->
+                                        <div class="toolbar-group">
+                                            <button type="button" id="btn-bullet" class="toolbar-btn" data-command="insertUnorderedList" title="글머리 기호">
+                                                • —
+                                            </button>
+                                            <button type="button" id="btn-ordered" class="toolbar-btn" data-command="insertOrderedList" title="번호 매기기">
+                                                1. —
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="toolbar-divider"></div>
+                                        
+                                        <!-- 정렬 -->
+                                        <div class="toolbar-group">
+                                            <button type="button" id="btn-align-left" class="toolbar-btn" data-command="justifyLeft" title="왼쪽 정렬">
+                                                ⟵
+                                            </button>
+                                            <button type="button" id="btn-align-center" class="toolbar-btn" data-command="justifyCenter" title="가운데 정렬">
+                                                ☰
+                                            </button>
+                                            <button type="button" id="btn-align-right" class="toolbar-btn" data-command="justifyRight" title="오른쪽 정렬">
+                                                ⟶
+                                            </button>
+                                        </div>
+                                        
+                                        <div class="toolbar-divider"></div>
+                                        
+                                        <!-- 기타 -->
+                                        <button type="button" id="btn-quote" class="toolbar-btn" data-command="formatBlock" data-value="blockquote" title="인용구">
+                                            ❝
+                                        </button>
+                                        
+                                        <button type="button" id="btn-image" class="toolbar-btn" title="이미지 삽입">
+                                            🖼️
+                                        </button>
+                                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                                        
+                                        <div class="toolbar-divider"></div>
+                                        
+                                        <!-- 실행 취소 -->
+                                        <div class="toolbar-group">
+                                            <button type="button" id="btn-undo" class="toolbar-btn" data-command="undo" title="실행 취소">
+                                                ↶
+                                            </button>
+                                            <button type="button" id="btn-redo" class="toolbar-btn" data-command="redo" title="다시 실행">
+                                                ↷
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- 리치 텍스트 에디터 -->
+                                    <div id="rich-text-editor" class="rich-text-editor" contenteditable="true">
+                                        <p>여기에 내용을 작성하세요...</p>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                    <button type="submit" class="btn-primary" style="flex: 1;">
+                                        게시글 작성
+                                    </button>
+                                    <button type="button" class="btn-secondary" onclick="clearEditor()" style="flex: 1;">
+                                        초기화
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- 테스트 패널 (개발용) -->
+                            <div id="test-panel" style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; display: none;">
+                                <h4 style="margin-bottom: 15px;">테스트 결과</h4>
+                                <div id="test-results" style="background: white; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; max-height: 300px; overflow-y: auto;">
+                                    테스트 준비 완료
+                                </div>
+                                <button type="button" class="btn-secondary" onclick="runEditorTests()" style="margin-top: 10px;">
+                                    테스트 실행
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tiptap 에디터 페이지 -->
+                <div class="page" id="editor-tiptap">
+                    <div class="auth-container" style="max-width: 1000px;">
+                        <div class="auth-card">
+                            <h2 class="auth-title">✏️ Tiptap 에디터 테스트</h2>
+                            <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+                                Tiptap 리치 텍스트 에디터로 게시글 작성해보기
+                            </p>
+                            
+                            <form id="tiptapPostForm">
+                                <div class="form-group">
+                                    <label class="form-label">제목</label>
+                                    <input type="text" class="form-input" id="tiptapTitle" placeholder="게시글 제목을 입력하세요" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">서비스</label>
+                                    <select class="form-input" id="tiptapService" required>
+                                        <option value="">서비스를 선택하세요</option>
+                                        <option value="apartment">아파트</option>
+                                        <option value="shopping">쇼핑</option>
+                                        <option value="community">커뮤니티</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">내용</label>
+                                    <!-- Tiptap CDN -->
+                                    <script src="https://unpkg.com/@tiptap/core@2.1.13/dist/tiptap-core.umd.js"></script>
+                                    <script src="https://unpkg.com/@tiptap/starter-kit@2.1.13/dist/tiptap-starter-kit.umd.js"></script>
+                                    <script src="https://unpkg.com/@tiptap/extension-link@2.1.13/dist/tiptap-extension-link.umd.js"></script>
+                                    <script src="https://unpkg.com/@tiptap/extension-image@2.1.13/dist/tiptap-extension-image.umd.js"></script>
+                                    
+                                    <!-- Tiptap 툴바 -->
+                                    <div id="tiptap-toolbar" style="border: 1px solid #d1d5db; border-bottom: none; border-radius: 8px 8px 0 0; padding: 10px; background: #f9fafb; display: flex; gap: 8px; flex-wrap: wrap;">
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleBold().run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            <strong>B</strong>
+                                        </button>
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleItalic().run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            <em>I</em>
+                                        </button>
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleStrike().run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            <s>S</s>
+                                        </button>
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleHeading({ level: 1 }).run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            H1
+                                        </button>
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleHeading({ level: 2 }).run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            H2
+                                        </button>
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleBulletList().run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            • List
+                                        </button>
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleOrderedList().run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            1. List
+                                        </button>
+                                        <button type="button" onclick="tiptapEditor.chain().focus().toggleBlockquote().run()" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            Quote
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Tiptap 에디터 -->
+                                    <div id="tiptap-editor" style="border: 1px solid #d1d5db; border-radius: 0 0 8px 8px; min-height: 300px; padding: 15px; background: white; outline: none;">
+                                        <p>여기에 내용을 작성하세요...</p>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                    <button type="submit" class="btn-primary" style="flex: 1;">
+                                        게시글 작성
+                                    </button>
+                                    <button type="button" class="btn-secondary" onclick="clearTiptapEditor()" style="flex: 1;">
+                                        초기화
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- API 테스트 로그 -->
+                            <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <h4 style="margin-bottom: 15px;">API 테스트 결과</h4>
+                                <div id="tiptap-api-log" style="background: #1f2937; color: #e5e7eb; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; max-height: 200px; overflow-y: auto;">
+                                    Tiptap 에디터 준비 완료
+                                </div>
+                                <button type="button" class="btn-secondary" onclick="clearTiptapLog()" style="margin-top: 10px;">
+                                    로그 지우기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Novel 에디터 페이지 -->
+                <div class="page" id="editor-novel">
+                    <div class="auth-container" style="max-width: 1000px;">
+                        <div class="auth-card">
+                            <h2 class="auth-title">📝 Novel 에디터 테스트</h2>
+                            <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+                                Novel AI 기반 리치 텍스트 에디터로 게시글 작성해보기
+                            </p>
+                            
+                            <form id="novelPostForm">
+                                <div class="form-group">
+                                    <label class="form-label">제목</label>
+                                    <input type="text" class="form-input" id="novelTitle" placeholder="게시글 제목을 입력하세요" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">서비스</label>
+                                    <select class="form-input" id="novelService" required>
+                                        <option value="">서비스를 선택하세요</option>
+                                        <option value="apartment">아파트</option>
+                                        <option value="shopping">쇼핑</option>
+                                        <option value="community">커뮤니티</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">내용</label>
+                                    
+                                    <!-- Novel 에디터 툴바 -->
+                                    <div id="novel-toolbar" style="border: 1px solid #d1d5db; border-bottom: none; border-radius: 8px 8px 0 0; padding: 10px; background: #f9fafb; display: flex; gap: 8px; flex-wrap: wrap;">
+                                        <button type="button" onclick="execNovelCommand('bold')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer; font-weight: bold;">
+                                            B
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('italic')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer; font-style: italic;">
+                                            I
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('underline')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer; text-decoration: underline;">
+                                            U
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('strikeThrough')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer; text-decoration: line-through;">
+                                            S
+                                        </button>
+                                        <div style="width: 1px; height: 24px; background: #d1d5db; margin: 0 4px;"></div>
+                                        <button type="button" onclick="execNovelCommand('formatBlock', '<h1>')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            H1
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('formatBlock', '<h2>')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            H2
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('formatBlock', '<h3>')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            H3
+                                        </button>
+                                        <div style="width: 1px; height: 24px; background: #d1d5db; margin: 0 4px;"></div>
+                                        <button type="button" onclick="execNovelCommand('insertUnorderedList')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            • List
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('insertOrderedList')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            1. List
+                                        </button>
+                                        <div style="width: 1px; height: 24px; background: #d1d5db; margin: 0 4px;"></div>
+                                        <button type="button" onclick="execNovelCommand('justifyLeft')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            ⭤
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('justifyCenter')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            ⭧
+                                        </button>
+                                        <button type="button" onclick="execNovelCommand('justifyRight')" style="padding: 6px 12px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            ⭢
+                                        </button>
+                                        <div style="width: 1px; height: 24px; background: #d1d5db; margin: 0 4px;"></div>
+                                        <select onchange="execNovelCommand('fontSize', this.value); this.selectedIndex = 0;" style="padding: 4px 8px; border: 1px solid #d1d5db; border-radius: 4px; background: white; cursor: pointer;">
+                                            <option value="">크기</option>
+                                            <option value="1">8pt</option>
+                                            <option value="2">10pt</option>
+                                            <option value="3">12pt</option>
+                                            <option value="4">14pt</option>
+                                            <option value="5">18pt</option>
+                                            <option value="6">24pt</option>
+                                            <option value="7">36pt</option>
+                                        </select>
+                                        <input type="color" onchange="execNovelCommand('foreColor', this.value)" style="width: 40px; height: 30px; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="글자 색상">
+                                        <input type="color" onchange="execNovelCommand('backColor', this.value)" style="width: 40px; height: 30px; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;" title="배경 색상">
+                                    </div>
+                                    
+                                    <!-- Novel 에디터 컨테이너 -->
+                                    <div id="novel-editor" contenteditable="true" style="border: 1px solid #d1d5db; border-radius: 0 0 8px 8px; min-height: 350px; padding: 15px; background: white; outline: none; font-family: inherit; line-height: 1.6;">
+                                        <p>여기에 내용을 작성하세요...</p>
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                    <button type="submit" class="btn-primary" style="flex: 1;">
+                                        게시글 작성
+                                    </button>
+                                    <button type="button" class="btn-secondary" onclick="clearNovelEditor()" style="flex: 1;">
+                                        초기화
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- API 테스트 로그 -->
+                            <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <h4 style="margin-bottom: 15px;">API 테스트 결과</h4>
+                                <div id="novel-api-log" style="background: #1f2937; color: #e5e7eb; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; max-height: 200px; overflow-y: auto;">
+                                    Novel 에디터 준비 완료
+                                </div>
+                                <button type="button" class="btn-secondary" onclick="clearNovelLog()" style="margin-top: 10px;">
+                                    로그 지우기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- ReactQuill 에디터 페이지 -->
+                <div class="page" id="editor-quill">
+                    <div class="auth-container" style="max-width: 1000px;">
+                        <div class="auth-card">
+                            <h2 class="auth-title">🖊️ ReactQuill 에디터 테스트</h2>
+                            <p style="text-align: center; color: #6b7280; margin-bottom: 30px;">
+                                ReactQuill 리치 텍스트 에디터로 게시글 작성해보기
+                            </p>
+                            
+                            <form id="quillPostForm">
+                                <div class="form-group">
+                                    <label class="form-label">제목</label>
+                                    <input type="text" class="form-input" id="quillTitle" placeholder="게시글 제목을 입력하세요" required>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">서비스</label>
+                                    <select class="form-input" id="quillService" required>
+                                        <option value="">서비스를 선택하세요</option>
+                                        <option value="apartment">아파트</option>
+                                        <option value="shopping">쇼핑</option>
+                                        <option value="community">커뮤니티</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">내용</label>
+                                    <!-- Quill CDN -->
+                                    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+                                    <script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+                                    
+                                    <!-- Quill 에디터 컨테이너 -->
+                                    <div id="quill-editor" style="min-height: 300px; border: 1px solid #d1d5db; border-radius: 8px; background: white;">
+                                        <!-- Quill editor will be initialized here -->
+                                    </div>
+                                </div>
+                                
+                                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                                    <button type="submit" class="btn-primary" style="flex: 1;">
+                                        게시글 작성
+                                    </button>
+                                    <button type="button" class="btn-secondary" onclick="clearQuillEditor()" style="flex: 1;">
+                                        초기화
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <!-- API 테스트 로그 -->
+                            <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <h4 style="margin-bottom: 15px;">API 테스트 결과</h4>
+                                <div id="quill-api-log" style="background: #1f2937; color: #e5e7eb; padding: 15px; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.9em; max-height: 200px; overflow-y: auto;">
+                                    ReactQuill 에디터 준비 완료
+                                </div>
+                                <button type="button" class="btn-secondary" onclick="clearQuillLog()" style="margin-top: 10px;">
+                                    로그 지우기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 관리자 페이지 제거됨 -->
                 
                 <!-- API 테스트 페이지 제거됨 -->
@@ -2324,7 +2919,13 @@
             });
             
             // 선택된 페이지 보이기
-            document.getElementById(pageId).classList.add('active');
+            const targetPage = document.getElementById(pageId);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            } else {
+                console.error('Page not found:', pageId);
+                return;
+            }
             
             // 네비게이션 업데이트
             document.querySelectorAll('.nav-item').forEach(item => {
@@ -2353,7 +2954,11 @@
                 posts: '게시글 목록',
                 'post-detail': '게시글 상세',
                 'post-create': '게시글 작성',
-                'file-upload': '파일 업로드 테스트'
+                'post-editor': '에디터로 작성',
+                'file-upload': '파일 업로드 테스트',
+                'editor-tiptap': 'Tiptap 에디터',
+                'editor-novel': 'Novel 에디터',
+                'editor-quill': 'ReactQuill 에디터'
             };
             
             const subtitles = {
@@ -2363,11 +2968,24 @@
                 posts: '모든 게시글을 확인하세요',
                 'post-detail': '게시글 내용 및 댓글',
                 'post-create': '새로운 게시글을 작성하세요',
-                'file-upload': '파일 관리 API (Task 1-6) 통합 테스트'
+                'post-editor': '향상된 리치 텍스트 에디터로 멋진 게시글 작성',
+                'file-upload': '파일 관리 API (Task 1-6) 통합 테스트',
+                'editor-tiptap': 'Tiptap 리치 텍스트 에디터로 게시글 작성 테스트',
+                'editor-novel': 'Novel AI 기반 리치 텍스트 에디터로 게시글 작성 테스트',
+                'editor-quill': 'ReactQuill 에디터로 게시글 작성 테스트'
             };
             
-            document.getElementById('pageTitle').textContent = titles[pageId] || '';
-            document.getElementById('pageSubtitle').textContent = subtitles[pageId] || '';
+            // 페이지 제목 요소 null 체크
+            const titleElement = document.getElementById('pageTitle');
+            const subtitleElement = document.getElementById('pageSubtitle');
+            
+            if (titleElement) {
+                titleElement.textContent = titles[pageId] || '';
+            }
+            
+            if (subtitleElement) {
+                subtitleElement.textContent = subtitles[pageId] || '';
+            }
             
             // 특정 페이지에 대한 추가 로직
             if (pageId === 'posts') {
@@ -4322,6 +4940,2223 @@
                         handleFileSelect({ target: { files: [file] } });
                     }
                 }
+            }
+            
+            // 에디터 관련 변수
+            let tiptapEditor = null;
+            let enhancedTiptapEditor = null;
+            let novelEditor = null;
+            let quillEditor = null;
+            
+            // 에디터 초기화 함수들
+            function initTiptapEditor() {
+                // 이미 초기화되었다면 리턴
+                if (tiptapEditor) {
+                    logToTiptap('Tiptap 에디터 이미 초기화됨');
+                    return;
+                }
+                
+                // 라이브러리 로딩 체크 (최대 5번까지만)
+                if (typeof window.TiptapCore === 'undefined') {
+                    if (!window.tiptapRetryCount) window.tiptapRetryCount = 0;
+                    if (window.tiptapRetryCount < 5) {
+                        window.tiptapRetryCount++;
+                        console.log('Tiptap 라이브러리 로딩 중... (' + window.tiptapRetryCount + '/5)');
+                        setTimeout(initTiptapEditor, 1000);
+                        return;
+                    } else {
+                        logToTiptap('Tiptap 라이브러리 로딩 실패 - 기본 에디터로 대체');
+                        initBasicTiptapEditor();
+                        return;
+                    }
+                }
+                
+                try {
+                    const { Editor } = window.TiptapCore;
+                    const { StarterKit } = window.TiptapStarterKit;
+                    
+                    tiptapEditor = new Editor({
+                        element: document.querySelector('#tiptap-editor'),
+                        extensions: [StarterKit],
+                        content: '<p>여기에 내용을 작성하세요...</p>',
+                        editorProps: {
+                            attributes: {
+                                style: 'outline: none; min-height: 300px; padding: 15px;'
+                            }
+                        }
+                    });
+                    
+                    logToTiptap('Tiptap 에디터 초기화 완료');
+                } catch (error) {
+                    logToTiptap('Tiptap 에디터 초기화 오류: ' + error.message + ' - 기본 에디터로 대체');
+                    initBasicTiptapEditor();
+                }
+            }
+            
+            function initBasicTiptapEditor() {
+                const editorElement = document.getElementById('tiptap-editor');
+                editorElement.innerHTML = `
+                    <div style="padding: 15px; border: 1px solid #d1d5db; border-radius: 8px; min-height: 300px; background: white;">
+                        <textarea style="width: 100%; height: 270px; border: none; outline: none; resize: none; font-family: inherit;" placeholder="여기에 내용을 작성하세요..."></textarea>
+                    </div>
+                `;
+                // 가짜 에디터 객체
+                tiptapEditor = {
+                    getHTML: function() {
+                        const textarea = editorElement.querySelector('textarea');
+                        return '<p>' + (textarea.value.replace(/\n/g, '</p><p>')) + '</p>';
+                    },
+                    commands: {
+                        setContent: function(content) {
+                            const textarea = editorElement.querySelector('textarea');
+                            textarea.value = content.replace(/<[^>]*>/g, '');
+                        }
+                    },
+                    chain: function() { return { focus: function() { return { toggleBold: function() { return { run: function() {} }; } }; } }; }
+                };
+                logToTiptap('기본 텍스트 에디터로 초기화 완료');
+            }
+            
+            function initNovelEditor() {
+                // 이미 초기화되었다면 리턴
+                if (novelEditor) {
+                    logToNovel('Novel 에디터 이미 초기화됨');
+                    return;
+                }
+                
+                try {
+                    const editorElement = document.getElementById('novel-editor');
+                    
+                    // contenteditable div로 Novel 에디터 초기화
+                    novelEditor = {
+                        element: editorElement,
+                        getContent: function() {
+                            return this.element.innerHTML;
+                        },
+                        setContent: function(content) {
+                            this.element.innerHTML = content;
+                        },
+                        getText: function() {
+                            return this.element.textContent || this.element.innerText;
+                        },
+                        focus: function() {
+                            this.element.focus();
+                        }
+                    };
+                    
+                    // 에디터 이벤트 설정
+                    editorElement.addEventListener('focus', function() {
+                        if (this.textContent.trim() === '여기에 내용을 작성하세요...') {
+                            this.innerHTML = '<p><br></p>';
+                        }
+                    });
+                    
+                    editorElement.addEventListener('blur', function() {
+                        if (this.textContent.trim() === '') {
+                            this.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+                        }
+                    });
+                    
+                    // 엔터 키 처리
+                    editorElement.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            document.execCommand('formatBlock', false, 'p');
+                        }
+                    });
+                    
+                    logToNovel('Novel 리치 텍스트 에디터 초기화 완료');
+                } catch (error) {
+                    logToNovel('Novel 에디터 초기화 오류: ' + error.message);
+                }
+            }
+            
+            // Novel 에디터 명령 실행 함수
+            function execNovelCommand(command, value = null) {
+                try {
+                    const editorElement = document.getElementById('novel-editor');
+                    editorElement.focus();
+                    
+                    if (value) {
+                        document.execCommand(command, false, value);
+                    } else {
+                        document.execCommand(command, false, null);
+                    }
+                    
+                    // 포커스 유지
+                    editorElement.focus();
+                } catch (error) {
+                    logToNovel('명령 실행 오류: ' + error.message);
+                }
+            }
+            
+            // 향상된 Tiptap 에디터 초기화
+            function initEnhancedTiptapEditor() {
+                // 이미 초기화되었다면 리턴
+                if (enhancedTiptapEditor) {
+                    logToEnhancedTiptap('향상된 Tiptap 에디터 이미 초기화됨');
+                    return;
+                }
+                
+                try {
+                    // Tiptap 라이브러리가 없을 경우 기본 에디터로 초기화
+                    if (typeof window.TiptapCore === 'undefined') {
+                        initBasicEnhancedTiptapEditor();
+                        return;
+                    }
+                    
+                    const { Editor } = window.TiptapCore;
+                    const { StarterKit } = window.TiptapStarterKit;
+                    
+                    // 기본 확장 추가
+                    const extensions = [StarterKit];
+                    
+                    // Underline 확장이 있으면 추가
+                    if (window.TiptapUnderline) {
+                        extensions.push(window.TiptapUnderline.Underline);
+                    }
+                    
+                    // TextAlign 확장이 있으면 추가
+                    if (window.TiptapTextAlign) {
+                        extensions.push(window.TiptapTextAlign.TextAlign.configure({
+                            types: ['heading', 'paragraph'],
+                        }));
+                    }
+                    
+                    // Image 확장이 있으면 추가
+                    if (window.TiptapImage) {
+                        extensions.push(window.TiptapImage.Image);
+                    }
+                    
+                    enhancedTiptapEditor = new Editor({
+                        element: document.querySelector('#enhanced-tiptap-editor'),
+                        extensions: extensions,
+                        content: '<p>여기에 내용을 작성하세요...</p>',
+                        editorProps: {
+                            attributes: {
+                                style: 'outline: none; min-height: 400px; padding: 20px; line-height: 1.6;'
+                            }
+                        }
+                    });
+                    
+                    logToEnhancedTiptap('향상된 Tiptap 에디터 초기화 완료');
+                } catch (error) {
+                    logToEnhancedTiptap('향상된 Tiptap 에디터 초기화 오류: ' + error.message + ' - 기본 에디터로 대체');
+                    initBasicEnhancedTiptapEditor();
+                }
+            }
+            
+            function initBasicEnhancedTiptapEditor() {
+                const editorElement = document.getElementById('enhanced-tiptap-editor');
+                editorElement.innerHTML = `
+                    <div style="padding: 20px; min-height: 400px; line-height: 1.6;">
+                        <div contenteditable="true" style="outline: none; min-height: 360px;" id="enhanced-basic-editor">
+                            <p>여기에 내용을 작성하세요...</p>
+                        </div>
+                    </div>
+                `;
+                
+                const basicEditor = document.getElementById('enhanced-basic-editor');
+                
+                // 가짜 에디터 객체
+                enhancedTiptapEditor = {
+                    getHTML: function() {
+                        return basicEditor.innerHTML;
+                    },
+                    chain: function() {
+                        return {
+                            focus: function() {
+                                basicEditor.focus();
+                                return {
+                                    toggleBold: function() { return { run: function() { document.execCommand('bold'); } }; },
+                                    toggleItalic: function() { return { run: function() { document.execCommand('italic'); } }; },
+                                    toggleUnderline: function() { return { run: function() { document.execCommand('underline'); } }; },
+                                    toggleStrike: function() { return { run: function() { document.execCommand('strikeThrough'); } }; },
+                                    toggleHeading: function(options) { return { run: function() { document.execCommand('formatBlock', false, 'h' + options.level); } }; },
+                                    toggleBulletList: function() { return { run: function() { document.execCommand('insertUnorderedList'); } }; },
+                                    toggleOrderedList: function() { return { run: function() { document.execCommand('insertOrderedList'); } }; },
+                                    toggleBlockquote: function() { return { run: function() { document.execCommand('formatBlock', false, 'blockquote'); } }; },
+                                    setTextAlign: function(align) { return { run: function() { document.execCommand('justify' + align.charAt(0).toUpperCase() + align.slice(1)); } }; },
+                                    undo: function() { return { run: function() { document.execCommand('undo'); } }; },
+                                    redo: function() { return { run: function() { document.execCommand('redo'); } }; }
+                                };
+                            }
+                        };
+                    },
+                    commands: {
+                        setContent: function(content) {
+                            basicEditor.innerHTML = content;
+                        }
+                    }
+                };
+                
+                // 기본 이벤트 설정
+                basicEditor.addEventListener('focus', function() {
+                    if (this.textContent.trim() === '여기에 내용을 작성하세요...') {
+                        this.innerHTML = '<p><br></p>';
+                    }
+                });
+                
+                basicEditor.addEventListener('blur', function() {
+                    if (this.textContent.trim() === '') {
+                        this.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+                    }
+                });
+                
+                logToEnhancedTiptap('기본 contenteditable 에디터로 초기화 완료');
+            }
+            
+            
+            function initQuillEditor() {
+                // 이미 초기화되었다면 리턴
+                if (quillEditor) {
+                    logToQuill('ReactQuill 에디터 이미 초기화됨');
+                    return;
+                }
+                
+                // Quill 라이브러리 체크 (최대 5번까지만)
+                if (typeof window.Quill === 'undefined') {
+                    if (!window.quillRetryCount) window.quillRetryCount = 0;
+                    if (window.quillRetryCount < 5) {
+                        window.quillRetryCount++;
+                        console.log('Quill 라이브러리 로딩 중... (' + window.quillRetryCount + '/5)');
+                        setTimeout(initQuillEditor, 1000);
+                        return;
+                    } else {
+                        logToQuill('Quill 라이브러리 로딩 실패 - 기본 에디터로 대체');
+                        initBasicQuillEditor();
+                        return;
+                    }
+                }
+                
+                try {
+                    const toolbarOptions = [
+                        ['bold', 'italic', 'underline', 'strike'],
+                        ['blockquote', 'code-block'],
+                        [{ 'header': 1 }, { 'header': 2 }],
+                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                        [{ 'script': 'sub'}, { 'script': 'super' }],
+                        [{ 'indent': '-1'}, { 'indent': '+1' }],
+                        [{ 'direction': 'rtl' }],
+                        [{ 'size': ['small', false, 'large', 'huge'] }],
+                        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+                        [{ 'color': [] }, { 'background': [] }],
+                        [{ 'font': [] }],
+                        [{ 'align': [] }],
+                        ['clean']
+                    ];
+                    
+                    quillEditor = new window.Quill('#quill-editor', {
+                        theme: 'snow',
+                        modules: {
+                            toolbar: toolbarOptions
+                        },
+                        placeholder: '여기에 내용을 작성하세요...'
+                    });
+                    
+                    logToQuill('ReactQuill 에디터 초기화 완료');
+                } catch (error) {
+                    logToQuill('ReactQuill 에디터 초기화 오류: ' + error.message + ' - 기본 에디터로 대체');
+                    initBasicQuillEditor();
+                }
+            }
+            
+            function initBasicQuillEditor() {
+                const editorElement = document.getElementById('quill-editor');
+                editorElement.outerHTML = `
+                    <textarea id="quill-editor" style="width: 100%; min-height: 300px; padding: 15px; border: 1px solid #d1d5db; border-radius: 8px; font-family: inherit; resize: vertical;" placeholder="여기에 내용을 작성하세요..."></textarea>
+                `;
+                
+                // 가짜 에디터 객체
+                quillEditor = {
+                    root: {
+                        innerHTML: function() {
+                            return document.getElementById('quill-editor').value;
+                        }
+                    },
+                    setContents: function(content) {
+                        document.getElementById('quill-editor').value = Array.isArray(content) ? '' : content.replace(/<[^>]*>/g, '');
+                    }
+                };
+                
+                // root.innerHTML을 속성으로 만들기
+                Object.defineProperty(quillEditor.root, 'innerHTML', {
+                    get: function() {
+                        return document.getElementById('quill-editor').value;
+                    }
+                });
+                
+                logToQuill('기본 텍스트 에리어로 초기화 완료');
+            }
+            
+            // 로그 함수들
+            function logToTiptap(message) {
+                const logElement = document.getElementById('tiptap-api-log');
+                if (logElement) {
+                    logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+                    logElement.scrollTop = logElement.scrollHeight;
+                }
+            }
+            
+            function logToNovel(message) {
+                const logElement = document.getElementById('novel-api-log');
+                if (logElement) {
+                    logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+                    logElement.scrollTop = logElement.scrollHeight;
+                }
+            }
+            
+            function logToQuill(message) {
+                const logElement = document.getElementById('quill-api-log');
+                if (logElement) {
+                    logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+                    logElement.scrollTop = logElement.scrollHeight;
+                }
+            }
+            
+            // 에디터 초기화 함수들
+            
+            // 폼 제출 이벤트 리스너들
+            document.addEventListener('DOMContentLoaded', function() {
+                // Tiptap 폼 제출
+                const tiptapForm = document.getElementById('tiptapPostForm');
+                if (tiptapForm) {
+                    tiptapForm.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        
+                        const title = document.getElementById('tiptapTitle').value;
+                        const service = document.getElementById('tiptapService').value;
+                        const content = tiptapEditor ? tiptapEditor.getHTML() : '';
+                        
+                        if (!title || !service || !content) {
+                            logToTiptap('오류: 모든 필드를 입력해주세요');
+                            return;
+                        }
+                        
+                        try {
+                            logToTiptap('게시글 작성 요청 중...');
+                            logToTiptap('제목: ' + title);
+                            logToTiptap('서비스: ' + service);
+                            logToTiptap('내용 길이: ' + content.length + '자');
+                            logToTiptap('Tiptap HTML 내용: ' + content.substring(0, 100) + '...');
+                            
+                            // 실제 API 호출 시 주석 해제
+                            // const response = await apiCall('/api/posts', 'POST', {
+                            //     title: title,
+                            //     content: content,
+                            //     service: service
+                            // });
+                            // logToTiptap('게시글 작성 성공: ' + JSON.stringify(response));
+                            
+                            logToTiptap('게시글 작성 테스트 완료 (API 연결 후 실제 작동)');
+                        } catch (error) {
+                            logToTiptap('게시글 작성 오류: ' + error.message);
+                        }
+                    });
+                }
+                
+                // Novel 폼 제출
+                const novelForm = document.getElementById('novelPostForm');
+                if (novelForm) {
+                    novelForm.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        
+                        const title = document.getElementById('novelTitle').value;
+                        const service = document.getElementById('novelService').value;
+                        let content = '';
+                        
+                        if (novelEditor && novelEditor.getContent) {
+                            content = novelEditor.getContent();
+                        } else {
+                            const editorElement = document.getElementById('novel-editor');
+                            if (editorElement) {
+                                content = editorElement.innerHTML;
+                            }
+                        }
+                        
+                        if (!title || !service || !content) {
+                            logToNovel('오류: 모든 필드를 입력해주세요');
+                            return;
+                        }
+                        
+                        try {
+                            logToNovel('게시글 작성 요청 중...');
+                            logToNovel('제목: ' + title);
+                            logToNovel('서비스: ' + service);
+                            logToNovel('내용 길이: ' + content.length + '자');
+                            logToNovel('Novel HTML 내용: ' + content.substring(0, 100) + '...');
+                            
+                            logToNovel('게시글 작성 테스트 완료 (API 연결 후 실제 작동)');
+                        } catch (error) {
+                            logToNovel('게시글 작성 오류: ' + error.message);
+                        }
+                    });
+                }
+                
+                // Quill 폼 제출
+                const quillForm = document.getElementById('quillPostForm');
+                if (quillForm) {
+                    quillForm.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        
+                        const title = document.getElementById('quillTitle').value;
+                        const service = document.getElementById('quillService').value;
+                        const content = quillEditor ? quillEditor.root.innerHTML : '';
+                        
+                        if (!title || !service || !content) {
+                            logToQuill('오류: 모든 필드를 입력해주세요');
+                            return;
+                        }
+                        
+                        try {
+                            logToQuill('게시글 작성 요청 중...');
+                            logToQuill('제목: ' + title);
+                            logToQuill('서비스: ' + service);
+                            logToQuill('내용 길이: ' + content.length + '자');
+                            logToQuill('Quill HTML 내용: ' + content.substring(0, 100) + '...');
+                            
+                            logToQuill('게시글 작성 테스트 완료 (API 연결 후 실제 작동)');
+                        } catch (error) {
+                            logToQuill('게시글 작성 오류: ' + error.message);
+                        }
+                    });
+                }
+                
+                // 향상된 Tiptap 폼 제출
+                const editorForm = document.getElementById('editorPostForm');
+                if (editorForm) {
+                    editorForm.addEventListener('submit', async function(e) {
+                        e.preventDefault();
+                        
+                        const title = document.getElementById('editorTitle').value;
+                        const service = document.getElementById('editorService').value;
+                        const content = enhancedTiptapEditor ? enhancedTiptapEditor.getHTML() : '';
+                        
+                        if (!title || !service || !content) {
+                            logToEnhancedTiptap('오류: 모든 필드를 입력해주세요');
+                            return;
+                        }
+                        
+                        try {
+                            logToEnhancedTiptap('게시글 작성 요청 중...');
+                            logToEnhancedTiptap('제목: ' + title);
+                            logToEnhancedTiptap('서비스: ' + service);
+                            logToEnhancedTiptap('내용 길이: ' + content.length + '자');
+                            logToEnhancedTiptap('향상된 Tiptap HTML 내용: ' + content.substring(0, 100) + '...');
+                            
+                            // 실제 API 호출 시 주석 해제
+                            // const response = await apiCall('/api/posts', 'POST', {
+                            //     title: title,
+                            //     content: content,
+                            //     service: service
+                            // });
+                            // logToEnhancedTiptap('게시글 작성 성공: ' + JSON.stringify(response));
+                            
+                            logToEnhancedTiptap('게시글 작성 테스트 완료 (API 연결 후 실제 작동)');
+                        } catch (error) {
+                            logToEnhancedTiptap('게시글 작성 오류: ' + error.message);
+                        }
+                    });
+                }
+            });
+            
+            // 페이지 전환 시 에디터 초기화
+            const originalShowPage = window.showPage;
+            window.showPage = function(pageId, targetElement) {
+                originalShowPage(pageId, targetElement);
+                
+                // 에디터 페이지 접근 시 초기화
+                setTimeout(() => {
+                    if (pageId === 'editor-tiptap' && !tiptapEditor) {
+                        initTiptapEditor();
+                    } else if (pageId === 'editor-novel' && !novelEditor) {
+                        initNovelEditor();
+                    } else if (pageId === 'editor-quill' && !quillEditor) {
+                        initQuillEditor();
+                    } else if (pageId === 'post-editor' && !enhancedTiptapEditor) {
+                        initEnhancedTiptapEditor();
+                    }
+                    
+                    // 향상된 에디터 페이지에서 포맷팅 상태 업데이트
+                    if (pageId === 'post-editor') {
+                        setTimeout(updateFormattingState, 200);
+                    }
+                }, 100);
+            };
+        });
+        
+        // 전역 변수들
+        var enhancedTiptapEditor = null;
+        var tiptapEditor = null;
+        var novelEditor = null;
+        var quillEditor = null;
+        
+        // 현재 입력 스타일 상태 추적
+        var currentInputStyle = {
+            color: null,
+            fontSize: null,
+            fontFamily: null
+        };
+        
+        // 전역 함수들 - HTML에서 직접 호출 가능하도록
+        
+        // 향상된 Tiptap 에디터 초기화
+        function initEnhancedTiptapEditor() {
+            // 이미 초기화되었다면 리턴
+            if (enhancedTiptapEditor) {
+                logToEnhancedTiptap('향상된 Tiptap 에디터 이미 초기화됨');
+                return;
+            }
+            
+            try {
+                // Tiptap 라이브러리가 없을 경우 기본 에디터로 초기화
+                if (typeof window.TiptapCore === 'undefined') {
+                    initBasicEnhancedTiptapEditor();
+                    return;
+                }
+                
+                const { Editor } = window.TiptapCore;
+                const { StarterKit } = window.TiptapStarterKit;
+                
+                // 기본 확장 추가
+                const extensions = [StarterKit];
+                
+                // Underline 확장이 있으면 추가
+                if (window.TiptapUnderline) {
+                    extensions.push(window.TiptapUnderline.Underline);
+                }
+                
+                // TextAlign 확장이 있으면 추가
+                if (window.TiptapTextAlign) {
+                    extensions.push(window.TiptapTextAlign.TextAlign.configure({
+                        types: ['heading', 'paragraph'],
+                    }));
+                }
+                
+                // Image 확장이 있으면 추가
+                if (window.TiptapImage) {
+                    extensions.push(window.TiptapImage.Image);
+                }
+                
+                enhancedTiptapEditor = new Editor({
+                    element: document.querySelector('#enhanced-tiptap-editor'),
+                    extensions: extensions,
+                    content: '<p>여기에 내용을 작성하세요...</p>',
+                    editorProps: {
+                        attributes: {
+                            style: 'outline: none; min-height: 400px; padding: 20px; line-height: 1.6;'
+                        }
+                    }
+                });
+                
+                logToEnhancedTiptap('향상된 Tiptap 에디터 초기화 완료');
+            } catch (error) {
+                logToEnhancedTiptap('향상된 Tiptap 에디터 초기화 오류: ' + error.message + ' - 기본 에디터로 대체');
+                initBasicEnhancedTiptapEditor();
+            }
+        }
+        
+        function initBasicEnhancedTiptapEditor() {
+            const editorElement = document.getElementById('enhanced-tiptap-editor');
+            if (!editorElement) return;
+            
+            editorElement.innerHTML = `
+                <div style="padding: 20px; min-height: 400px; line-height: 1.6;">
+                    <div contenteditable="true" style="outline: none; min-height: 360px;" id="enhanced-basic-editor">
+                        <p>여기에 내용을 작성하세요...</p>
+                    </div>
+                </div>
+            `;
+            
+            const basicEditor = document.getElementById('enhanced-basic-editor');
+            
+            // 가짜 에디터 객체
+            enhancedTiptapEditor = {
+                getHTML: function() {
+                    return basicEditor.innerHTML;
+                },
+                chain: function() {
+                    return {
+                        focus: function() {
+                            basicEditor.focus();
+                            return {
+                                toggleBold: function() { return { run: function() { document.execCommand('bold'); } }; },
+                                toggleItalic: function() { return { run: function() { document.execCommand('italic'); } }; },
+                                toggleUnderline: function() { return { run: function() { document.execCommand('underline'); } }; },
+                                toggleStrike: function() { return { run: function() { document.execCommand('strikeThrough'); } }; },
+                                toggleHeading: function(options) { return { run: function() { document.execCommand('formatBlock', false, 'h' + options.level); } }; },
+                                toggleBulletList: function() { return { run: function() { document.execCommand('insertUnorderedList'); } }; },
+                                toggleOrderedList: function() { return { run: function() { document.execCommand('insertOrderedList'); } }; },
+                                toggleBlockquote: function() { return { run: function() { document.execCommand('formatBlock', false, 'blockquote'); } }; },
+                                setTextAlign: function(align) { return { run: function() { document.execCommand('justify' + align.charAt(0).toUpperCase() + align.slice(1)); } }; },
+                                undo: function() { return { run: function() { document.execCommand('undo'); } }; },
+                                redo: function() { return { run: function() { document.execCommand('redo'); } }; }
+                            };
+                        }
+                    };
+                },
+                commands: {
+                    setContent: function(content) {
+                        basicEditor.innerHTML = content;
+                    }
+                }
+            };
+            
+            // 기본 이벤트 설정
+            basicEditor.addEventListener('focus', function() {
+                if (this.textContent.trim() === '여기에 내용을 작성하세요...') {
+                    this.innerHTML = '<p><br></p>';
+                }
+            });
+            
+            basicEditor.addEventListener('blur', function() {
+                if (this.textContent.trim() === '') {
+                    this.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+                }
+            });
+            
+            // 입력 시 포맷팅 상태 감지 및 업데이트
+            basicEditor.addEventListener('keyup', updateFormattingState);
+            basicEditor.addEventListener('mouseup', updateFormattingState);
+            document.addEventListener('selectionchange', updateFormattingState);
+            
+            // 키 입력 시 현재 스타일 적용
+            basicEditor.addEventListener('input', function(e) {
+                const hasStyle = currentInputStyle.color || currentInputStyle.fontSize || currentInputStyle.fontFamily;
+                
+                if (hasStyle && e.inputType === 'insertText') {
+                    const selection = window.getSelection();
+                    if (selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        
+                        // 현재 커서 위치의 텍스트 노드 찾기
+                        let textNode = range.startContainer;
+                        if (textNode.nodeType === Node.ELEMENT_NODE) {
+                            // 요소 노드인 경우 마지막 텍스트 노드 찾기
+                            const walker = document.createTreeWalker(
+                                textNode,
+                                NodeFilter.SHOW_TEXT,
+                                null,
+                                false
+                            );
+                            let lastTextNode = null;
+                            while (walker.nextNode()) {
+                                lastTextNode = walker.currentNode;
+                            }
+                            textNode = lastTextNode;
+                        }
+                        
+                        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                            // 입력된 문자의 위치 찾기
+                            const offset = range.startOffset;
+                            const textContent = textNode.textContent;
+                            
+                            if (offset > 0) {
+                                // 새로 입력된 마지막 문자를 span으로 감싸기
+                                const beforeText = textContent.substring(0, offset - 1);
+                                const newChar = textContent.charAt(offset - 1);
+                                const afterText = textContent.substring(offset);
+                                
+                                // 텍스트 노드 교체
+                                const parent = textNode.parentNode;
+                                
+                                // 이전 텍스트
+                                if (beforeText) {
+                                    const beforeTextNode = document.createTextNode(beforeText);
+                                    parent.insertBefore(beforeTextNode, textNode);
+                                }
+                                
+                                // 새 문자를 스타일이 적용된 span으로
+                                const span = document.createElement('span');
+                                if (currentInputStyle.color) span.style.color = currentInputStyle.color;
+                                if (currentInputStyle.fontSize) span.style.fontSize = currentInputStyle.fontSize;
+                                if (currentInputStyle.fontFamily) span.style.fontFamily = currentInputStyle.fontFamily;
+                                span.appendChild(document.createTextNode(newChar));
+                                parent.insertBefore(span, textNode);
+                                
+                                // 이후 텍스트
+                                if (afterText) {
+                                    const afterTextNode = document.createTextNode(afterText);
+                                    parent.insertBefore(afterTextNode, textNode);
+                                }
+                                
+                                // 원래 텍스트 노드 제거
+                                parent.removeChild(textNode);
+                                
+                                // 커서를 span 다음으로 이동
+                                const newRange = document.createRange();
+                                if (afterText) {
+                                    newRange.setStart(afterTextNode, 0);
+                                } else {
+                                    newRange.setStartAfter(span);
+                                }
+                                newRange.collapse(true);
+                                selection.removeAllRanges();
+                                selection.addRange(newRange);
+                            }
+                        }
+                    }
+                }
+            });
+            
+            basicEditor.addEventListener('keydown', function(e) {
+                const hasStyle = currentInputStyle.color || currentInputStyle.fontSize || currentInputStyle.fontFamily;
+                // Enter 키 처리 - 새 줄에서도 스타일 유지
+                if (e.key === 'Enter' && hasStyle) {
+                    const selection = window.getSelection();
+                    if (selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        
+                        if (range.collapsed) {
+                            e.preventDefault();
+                            
+                            // 새 줄 삽입
+                            document.execCommand('insertHTML', false, '<br>');
+                            
+                            // 스타일이 적용된 span 삽입 준비
+                            setTimeout(() => {
+                                const newSelection = window.getSelection();
+                                if (newSelection.rangeCount > 0) {
+                                    const newRange = newSelection.getRangeAt(0);
+                                    
+                                    const span = document.createElement('span');
+                                    if (currentInputStyle.color) span.style.color = currentInputStyle.color;
+                                    if (currentInputStyle.fontSize) span.style.fontSize = currentInputStyle.fontSize;
+                                    if (currentInputStyle.fontFamily) span.style.fontFamily = currentInputStyle.fontFamily;
+                                    
+                                    span.appendChild(document.createTextNode('\u00A0')); // 비어있지 않은 공간
+                                    newRange.insertNode(span);
+                                    
+                                    // 커서를 span 안으로 이동
+                                    const finalRange = document.createRange();
+                                    finalRange.setStart(span.firstChild, 1);
+                                    finalRange.collapse(true);
+                                    newSelection.removeAllRanges();
+                                    newSelection.addRange(finalRange);
+                                }
+                            }, 10);
+                        }
+                    }
+                }
+            });
+            
+            logToEnhancedTiptap('기본 contenteditable 에디터로 초기화 완료');
+            
+            // 초기 포맷팅 상태 업데이트
+            setTimeout(updateFormattingState, 100);
+        }
+        
+        // 향상된 Tiptap 에디터 기능 함수들
+        function changeFontFamily(fontFamily) {
+            if (fontFamily) {
+                // 에디터가 초기화되지 않은 경우 자동 초기화
+                if (!enhancedTiptapEditor) {
+                    initEnhancedTiptapEditor();
+                }
+                
+                const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+                if (editorElement) {
+                    editorElement.focus();
+                    
+                    // 현재 선택된 텍스트 또는 커서 위치에 적용
+                    const selection = window.getSelection();
+                    if (selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        
+                        if (range.collapsed) {
+                            // 선택된 텍스트가 없으면 다음 입력에 적용
+                            currentInputStyle.fontFamily = fontFamily;
+                            logToEnhancedTiptap('다음 입력 텍스트에 폰트 적용 예정: ' + fontFamily);
+                            displayCurrentInputStyle();
+                        } else {
+                            // 선택된 텍스트가 있으면 해당 텍스트에 적용
+                            document.execCommand('fontName', false, fontFamily);
+                        }
+                    } else {
+                        // 선택이 없으면 전체 에디터에 기본 폰트 설정
+                        editorElement.style.fontFamily = fontFamily;
+                    }
+                    
+                    // 현재 상태 표시
+                    updateFontFamilyDisplay(fontFamily);
+                }
+            }
+            // 드롭다운 상태는 updateFontFamilyDisplay에서 처리
+        }
+        
+        function changeFontSize(fontSize) {
+            if (fontSize) {
+                // 에디터가 초기화되지 않은 경우 자동 초기화
+                if (!enhancedTiptapEditor) {
+                    initEnhancedTiptapEditor();
+                }
+                
+                const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+                if (editorElement) {
+                    editorElement.focus();
+                    
+                    // 현재 선택된 텍스트 또는 커서 위치에 적용
+                    const selection = window.getSelection();
+                    if (selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        
+                        if (range.collapsed) {
+                            // 선택된 텍스트가 없으면 다음 입력에 적용
+                            currentInputStyle.fontSize = fontSize;
+                            logToEnhancedTiptap('다음 입력 텍스트에 크기 적용 예정: ' + fontSize);
+                            displayCurrentInputStyle();
+                        } else {
+                            // 선택된 텍스트가 있으면 해당 텍스트에 적용
+                            const span = document.createElement('span');
+                            span.style.fontSize = fontSize;
+                            try {
+                                range.surroundContents(span);
+                            } catch (e) {
+                                span.appendChild(range.extractContents());
+                                range.insertNode(span);
+                            }
+                        }
+                    } else {
+                        // 선택이 없으면 전체 에디터에 기본 크기 설정
+                        editorElement.style.fontSize = fontSize;
+                    }
+                    
+                    // 현재 상태 표시
+                    updateFontSizeDisplay(fontSize);
+                }
+            }
+            // 드롭다운 상태는 updateFontSizeDisplay에서 처리
+        }
+        
+        function changeTextColor(color) {
+            if (color) {
+                // 에디터가 초기화되지 않은 경우 자동 초기화
+                if (!enhancedTiptapEditor) {
+                    initEnhancedTiptapEditor();
+                }
+                
+                const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+                if (editorElement) {
+                    editorElement.focus();
+                    
+                    const selection = window.getSelection();
+                    if (selection.rangeCount > 0) {
+                        const range = selection.getRangeAt(0);
+                        
+                        if (range.collapsed) {
+                            // 선택된 텍스트가 없으면 다음 입력에 적용
+                            currentInputStyle.color = color;
+                            logToEnhancedTiptap('다음 입력 텍스트에 색상 적용 예정: ' + color);
+                            displayCurrentInputStyle();
+                        } else {
+                            // 선택된 텍스트가 있으면 즉시 적용
+                            document.execCommand('foreColor', false, color);
+                            logToEnhancedTiptap('선택된 텍스트에 색상 적용: ' + color);
+                        }
+                    }
+                    
+                    // 색상 선택기 상태 표시
+                    const colorPicker = document.getElementById('textColor');
+                    if (colorPicker) {
+                        colorPicker.style.border = '2px solid #3b82f6';
+                        colorPicker.value = color;
+                        
+                        // 색상 선택기 하이라이트 유지 (3초)
+                        setTimeout(() => {
+                            colorPicker.style.border = '1px solid #d1d5db';
+                        }, 3000);
+                    }
+                }
+            }
+        }
+        
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const imageUrl = e.target.result;
+                    
+                    if (enhancedTiptapEditor && enhancedTiptapEditor.chain && typeof enhancedTiptapEditor.chain === 'function') {
+                        // Tiptap 에디터가 정상 작동하는 경우
+                        try {
+                            enhancedTiptapEditor.chain().focus().setImage({ src: imageUrl }).run();
+                        } catch (error) {
+                            // 이미지 확장이 없는 경우 HTML로 직접 삽입
+                            insertImageAsHTML(imageUrl);
+                        }
+                    } else {
+                        // 기본 에디터인 경우
+                        insertImageAsHTML(imageUrl);
+                    }
+                    
+                    logToEnhancedTiptap('이미지 업로드 완료: ' + file.name);
+                };
+                reader.readAsDataURL(file);
+            } else {
+                logToEnhancedTiptap('유효하지 않은 이미지 파일입니다.');
+            }
+            
+            // 파일 입력 초기화
+            event.target.value = '';
+        }
+        
+        function insertImageAsHTML(imageUrl) {
+            const editorElement = document.getElementById('enhanced-basic-editor') || document.getElementById('enhanced-tiptap-editor');
+            if (editorElement) {
+                editorElement.focus();
+                const img = `<img src="${imageUrl}" style="max-width: 100%; height: auto; margin: 10px 0;" alt="업로드된 이미지">`;
+                document.execCommand('insertHTML', false, img);
+            }
+        }
+        
+        function clearEnhancedTiptapEditor() {
+            if (enhancedTiptapEditor && enhancedTiptapEditor.commands) {
+                enhancedTiptapEditor.commands.setContent('<p>여기에 내용을 작성하세요...</p>');
+            } else {
+                const basicEditor = document.getElementById('enhanced-basic-editor');
+                if (basicEditor) {
+                    basicEditor.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+                }
+            }
+            const titleInput = document.getElementById('editorTitle');
+            const serviceSelect = document.getElementById('editorService');
+            
+            if (titleInput) titleInput.value = '';
+            if (serviceSelect) serviceSelect.value = '';
+            
+            // 현재 입력 스타일 초기화
+            currentInputStyle = {
+                color: null,
+                fontSize: null,
+                fontFamily: null
+            };
+            
+            // 모든 툴바 버튼 초기화
+            ['btn-bold', 'btn-italic', 'btn-underline', 'btn-strike', 'btn-h1', 'btn-h2', 'btn-h3', 
+             'btn-bullet', 'btn-ordered', 'btn-align-left', 'btn-align-center', 'btn-align-right', 'btn-quote'].forEach(id => {
+                const btn = document.getElementById(id);
+                if (btn) {
+                    btn.style.background = 'white';
+                    btn.style.color = 'black';
+                }
+            });
+            
+            logToEnhancedTiptap('에디터 초기화 완료');
+        }
+        
+        function logToEnhancedTiptap(message) {
+            const logElement = document.getElementById('enhanced-tiptap-api-log');
+            if (logElement) {
+                logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': ' + message + '</div>';
+                logElement.scrollTop = logElement.scrollHeight;
+            }
+        }
+        
+        function clearEnhancedTiptapLog() {
+            const logElement = document.getElementById('enhanced-tiptap-api-log');
+            if (logElement) {
+                logElement.innerHTML = '향상된 Tiptap 에디터 준비 완료';
+            }
+        }
+        
+        // 툴바 버튼 상태 관리 함수들
+        function toggleFormatAndHighlight(format, button) {
+            // 에디터가 초기화되지 않은 경우 자동 초기화
+            if (!enhancedTiptapEditor) {
+                initEnhancedTiptapEditor();
+            }
+            
+            const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+            if (editorElement) {
+                editorElement.focus();
+                
+                // 포맷 적용
+                switch(format) {
+                    case 'bold':
+                        if (enhancedTiptapEditor?.chain) {
+                            enhancedTiptapEditor.chain().focus().toggleBold().run();
+                        } else {
+                            document.execCommand('bold');
+                        }
+                        break;
+                    case 'italic':
+                        if (enhancedTiptapEditor?.chain) {
+                            enhancedTiptapEditor.chain().focus().toggleItalic().run();
+                        } else {
+                            document.execCommand('italic');
+                        }
+                        break;
+                    case 'underline':
+                        if (enhancedTiptapEditor?.chain) {
+                            enhancedTiptapEditor.chain().focus().toggleUnderline().run();
+                        } else {
+                            document.execCommand('underline');
+                        }
+                        break;
+                    case 'strike':
+                        if (enhancedTiptapEditor?.chain) {
+                            enhancedTiptapEditor.chain().focus().toggleStrike().run();
+                        } else {
+                            document.execCommand('strikeThrough');
+                        }
+                        break;
+                }
+                
+                // 버튼 상태 토글
+                if (button.style.background === 'rgb(59, 130, 246)' || button.style.background === '#3b82f6') {
+                    button.style.background = 'white';
+                    button.style.color = 'black';
+                } else {
+                    button.style.background = '#3b82f6';
+                    button.style.color = 'white';
+                }
+                
+                logToEnhancedTiptap(format + ' 포맷 적용/해제');
+            }
+        }
+        
+        function toggleHeadingAndHighlight(level, button) {
+            // 에디터가 초기화되지 않은 경우 자동 초기화
+            if (!enhancedTiptapEditor) {
+                initEnhancedTiptapEditor();
+            }
+            
+            const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+            if (editorElement) {
+                editorElement.focus();
+                
+                const selection = window.getSelection();
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    
+                    // 현재 단락의 헤딩 상태 확인
+                    let currentElement = range.startContainer;
+                    if (currentElement.nodeType === Node.TEXT_NODE) {
+                        currentElement = currentElement.parentNode;
+                    }
+                    
+                    // 부모 요소 중에서 헤딩 태그 찾기
+                    let currentHeading = null;
+                    let tempElement = currentElement;
+                    while (tempElement && tempElement !== editorElement) {
+                        if (tempElement.tagName && /^H[1-6]$/.test(tempElement.tagName)) {
+                            currentHeading = tempElement;
+                            break;
+                        }
+                        tempElement = tempElement.parentNode;
+                    }
+                    
+                    const targetTag = 'H' + level;
+                    
+                    // 이미 같은 레벨의 헤딩이면 해제, 아니면 적용
+                    if (currentHeading && currentHeading.tagName === targetTag) {
+                        // 헤딩 해제 - p 태그로 변경
+                        const p = document.createElement('p');
+                        p.innerHTML = currentHeading.innerHTML;
+                        currentHeading.parentNode.replaceChild(p, currentHeading);
+                        
+                        // 모든 헤딩 버튼 비활성화
+                        ['btn-h1', 'btn-h2', 'btn-h3'].forEach(id => {
+                            const btn = document.getElementById(id);
+                            if (btn) {
+                                btn.style.background = 'white';
+                                btn.style.color = 'black';
+                            }
+                        });
+                        
+                        logToEnhancedTiptap('H' + level + ' 헤딩 해제');
+                    } else {
+                        // 헤딩 적용
+                        if (enhancedTiptapEditor?.chain) {
+                            enhancedTiptapEditor.chain().focus().toggleHeading({ level: level }).run();
+                        } else {
+                            document.execCommand('formatBlock', false, 'h' + level);
+                        }
+                        
+                        // 다른 헤딩 버튼들 초기화
+                        ['btn-h1', 'btn-h2', 'btn-h3'].forEach(id => {
+                            const btn = document.getElementById(id);
+                            if (btn && btn !== button) {
+                                btn.style.background = 'white';
+                                btn.style.color = 'black';
+                            }
+                        });
+                        
+                        // 현재 버튼 활성화
+                        button.style.background = '#3b82f6';
+                        button.style.color = 'white';
+                        
+                        logToEnhancedTiptap('H' + level + ' 헤딩 적용 (현재 단락 전체)');
+                    }
+                    
+                    // 커서 위치 복원
+                    setTimeout(() => {
+                        const newSelection = window.getSelection();
+                        const newRange = document.createRange();
+                        try {
+                            newRange.setStart(range.startContainer, range.startOffset);
+                            newRange.collapse(true);
+                            newSelection.removeAllRanges();
+                            newSelection.addRange(newRange);
+                        } catch (e) {
+                            // 커서 복원 실패 시 에디터 끝으로 이동
+                            newRange.selectNodeContents(editorElement);
+                            newRange.collapse(false);
+                            newSelection.removeAllRanges();
+                            newSelection.addRange(newRange);
+                        }
+                    }, 10);
+                }
+            }
+        }
+        
+        function toggleListAndHighlight(type, button) {
+            // 에디터가 초기화되지 않은 경우 자동 초기화
+            if (!enhancedTiptapEditor) {
+                initEnhancedTiptapEditor();
+            }
+            
+            const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+            if (editorElement) {
+                editorElement.focus();
+                
+                // 현재 커서 위치 저장
+                const selection = window.getSelection();
+                let savedRange = null;
+                let cursorOffset = 0;
+                
+                if (selection.rangeCount > 0) {
+                    const range = selection.getRangeAt(0);
+                    savedRange = range.cloneRange();
+                    
+                    // 현재 노드 내에서의 커서 오프셋 저장
+                    if (range.startContainer.nodeType === Node.TEXT_NODE) {
+                        cursorOffset = range.startOffset;
+                    }
+                }
+                
+                // 다른 리스트 버튼 초기화
+                const otherButton = type === 'bullet' ? document.getElementById('btn-ordered') : document.getElementById('btn-bullet');
+                if (otherButton) {
+                    otherButton.style.background = 'white';
+                    otherButton.style.color = 'black';
+                }
+                
+                // 리스트 적용
+                if (type === 'bullet') {
+                    if (enhancedTiptapEditor?.chain) {
+                        enhancedTiptapEditor.chain().focus().toggleBulletList().run();
+                    } else {
+                        document.execCommand('insertUnorderedList');
+                    }
+                } else {
+                    if (enhancedTiptapEditor?.chain) {
+                        enhancedTiptapEditor.chain().focus().toggleOrderedList().run();
+                    } else {
+                        document.execCommand('insertOrderedList');
+                    }
+                }
+                
+                // 커서 위치 복원
+                if (savedRange) {
+                    setTimeout(() => {
+                        try {
+                            // 리스트가 적용된 후 현재 커서가 있는 리스트 아이템 찾기
+                            const currentSelection = window.getSelection();
+                            if (currentSelection.rangeCount > 0) {
+                                const currentRange = currentSelection.getRangeAt(0);
+                                let listItem = currentRange.startContainer;
+                                
+                                // 리스트 아이템 찾기
+                                while (listItem && listItem.nodeName !== 'LI' && listItem.parentNode) {
+                                    listItem = listItem.parentNode;
+                                }
+                                
+                                if (listItem && listItem.nodeName === 'LI') {
+                                    // 리스트 아이템 내의 텍스트 노드 찾기
+                                    const textNode = findTextNode(listItem);
+                                    if (textNode) {
+                                        const newRange = document.createRange();
+                                        const offset = Math.min(cursorOffset, textNode.textContent.length);
+                                        newRange.setStart(textNode, offset);
+                                        newRange.collapse(true);
+                                        currentSelection.removeAllRanges();
+                                        currentSelection.addRange(newRange);
+                                    }
+                                }
+                            }
+                        } catch (e) {
+                            // 커서 복원 실패 시 무시
+                        }
+                    }, 10);
+                }
+                
+                // 버튼 상태 토글
+                if (button.style.background === 'rgb(59, 130, 246)' || button.style.background === '#3b82f6') {
+                    button.style.background = 'white';
+                    button.style.color = 'black';
+                    logToEnhancedTiptap((type === 'bullet' ? '불릿' : '번호') + ' 리스트 해제');
+                } else {
+                    button.style.background = '#3b82f6';
+                    button.style.color = 'white';
+                    logToEnhancedTiptap((type === 'bullet' ? '불릿' : '번호') + ' 리스트 적용');
+                }
+                
+                // 포맷팅 상태 업데이트
+                setTimeout(updateFormattingState, 50);
+            }
+        }
+        
+        // 텍스트 노드 찾기 헬퍼 함수
+        function findTextNode(element) {
+            if (element.nodeType === Node.TEXT_NODE && element.textContent.trim()) {
+                return element;
+            }
+            for (let child of element.childNodes) {
+                const textNode = findTextNode(child);
+                if (textNode) return textNode;
+            }
+            return null;
+        }
+        
+        function setAlignAndHighlight(align, button) {
+            // 에디터가 초기화되지 않은 경우 자동 초기화
+            if (!enhancedTiptapEditor) {
+                initEnhancedTiptapEditor();
+            }
+            
+            const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+            if (editorElement) {
+                editorElement.focus();
+                
+                // 다른 정렬 버튼들 초기화
+                ['btn-align-left', 'btn-align-center', 'btn-align-right'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn && btn !== button) {
+                        btn.style.background = 'white';
+                        btn.style.color = 'black';
+                    }
+                });
+                
+                // 정렬 적용
+                if (enhancedTiptapEditor?.chain) {
+                    enhancedTiptapEditor.chain().focus().setTextAlign(align).run();
+                } else {
+                    const command = 'justify' + align.charAt(0).toUpperCase() + align.slice(1);
+                    document.execCommand(command);
+                }
+                
+                // 버튼 활성화
+                button.style.background = '#3b82f6';
+                button.style.color = 'white';
+                
+                logToEnhancedTiptap(align + ' 정렬 적용');
+            }
+        }
+        
+        function toggleQuoteAndHighlight(button) {
+            // 에디터가 초기화되지 않은 경우 자동 초기화
+            if (!enhancedTiptapEditor) {
+                initEnhancedTiptapEditor();
+            }
+            
+            const editorElement = document.getElementById('enhanced-tiptap-editor') || document.getElementById('enhanced-basic-editor');
+            if (editorElement) {
+                editorElement.focus();
+                
+                // 인용 적용
+                if (enhancedTiptapEditor?.chain) {
+                    enhancedTiptapEditor.chain().focus().toggleBlockquote().run();
+                } else {
+                    document.execCommand('formatBlock', false, 'blockquote');
+                }
+                
+                // 버튼 상태 토글
+                if (button.style.background === 'rgb(59, 130, 246)' || button.style.background === '#3b82f6') {
+                    button.style.background = 'white';
+                    button.style.color = 'black';
+                    logToEnhancedTiptap('인용 해제');
+                } else {
+                    button.style.background = '#3b82f6';
+                    button.style.color = 'white';
+                    logToEnhancedTiptap('인용 적용');
+                }
+            }
+        }
+        
+        function updateFontSizeDisplay(fontSize) {
+            // 현재 선택된 폰트 크기를 툴바에 표시
+            const sizeSelect = document.getElementById('fontSize');
+            if (sizeSelect) {
+                // 선택된 값을 드롭다운에 유지
+                for (let i = 0; i < sizeSelect.options.length; i++) {
+                    if (sizeSelect.options[i].value === fontSize) {
+                        sizeSelect.selectedIndex = i;
+                        sizeSelect.style.background = '#eff6ff';
+                        sizeSelect.style.color = '#2563eb';
+                        
+                        // 3초 후 기본값으로 돌아가기
+                        setTimeout(() => {
+                            if (sizeSelect.selectedIndex === i) { // 아직 같은 상태이면
+                                sizeSelect.selectedIndex = 0;
+                                sizeSelect.style.background = 'white';
+                                sizeSelect.style.color = 'black';
+                            }
+                        }, 3000);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        function updateFontFamilyDisplay(fontFamily) {
+            // 현재 선택된 폰트를 툴바에 표시
+            const fontSelect = document.getElementById('fontFamily');
+            if (fontSelect) {
+                // 선택된 값을 드롭다운에 유지
+                for (let i = 0; i < fontSelect.options.length; i++) {
+                    if (fontSelect.options[i].value === fontFamily) {
+                        fontSelect.selectedIndex = i;
+                        fontSelect.style.background = '#eff6ff';
+                        fontSelect.style.color = '#2563eb';
+                        
+                        // 3초 후 기본값으로 돌아가기
+                        setTimeout(() => {
+                            if (fontSelect.selectedIndex === i) { // 아직 같은 상태이면
+                                fontSelect.selectedIndex = 0;
+                                fontSelect.style.background = 'white';
+                                fontSelect.style.color = 'black';
+                            }
+                        }, 3000);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Novel 에디터 명령 실행 함수
+        function execNovelCommand(command, value = null) {
+            try {
+                const editorElement = document.getElementById('novel-editor');
+                if (editorElement) {
+                    editorElement.focus();
+                    
+                    if (value) {
+                        document.execCommand(command, false, value);
+                    } else {
+                        document.execCommand(command, false, null);
+                    }
+                    
+                    // 포커스 유지
+                    editorElement.focus();
+                }
+            } catch (error) {
+                const logElement = document.getElementById('novel-api-log');
+                if (logElement) {
+                    logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': 명령 실행 오류: ' + error.message + '</div>';
+                }
+            }
+        }
+        
+        // 포맷팅 상태 업데이트 함수
+        function updateFormattingState() {
+            // 에디터가 초기화되지 않으면 리턴
+            if (!enhancedTiptapEditor) return;
+            
+            try {
+                // 기본 포맷팅 버튼 상태 업데이트
+                updateButtonState('btn-bold', document.queryCommandState('bold'));
+                updateButtonState('btn-italic', document.queryCommandState('italic'));
+                updateButtonState('btn-underline', document.queryCommandState('underline'));
+                updateButtonState('btn-strike', document.queryCommandState('strikeThrough'));
+                
+                // 헤딩 상태 업데이트
+                const formatBlock = document.queryCommandValue('formatBlock').toLowerCase();
+                ['btn-h1', 'btn-h2', 'btn-h3'].forEach(id => {
+                    const btn = document.getElementById(id);
+                    if (btn) {
+                        const level = id.replace('btn-h', '');
+                        const active = formatBlock === 'h' + level || formatBlock === 'heading';
+                        updateButtonState(id, active);
+                    }
+                });
+                
+                // 리스트 상태 업데이트
+                updateButtonState('btn-bullet', document.queryCommandState('insertUnorderedList'));
+                updateButtonState('btn-ordered', document.queryCommandState('insertOrderedList'));
+                
+                // 정렬 상태 업데이트
+                const justifyState = {
+                    left: document.queryCommandState('justifyLeft'),
+                    center: document.queryCommandState('justifyCenter'),
+                    right: document.queryCommandState('justifyRight')
+                };
+                
+                ['btn-align-left', 'btn-align-center', 'btn-align-right'].forEach(id => {
+                    const align = id.replace('btn-align-', '');
+                    updateButtonState(id, justifyState[align]);
+                });
+                
+                // 인용 상태 업데이트
+                const blockquoteState = document.queryCommandValue('formatBlock').toLowerCase() === 'blockquote';
+                updateButtonState('btn-quote', blockquoteState);
+            } catch (error) {
+                // 에러 무시 (브라우저 호환성 문제)
+            }
+        }
+        
+        // 버튼 상태 업데이트 헬퍼 함수
+        function updateButtonState(buttonId, isActive) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                if (isActive) {
+                    button.style.background = '#3b82f6';
+                    button.style.color = 'white';
+                } else {
+                    button.style.background = 'white';
+                    button.style.color = 'black';
+                }
+            }
+        }
+        
+        // 현재 입력 스타일 표시 함수
+        function displayCurrentInputStyle() {
+            const styles = [];
+            if (currentInputStyle.color) {
+                styles.push('색상: ' + currentInputStyle.color);
+            }
+            if (currentInputStyle.fontSize) {
+                styles.push('크기: ' + currentInputStyle.fontSize);
+            }
+            if (currentInputStyle.fontFamily) {
+                styles.push('폰트: ' + currentInputStyle.fontFamily);
+            }
+            
+            if (styles.length > 0) {
+                logToEnhancedTiptap('현재 입력 스타일: ' + styles.join(', '));
+            }
+        }
+        
+        // 기타 에디터 초기화 함수들
+        function clearTiptapEditor() {
+            if (tiptapEditor) {
+                tiptapEditor.commands.setContent('<p>여기에 내용을 작성하세요...</p>');
+                const titleInput = document.getElementById('tiptapTitle');
+                const serviceSelect = document.getElementById('tiptapService');
+                
+                if (titleInput) titleInput.value = '';
+                if (serviceSelect) serviceSelect.value = '';
+                
+                const logElement = document.getElementById('tiptap-api-log');
+                if (logElement) {
+                    logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': 에디터 초기화 완료</div>';
+                }
+            }
+        }
+        
+        function clearNovelEditor() {
+            if (novelEditor && novelEditor.setContent) {
+                novelEditor.setContent('<p>여기에 내용을 작성하세요...</p>');
+            } else {
+                const editorElement = document.getElementById('novel-editor');
+                if (editorElement) {
+                    editorElement.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+                }
+            }
+            const titleInput = document.getElementById('novelTitle');
+            const serviceSelect = document.getElementById('novelService');
+            
+            if (titleInput) titleInput.value = '';
+            if (serviceSelect) serviceSelect.value = '';
+            
+            const logElement = document.getElementById('novel-api-log');
+            if (logElement) {
+                logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': 에디터 초기화 완료</div>';
+            }
+        }
+        
+        function clearQuillEditor() {
+            if (quillEditor && quillEditor.setContents) {
+                quillEditor.setContents([]);
+            } else {
+                const editorElement = document.getElementById('quill-editor');
+                if (editorElement && editorElement.tagName === 'TEXTAREA') {
+                    editorElement.value = '';
+                }
+            }
+            const titleInput = document.getElementById('quillTitle');
+            const serviceSelect = document.getElementById('quillService');
+            
+            if (titleInput) titleInput.value = '';
+            if (serviceSelect) serviceSelect.value = '';
+            
+            const logElement = document.getElementById('quill-api-log');
+            if (logElement) {
+                logElement.innerHTML += '<div>' + new Date().toLocaleTimeString() + ': 에디터 초기화 완료</div>';
+            }
+        }
+        
+        // 로그 클리어 함수들
+        function clearTiptapLog() {
+            const logElement = document.getElementById('tiptap-api-log');
+            if (logElement) {
+                logElement.innerHTML = 'Tiptap 에디터 준비 완료';
+            }
+        }
+        
+        function clearNovelLog() {
+            const logElement = document.getElementById('novel-api-log');
+            if (logElement) {
+                logElement.innerHTML = 'Novel 에디터 준비 완료';
+            }
+        }
+        
+        function clearQuillLog() {
+            const logElement = document.getElementById('quill-api-log');
+            if (logElement) {
+                logElement.innerHTML = 'ReactQuill 에디터 준비 완료';
+            }
+        }
+        
+        // ===================== 리치 텍스트 에디터 TDD 구현 =====================
+        
+        // 에디터 상태 관리
+        let editorState = {
+            editor: null,
+            currentRange: null,
+            history: [],
+            historyIndex: -1
+        };
+        
+        // 테스트 결과 저장
+        let testResults = [];
+        
+        // 에디터 초기화
+        function initializeEditor() {
+            const editor = document.getElementById('rich-text-editor');
+            if (!editor) return false;
+            
+            editorState.editor = editor;
+            
+            // 이벤트 리스너 추가
+            setupEventListeners();
+            
+            // 툴바 버튼 이벤트 바인딩
+            bindToolbarEvents();
+            
+            // 히스토리 초기화
+            saveState();
+            
+            logTest('에디터 초기화 완료');
+            return true;
+        }
+        
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            const editor = editorState.editor;
+            
+            // 커서 위치 저장
+            editor.addEventListener('mouseup', saveCurrentRange);
+            editor.addEventListener('keyup', saveCurrentRange);
+            
+            // 내용 변경 감지
+            editor.addEventListener('input', onContentChange);
+            
+            // 키보드 단축키
+            editor.addEventListener('keydown', handleKeyboardShortcuts);
+        }
+        
+        // 툴바 이벤트 바인딩
+        function bindToolbarEvents() {
+            // 기본 서식 버튼들
+            document.getElementById('btn-bold')?.addEventListener('click', () => executeCommand('bold'));
+            document.getElementById('btn-italic')?.addEventListener('click', () => executeCommand('italic'));
+            document.getElementById('btn-underline')?.addEventListener('click', () => executeCommand('underline'));
+            document.getElementById('btn-strike')?.addEventListener('click', () => executeCommand('strikethrough'));
+            
+            // 리스트 버튼들
+            document.getElementById('btn-bullet')?.addEventListener('click', () => executeCommand('insertUnorderedList'));
+            document.getElementById('btn-ordered')?.addEventListener('click', () => executeCommand('insertOrderedList'));
+            
+            // 정렬 버튼들
+            document.getElementById('btn-align-left')?.addEventListener('click', () => executeCommand('justifyLeft'));
+            document.getElementById('btn-align-center')?.addEventListener('click', () => executeCommand('justifyCenter'));
+            document.getElementById('btn-align-right')?.addEventListener('click', () => executeCommand('justifyRight'));
+            
+            // 인용구 버튼
+            document.getElementById('btn-quote')?.addEventListener('click', () => executeCommand('formatBlock', 'blockquote'));
+            
+            // 실행 취소/재실행
+            document.getElementById('btn-undo')?.addEventListener('click', () => executeCommand('undo'));
+            document.getElementById('btn-redo')?.addEventListener('click', () => executeCommand('redo'));
+            
+            // 글씨체 및 크기 변경
+            document.getElementById('fontFamily')?.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    executeCommand('fontName', e.target.value);
+                }
+            });
+            
+            document.getElementById('fontSize')?.addEventListener('change', (e) => {
+                if (e.target.value) {
+                    executeCommand('fontSize', '3');
+                    // CSS로 크기 적용
+                    applyFontSize(e.target.value);
+                }
+            });
+            
+            // 글자 색상 변경
+            document.getElementById('textColor')?.addEventListener('change', (e) => {
+                executeCommand('foreColor', e.target.value);
+            });
+            
+            // 이미지 업로드
+            document.getElementById('btn-image')?.addEventListener('click', () => {
+                document.getElementById('imageInput')?.click();
+            });
+            
+            document.getElementById('imageInput')?.addEventListener('change', handleImageUpload);
+        }
+        
+        // 명령 실행 (TDD 테스트 가능)
+        function executeCommand(command, value = null) {
+            try {
+                // 포커스 복원
+                restoreCurrentRange();
+                
+                // 명령 실행
+                const success = document.execCommand(command, false, value);
+                
+                // 버튼 상태 업데이트
+                updateToolbarState();
+                
+                // 히스토리 저장
+                saveState();
+                
+                logTest(`명령 실행 성공: ${command}${value ? ` (${value})` : ''}`);
+                return success;
+            } catch (error) {
+                logTest(`명령 실행 실패: ${command} - ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // 커서 위치 저장/복원
+        function saveCurrentRange() {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                editorState.currentRange = selection.getRangeAt(0);
+            }
+        }
+        
+        function restoreCurrentRange() {
+            if (editorState.currentRange) {
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(editorState.currentRange);
+            }
+            editorState.editor?.focus();
+        }
+        
+        // 히스토리 관리
+        function saveState() {
+            const content = editorState.editor?.innerHTML;
+            if (content) {
+                editorState.history = editorState.history.slice(0, editorState.historyIndex + 1);
+                editorState.history.push(content);
+                editorState.historyIndex = editorState.history.length - 1;
+            }
+        }
+        
+        // 툴바 상태 업데이트
+        function updateToolbarState() {
+            // 기본 서식 버튼 상태
+            updateButtonState('btn-bold', document.queryCommandState('bold'));
+            updateButtonState('btn-italic', document.queryCommandState('italic'));
+            updateButtonState('btn-underline', document.queryCommandState('underline'));
+            updateButtonState('btn-strike', document.queryCommandState('strikethrough'));
+            
+            // 리스트 버튼 상태
+            updateButtonState('btn-bullet', document.queryCommandState('insertUnorderedList'));
+            updateButtonState('btn-ordered', document.queryCommandState('insertOrderedList'));
+            
+            // 정렬 버튼 상태
+            updateButtonState('btn-align-left', document.queryCommandState('justifyLeft'));
+            updateButtonState('btn-align-center', document.queryCommandState('justifyCenter'));
+            updateButtonState('btn-align-right', document.queryCommandState('justifyRight'));
+        }
+        
+        function updateButtonState(buttonId, isActive) {
+            const button = document.getElementById(buttonId);
+            if (button) {
+                if (isActive) {
+                    button.classList.add('active');
+                } else {
+                    button.classList.remove('active');
+                }
+            }
+        }
+        
+        // 글자 크기 적용
+        function applyFontSize(size) {
+            const selection = window.getSelection();
+            if (selection.rangeCount > 0) {
+                const range = selection.getRangeAt(0);
+                if (!range.collapsed) {
+                    const span = document.createElement('span');
+                    span.style.fontSize = size;
+                    try {
+                        range.surroundContents(span);
+                    } catch (e) {
+                        span.appendChild(range.extractContents());
+                        range.insertNode(span);
+                    }
+                }
+            }
+        }
+        
+        // 이미지 업로드 처리
+        function handleImageUpload(event) {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = `<img src="${e.target.result}" alt="업로드된 이미지" style="max-width: 100%; height: auto; margin: 10px 0;">`;
+                    executeCommand('insertHTML', img);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // 키보드 단축키 처리
+        function handleKeyboardShortcuts(event) {
+            if (event.ctrlKey || event.metaKey) {
+                switch (event.key) {
+                    case 'b':
+                        event.preventDefault();
+                        executeCommand('bold');
+                        break;
+                    case 'i':
+                        event.preventDefault();
+                        executeCommand('italic');
+                        break;
+                    case 'u':
+                        event.preventDefault();
+                        executeCommand('underline');
+                        break;
+                    case 'z':
+                        if (event.shiftKey) {
+                            event.preventDefault();
+                            executeCommand('redo');
+                        } else {
+                            event.preventDefault();
+                            executeCommand('undo');
+                        }
+                        break;
+                }
+            }
+        }
+        
+        // 내용 변경 감지
+        function onContentChange() {
+            updateToolbarState();
+            // 디바운싱된 히스토리 저장
+            clearTimeout(window.editorSaveTimeout);
+            window.editorSaveTimeout = setTimeout(saveState, 500);
+        }
+        
+        // 에디터 초기화
+        function clearEditor() {
+            if (editorState.editor) {
+                editorState.editor.innerHTML = '<p>여기에 내용을 작성하세요...</p>';
+                editorState.history = [];
+                editorState.historyIndex = -1;
+                saveState();
+                
+                // 폼 필드 초기화
+                document.getElementById('editorTitle').value = '';
+                document.getElementById('editorService').value = '';
+                
+                logTest('에디터 초기화 완료');
+            }
+        }
+        
+        // 게시글 제출 처리
+        function handleEditorPostSubmit(event) {
+            event.preventDefault();
+            
+            const title = document.getElementById('editorTitle').value;
+            const service = document.getElementById('editorService').value;
+            const content = editorState.editor?.innerHTML;
+            
+            if (!title || !service || !content) {
+                showNotification('모든 필드를 입력해주세요.', 'error');
+                return;
+            }
+            
+            // 기존 게시글 생성 로직 사용
+            const postData = {
+                title: title,
+                content: content,
+                service: service,
+                metadata: {
+                    type: '리치 텍스트',
+                    tags: [],
+                    visibility: 'public'
+                }
+            };
+            
+            // API 호출 (기존 함수 재사용)
+            createPost(postData).then(newPost => {
+                if (newPost && (newPost.slug || newPost.id)) {
+                    showNotification('게시글이 작성되었습니다!', 'success');
+                    clearEditor();
+                    showPostDetail(newPost.slug || newPost.id);
+                }
+            }).catch(error => {
+                showNotification('게시글 작성에 실패했습니다.', 'error');
+            });
+        }
+        
+        // ===================== TDD 테스트 시스템 =====================
+        
+        // 테스트 로깅
+        function logTest(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const testResult = {
+                timestamp,
+                message,
+                type
+            };
+            
+            testResults.push(testResult);
+            
+            // 콘솔에도 출력
+            console.log(`[${timestamp}] ${message}`);
+            
+            // 테스트 패널이 표시되어 있으면 업데이트
+            updateTestDisplay();
+        }
+        
+        // 테스트 표시 업데이트
+        function updateTestDisplay() {
+            const testResultsElement = document.getElementById('test-results');
+            if (testResultsElement) {
+                const html = testResults.map(result => {
+                    const color = result.type === 'error' ? '#dc2626' : 
+                                 result.type === 'success' ? '#059669' : '#374151';
+                    return `<div style="color: ${color}; margin: 2px 0;">[${result.timestamp}] ${result.message}</div>`;
+                }).join('');
+                testResultsElement.innerHTML = html;
+                testResultsElement.scrollTop = testResultsElement.scrollHeight;
+            }
+        }
+        
+        // 에디터 테스트 실행
+        function runEditorTests() {
+            // 테스트 패널 표시
+            const testPanel = document.getElementById('test-panel');
+            if (testPanel) {
+                testPanel.style.display = 'block';
+            }
+            
+            testResults = []; // 테스트 결과 초기화
+            logTest('=== 에디터 테스트 시작 ===');
+            
+            // 기본 기능 테스트
+            testBasicFormatting();
+            testListFormatting();
+            testAlignment();
+            testQuote();
+            testUndoRedo();
+            
+            logTest('=== 에디터 테스트 완료 ===');
+        }
+        
+        // 기본 서식 테스트
+        function testBasicFormatting() {
+            logTest('기본 서식 테스트 시작...');
+            
+            // Bold 테스트
+            if (testBold()) {
+                logTest('✅ Bold 테스트 통과', 'success');
+            } else {
+                logTest('❌ Bold 테스트 실패', 'error');
+            }
+            
+            // Italic 테스트
+            if (testItalic()) {
+                logTest('✅ Italic 테스트 통과', 'success');
+            } else {
+                logTest('❌ Italic 테스트 실패', 'error');
+            }
+            
+            // Underline 테스트
+            if (testUnderline()) {
+                logTest('✅ Underline 테스트 통과', 'success');
+            } else {
+                logTest('❌ Underline 테스트 실패', 'error');
+            }
+            
+            // Strikethrough 테스트
+            if (testStrikethrough()) {
+                logTest('✅ Strikethrough 테스트 통과', 'success');
+            } else {
+                logTest('❌ Strikethrough 테스트 실패', 'error');
+            }
+        }
+        
+        // Bold 테스트 구현
+        function testBold() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                
+                // 텍스트 선택
+                const range = document.createRange();
+                range.selectNodeContents(editor.firstChild);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                // Bold 명령 실행
+                const result = executeCommand('bold');
+                
+                // 결과 확인
+                const hasStrong = editor.innerHTML.includes('<strong>') || editor.innerHTML.includes('<b>');
+                return result && hasStrong;
+            } catch (error) {
+                logTest(`Bold 테스트 오류: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Italic 테스트 구현
+        function testItalic() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                
+                const range = document.createRange();
+                range.selectNodeContents(editor.firstChild);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                const result = executeCommand('italic');
+                const hasItalic = editor.innerHTML.includes('<em>') || editor.innerHTML.includes('<i>');
+                return result && hasItalic;
+            } catch (error) {
+                logTest(`Italic 테스트 오류: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Underline 테스트 구현
+        function testUnderline() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                
+                const range = document.createRange();
+                range.selectNodeContents(editor.firstChild);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                const result = executeCommand('underline');
+                const hasUnderline = editor.innerHTML.includes('<u>') || 
+                                   editor.innerHTML.includes('text-decoration: underline');
+                return result && hasUnderline;
+            } catch (error) {
+                logTest(`Underline 테스트 오류: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // Strikethrough 테스트 구현
+        function testStrikethrough() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                
+                const range = document.createRange();
+                range.selectNodeContents(editor.firstChild);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+                
+                const result = executeCommand('strikethrough');
+                const hasStrike = editor.innerHTML.includes('<strike>') || 
+                                 editor.innerHTML.includes('<s>') ||
+                                 editor.innerHTML.includes('text-decoration: line-through');
+                return result && hasStrike;
+            } catch (error) {
+                logTest(`Strikethrough 테스트 오류: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // 리스트 서식 테스트
+        function testListFormatting() {
+            logTest('리스트 서식 테스트 시작...');
+            
+            // Bullet list 테스트
+            if (testBulletList()) {
+                logTest('✅ Bullet List 테스트 통과', 'success');
+            } else {
+                logTest('❌ Bullet List 테스트 실패', 'error');
+            }
+            
+            // Ordered list 테스트
+            if (testOrderedList()) {
+                logTest('✅ Ordered List 테스트 통과', 'success');
+            } else {
+                logTest('❌ Ordered List 테스트 실패', 'error');
+            }
+        }
+        
+        function testBulletList() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                
+                const result = executeCommand('insertUnorderedList');
+                const hasUL = editor.innerHTML.includes('<ul>');
+                return result && hasUL;
+            } catch (error) {
+                logTest(`Bullet List 테스트 오류: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        function testOrderedList() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                
+                const result = executeCommand('insertOrderedList');
+                const hasOL = editor.innerHTML.includes('<ol>');
+                return result && hasOL;
+            } catch (error) {
+                logTest(`Ordered List 테스트 오류: ${error.message}`, 'error');
+                return false;
+            }
+        }
+        
+        // 정렬 테스트
+        function testAlignment() {
+            logTest('정렬 테스트 시작...');
+            
+            if (testLeftAlign() && testCenterAlign() && testRightAlign()) {
+                logTest('✅ 정렬 테스트 통과', 'success');
+            } else {
+                logTest('❌ 정렬 테스트 실패', 'error');
+            }
+        }
+        
+        function testLeftAlign() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                return executeCommand('justifyLeft');
+            } catch (error) {
+                return false;
+            }
+        }
+        
+        function testCenterAlign() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                return executeCommand('justifyCenter');
+            } catch (error) {
+                return false;
+            }
+        }
+        
+        function testRightAlign() {
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                return executeCommand('justifyRight');
+            } catch (error) {
+                return false;
+            }
+        }
+        
+        // 인용구 테스트
+        function testQuote() {
+            logTest('인용구 테스트 시작...');
+            
+            try {
+                const editor = editorState.editor;
+                editor.innerHTML = '<p>테스트 텍스트</p>';
+                
+                const result = executeCommand('formatBlock', 'blockquote');
+                const hasBlockquote = editor.innerHTML.includes('<blockquote>');
+                
+                if (result && hasBlockquote) {
+                    logTest('✅ 인용구 테스트 통과', 'success');
+                } else {
+                    logTest('❌ 인용구 테스트 실패', 'error');
+                }
+            } catch (error) {
+                logTest(`인용구 테스트 오류: ${error.message}`, 'error');
+            }
+        }
+        
+        // 실행 취소/재실행 테스트
+        function testUndoRedo() {
+            logTest('실행 취소/재실행 테스트 시작...');
+            
+            try {
+                const editor = editorState.editor;
+                const originalContent = '<p>원본 텍스트</p>';
+                editor.innerHTML = originalContent;
+                saveState();
+                
+                // 변경 사항 추가
+                editor.innerHTML = '<p><strong>변경된 텍스트</strong></p>';
+                saveState();
+                
+                // 실행 취소
+                const undoResult = executeCommand('undo');
+                
+                // 재실행
+                const redoResult = executeCommand('redo');
+                
+                if (undoResult && redoResult) {
+                    logTest('✅ 실행 취소/재실행 테스트 통과', 'success');
+                } else {
+                    logTest('❌ 실행 취소/재실행 테스트 실패', 'error');
+                }
+            } catch (error) {
+                logTest(`실행 취소/재실행 테스트 오류: ${error.message}`, 'error');
+            }
+        }
+        
+        // 페이지 로드 시 에디터 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            // 에디터 페이지가 표시될 때 초기화
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                        const target = mutation.target;
+                        if (target.id === 'post-editor' && target.classList.contains('active')) {
+                            setTimeout(() => {
+                                if (!editorState.editor) {
+                                    initializeEditor();
+                                }
+                            }, 100);
+                        }
+                    }
+                });
+            });
+            
+            const editorPage = document.getElementById('post-editor');
+            if (editorPage) {
+                observer.observe(editorPage, { attributes: true });
             }
         });
     </script>
