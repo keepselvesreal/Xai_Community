@@ -10,6 +10,7 @@ Provides data access layer for file operations including:
 from typing import Dict, Any, Optional
 import logging
 from src.database.connection import get_database
+from src.models.core import FileRecord
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +20,7 @@ FILES_COLLECTION = "files"
 
 async def save_file_record(file_document: Dict[str, Any]) -> bool:
     """
-    Save file record to MongoDB
+    Save file record to MongoDB using Beanie
     
     Args:
         file_document: File document to save
@@ -28,26 +29,24 @@ async def save_file_record(file_document: Dict[str, Any]) -> bool:
         bool: True if successful, False otherwise
     """
     try:
-        db = await get_database()
-        collection = db[FILES_COLLECTION]
+        # Create FileRecord instance from dictionary
+        file_record = FileRecord(**file_document)
         
-        result = await collection.insert_one(file_document)
+        # Save to database using Beanie
+        await file_record.save()
         
-        if result.inserted_id:
-            logger.info(f"File record saved: {file_document.get('file_id')}")
-            return True
-        else:
-            logger.warning(f"Failed to save file record: {file_document.get('file_id')}")
-            return False
+        logger.info(f"File record saved: {file_document.get('file_id')}")
+        return True
             
     except Exception as e:
         logger.error(f"Error saving file record: {e}")
+        logger.error(f"File document: {file_document}")
         return False
 
 
 async def find_file_by_id(file_id: str) -> Optional[Dict[str, Any]]:
     """
-    Find file record by file ID
+    Find file record by file ID using Beanie
     
     Args:
         file_id: Unique file identifier
@@ -56,21 +55,33 @@ async def find_file_by_id(file_id: str) -> Optional[Dict[str, Any]]:
         Optional[Dict]: File document if found, None otherwise
     """
     try:
-        db = await get_database()
-        collection = db[FILES_COLLECTION]
+        # Find by file_id field using Beanie
+        file_record = await FileRecord.find_one(FileRecord.file_id == file_id)
         
-        document = await collection.find_one({"file_id": file_id})
-        
-        if document:
+        if file_record:
             logger.debug(f"File record found: {file_id}")
+            # Convert to dict for compatibility
+            return file_record.model_dump()
         else:
             logger.debug(f"File record not found: {file_id}")
-            
-        return document
+            return None
         
     except Exception as e:
         logger.error(f"Error finding file record {file_id}: {e}")
         return None
+
+
+async def get_file_record(file_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Get file record by file ID (alias for find_file_by_id)
+    
+    Args:
+        file_id: Unique file identifier
+        
+    Returns:
+        Optional[Dict]: File document if found, None otherwise
+    """
+    return await find_file_by_id(file_id)
 
 
 async def find_files_by_attachment(attachment_type: str, attachment_id: str) -> list:

@@ -44,6 +44,7 @@ class PostMetadata(BaseModel):
     type: Optional[str] = None  # Service-specific post type
     tags: Optional[List[str]] = Field(default_factory=list, max_items=3)
     attachments: Optional[List[str]] = Field(default_factory=list)  # Image URLs
+    file_ids: Optional[List[str]] = Field(default_factory=list)  # File upload IDs
     thumbnail: Optional[str] = None
     visibility: Literal["public", "private"] = "public"
     
@@ -227,6 +228,30 @@ class UserReaction(Document):
         indexes = [
             [("user_id", ASCENDING), ("target_type", ASCENDING), ("target_id", ASCENDING)],
             [("target_type", ASCENDING), ("target_id", ASCENDING)]
+        ]
+
+
+class FileRecord(Document):
+    """File upload record document model."""
+    file_id: str = Indexed(unique=True)
+    original_filename: str
+    stored_filename: Optional[str] = None
+    file_path: str
+    file_size: int
+    content_type: str
+    attachment_type: Optional[str] = None
+    attachment_id: Optional[str] = None
+    uploaded_by: Optional[str] = None
+    upload_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    status: str = "active"
+    
+    class Settings:
+        name = "files"
+        indexes = [
+            [("file_id", ASCENDING)],
+            [("attachment_type", ASCENDING), ("attachment_id", ASCENDING)],
+            [("uploaded_by", ASCENDING), ("created_at", DESCENDING)]
         ]
 
 

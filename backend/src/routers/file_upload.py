@@ -6,9 +6,10 @@ Provides REST API endpoints for file upload functionality including:
 - Request validation and error handling
 """
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
 from typing import Dict, Any, Optional
 import logging
+from datetime import datetime
 
 # Import all required services
 from src.services.file_validator import (
@@ -33,8 +34,8 @@ router = APIRouter(tags=["files"])
 @router.post("/upload")
 async def upload_file(
     file: UploadFile = File(...),
-    attachment_type: Optional[str] = None,
-    attachment_id: Optional[str] = None
+    attachment_type: Optional[str] = Form(None),
+    attachment_id: Optional[str] = Form(None)
 ) -> Dict[str, Any]:
     """
     Upload a single file with validation
@@ -48,6 +49,8 @@ async def upload_file(
         Dict containing upload result and file information
     """
     try:
+        logger.info(f"File upload request received: {file.filename}, attachment_type: {attachment_type}")
+        
         # Validate file type
         if not validate_file_type(file):
             raise HTTPException(
@@ -93,7 +96,11 @@ async def upload_file(
         )
         
         # Save to database
-        if not await save_file_record(file_document):
+        logger.info(f"Attempting to save file record to database: {file_document['file_id']}")
+        saved = await save_file_record(file_document)
+        logger.info(f"Database save result: {saved}")
+        
+        if not saved:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to save file record to database."
@@ -101,14 +108,18 @@ async def upload_file(
         
         logger.info(f"File uploaded successfully: {file_document['file_id']}")
         
+        # API 명세에 맞는 응답 형식
         return {
-            "success": True,
-            "message": "File uploaded successfully",
             "file_id": file_document["file_id"],
-            "filename": file_document["original_filename"],
+            "original_filename": file_document["original_filename"],
+            "stored_filename": file_document.get("stored_filename", file_document["file_id"]),
             "file_path": file_document["file_path"],
             "file_size": file_document["file_size"],
-            "content_type": file_document["content_type"]
+            "file_type": file_document["content_type"],
+            "attachment_type": attachment_type or "post",
+            "uploaded_by": file_document.get("uploaded_by", "anonymous"),
+            "created_at": file_document.get("created_at", datetime.utcnow()).isoformat(),
+            "file_url": f"/api/files/{file_document['file_id']}"
         }
         
     except HTTPException:
@@ -118,6 +129,72 @@ async def upload_file(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred during file upload."
+        )
+
+
+@router.get("/{file_id}")
+async def get_file(file_id: str):
+    """Get file by ID"""
+    try:
+        from fastapi.responses import FileResponse
+        from src.repositories.file_repository import get_file_record
+        
+        # Get file record from database
+        file_record = await get_file_record(file_id)
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found"
+            )
+        
+        # Return file
+        return FileResponse(
+            file_record["file_path"],
+            media_type=file_record["content_type"],
+            headers={"Cache-Control": "public, max-age=31536000"}
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving file {file_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve file"
+        )
+
+
+@router.get("/{file_id}/info")
+async def get_file_info(file_id: str):
+    """Get file metadata"""
+    try:
+        from src.repositories.file_repository import get_file_record
+        
+        # Get file record from database
+        file_record = await get_file_record(file_id)
+        if not file_record:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="File not found"
+            )
+        
+        return {
+            "file_id": file_record["file_id"],
+            "original_filename": file_record["original_filename"],
+            "file_size": file_record["file_size"],
+            "file_type": file_record["content_type"],
+            "attachment_type": file_record.get("attachment_type", "post"),
+            "attached_to_id": file_record.get("attached_to_id"),
+            "uploaded_by": file_record.get("uploaded_by", "anonymous"),
+            "created_at": file_record.get("created_at", datetime.utcnow()).isoformat(),
+            "file_url": f"/api/files/{file_record['file_id']}"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving file info {file_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve file info"
         )
 
 

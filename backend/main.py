@@ -16,10 +16,10 @@ async def lifespan(app: FastAPI):
     try:
         # 데이터베이스 연결 시도
         from src.database.connection import database
-        from src.models.core import User, Post, Comment, PostStats, UserReaction, Stats
+        from src.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
         
         await database.connect()
-        await database.init_beanie_models([User, Post, Comment, PostStats, UserReaction, Stats])
+        await database.init_beanie_models([User, Post, Comment, PostStats, UserReaction, Stats, FileRecord])
         logger.info("Database connected successfully!")
     except Exception as e:
         logger.error(f"Database connection failed: {e}")

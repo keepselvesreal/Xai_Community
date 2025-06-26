@@ -57,6 +57,9 @@ async def search_posts(
                     item["id"] = str(item["id"])
                 if "author_id" in item:
                     item["author_id"] = str(item["author_id"])
+                # file_ids 추가
+                if "metadata" in item and item["metadata"]:
+                    item["file_ids"] = item["metadata"].get("file_ids", [])
         
         return result
     except Exception as e:
@@ -96,6 +99,9 @@ async def list_posts(
                     item["id"] = str(item["id"])
                 if "author_id" in item:
                     item["author_id"] = str(item["author_id"])
+                # file_ids 추가
+                if "metadata" in item and item["metadata"]:
+                    item["file_ids"] = item["metadata"].get("file_ids", [])
         
         return result
     except Exception as e:
@@ -143,6 +149,7 @@ async def get_post(
             "slug": post.slug,
             "service": post.service,
             "metadata": post.metadata,
+            "file_ids": post.metadata.file_ids if post.metadata else [],  # 파일 IDs 추가
             "author_id": str(post.author_id),
             "status": post.status,
             "created_at": post.created_at,
