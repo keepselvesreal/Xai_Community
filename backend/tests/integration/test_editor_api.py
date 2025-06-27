@@ -20,7 +20,7 @@ import asyncio
 from unittest.mock import Mock, patch, AsyncMock
 from httpx import AsyncClient
 from fastapi.testclient import TestClient
-from src.main import app
+from main import app
 from src.models.core import Post, PostCreate, PreviewRequest
 from src.services.auth_service import AuthService
 

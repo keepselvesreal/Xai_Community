@@ -19,7 +19,7 @@ import pytest
 import asyncio
 from httpx import AsyncClient
 from fastapi.testclient import TestClient
-from src.main import app
+from main import app
 from typing import Dict, Any, List
 
 

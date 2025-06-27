@@ -17,7 +17,7 @@
 ```typescript
 interface PostListQuery {
   type?: string;                // 게시글 타입 필터링 (예: "입주 정보", "생활 정보", "이야기")
-  author?: string;              // 작성자 user_handle 필터링
+  author_id?: string;           // 작성자 ID 필터링 (MongoDB ObjectId)
   visibility?: "public" | "private"; // 공개 여부
   page?: number;                // 페이지 번호 (default: 1)
   limit?: number;               // 페이지 크기 (default: 20, max: 100)

@@ -4,11 +4,11 @@ from pydantic import ValidationError
 from beanie import init_beanie
 
 from src.models import (
-    User, Post, Comment, Reaction, Stats,
+    User, Post, Comment, UserReaction, Stats,
     UserCreate, UserUpdate, UserResponse,
     PostCreate, PostUpdate, PostResponse,
-    CommentCreate, CommentResponse,
-    ServiceType, PostStatus, UserStatus, ReactionType,
+    CommentCreate, CommentDetail,
+    ServiceType, PostStatus, UserStatus, TargetType,
     PaginationParams, PaginatedResponse
 )
 from src.database import Database

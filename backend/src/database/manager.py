@@ -3,6 +3,9 @@ from pymongo import IndexModel, ASCENDING, DESCENDING, TEXT
 from typing import List, Dict, Any
 import logging
 
+# Import settings for dynamic collection names
+from ..config import settings
+
 logger = logging.getLogger(__name__)
 
 
@@ -92,10 +95,10 @@ class IndexManager:
             List of IndexModel instances for comments collection
         """
         return [
-            # Post ID index for fetching comments
+            # Parent ID index for fetching comments
             IndexModel(
-                [("post_id", ASCENDING), ("created_at", ASCENDING)],
-                name="post_comments_idx"
+                [("parent_id", ASCENDING), ("created_at", ASCENDING)],
+                name="parent_comments_idx"
             ),
             # Author index
             IndexModel(
@@ -181,11 +184,11 @@ class IndexManager:
             Dictionary mapping collection names to list of created index names
         """
         index_definitions = {
-            "users": IndexManager.get_user_indexes(),
-            "posts": IndexManager.get_post_indexes(),
-            "comments": IndexManager.get_comment_indexes(),
-            "reactions": IndexManager.get_reaction_indexes(),
-            "stats": IndexManager.get_stats_indexes()
+            settings.users_collection: IndexManager.get_user_indexes(),
+            settings.posts_collection: IndexManager.get_post_indexes(),
+            settings.comments_collection: IndexManager.get_comment_indexes(),
+            settings.user_reactions_collection: IndexManager.get_reaction_indexes(),
+            settings.stats_collection: IndexManager.get_stats_indexes()
         }
         
         created_indexes = {}
@@ -217,7 +220,13 @@ class IndexManager:
         Args:
             db: MongoDB database instance
         """
-        collections = ["users", "posts", "comments", "reactions", "stats"]
+        collections = [
+            settings.users_collection, 
+            settings.posts_collection, 
+            settings.comments_collection, 
+            settings.user_reactions_collection, 
+            settings.stats_collection
+        ]
         
         for collection_name in collections:
             collection = db[collection_name]

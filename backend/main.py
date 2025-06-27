@@ -40,9 +40,9 @@ async def lifespan(app: FastAPI):
 
 def create_app() -> FastAPI:
     app = FastAPI(
-        title="Xai Community API",
-        description="Community platform API with authentication, posts, and comments",
-        version="1.0.0",
+        title=settings.api_title,
+        description=settings.api_description,
+        version=settings.api_version,
         lifespan=lifespan  # 새로운 lifespan 이벤트 사용
     )
     
@@ -73,7 +73,7 @@ def create_app() -> FastAPI:
     # 기본 라우트
     @app.get("/")
     async def root():
-        return {"message": "Xai Community API", "status": "running"}
+        return {"message": settings.api_title, "status": "running"}
     
     # 정적 파일 서빙 (프론트엔드용)
     frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend-prototypes")

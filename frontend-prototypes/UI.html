@@ -3304,10 +3304,9 @@
                                         style="background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8em;">
                                     👎 ${(post.stats?.dislike_count || post.dislike_count) || 0}
                                 </button>
-                                <button onclick="event.stopPropagation(); togglePostReaction('${post.slug || post.id}', 'bookmark')" 
-                                        style="background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 4px; font-size: 0.8em;">
+                                <span style="background: none; border: 1px solid #d1d5db; border-radius: 4px; padding: 4px 8px; display: flex; align-items: center; gap: 4px; font-size: 0.8em; color: #6b7280;">
                                     🔖 ${(post.stats?.bookmark_count || post.bookmark_count) || 0}
-                                </button>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -3646,8 +3645,14 @@
                 return;
             }
             
+            // 북마크는 게시글 목록에서 불가능
+            if (type === 'bookmark') {
+                showNotification('북마크는 게시글 상세 페이지에서 가능합니다.', 'info');
+                return;
+            }
+            
             try {
-                // 실제 API 호출
+                // like, dislike만 처리
                 const endpoint = type === 'like' ? 'like' : 'dislike';
                 const response = await apiCall(`/api/posts/${postSlug}/${endpoint}`, {
                     method: 'POST'

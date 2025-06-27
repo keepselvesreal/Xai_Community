@@ -14,8 +14,38 @@ class Settings(BaseSettings):
         description="MongoDB Atlas connection URL"
     )
     database_name: str = Field(
-        default="xai_community",
+        default="app_database",
         description="MongoDB database name"
+    )
+    
+    # Collection Configuration
+    users_collection: str = Field(
+        default="users",
+        description="Users collection name"
+    )
+    posts_collection: str = Field(
+        default="posts",
+        description="Posts collection name"
+    )
+    comments_collection: str = Field(
+        default="comments",
+        description="Comments collection name"
+    )
+    post_stats_collection: str = Field(
+        default="post_stats",
+        description="Post statistics collection name"
+    )
+    user_reactions_collection: str = Field(
+        default="user_reactions",
+        description="User reactions collection name"
+    )
+    files_collection: str = Field(
+        default="files",
+        description="Files collection name"
+    )
+    stats_collection: str = Field(
+        default="stats",
+        description="Statistics collection name"
     )
     
     # Security Configuration
@@ -51,7 +81,7 @@ class Settings(BaseSettings):
     
     # API Configuration
     api_title: str = Field(
-        default="Xai Community API",
+        default="API Server",
         description="API title"
     )
     api_version: str = Field(
@@ -59,7 +89,7 @@ class Settings(BaseSettings):
         description="API version"
     )
     api_description: str = Field(
-        default="Content Management API for Xai Community",
+        default="Content Management API",
         description="API description"
     )
     

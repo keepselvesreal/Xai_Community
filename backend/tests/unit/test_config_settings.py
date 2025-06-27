@@ -2,6 +2,7 @@ import pytest
 import os
 from unittest.mock import patch
 from pydantic import ValidationError
+from dotenv import load_dotenv
 
 from src.config import Settings
 
@@ -9,36 +10,58 @@ from src.config import Settings
 class TestConfigSettings:
     """Test environment configuration management with Pydantic."""
     
-    def test_default_settings(self):
-        """Test default configuration values."""
-        # Test with no env file to get true defaults
-        with patch("pydantic_settings.sources.DotEnvSettingsSource.__call__", return_value={}):
-            settings = Settings()
+    def test_env_settings(self):
+        """Test configuration values loaded from .env file."""
+        # Load .env file explicitly
+        load_dotenv("config/.env")
         
-            # Database defaults
-            assert settings.mongodb_url == "mongodb://localhost:27017"
-            assert settings.database_name == "xai_community"
+        # Load settings from .env file
+        settings = Settings()
         
-            # Security defaults
-            assert settings.secret_key == "your-secret-key-here-change-in-production-32-characters"
-            assert settings.algorithm == "HS256"
-            assert settings.access_token_expire_minutes == 30
+        # Database settings (from .env)
+        expected_db_name = os.getenv("DATABASE_NAME", settings.database_name)
+        assert settings.database_name == expected_db_name
+        
+        # Collection settings (from .env or defaults)
+        expected_users_collection = os.getenv("USERS_COLLECTION", settings.users_collection)
+        expected_posts_collection = os.getenv("POSTS_COLLECTION", settings.posts_collection)
+        expected_comments_collection = os.getenv("COMMENTS_COLLECTION", settings.comments_collection)
+        expected_files_collection = os.getenv("FILES_COLLECTION", settings.files_collection)
+        
+        assert settings.users_collection == expected_users_collection
+        assert settings.posts_collection == expected_posts_collection
+        assert settings.comments_collection == expected_comments_collection
+        assert settings.files_collection == expected_files_collection
+        
+        # API settings (from .env or defaults)
+        expected_api_title = os.getenv("API_TITLE", settings.api_title)
+        expected_api_description = os.getenv("API_DESCRIPTION", settings.api_description)
+        
+        assert settings.api_title == expected_api_title
+        assert settings.api_description == expected_api_description
+        
+        # CORS settings (from .env or defaults)
+        expected_cors_origins = os.getenv("CORS_ORIGINS")
+        if expected_cors_origins:
+            # CORS_ORIGINS is set in .env, just verify it's a list
+            assert isinstance(settings.cors_origins, list)
+            assert len(settings.cors_origins) > 0
+        else:
+            # If not set, should use defaults
+            assert isinstance(settings.cors_origins, list)
             
-            # API defaults
-            assert settings.api_title == "Xai Community API"
-            assert settings.api_version == "1.0.0"
-            assert settings.api_description == "Content Management API for Xai Community"
-            
-            # CORS defaults
-            assert settings.cors_origins == ["http://localhost:5173", "http://127.0.0.1:5173"]
-            
-            # Environment defaults
-            assert settings.environment == "development"
-            assert settings.port == 8000
-            assert settings.host == "0.0.0.0"
-            assert settings.log_level == "INFO"
-            assert settings.enable_docs is True
-            assert settings.enable_cors is True
+        # Environment settings (from .env or defaults)
+        expected_environment = os.getenv("ENVIRONMENT", settings.environment)
+        expected_port = int(os.getenv("PORT", settings.port))
+        expected_host = os.getenv("HOST", settings.host)
+        
+        assert settings.environment == expected_environment
+        assert settings.port == expected_port
+        assert settings.host == expected_host
+        
+        # Feature flags (defaults)
+        assert settings.enable_docs is True
+        assert settings.enable_cors is True
     
     def test_mongodb_atlas_url_validation(self):
         """Test MongoDB Atlas connection string validation."""

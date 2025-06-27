@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field, field_validator, EmailStr
 from beanie import Document, Indexed
 from pymongo import ASCENDING, DESCENDING
 
+# Import settings for dynamic collection names
+from ..config import settings
+
 
 # Enums and Types
 ServiceType = Literal["shopping", "apartment", "community", "X", "Threads", "Bluesky", "Mastodon"]
@@ -99,7 +102,7 @@ class User(Document, UserBase):
     social_profiles: Dict[ServiceType, str] = Field(default_factory=dict)
     
     class Settings:
-        name = "users"
+        name = settings.users_collection
         indexes = [
             [("email", ASCENDING)],
             [("user_handle", ASCENDING)],
@@ -142,7 +145,7 @@ class Post(Document, PostBase):
     comment_count: int = 0
     
     class Settings:
-        name = "posts"
+        name = settings.posts_collection
         indexes = [
             [("slug", ASCENDING)],
             [("author_id", ASCENDING), ("created_at", DESCENDING)],
@@ -189,7 +192,7 @@ class Comment(Document, CommentBase):
     metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
     
     class Settings:
-        name = "comments"
+        name = settings.comments_collection
         indexes = [
             [("parent_id", ASCENDING), ("created_at", ASCENDING)],
             [("author_id", ASCENDING), ("created_at", DESCENDING)],
@@ -217,7 +220,7 @@ class PostStats(Document):
     last_viewed_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Settings:
-        name = "post_stats"
+        name = settings.post_stats_collection
         indexes = [
             [("post_id", ASCENDING)]
         ]
@@ -235,7 +238,7 @@ class UserReaction(Document):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     
     class Settings:
-        name = "user_reactions"
+        name = settings.user_reactions_collection
         indexes = [
             [("user_id", ASCENDING), ("target_type", ASCENDING), ("target_id", ASCENDING)],
             [("target_type", ASCENDING), ("target_id", ASCENDING)]
@@ -258,7 +261,7 @@ class FileRecord(Document):
     status: str = "active"
     
     class Settings:
-        name = "files"
+        name = settings.files_collection
         indexes = [
             [("file_id", ASCENDING)],
             [("attachment_type", ASCENDING), ("attachment_id", ASCENDING)],
@@ -285,7 +288,7 @@ class Stats(Document):
     last_updated: datetime = Field(default_factory=datetime.utcnow)
     
     class Settings:
-        name = "stats"
+        name = settings.stats_collection
         indexes = [
             [("entity_id", ASCENDING), ("entity_type", ASCENDING)],
             [("entity_type", ASCENDING), ("view_count", DESCENDING)]

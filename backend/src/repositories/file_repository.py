@@ -14,9 +14,6 @@ from src.models.core import FileRecord
 
 logger = logging.getLogger(__name__)
 
-# Collection name
-FILES_COLLECTION = "files"
-
 
 async def save_file_record(file_document: Dict[str, Any]) -> bool:
     """
