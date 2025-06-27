@@ -228,9 +228,15 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from config import settings
+from enum import Enum
 import logging
 
 logger = logging.getLogger(__name__)
+
+class TokenType(str, Enum):
+    """토큰 타입 정의 - 타입 안전성과 확장성 보장"""
+    ACCESS = "access"
+    REFRESH = "refresh"
 
 class JWTHandler:
     def __init__(self):
@@ -247,7 +253,7 @@ class JWTHandler:
             "email": email,
             "exp": expire,
             "iat": datetime.utcnow(),
-            "type": "access"
+            "type": TokenType.ACCESS.value  # Enum 사용으로 타입 안전성 보장
         }
         
         token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
@@ -264,7 +270,7 @@ class JWTHandler:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             
             # 토큰 타입 확인
-            if payload.get("type") != "access":
+            if payload.get("type") != TokenType.ACCESS.value:
                 return None
             
             # 필수 필드 확인
@@ -409,7 +415,7 @@ class AuthDependency:
 
 # 자주 사용하는 의존성들
 get_current_user = AuthDependency(required=True)
-get_current_user_optional = AuthDependency(required=False)
+get_optional_current_active_user = AuthDependency(required=False)
 
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """관리자 권한 확인"""
@@ -462,8 +468,8 @@ class PermissionChecker:
         return user.id == comment_author_id
     
     @staticmethod
-    def require_post_owner(user: User, post_author_id: str):
-        """게시글 소유자 권한 필수"""
+    def validate_post_ownership(user: User, post_author_id: str):
+        """게시글 소유자 권한 검증"""
         if not PermissionChecker.check_post_owner(user, post_author_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -471,8 +477,8 @@ class PermissionChecker:
             )
     
     @staticmethod
-    def require_comment_owner(user: User, comment_author_id: str):
-        """댓글 소유자 권한 필수"""
+    def validate_comment_ownership(user: User, comment_author_id: str):
+        """댓글 소유자 권한 검증"""
         if not PermissionChecker.check_comment_owner(user, comment_author_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -637,7 +643,7 @@ async def check_user_handle_availability(user_handle: str):
 #### routers/posts.py (인증 적용 예시)
 ```python
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from dependencies.auth import get_current_user, get_current_user_optional
+from dependencies.auth import get_current_user, get_optional_current_active_user
 from utils.permissions import permission_checker
 from models.user import User
 from typing import Optional
@@ -647,7 +653,7 @@ router = APIRouter(prefix="/posts", tags=["게시글"])
 @router.get("/{slug}")
 async def get_post_detail(
     slug: str,
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_optional_current_active_user)
 ):
     """게시글 상세 조회 (로그인 선택)"""
     # 게시글 조회 로직
@@ -683,7 +689,7 @@ async def update_post(
     existing_post = await posts_service.get_post_by_slug(slug)
     
     # 소유자 권한 확인
-    permission_checker.require_post_owner(current_user, existing_post.authorId)
+    permission_checker.validate_post_ownership(current_user, existing_post.authorId)
     
     # 게시글 수정
     updated_post = await posts_service.update_post(slug, post_data)
@@ -699,7 +705,7 @@ async def delete_post(
     existing_post = await posts_service.get_post_by_slug(slug)
     
     # 소유자 권한 확인
-    permission_checker.require_post_owner(current_user, existing_post.authorId)
+    permission_checker.validate_post_ownership(current_user, existing_post.authorId)
     
     # 게시글 삭제
     await posts_service.delete_post(slug)
@@ -729,7 +735,7 @@ async def bookmark_post(
 #### routers/comments.py (인증 적용 예시)
 ```python
 from fastapi import APIRouter, Depends, HTTPException, status
-from dependencies.auth import get_current_user, get_current_user_optional
+from dependencies.auth import get_current_user, get_optional_current_active_user
 from utils.permissions import permission_checker
 from models.user import User
 from typing import Optional
@@ -741,7 +747,7 @@ async def get_comments(
     post_slug: str,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_optional_current_active_user)
 ):
     """댓글 목록 조회 (로그인 선택)"""
     comments = await comments_service.get_comments_by_post_slug(
@@ -774,7 +780,7 @@ async def update_comment(
     existing_comment = await comments_service.get_comment_by_id(comment_id)
     
     # 소유자 권한 확인
-    permission_checker.require_comment_owner(current_user, existing_comment.authorId)
+    permission_checker.validate_comment_ownership(current_user, existing_comment.authorId)
     
     # 댓글 수정
     updated_comment = await comments_service.update_comment(comment_id, comment_data)
@@ -791,7 +797,7 @@ async def delete_comment(
     existing_comment = await comments_service.get_comment_by_id(comment_id)
     
     # 소유자 권한 확인
-    permission_checker.require_comment_owner(current_user, existing_comment.authorId)
+    permission_checker.validate_comment_ownership(current_user, existing_comment.authorId)
     
     # 댓글 삭제 (상태만 변경)
     await comments_service.delete_comment(comment_id)
@@ -1062,9 +1068,15 @@ from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from config import settings
+from enum import Enum
 import logging
 
 logger = logging.getLogger(__name__)
+
+class TokenType(str, Enum):
+    """토큰 타입 정의 - 타입 안전성과 확장성 보장"""
+    ACCESS = "access"
+    REFRESH = "refresh"
 
 class JWTHandler:
     def __init__(self):
@@ -1081,7 +1093,7 @@ class JWTHandler:
             "email": email,
             "exp": expire,
             "iat": datetime.utcnow(),
-            "type": "access"
+            "type": TokenType.ACCESS.value  # Enum 사용으로 타입 안전성 보장
         }
         
         token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
@@ -1098,7 +1110,7 @@ class JWTHandler:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             
             # 토큰 타입 확인
-            if payload.get("type") != "access":
+            if payload.get("type") != TokenType.ACCESS.value:
                 return None
             
             # 필수 필드 확인
@@ -1243,7 +1255,7 @@ class AuthDependency:
 
 # 자주 사용하는 의존성들
 get_current_user = AuthDependency(required=True)
-get_current_user_optional = AuthDependency(required=False)
+get_optional_current_active_user = AuthDependency(required=False)
 
 async def get_admin_user(current_user: User = Depends(get_current_user)) -> User:
     """관리자 권한 확인"""
@@ -1296,8 +1308,8 @@ class PermissionChecker:
         return user.id == comment_author_id
     
     @staticmethod
-    def require_post_owner(user: User, post_author_id: str):
-        """게시글 소유자 권한 필수"""
+    def validate_post_ownership(user: User, post_author_id: str):
+        """게시글 소유자 권한 검증"""
         if not PermissionChecker.check_post_owner(user, post_author_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -1305,8 +1317,8 @@ class PermissionChecker:
             )
     
     @staticmethod
-    def require_comment_owner(user: User, comment_author_id: str):
-        """댓글 소유자 권한 필수"""
+    def validate_comment_ownership(user: User, comment_author_id: str):
+        """댓글 소유자 권한 검증"""
         if not PermissionChecker.check_comment_owner(user, comment_author_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -1471,7 +1483,7 @@ async def check_username_availability(username: str):
 #### routers/posts.py (인증 적용 예시)
 ```python
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from dependencies.auth import get_current_user, get_current_user_optional
+from dependencies.auth import get_current_user, get_optional_current_active_user
 from utils.permissions import permission_checker
 from models.user import User
 from typing import Optional
@@ -1481,7 +1493,7 @@ router = APIRouter(prefix="/posts", tags=["게시글"])
 @router.get("/{slug}")
 async def get_post_detail(
     slug: str,
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_optional_current_active_user)
 ):
     """게시글 상세 조회 (로그인 선택)"""
     # 게시글 조회 로직
@@ -1517,7 +1529,7 @@ async def update_post(
     existing_post = await posts_service.get_post_by_slug(slug)
     
     # 소유자 권한 확인
-    permission_checker.require_post_owner(current_user, existing_post.authorId)
+    permission_checker.validate_post_ownership(current_user, existing_post.authorId)
     
     # 게시글 수정
     updated_post = await posts_service.update_post(slug, post_data)
@@ -1533,7 +1545,7 @@ async def delete_post(
     existing_post = await posts_service.get_post_by_slug(slug)
     
     # 소유자 권한 확인
-    permission_checker.require_post_owner(current_user, existing_post.authorId)
+    permission_checker.validate_post_ownership(current_user, existing_post.authorId)
     
     # 게시글 삭제
     await posts_service.delete_post(slug)
@@ -1563,7 +1575,7 @@ async def bookmark_post(
 #### routers/comments.py (인증 적용 예시)
 ```python
 from fastapi import APIRouter, Depends, HTTPException, status
-from dependencies.auth import get_current_user, get_current_user_optional
+from dependencies.auth import get_current_user, get_optional_current_active_user
 from utils.permissions import permission_checker
 from models.user import User
 from typing import Optional
@@ -1575,7 +1587,7 @@ async def get_comments(
     post_slug: str,
     page: int = Query(1, ge=1),
     limit: int = Query(50, ge=1, le=100),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[User] = Depends(get_optional_current_active_user)
 ):
     """댓글 목록 조회 (로그인 선택)"""
     comments = await comments_service.get_comments_by_post_slug(
@@ -1608,7 +1620,7 @@ async def update_comment(
     existing_comment = await comments_service.get_comment_by_id(comment_id)
     
     # 소유자 권한 확인
-    permission_checker.require_comment_owner(current_user, existing_comment.authorId)
+    permission_checker.validate_comment_ownership(current_user, existing_comment.authorId)
     
     # 댓글 수정
     updated_comment = await comments_service.update_comment(comment_id, comment_data)
@@ -1625,7 +1637,7 @@ async def delete_comment(
     existing_comment = await comments_service.get_comment_by_id(comment_id)
     
     # 소유자 권한 확인
-    permission_checker.require_comment_owner(current_user, existing_comment.authorId)
+    permission_checker.validate_comment_ownership(current_user, existing_comment.authorId)
     
     # 댓글 삭제 (상태만 변경)
     await comments_service.delete_comment(comment_id)

@@ -20,12 +20,17 @@ interface Post {
   id: string;                    // UUID
   title: string;                 // required, max 200자
   authorId: string;              // required (UUID)
-  content: string;               // required, min 30자 (권장)
+  content: string;               // required, min 30자 (권장) - 원본 에디터 데이터
   slug: string;                  // URL 친화적 식별자, unique
   service: ServiceType;          // required: 서비스 구분
   createdAt: Date;               // 자동 생성
   updatedAt: Date;               // 자동 업데이트
   metadata: PostMetadata;
+  // 에디터 확장 필드 (Rich Text Editor 지원)
+  content_type?: "text" | "markdown" | "html"; // optional, default "text"
+  content_rendered?: string;     // optional, 렌더링된 HTML (content_type이 markdown인 경우)
+  word_count?: number;           // optional, 단어 수 자동 계산
+  reading_time?: number;         // optional, 예상 읽기 시간 (분)
 }
 
 interface PostMetadata {

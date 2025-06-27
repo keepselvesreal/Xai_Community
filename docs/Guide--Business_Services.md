@@ -77,22 +77,10 @@ from abc import ABC
 import logging
 from typing import Any, Dict
 
-class BaseService(ABC):
-    """모든 서비스의 기본 클래스"""
-    
-    def __init__(self):
-        self.logger = logging.getLogger(self.__class__.__name__)
-    
-    def log_operation(self, operation: str, data: Dict[str, Any] = None):
-        """비즈니스 로직 실행 로깅"""
-        log_data = {"operation": operation}
-        if data:
-            log_data.update(data)
-        self.logger.info(f"비즈니스 로직 실행: {log_data}")
-    
-    async def validate_business_rules(self, **kwargs) -> bool:
-        """비즈니스 규칙 검증 (하위 클래스에서 구현)"""
-        return True
+"""
+현재 프로젝트는 BaseService 추상화 없이 각 Service가 독립적으로 구현됩니다.
+Beanie ODM과 함께 사용하여 복잡한 추상화 계층 없이 단순하고 명확한 구조를 유지합니다.
+"""
 ```
 
 ## 2. 인증 서비스 (AuthService)
@@ -109,63 +97,92 @@ from utils.jwt import JWTHandler
 from services.base_service import BaseService
 import uuid
 
-class AuthService(BaseService):
-    def __init__(self, user_repo: UserRepository):
-        super().__init__()
-        self.user_repo = user_repo
-        self.password_handler = PasswordHandler()
-        self.jwt_handler = JWTHandler()
+class AuthService:
+    """Authentication service for handling user authentication and management."""
+    
+    def __init__(
+        self, 
+        user_repository: UserRepository = None,
+        jwt_manager: JWTManager = None,
+        password_manager: PasswordManager = None
+    ):
+        """Initialize auth service with dependencies."""
+        self.user_repository = user_repository or UserRepository()
+        self.jwt_manager = jwt_manager
+        self.password_manager = password_manager or PasswordManager()
     
     async def register_user(self, user_data: UserCreate) -> User:
-        """사용자 회원가입"""
-        self.log_operation("user_registration", {"email": user_data.email})
-        
+        """Register a new user."""
         # 1. 중복 검증
-        await self._validate_user_uniqueness(user_data)
+        if await self.user_repository.email_exists(user_data.email):
+            raise EmailAlreadyExistsError("이미 등록된 이메일입니다")
+            
+        if await self.user_repository.user_handle_exists(user_data.user_handle):
+            raise HandleAlreadyExistsError("이미 사용 중인 사용자 핸들입니다")
         
         # 2. 비밀번호 해싱
-        hashed_password = self.password_handler.hash_password(user_data.password)
+        password_hash = self.password_manager.hash_password(user_data.password)
         
         # 3. 사용자 생성
-        user = await self.user_repo.create_user(user_data, hashed_password)
+        user = await self.user_repository.create(user_data, password_hash)
         
-        self.logger.info(f"새 사용자 등록 완료: {user.email}")
         return user
     
-    async def authenticate_user(self, login_data: UserLogin) -> Token:
-        """사용자 로그인"""
-        self.log_operation("user_login", {"email": login_data.email})
-        
+    async def authenticate_user(self, login_data: UserLogin) -> Dict[str, Any]:
+        """Authenticate user and return token."""
         # 1. 사용자 조회
-        user = await self.user_repo.get_by_email(login_data.email)
+        user = await self.user_repository.get_by_email(login_data.email)
         if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="이메일 또는 비밀번호가 올바르지 않습니다"
-            )
+            raise InvalidCredentialsError("Invalid email or password")
         
         # 2. 비밀번호 검증
-        if not self.password_handler.verify_password(login_data.password, user.hashed_password):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="이메일 또는 비밀번호가 올바르지 않습니다"
-            )
+        if not self.password_manager.verify_password(login_data.password, user.password_hash):
+            raise InvalidCredentialsError("Invalid email or password")
         
         # 3. 계정 상태 확인
-        await self._validate_user_status(user)
+        if user.status != "active":
+            raise UserNotActiveError("Account is not active")
         
-        # 4. 마지막 로그인 시간 업데이트
-        await self.user_repo.update_last_login(user.id)
+        # 4. 토큰 생성
+        token_data = {
+            "user_id": str(user.id),
+            "email": user.email,
+            "user_handle": user.user_handle
+        }
         
-        # 5. 토큰 생성
-        token_data = self.jwt_handler.create_access_token(user.id, user.email)
+        access_token = self.jwt_manager.create_token(
+            data=token_data,
+            token_type=TokenType.ACCESS
+        )
         
-        self.logger.info(f"사용자 로그인 성공: {user.email}")
-        return Token(**token_data)
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": user
+        }
+    
+    async def verify_access_token(self, token: str) -> Dict[str, Any]:
+        """액세스 토큰 검증 (type 필드 포함)"""
+        payload = self.jwt_handler.verify_token(token)
+        if not payload:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="유효하지 않은 토큰입니다"
+            )
+        
+        # type 필드 검증 추가
+        if payload.get("type") != "access":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="잘못된 토큰 타입입니다"
+            )
+        
+        return payload
     
     async def get_user_profile(self, user_id: str) -> User:
         """사용자 프로필 조회"""
-        user = await self.user_repo.get_by_id(user_id)
+        user_repo = await self.get_user_repository()
+        user = await user_repo.get_by_id(user_id)
         if not user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -177,8 +194,10 @@ class AuthService(BaseService):
         """사용자 프로필 수정"""
         self.log_operation("user_profile_update", {"user_id": user_id})
         
+        user_repo = await self.get_user_repository()
+        
         # 기존 사용자 존재 확인
-        existing_user = await self.user_repo.get_by_id(user_id)
+        existing_user = await user_repo.get_by_id(user_id)
         if not existing_user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -186,7 +205,7 @@ class AuthService(BaseService):
             )
         
         # 프로필 업데이트
-        updated_user = await self.user_repo.update(user_id, update_data.dict(exclude_unset=True))
+        updated_user = await user_repo.update(user_id, update_data.dict(exclude_unset=True))
         if not updated_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -197,15 +216,17 @@ class AuthService(BaseService):
     
     async def _validate_user_uniqueness(self, user_data: UserCreate):
         """사용자 중복성 검증"""
+        user_repo = await self.get_user_repository()
+        
         # 이메일 중복 확인
-        if await self.user_repo.email_exists(user_data.email):
+        if await user_repo.email_exists(user_data.email):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="이미 등록된 이메일입니다"
             )
         
         # 사용자 핸들 중복 확인
-        if await self.user_repo.user_handle_exists(user_data.user_handle):
+        if await user_repo.user_handle_exists(user_data.user_handle):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="이미 사용 중인 사용자 핸들입니다"

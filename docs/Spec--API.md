@@ -7,9 +7,9 @@
 | GET | `/api/posts` | 게시글 목록 조회 | No |
 | GET | `/api/posts/search` | 게시글 검색 | No |
 | GET | `/api/posts/:slug` | 게시글 상세 조회 | No |
-| POST | `/api/posts/create` | 게시글 생성 | Yes |
-| PUT | `/api/posts/:slug/update` | 게시글 수정 | Yes |
-| DELETE | `/api/posts/:slug/delete` | 게시글 삭제 | Yes |
+| POST | `/api/posts` | 게시글 생성 | Yes |
+| PUT | `/api/posts/:slug` | 게시글 수정 | Yes |
+| DELETE | `/api/posts/:slug` | 게시글 삭제 | Yes |
 
 ### GET /api/posts (게시글 목록 조회)
 
@@ -83,7 +83,7 @@ interface PostDetailResponse {
 }
 ```
 
-### POST /api/posts/create (게시글 생성)
+### POST /api/posts (게시글 생성)
 
 **Request Body:**
 ```typescript
@@ -108,7 +108,7 @@ interface PostDetailResponse {
 }
 ```
 
-### PUT /api/posts/:slug/update (게시글 수정)
+### PUT /api/posts/:slug (게시글 수정)
 
 **Request Body:**
 ```typescript
@@ -132,7 +132,7 @@ interface PostDetailResponse {
 }
 ```
 
-### DELETE /api/posts/:slug/delete (게시글 삭제)
+### DELETE /api/posts/:slug (게시글 삭제)
 
 **Response:**
 ```typescript
@@ -235,10 +235,10 @@ interface ReactionResponse {
 | Method | Endpoint | 설명 | 인증 필요 |
 |--------|----------|------|-----------|
 | GET | `/api/posts/:slug/comments` | 댓글 목록 조회 | No |
-| POST | `/api/posts/:slug/comments/create` | 댓글 생성 | Yes |
-| PUT | `/api/posts/:slug/comments/:commentId/update` | 댓글 수정 | Yes |
-| DELETE | `/api/posts/:slug/comments/:commentId/delete` | 댓글 삭제 | Yes |
-| POST | `/api/posts/:slug/comments/:commentId/replies/create` | 대댓글 생성 | Yes |
+| POST | `/api/posts/:slug/comments` | 댓글 생성 | Yes |
+| PUT | `/api/posts/:slug/comments/:commentId` | 댓글 수정 | Yes |
+| DELETE | `/api/posts/:slug/comments/:commentId` | 댓글 삭제 | Yes |
+| POST | `/api/posts/:slug/comments/:commentId/replies` | 대댓글 생성 | Yes |
 | POST | `/api/posts/:slug/comments/:commentId/like` | 댓글 좋아요 | Yes |
 | POST | `/api/posts/:slug/comments/:commentId/dislike` | 댓글 싫어요 | Yes |
 
@@ -262,7 +262,7 @@ interface CommentListResponse {
 }
 ```
 
-### POST /api/posts/:slug/comments/create (댓글 생성)
+### POST /api/posts/:slug/comments (댓글 생성)
 
 **Request Body:**
 ```typescript
@@ -292,7 +292,7 @@ interface CommentDetail {
 }
 ```
 
-### PUT /api/posts/:slug/comments/:commentId/update (댓글 수정)
+### PUT /api/posts/:slug/comments/:commentId (댓글 수정)
 
 **Request Body:**
 ```typescript
@@ -308,7 +308,7 @@ interface CommentDetail {
 }
 ```
 
-### DELETE /api/posts/:slug/comments/:commentId/delete (댓글 삭제)
+### DELETE /api/posts/:slug/comments/:commentId (댓글 삭제)
 
 **Response:**
 ```typescript
@@ -318,7 +318,7 @@ interface DeleteResponse {
 }
 ```
 
-### POST /api/posts/:slug/comments/:commentId/replies/create (대댓글 생성)
+### POST /api/posts/:slug/comments/:commentId/replies (대댓글 생성)
 
 **Request Body:**
 ```typescript
@@ -360,31 +360,33 @@ interface CommentReactionResponse {
 
 ## 4. 에러 응답
 
-### 표준 에러 형식
+### 표준 에러 형식 (FastAPI 기본 형식 사용)
 ```typescript
 interface ErrorResponse {
-  error: {
-    code: string;               // 에러 코드
-    message: string;            // 에러 메시지
-    details?: any;              // 추가 정보
-  };
-  timestamp: Date;
-  path: string;                 // 요청 경로
+  detail: string;               // 에러 메시지 (FastAPI 표준)
+}
+
+// 422 Validation Error의 경우
+interface ValidationErrorResponse {
+  detail: Array<{
+    loc: Array<string | number>;  // 에러 위치
+    msg: string;                  // 에러 메시지
+    type: string;                 // 에러 타입
+  }>;
 }
 ```
 
-### 주요 에러 코드
+### 주요 HTTP 상태 코드 및 응답 예시
 
-| HTTP Status | Code | 설명 |
-|-------------|------|------|
-| 400 | `INVALID_REQUEST` | 잘못된 요청 |
-| 401 | `UNAUTHORIZED` | 인증 필요 |
-| 403 | `FORBIDDEN` | 권한 없음 |
-| 404 | `NOT_FOUND` | 리소스 없음 |
-| 409 | `CONFLICT` | 리소스 충돌 (중복 등) |
-| 422 | `VALIDATION_ERROR` | 입력 검증 실패 |
-| 429 | `RATE_LIMIT_EXCEEDED` | 요청 제한 초과 |
-| 500 | `INTERNAL_ERROR` | 서버 오류 |
+| HTTP Status | 설명 | 응답 예시 |
+|-------------|------|-----------|
+| 400 | 잘못된 요청 | `{"detail": "Invalid request format"}` |
+| 401 | 인증 필요 | `{"detail": "Not authenticated"}` |
+| 403 | 권한 없음 | `{"detail": "게시글 작성자만 접근할 수 있습니다"}` |
+| 404 | 리소스 없음 | `{"detail": "Post not found"}` |
+| 409 | 리소스 충돌 | `{"detail": "이미 등록된 이메일입니다"}` |
+| 422 | 입력 검증 실패 | ValidationErrorResponse 형식 |
+| 500 | 서버 오류 | `{"detail": "Internal server error"}` |
 
 ## 5. 인증 헤더
 

@@ -575,7 +575,7 @@ class TestDatabaseIndexes:
         # When: create_users_indexes() 호출
         # Then: 사용자 조회에 필요한 인덱스 생성
         # - email unique 인덱스
-        # - username unique 인덱스
+        # - user_handle unique 인덱스
         # - createdAt 내림차순 인덱스
         pass
     
@@ -987,8 +987,8 @@ async def create_users_indexes(db):
         # 이메일로 사용자 조회 (unique)
         IndexModel([("email", ASCENDING)], unique=True, name="idx_users_email"),
         
-        # 사용자명으로 조회 (unique)
-        IndexModel([("username", ASCENDING)], unique=True, name="idx_users_username"),
+        # 사용자 핸들로 조회 (unique)
+        IndexModel([("user_handle", ASCENDING)], unique=True, name="idx_users_user_handle"),
         
         # 가입일순 정렬
         IndexModel([("createdAt", DESCENDING)], name="idx_users_created"),
@@ -1260,7 +1260,7 @@ class TestDatabaseIndexes:
         # When: create_users_indexes() 호출
         # Then: 사용자 조회에 필요한 인덱스 생성
         # - email unique 인덱스
-        # - username unique 인덱스
+        # - user_handle unique 인덱스
         # - createdAt 내림차순 인덱스
         pass
     
@@ -1685,8 +1685,8 @@ async def create_users_indexes(db):
         # 이메일로 사용자 조회 (unique)
         IndexModel([("email", ASCENDING)], unique=True, name="idx_users_email"),
         
-        # 사용자명으로 조회 (unique)
-        IndexModel([("username", ASCENDING)], unique=True, name="idx_users_username"),
+        # 사용자 핸들로 조회 (unique)
+        IndexModel([("user_handle", ASCENDING)], unique=True, name="idx_users_user_handle"),
         
         # 가입일순 정렬
         IndexModel([("createdAt", DESCENDING)], name="idx_users_created"),
