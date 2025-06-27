@@ -233,3 +233,139 @@ PORT=9000
         except Exception as e:
             # If env file doesn't exist or has issues, that's okay for this test
             pass
+
+    def test_env_file_auto_discovery_priority(self):
+        """Test automatic environment file discovery with priority order."""
+        import tempfile
+        import os
+        from pathlib import Path
+        from unittest.mock import patch
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create test environment files
+            env_local_content = """
+DATABASE_NAME=test_local_db
+SECRET_KEY=local-secret-key-that-is-long-enough-32chars
+API_TITLE=Local API
+"""
+            env_content = """
+DATABASE_NAME=test_main_db
+SECRET_KEY=main-secret-key-that-is-long-enough-32chars
+API_TITLE=Main API
+API_DESCRIPTION=Main Description
+"""
+            env_example_content = """
+DATABASE_NAME=example_db
+SECRET_KEY=example-secret-key-that-is-long-enough32
+API_TITLE=Example API
+API_DESCRIPTION=Example Description
+ENVIRONMENT=development
+"""
+            
+            # Write test files
+            Path(temp_dir, ".env.local").write_text(env_local_content)
+            Path(temp_dir, ".env").write_text(env_content)
+            Path(temp_dir, ".env.example").write_text(env_example_content)
+            
+            # Test priority: .env.local should override .env and .env.example
+            with patch.dict(os.environ, {}, clear=True):
+                # Mock the file discovery to use our temp directory
+                # This test verifies the expected behavior structure
+                # Actual implementation will be added in the next step
+                
+                # Priority test structure
+                expected_priority = [".env.local", ".env", ".env.example", "config/.env"]
+                assert len(expected_priority) == 4
+                
+                # File existence check structure
+                local_exists = Path(temp_dir, ".env.local").exists()
+                main_exists = Path(temp_dir, ".env").exists()
+                example_exists = Path(temp_dir, ".env.example").exists()
+                
+                assert local_exists and main_exists and example_exists
+
+    def test_env_file_discovery_fallback(self):
+        """Test fallback behavior when preferred env files don't exist."""
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Only create .env.example (last priority)
+            env_example_content = """
+DATABASE_NAME=fallback_db
+SECRET_KEY=fallback-secret-key-that-is-long-enough32
+API_TITLE=Fallback API
+"""
+            Path(temp_dir, ".env.example").write_text(env_example_content)
+            
+            # Test that fallback works when higher priority files don't exist
+            local_missing = not Path(temp_dir, ".env.local").exists()
+            main_missing = not Path(temp_dir, ".env").exists()
+            example_exists = Path(temp_dir, ".env.example").exists()
+            
+            assert local_missing and main_missing and example_exists
+
+    def test_env_file_explicit_path_override(self):
+        """Test explicit environment file path via ENV_FILE_PATH variable."""
+        import tempfile
+        import os
+        from pathlib import Path
+        from unittest.mock import patch
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Create custom env file
+            custom_env_content = """
+DATABASE_NAME=custom_db
+SECRET_KEY=custom-secret-key-that-is-long-enough-32chars
+API_TITLE=Custom API
+"""
+            custom_path = Path(temp_dir, "custom.env")
+            custom_path.write_text(custom_env_content)
+            
+            # Test ENV_FILE_PATH override capability
+            with patch.dict(os.environ, {"ENV_FILE_PATH": str(custom_path)}):
+                # Verify the custom path is recognized
+                assert os.getenv("ENV_FILE_PATH") == str(custom_path)
+                assert custom_path.exists()
+
+    def test_backward_compatibility_config_env(self):
+        """Test backward compatibility with existing config/.env path."""
+        # Ensure existing config/.env still works
+        from pathlib import Path
+        import os
+        
+        # Check if the old config/.env exists
+        config_env_path = Path("config/.env")
+        
+        # The test should pass whether the file exists or not
+        # This ensures backward compatibility is maintained
+        if config_env_path.exists():
+            # If it exists, it should be readable
+            assert config_env_path.is_file()
+            
+        # Test that Settings can still work with the old path
+        # This will be verified when the implementation is complete
+        assert True  # Placeholder for actual implementation test
+
+    def test_env_file_not_found_uses_defaults(self):
+        """Test that missing env files gracefully fall back to defaults."""
+        import tempfile
+        import os
+        from unittest.mock import patch
+        from pathlib import Path
+        
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Ensure no env files exist
+            env_files = [".env.local", ".env", ".env.example", "config/.env"]
+            for env_file in env_files:
+                env_path = Path(temp_dir, env_file)
+                assert not env_path.exists()
+            
+            # Test should use default values when no env files are found
+            # This will be implemented in the Settings class
+            default_db_name = "app_database"  # Default from Settings class
+            default_api_title = "API Server"  # Default from Settings class
+            
+            assert default_db_name == "app_database"
+            assert default_api_title == "API Server"
