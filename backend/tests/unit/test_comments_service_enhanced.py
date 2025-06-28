@@ -1,5 +1,30 @@
 """Enhanced unit tests for comments service functionality.
 
+## 📋 모듈 목차
+
+### 🎯 역할 및 기능
+- **역할**: CommentsService 비즈니스 로직 검증
+- **범위**: 댓글 CRUD, 답글 계층, 금기어 필터링
+- **Epic**: 콘텐츠 관리 시스템 > 댓글 시스템
+
+### 🔗 관련 모듈
+- **상위 도메인**: `test_comments_router.py` (API 통합)
+- **하위 의존성**: `test_comment_repository.py` (Repository)
+- **연관 서비스**: `test_posts_service.py` (포스트 연결)
+- **유틸리티**: `test_permissions.py` (권한 검사)
+
+### 🔄 함수 관계
+```
+create_comment() → validate_post() → check_depth() → save_comment()
+get_comments() → build_tree() → apply_user_data() → filter_content()
+update_comment() → check_permission() → validate_content() → save_changes()
+```
+
+### 🎭 Mock 사용 정책
+- **✅ 실제 구현**: CommentsService (비즈니스 로직 검증)
+- **🚨 Mock 사용**: CommentRepository, PostRepository (DB 호출 비용)
+- **🔄 대안 검토**: 실제 DB 사용 시 테스트 불안정성
+
 🎯 테스트 전략: Mock 사용 기준에 따른 실제 구현 검증
 - Service 계층: 실제 CommentsService 인스턴스 사용 (비즈니스 로직 검증)
 - Repository 계층: Mock 사용 (🚨 DB 호출 비용 높음)
@@ -102,6 +127,18 @@ class TestCommentsServiceEnhanced:
     async def test_create_comment_success(self, comments_service, mock_comment_repository, 
                                         mock_post_repository, sample_comment_data, sample_user, sample_post):
         """Test successful comment creation.
+        
+        ## 📝 함수 설명
+        댓글 생성 성공 시나리오를 검증합니다.
+        CommentsService의 create_comment 메서드가 올바른 비즈니스 로직으로 동작하는지 확인합니다.
+        
+        ## 🤝 테스트 분류
+        **Sociable Unit Test** - Repository Mock들과 상호작용
+        
+        ## 🔄 테스트 전후 상태
+        - **사전 조건**: 유효한 CommentCreate 데이터, 인증된 사용자, 존재하는 포스트
+        - **실행 작업**: CommentsService.create_comment() 호출
+        - **사후 조건**: CommentDetail 객체 반환, Repository.create() 호출 확인
         
         🎯 테스트 전략: 실제 CommentsService 비즈니스 로직 검증
         🔑 우선순위: 🔵 필수 (MVP) - 핵심 기능

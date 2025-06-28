@@ -1,5 +1,38 @@
 """Enhanced unit tests for utility functions.
 
+## 📋 모듈 목차
+
+### 🎯 역할 및 기능
+- **역할**: 유틸리티 함수 및 도구 기능 검증
+- **범위**: JWT 관리, 비밀번호 보안, 권한 검사
+- **Epic**: 사용자 인증 및 권한 관리
+
+### 🔗 관련 모듈
+- **상위 사용**: `test_auth_service.py` (JWT/Password 사용)
+- **상위 사용**: `test_posts_service.py` (Permission 사용)
+- **상위 사용**: `test_comments_service.py` (Permission 사용)
+- **API 의존**: `test_auth_dependency.py` (FastAPI 의존성)
+
+### 🔄 함수 관계
+```
+JWTManager:
+  create_token() → encode() → set_expiration()
+  verify_token() → decode() → check_expiration()
+
+PasswordManager:
+  hash_password() → generate_salt() → bcrypt_hash()
+  verify_password() → compare_hash()
+
+PermissionChecker:
+  check_post_permission() → is_owner() OR is_admin()
+  check_resource_access() → check_visibility()
+```
+
+### 🎭 Mock 사용 정책
+- **✅ 실제 구현**: 모든 Utils 함수 (순수 함수 특성)
+- **🚫 Mock 제거**: 호출 비용 낮음, 실제 알고리즘 검증 필요
+- **🔄 이유**: JWT 암호화, Password 해싱, 권한 로직 실제 동작 보장
+
 🎯 테스트 전략: 순수 함수 직접 테스트 (비용 효율적)
 - Utils 계층: JWT, Password, Permission 실제 함수 호출
 - Mock 사용 제거: 순수 함수는 직접 테스트 가능
@@ -34,6 +67,18 @@ class TestJWTManager:
     
     def test_create_access_token_success(self, jwt_manager):
         """Test successful access token creation.
+        
+        ## 📝 함수 설명
+        JWT Access Token 생성 성공 시나리오를 검증합니다.
+        실제 JWT 암호화 알고리즘이 올바르게 동작하는지 확인합니다.
+        
+        ## 🤖 테스트 분류
+        **Solitary Unit Test** - 외부 의존성 없음
+        
+        ## 🔄 테스트 전후 상태
+        - **사전 조건**: 유효한 payload 데이터
+        - **실행 작업**: JWTManager.create_token() 호출
+        - **사후 조건**: 유효한 JWT 토큰 문자열 반환
         
         🎯 테스트 전략: JWT 암호화 실제 동작 검증
         🔑 우선순위: 🔵 필수 (MVP) - 인증 핵심 기능
@@ -190,6 +235,18 @@ class TestPasswordManager:
     
     def test_hash_password_success(self, password_manager):
         """Test successful password hashing.
+        
+        ## 📝 함수 설명
+        비밀번호 해싱 성공 시나리오를 검증합니다.
+        실제 bcrypt 알고리즘을 사용하여 비밀번호가 안전하게 해싱되는지 확인합니다.
+        
+        ## 🤖 테스트 분류
+        **Solitary Unit Test** - 외부 의존성 없음
+        
+        ## 🔄 테스트 전후 상태
+        - **사전 조건**: 평문 비밀번호 문자열
+        - **실행 작업**: PasswordManager.hash_password() 호출
+        - **사후 조건**: 해싱된 비밀번호 문자열 (평문과 다름)
         
         🎯 테스트 전략: 비밀번호 해싱 실제 동작 검증
         🔑 우선순위: 🔵 필수 (MVP) - 보안 핵심 기능

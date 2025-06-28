@@ -1,5 +1,30 @@
 """Enhanced unit tests for posts service functionality.
 
+## 📋 모듈 목차
+
+### 🎯 역할 및 기능
+- **역할**: PostsService 비즈니스 로직 검증
+- **범위**: 포스트 CRUD, 검색, 통계 기능
+- **Epic**: 콘텐츠 관리 시스템 > 포스트 관리
+
+### 🔗 관련 모듈
+- **상위 도메인**: `test_posts_router.py` (API 통합)
+- **하위 의존성**: `test_post_repository.py` (Repository)
+- **동등 계층**: `test_comments_service.py` (Service)
+- **유틸리티**: `test_permissions.py` (권한 검사)
+
+### 🔄 함수 관계
+```
+create_post() → validate_data() → check_permissions()
+list_posts() → calculate_stats() → apply_user_reactions()
+search_posts() → build_query() → format_results()
+```
+
+### 🎭 Mock 사용 정책
+- **✅ 실제 구현**: PostsService (비즈니스 로직 검증)
+- **🚨 Mock 사용**: PostRepository (DB 호출 비용 높음)
+- **🔄 대안 검토**: 실제 DB 사용 시 테스트 불안정성
+
 🎯 테스트 전략: Mock 사용 기준에 따른 실제 구현 검증
 - Service 계층: 실제 PostsService 인스턴스 사용 (비즈니스 로직 검증)
 - Repository 계층: Mock 사용 (🚨 DB 호출 비용 높음)
@@ -88,6 +113,18 @@ class TestPostsServiceEnhanced:
     async def test_create_post_success(self, posts_service, mock_post_repository, sample_post_data, sample_user):
         """Test successful post creation.
         
+        ## 📝 함수 설명
+        포스트 생성 성공 시나리오를 검증합니다.
+        PostsService의 create_post 메서드가 올바른 데이터로 호출되는지 확인합니다.
+        
+        ## 🤝 테스트 분류
+        **Sociable Unit Test** - Repository Mock과 상호작용
+        
+        ## 🔄 테스트 전후 상태
+        - **사전 조건**: 유효한 PostCreate 데이터, 인증된 사용자
+        - **실행 작업**: PostsService.create_post() 호출
+        - **사후 조건**: Post 객체 반환, Repository.create() 호출 확인
+        
         🎯 테스트 전략: 실제 Service 비즈니스 로직 검증
         🔑 우선순위: 🔵 필수 (MVP) - 핵심 기능
         🎓 난이도: 🟢 초급 - 단순 비즈니스 로직
@@ -162,6 +199,18 @@ class TestPostsServiceEnhanced:
     @pytest.mark.asyncio
     async def test_get_post_not_found(self, posts_service, mock_post_repository):
         """Test post retrieval when post not found.
+        
+        ## 📝 함수 설명
+        존재하지 않는 포스트 조회 시 예외 처리를 검증합니다.
+        PostNotFoundError가 올바르게 발생하는지 확인합니다.
+        
+        ## 🤝 테스트 분류
+        **Sociable Unit Test** - Repository Mock과 상호작용
+        
+        ## 🔄 테스트 전후 상태
+        - **사전 조건**: 존재하지 않는 포스트 slug
+        - **실행 작업**: PostsService.get_post() 호출
+        - **사후 조건**: PostNotFoundError 예외 발생
         
         🎯 테스트 전략: 예외 처리 로직 검증
         🔑 우선순위: 🔵 필수 (MVP) - 오류 처리
