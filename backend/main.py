@@ -39,11 +39,58 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutting down...")
 
 def create_app() -> FastAPI:
+    # Swagger UI 설정 - 환경별 제어
+    docs_url = "/docs" if settings.enable_docs and settings.environment != "production" else None
+    redoc_url = "/redoc" if settings.enable_docs and settings.environment != "production" else None
+    
     app = FastAPI(
         title=settings.api_title,
         description=settings.api_description,
         version=settings.api_version,
-        lifespan=lifespan  # 새로운 lifespan 이벤트 사용
+        docs_url=docs_url,
+        redoc_url=redoc_url,
+        lifespan=lifespan,  # 새로운 lifespan 이벤트 사용
+        # OpenAPI 메타데이터 추가
+        contact={
+            "name": "API Support",
+            "email": "support@example.com",
+        },
+        license_info={
+            "name": "MIT License",
+            "url": "https://opensource.org/licenses/MIT",
+        },
+        servers=[
+            {
+                "url": f"http://localhost:{settings.port}",
+                "description": "Development server"
+            },
+            {
+                "url": "https://api.example.com",
+                "description": "Production server"
+            }
+        ] if settings.environment == "development" else [],
+        openapi_tags=[
+            {
+                "name": "Authentication",
+                "description": "사용자 인증 및 계정 관리 API - 회원가입, 로그인, 프로필 관리, 관리자 기능"
+            },
+            {
+                "name": "Posts",
+                "description": "게시글 관리 API - CRUD 작업, 검색, 정렬, 좋아요/북마크 등 상호작용"
+            },
+            {
+                "name": "Comments",
+                "description": "댓글 시스템 API - 댓글 작성/수정/삭제, 대댓글, 좋아요/싫어요"
+            },
+            {
+                "name": "Files",
+                "description": "파일 업로드 및 관리 API - 이미지 업로드, 파일 다운로드, 메타데이터 조회"
+            },
+            {
+                "name": "Content",
+                "description": "컨텐츠 처리 API - 마크다운 미리보기, 리치 텍스트 변환"
+            }
+        ]
     )
     
     # CORS 설정 - 설정 파일에서 읽어오기
