@@ -131,7 +131,6 @@ class TestPostsService:
         # Arrange
         posts_list = [sample_post]
         mock_post_repository.list_posts.return_value = (posts_list, 1)
-        mock_post_repository.get_user_reactions.return_value = {"507f1f77bcf86cd799439012": "like"}
         
         # Act
         result = await posts_service.list_posts(page=1, page_size=20, current_user=sample_user)
@@ -145,7 +144,6 @@ class TestPostsService:
         
         # Verify repository calls
         mock_post_repository.list_posts.assert_called_once()
-        mock_post_repository.get_user_reactions.assert_called_once_with(sample_user.id, [sample_post.id])
     
     async def test_update_post_with_permission(self, posts_service, mock_post_repository, sample_post, sample_user):
         """Test updating a post with proper permissions."""

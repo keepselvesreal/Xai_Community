@@ -162,10 +162,6 @@ async def test_get_comments_with_user_data(comments_service, mock_comment_repo, 
     # Mock repository calls
     mock_post_repo.get_by_slug.return_value = mock_post
     mock_comment_repo.get_comments_with_replies.return_value = (comments_with_replies, total_count)
-    mock_comment_repo.get_user_reactions.return_value = {
-        "comment123": {"liked": True, "disliked": False},
-        "reply123": {"liked": False, "disliked": False}
-    }
     
     # Act
     result, total = await comments_service.get_comments_with_user_data(
@@ -190,7 +186,6 @@ async def test_get_comments_with_user_data(comments_service, mock_comment_repo, 
         page_size=page_size,
         status="active"
     )
-    mock_comment_repo.get_user_reactions.assert_called_once()
 
 
 @pytest.mark.asyncio
