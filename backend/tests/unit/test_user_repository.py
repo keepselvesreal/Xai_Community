@@ -2,9 +2,9 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from datetime import datetime
 from beanie.exceptions import RevisionIdWasChanged
-from src.models.core import User, UserCreate, UserUpdate
-from src.repositories.user_repository import UserRepository
-from src.exceptions.user import UserNotFoundError, DuplicateUserError
+from nadle_backend.models.core import User, UserCreate, UserUpdate
+from nadle_backend.repositories.user_repository import UserRepository
+from nadle_backend.exceptions.user import UserNotFoundError, DuplicateUserError
 
 
 @pytest.fixture

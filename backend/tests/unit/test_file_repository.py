@@ -9,7 +9,7 @@ Tests for file repository functions including:
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, Mock, patch
-from src.repositories.file_repository import (
+from nadle_backend.repositories.file_repository import (
     save_file_record,
     find_file_by_id
 )

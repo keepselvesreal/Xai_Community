@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import AsyncMock, Mock, patch
 from fastapi import UploadFile
 from fastapi.testclient import TestClient
-from src.routers.file_upload import router
+from nadle_backend.routers.file_upload import router
 
 
 @pytest.fixture
@@ -58,7 +58,7 @@ class TestFileUploadAPI:
              }), \
              patch('src.routers.file_upload.save_file_record', return_value=True):
             
-            from src.routers.file_upload import upload_file
+            from nadle_backend.routers.file_upload import upload_file
             
             result = await upload_file(mock_file)
             
@@ -84,7 +84,7 @@ class TestFileUploadAPI:
         for content_type in valid_content_types:
             # Mock request validation would happen here
             # For now, we'll test the validation functions directly
-            from src.services.file_validator import validate_file_type
+            from nadle_backend.services.file_validator import validate_file_type
             
             mock_file = Mock()
             mock_file.content_type = content_type

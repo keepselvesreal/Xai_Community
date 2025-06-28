@@ -34,10 +34,10 @@ search_posts() → build_query() → format_results()
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch
-from src.models.core import User, Post, PostCreate, PostUpdate, PostMetadata
-from src.services.posts_service import PostsService
-from src.repositories.post_repository import PostRepository
-from src.exceptions.post import PostNotFoundError, PostPermissionError
+from nadle_backend.models.core import User, Post, PostCreate, PostUpdate, PostMetadata
+from nadle_backend.services.posts_service import PostsService
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.exceptions.post import PostNotFoundError, PostPermissionError
 
 
 class TestPostsServiceEnhanced:

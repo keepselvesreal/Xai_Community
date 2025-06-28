@@ -14,10 +14,10 @@ from typing import Dict, Any
 from unittest.mock import patch
 import os
 
-from src.config import settings
-from src.database.connection import database
-from src.models.core import User, Post, Comment, FileRecord, PostStats, UserReaction, Stats
-from src.utils.password import PasswordManager
+from nadle_backend.config import settings
+from nadle_backend.database.connection import database
+from nadle_backend.models.core import User, Post, Comment, FileRecord, PostStats, UserReaction, Stats
+from nadle_backend.utils.password import PasswordManager
 
 
 class TestPhase1ConfigurationExtension:
@@ -118,7 +118,7 @@ class TestPhase3HardcodingRemoval:
     
     def test_index_manager_uses_dynamic_collections(self):
         """Test that IndexManager uses dynamic collection names."""
-        from src.database.manager import IndexManager
+        from nadle_backend.database.manager import IndexManager
         
         # Mock database to test index creation logic
         class MockDatabase:

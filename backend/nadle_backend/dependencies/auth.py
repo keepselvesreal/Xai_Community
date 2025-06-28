@@ -3,13 +3,13 @@
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from src.models.core import User
-from src.utils.jwt import JWTManager, TokenType
-from src.utils.password import PasswordManager
-from src.repositories.user_repository import UserRepository
-from src.exceptions.auth import InvalidTokenError, ExpiredTokenError, InvalidTokenTypeError
-from src.exceptions.user import UserNotFoundError
-from src.config import get_settings
+from nadle_backend.models.core import User
+from nadle_backend.utils.jwt import JWTManager, TokenType
+from nadle_backend.utils.password import PasswordManager
+from nadle_backend.repositories.user_repository import UserRepository
+from nadle_backend.exceptions.auth import InvalidTokenError, ExpiredTokenError, InvalidTokenTypeError
+from nadle_backend.exceptions.user import UserNotFoundError
+from nadle_backend.config import get_settings
 
 
 # Security scheme for Bearer token authentication

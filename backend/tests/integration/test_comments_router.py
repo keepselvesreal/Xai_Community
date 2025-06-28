@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.models.core import User, CommentDetail, CommentCreate, CommentListResponse, PaginationInfo
+from nadle_backend.models.core import User, CommentDetail, CommentCreate, CommentListResponse, PaginationInfo
 
 
 @pytest.fixture
@@ -22,8 +22,8 @@ def mock_comments_service():
 @pytest.fixture
 def app_with_comments(mock_comments_service):
     """Create test app with mocked comments service."""
-    from src.routers.comments import router, get_comments_service
-    from src.dependencies.auth import get_current_active_user, get_optional_current_active_user
+    from nadle_backend.routers.comments import router, get_comments_service
+    from nadle_backend.dependencies.auth import get_current_active_user, get_optional_current_active_user
     
     app = FastAPI()
     

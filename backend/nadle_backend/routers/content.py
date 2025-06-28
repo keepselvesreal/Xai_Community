@@ -4,8 +4,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
 
-from src.models.content import PreviewRequest, PreviewResponse
-from src.services.content_service import ContentService
+from nadle_backend.models.content import PreviewRequest, PreviewResponse
+from nadle_backend.services.content_service import ContentService
 
 router = APIRouter(prefix="/api/content", tags=["content"])
 

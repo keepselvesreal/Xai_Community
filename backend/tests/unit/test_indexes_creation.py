@@ -2,8 +2,8 @@ import pytest
 from pymongo import ASCENDING, DESCENDING, TEXT
 from typing import Dict, List, Any
 
-from src.database import Database, IndexManager
-from src.config import settings
+from nadle_backend.database import Database, IndexManager
+from nadle_backend.config import settings
 
 
 class TestIndexesCreation:

@@ -4,7 +4,7 @@ from jose import jwt, JWTError, ExpiredSignatureError
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any
 from enum import Enum
-from src.exceptions.auth import InvalidTokenError, ExpiredTokenError, InvalidTokenTypeError
+from nadle_backend.exceptions.auth import InvalidTokenError, ExpiredTokenError, InvalidTokenTypeError
 
 
 class TokenType(Enum):

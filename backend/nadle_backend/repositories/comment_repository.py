@@ -3,8 +3,8 @@
 from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
 from beanie import PydanticObjectId
-from src.models.core import Comment, CommentCreate, CommentDetail, PaginationParams
-from src.exceptions.comment import CommentNotFoundError, CommentDepthExceededError
+from nadle_backend.models.core import Comment, CommentCreate, CommentDetail, PaginationParams
+from nadle_backend.exceptions.comment import CommentNotFoundError, CommentDepthExceededError
 
 
 class CommentRepository:

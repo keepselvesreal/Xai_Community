@@ -4,7 +4,7 @@ from unittest.mock import patch
 from pydantic import ValidationError
 from dotenv import load_dotenv
 
-from src.config import Settings
+from nadle_backend.config import Settings
 
 
 class TestConfigSettings:

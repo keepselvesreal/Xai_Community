@@ -4,8 +4,8 @@ from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
 import re
 from beanie import PydanticObjectId
-from src.models.core import Post, PostCreate, PostUpdate, PaginationParams
-from src.exceptions.post import PostNotFoundError, PostSlugAlreadyExistsError
+from nadle_backend.models.core import Post, PostCreate, PostUpdate, PaginationParams
+from nadle_backend.exceptions.post import PostNotFoundError, PostSlugAlreadyExistsError
 
 
 class PostRepository:

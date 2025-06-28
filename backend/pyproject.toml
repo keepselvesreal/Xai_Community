@@ -1,9 +1,28 @@
 [project]
-name = "backend"
+name = "nadle_backend"
 version = "0.1.0"
-description = "FastAPI backend for development environment"
+description = "FastAPI backend for content management system"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+    {name = "nadle"}
+]
+license = {text = "MIT"}
+keywords = ["fastapi", "backend", "api", "content-management", "mongodb"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: FastAPI",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Topic :: Software Development :: Libraries :: Application Frameworks"
+]
 dependencies = [
     "fastapi[standard]>=0.115.12",
     "uvicorn>=0.34.3",
@@ -41,7 +60,31 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["backend"]
+packages = ["nadle_backend"]
+exclude = [
+    "nadle_backend/**/__pycache__",
+    "nadle_backend/**/*.pyc",
+    "nadle_backend/**/*.pyo",
+    "tests/",
+    "htmlcov/",
+    "uploads/",
+    "*.log",
+    ".env*",
+    "*.md",
+    "Makefile",
+    "start_server.sh"
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "nadle_backend/",
+    "pyproject.toml",
+    "README.md",
+    ".env.example"
+]
+
+[project.scripts]
+nadle-backend = "nadle_backend.cli:main"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -54,8 +97,8 @@ asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
 
 [tool.coverage.run]
-source = ["backend"]
-omit = ["tests/*", "backend/__init__.py"]
+source = ["nadle_backend"]
+omit = ["tests/*", "nadle_backend/__init__.py"]
 
 [tool.coverage.report]
 exclude_lines = [

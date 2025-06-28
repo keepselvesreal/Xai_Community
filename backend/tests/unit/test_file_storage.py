@@ -13,7 +13,7 @@ import tempfile
 import shutil
 from datetime import datetime
 from unittest.mock import Mock, patch
-from src.services.file_storage import (
+from nadle_backend.services.file_storage import (
     generate_file_path,
     save_file_to_disk,
     create_directory_structure

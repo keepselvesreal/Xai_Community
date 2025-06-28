@@ -27,7 +27,7 @@ async def test_db() -> AsyncGenerator[AsyncIOMotorDatabase, None]:
     Provide a test database connection.
     Uses the actual MongoDB Atlas connection from environment variables.
     """
-    from src.config import settings
+    from nadle_backend.config import settings
     
     # Use test database name
     test_db_name = f"{settings.database_name}_test"
@@ -75,8 +75,8 @@ def client():
 @pytest.fixture
 async def test_user(clean_db: AsyncIOMotorDatabase) -> Dict[str, Any]:
     """Create a test user."""
-    from src.models.core import User
-    from src.utils.password import PasswordManager
+    from nadle_backend.models.core import User
+    from nadle_backend.utils.password import PasswordManager
     
     password_manager = PasswordManager()
     
@@ -101,8 +101,8 @@ async def test_user(clean_db: AsyncIOMotorDatabase) -> Dict[str, Any]:
 @pytest.fixture
 async def admin_user(clean_db: AsyncIOMotorDatabase) -> Dict[str, Any]:
     """Create a test admin user."""
-    from src.models.core import User
-    from src.utils.password import PasswordManager
+    from nadle_backend.models.core import User
+    from nadle_backend.utils.password import PasswordManager
     
     password_manager = PasswordManager()
     

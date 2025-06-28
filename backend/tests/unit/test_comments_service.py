@@ -3,12 +3,12 @@
 import pytest
 from unittest.mock import AsyncMock, Mock
 from datetime import datetime
-from src.services.comments_service import CommentsService
-from src.repositories.comment_repository import CommentRepository
-from src.repositories.post_repository import PostRepository
-from src.models.core import Comment, CommentCreate, CommentDetail, User, Post
-from src.exceptions.comment import CommentNotFoundError, CommentPermissionError, CommentValidationError
-from src.exceptions.post import PostNotFoundError
+from nadle_backend.services.comments_service import CommentsService
+from nadle_backend.repositories.comment_repository import CommentRepository
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.models.core import Comment, CommentCreate, CommentDetail, User, Post
+from nadle_backend.exceptions.comment import CommentNotFoundError, CommentPermissionError, CommentValidationError
+from nadle_backend.exceptions.post import PostNotFoundError
 
 
 @pytest.fixture

@@ -19,7 +19,7 @@ import pytest
 from datetime import datetime
 from typing import List, Optional
 from pydantic import ValidationError
-from src.models.core import Post, PostMetadata, ContentType, PostBase
+from nadle_backend.models.core import Post, PostMetadata, ContentType, PostBase
 
 
 class TestPostContentFields:
@@ -41,7 +41,7 @@ class TestPostContentFields:
         입력: dict (post_data)
         출력: Post (validated_model)
         """
-        from src.models.core import PostBase, PostMetadata, ContentType
+        from nadle_backend.models.core import PostBase, PostMetadata, ContentType
         
         post_data = TestDataModels.BASIC_POST_DATA.copy()
         post_data["metadata"] = PostMetadata()
@@ -83,7 +83,7 @@ class TestPostContentFields:
         입력: str (content_type)
         출력: bool (validation_result)
         """
-        from src.models.core import Post, PostMetadata
+        from nadle_backend.models.core import Post, PostMetadata
         from pydantic import ValidationError
         
         base_data = TestDataModels.BASIC_POST_DATA.copy()

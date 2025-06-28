@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 from fastapi import HTTPException
 from fastapi.security import HTTPBearer
-from src.dependencies.auth import (
+from nadle_backend.dependencies.auth import (
     get_jwt_manager,
     get_password_manager,
     get_user_repository,
@@ -12,11 +12,11 @@ from src.dependencies.auth import (
     get_optional_current_user,
     require_admin_user
 )
-from src.models.core import User
-from src.utils.jwt import JWTManager, TokenType
-from src.utils.password import PasswordManager
-from src.repositories.user_repository import UserRepository
-from src.exceptions.auth import InvalidTokenError, ExpiredTokenError
+from nadle_backend.models.core import User
+from nadle_backend.utils.jwt import JWTManager, TokenType
+from nadle_backend.utils.password import PasswordManager
+from nadle_backend.repositories.user_repository import UserRepository
+from nadle_backend.exceptions.auth import InvalidTokenError, ExpiredTokenError
 
 
 @pytest.fixture
@@ -182,7 +182,7 @@ class TestCurrentUserDependency:
         }
         
         # Mock user not found
-        from src.exceptions.user import UserNotFoundError
+        from nadle_backend.exceptions.user import UserNotFoundError
         mock_user_repository.get_by_id = AsyncMock(side_effect=UserNotFoundError(user_id))
         
         with pytest.raises(HTTPException) as exc_info:
@@ -197,7 +197,7 @@ class TestCurrentUserDependency:
         token = "refresh_jwt_token"
         
         # Mock JWT verification with wrong token type
-        from src.exceptions.auth import InvalidTokenTypeError
+        from nadle_backend.exceptions.auth import InvalidTokenTypeError
         mock_jwt_manager.verify_token.side_effect = InvalidTokenTypeError("access", "refresh")
         
         with pytest.raises(HTTPException) as exc_info:
@@ -292,7 +292,7 @@ class TestOptionalUserDependency:
             "type": TokenType.ACCESS.value
         }
         
-        from src.exceptions.user import UserNotFoundError
+        from nadle_backend.exceptions.user import UserNotFoundError
         mock_user_repository.get_by_id = AsyncMock(side_effect=UserNotFoundError("user_id"))
         
         # Should return None instead of raising exception

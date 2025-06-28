@@ -4,17 +4,17 @@ from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
-from src.models.core import User, UserCreate, UserUpdate, UserResponse
-from src.services.auth_service import AuthService
-from src.dependencies.auth import (
+from nadle_backend.models.core import User, UserCreate, UserUpdate, UserResponse
+from nadle_backend.services.auth_service import AuthService
+from nadle_backend.dependencies.auth import (
     CurrentActiveUser, 
     AdminUser,
     get_jwt_manager,
     get_password_manager,
     get_user_repository
 )
-from src.exceptions.auth import InvalidCredentialsError, InvalidTokenError, ExpiredTokenError
-from src.exceptions.user import (
+from nadle_backend.exceptions.auth import InvalidCredentialsError, InvalidTokenError, ExpiredTokenError
+from nadle_backend.exceptions.user import (
     UserNotFoundError,
     EmailAlreadyExistsError,
     HandleAlreadyExistsError

@@ -9,8 +9,8 @@ Provides data access layer for file operations including:
 
 from typing import Dict, Any, Optional
 import logging
-from src.database.connection import get_database
-from src.models.core import FileRecord
+from nadle_backend.database.connection import get_database
+from nadle_backend.models.core import FileRecord
 
 logger = logging.getLogger(__name__)
 

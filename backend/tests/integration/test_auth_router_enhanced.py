@@ -4,8 +4,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
-from src.exceptions.auth import InvalidCredentialsError
-from src.exceptions.user import EmailAlreadyExistsError, HandleAlreadyExistsError, UserNotFoundError
+from nadle_backend.exceptions.auth import InvalidCredentialsError
+from nadle_backend.exceptions.user import EmailAlreadyExistsError, HandleAlreadyExistsError, UserNotFoundError
 
 
 @pytest.fixture
@@ -29,7 +29,7 @@ def mock_auth_service():
 @pytest.fixture
 def app_with_auth(mock_auth_service):
     """Create test app with mocked auth service."""
-    from src.routers.auth import router, get_auth_service
+    from nadle_backend.routers.auth import router, get_auth_service
     
     app = FastAPI()
     
@@ -244,7 +244,7 @@ class TestUserProfile:
         
         with client as c:
             # Mock the get_current_active_user dependency
-            from src.dependencies.auth import get_current_active_user
+            from nadle_backend.dependencies.auth import get_current_active_user
             
             mock_user = MagicMock()
             mock_user.id = "user123"
@@ -291,7 +291,7 @@ class TestUserProfile:
         }
         
         with client as c:
-            from src.dependencies.auth import get_current_active_user
+            from nadle_backend.dependencies.auth import get_current_active_user
             
             mock_user = MagicMock()
             mock_user.id = "user123"
@@ -332,7 +332,7 @@ class TestPasswordChange:
         }
         
         with client as c:
-            from src.dependencies.auth import get_current_active_user
+            from nadle_backend.dependencies.auth import get_current_active_user
             
             mock_user = MagicMock()
             mock_user.id = "user123"
@@ -362,7 +362,7 @@ class TestPasswordChange:
         }
         
         with client as c:
-            from src.dependencies.auth import get_current_active_user
+            from nadle_backend.dependencies.auth import get_current_active_user
             
             mock_user = MagicMock()
             mock_user.id = "user123"

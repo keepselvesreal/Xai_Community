@@ -1,6 +1,6 @@
 """User-related exceptions."""
 
-from src.exceptions.base import BaseAppException
+from nadle_backend.exceptions.base import BaseAppException
 
 
 class UserError(BaseAppException):

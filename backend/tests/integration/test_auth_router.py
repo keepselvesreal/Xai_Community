@@ -28,7 +28,7 @@ def mock_auth_service():
 @pytest.fixture
 def app_with_auth(mock_auth_service):
     """Create test app with mocked auth service."""
-    from src.routers.auth import router, get_auth_service
+    from nadle_backend.routers.auth import router, get_auth_service
     
     app = FastAPI()
     

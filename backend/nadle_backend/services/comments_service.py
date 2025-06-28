@@ -1,11 +1,11 @@
 """Comments service for business logic layer."""
 
 from typing import List, Dict, Optional, Tuple, Any
-from src.models.core import Comment, CommentCreate, CommentDetail, User, UserReaction
-from src.repositories.comment_repository import CommentRepository
-from src.repositories.post_repository import PostRepository
-from src.exceptions.comment import CommentNotFoundError, CommentPermissionError, CommentValidationError
-from src.exceptions.post import PostNotFoundError
+from nadle_backend.models.core import Comment, CommentCreate, CommentDetail, User, UserReaction
+from nadle_backend.repositories.comment_repository import CommentRepository
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.exceptions.comment import CommentNotFoundError, CommentPermissionError, CommentValidationError
+from nadle_backend.exceptions.post import PostNotFoundError
 from beanie import PydanticObjectId
 
 
@@ -457,7 +457,7 @@ class CommentsService:
         try:
             # This would typically update the post's comment_count field
             # For now, we'll implement a simple increment operation
-            from src.models.core import Post
+            from nadle_backend.models.core import Post
             from beanie import PydanticObjectId
             
             await Post.find_one(Post.id == PydanticObjectId(post_id)).update(
@@ -475,7 +475,7 @@ class CommentsService:
         """
         try:
             # This would typically update the post's comment_count field
-            from src.models.core import Post
+            from nadle_backend.models.core import Post
             from beanie import PydanticObjectId
             
             await Post.find_one(Post.id == PydanticObjectId(post_id)).update(

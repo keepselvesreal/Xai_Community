@@ -4,9 +4,9 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch, mock_open
 from io import BytesIO
-from src.services.file_validator import FileValidator
-from src.services.file_storage import FileStorage
-from src.services.file_metadata import FileMetadataExtractor
+from nadle_backend.services.file_validator import FileValidator
+from nadle_backend.services.file_storage import FileStorage
+from nadle_backend.services.file_metadata import FileMetadataExtractor
 
 
 class TestFileValidator:

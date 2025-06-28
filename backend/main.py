@@ -4,7 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
 import os
-from src.config import settings
+from nadle_backend.config import settings
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -17,8 +17,8 @@ async def lifespan(app: FastAPI):
     logger.info("Application starting...")
     try:
         # 데이터베이스 연결 시도
-        from src.database.connection import database
-        from src.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
+        from nadle_backend.database.connection import database
+        from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
         
         await database.connect()
         await database.init_beanie_models([User, Post, Comment, PostStats, UserReaction, Stats, FileRecord])
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
     
     # 종료 시
     try:
-        from src.database.connection import database
+        from nadle_backend.database.connection import database
         await database.disconnect()
         logger.info("Database disconnected")
     except:
@@ -130,7 +130,7 @@ def create_app() -> FastAPI:
     
     # 라우터 등록 (안전하게)
     try:
-        from src.routers import auth, posts, comments, file_upload, content
+        from nadle_backend.routers import auth, posts, comments, file_upload, content
         app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
         app.include_router(posts.router, tags=["Posts"])
         app.include_router(comments.router, tags=["Comments"])
@@ -146,7 +146,7 @@ def create_app() -> FastAPI:
     async def debug_users():
         """임시 디버그용 - 모든 사용자 목록 확인"""
         try:
-            from src.models.core import User
+            from nadle_backend.models.core import User
             users = await User.find_all().to_list()
             return {"users": [{"email": user.email, "user_handle": user.user_handle} for user in users]}
         except Exception as e:
@@ -156,7 +156,7 @@ def create_app() -> FastAPI:
     async def debug_delete_user(email: str):
         """임시 디버그용 - 사용자 삭제"""
         try:
-            from src.models.core import User
+            from nadle_backend.models.core import User
             user = await User.find_one({"email": email})
             if user:
                 await user.delete()

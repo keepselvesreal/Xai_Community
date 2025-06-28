@@ -9,7 +9,7 @@ Tests for file validation functions including:
 
 import pytest
 from unittest.mock import Mock
-from src.services.file_validator import (
+from nadle_backend.services.file_validator import (
     validate_file_type,
     validate_file_size,
     validate_file_extension

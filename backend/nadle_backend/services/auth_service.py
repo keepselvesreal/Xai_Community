@@ -2,12 +2,12 @@
 
 from typing import Dict, Any, List
 from datetime import datetime
-from src.models.core import User, UserCreate, UserUpdate
-from src.repositories.user_repository import UserRepository
-from src.utils.jwt import JWTManager, TokenType
-from src.utils.password import PasswordManager
-from src.exceptions.auth import InvalidCredentialsError
-from src.exceptions.user import (
+from nadle_backend.models.core import User, UserCreate, UserUpdate
+from nadle_backend.repositories.user_repository import UserRepository
+from nadle_backend.utils.jwt import JWTManager, TokenType
+from nadle_backend.utils.password import PasswordManager
+from nadle_backend.exceptions.auth import InvalidCredentialsError
+from nadle_backend.exceptions.user import (
     UserNotFoundError, 
     EmailAlreadyExistsError, 
     HandleAlreadyExistsError,

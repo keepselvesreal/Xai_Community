@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.database.manager import DatabaseManager, IndexManager
+from nadle_backend.database.manager import DatabaseManager, IndexManager
 
 
 class TestIndexManager:

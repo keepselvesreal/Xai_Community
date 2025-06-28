@@ -2,8 +2,8 @@
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.database.connection import Database
-from src.config import settings
+from nadle_backend.database.connection import Database
+from nadle_backend.config import settings
 
 
 class TestDatabaseConnection:
@@ -84,7 +84,7 @@ class TestDatabaseConnection:
         with patch('beanie.init_beanie') as mock_init_beanie:
             mock_init_beanie.return_value = AsyncMock()
             
-            from src.models.core import User, Post, Comment
+            from nadle_backend.models.core import User, Post, Comment
             models = [User, Post, Comment]
             
             # Act
@@ -106,7 +106,7 @@ class TestDatabaseConnection:
         with patch('beanie.init_beanie') as mock_init_beanie:
             mock_init_beanie.side_effect = Exception("Beanie initialization failed")
             
-            from src.models.core import User, Post, Comment
+            from nadle_backend.models.core import User, Post, Comment
             models = [User, Post, Comment]
             
             # Act & Assert
@@ -232,7 +232,7 @@ class TestDatabaseSingleton:
     async def test_global_database_instance(self):
         """Test global database instance access."""
         # Arrange
-        from src.database.connection import database
+        from nadle_backend.database.connection import database
         
         # Act & Assert
         assert isinstance(database, Database)

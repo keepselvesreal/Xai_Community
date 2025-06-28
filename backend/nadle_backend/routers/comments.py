@@ -2,19 +2,19 @@
 
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
-from src.models.core import (
+from nadle_backend.models.core import (
     CommentCreate, CommentUpdate, CommentDetail, User, CommentListResponse, PaginationInfo
 )
-from src.services.comments_service import CommentsService
-from src.repositories.comment_repository import CommentRepository
-from src.repositories.post_repository import PostRepository
-from src.dependencies.auth import (
+from nadle_backend.services.comments_service import CommentsService
+from nadle_backend.repositories.comment_repository import CommentRepository
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.dependencies.auth import (
     get_current_active_user, get_optional_current_active_user
 )
-from src.exceptions.comment import (
+from nadle_backend.exceptions.comment import (
     CommentNotFoundError, CommentPermissionError, CommentValidationError
 )
-from src.exceptions.post import PostNotFoundError
+from nadle_backend.exceptions.post import PostNotFoundError
 
 
 # Create router

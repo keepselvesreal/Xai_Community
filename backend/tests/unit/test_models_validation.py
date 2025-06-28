@@ -3,7 +3,7 @@ from datetime import datetime
 from pydantic import ValidationError
 from beanie import init_beanie
 
-from src.models import (
+from nadle_backend.models import (
     User, Post, Comment, UserReaction, Stats,
     UserCreate, UserUpdate, UserResponse,
     PostCreate, PostUpdate, PostResponse,
@@ -11,8 +11,8 @@ from src.models import (
     ServiceType, PostStatus, UserStatus, TargetType,
     PaginationParams, PaginatedResponse
 )
-from src.database import Database
-from src.config import settings
+from nadle_backend.database import Database
+from nadle_backend.config import settings
 
 
 class TestModelsValidation:

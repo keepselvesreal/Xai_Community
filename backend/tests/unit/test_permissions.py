@@ -1,8 +1,8 @@
 import pytest
 from unittest.mock import MagicMock
-from src.utils.permissions import PermissionChecker, ResourcePermission
-from src.models.core import User
-from src.exceptions.auth import InsufficientPermissionsError, ResourceOwnershipError
+from nadle_backend.utils.permissions import PermissionChecker, ResourcePermission
+from nadle_backend.models.core import User
+from nadle_backend.exceptions.auth import InsufficientPermissionsError, ResourceOwnershipError
 
 
 @pytest.fixture

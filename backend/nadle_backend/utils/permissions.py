@@ -2,7 +2,7 @@
 
 from enum import Enum
 from typing import List, Optional, Any, Union
-from src.exceptions.auth import InsufficientPermissionsError, ResourceOwnershipError
+from nadle_backend.exceptions.auth import InsufficientPermissionsError, ResourceOwnershipError
 
 
 class ResourcePermission(Enum):

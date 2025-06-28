@@ -10,10 +10,10 @@ import asyncio
 from datetime import datetime
 from typing import Dict, Any, List
 
-from src.config import settings
-from src.database.connection import database
-from src.models.core import User, Post, Comment, FileRecord
-from src.utils.password import PasswordManager
+from nadle_backend.config import settings
+from nadle_backend.database.connection import database
+from nadle_backend.models.core import User, Post, Comment, FileRecord
+from nadle_backend.utils.password import PasswordManager
 
 
 @pytest.mark.asyncio

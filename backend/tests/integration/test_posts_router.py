@@ -4,7 +4,7 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.models.core import User, Post, PostCreate
+from nadle_backend.models.core import User, Post, PostCreate
 
 
 @pytest.fixture
@@ -23,8 +23,8 @@ def mock_posts_service():
 @pytest.fixture
 def app_with_posts(mock_posts_service):
     """Create test app with mocked posts service."""
-    from src.routers.posts import router, get_posts_service
-    from src.dependencies.auth import get_current_active_user, get_optional_current_active_user
+    from nadle_backend.routers.posts import router, get_posts_service
+    from nadle_backend.dependencies.auth import get_current_active_user, get_optional_current_active_user
     
     app = FastAPI()
     

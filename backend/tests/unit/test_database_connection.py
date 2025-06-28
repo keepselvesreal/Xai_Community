@@ -4,8 +4,8 @@ from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from unittest.mock import AsyncMock, MagicMock, patch
 import logging
 
-from src.database import Database, database, get_database, get_client
-from src.config import settings
+from nadle_backend.database import Database, database, get_database, get_client
+from nadle_backend.config import settings
 
 
 class TestDatabaseConnection:

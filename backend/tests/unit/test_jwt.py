@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime, timedelta
-from src.utils.jwt import JWTManager, TokenType
-from src.exceptions.auth import InvalidTokenError, ExpiredTokenError, InvalidTokenTypeError
+from nadle_backend.utils.jwt import JWTManager, TokenType
+from nadle_backend.exceptions.auth import InvalidTokenError, ExpiredTokenError, InvalidTokenTypeError
 
 
 @pytest.fixture

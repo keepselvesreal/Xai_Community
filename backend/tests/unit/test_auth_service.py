@@ -3,13 +3,13 @@
 import pytest
 from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
-from src.services.auth_service import AuthService
-from src.models.core import User, UserCreate, UserUpdate
-from src.utils.jwt import JWTManager, TokenType
-from src.utils.password import PasswordManager
-from src.repositories.user_repository import UserRepository
-from src.exceptions.auth import InvalidCredentialsError
-from src.exceptions.user import UserNotFoundError, EmailAlreadyExistsError, HandleAlreadyExistsError
+from nadle_backend.services.auth_service import AuthService
+from nadle_backend.models.core import User, UserCreate, UserUpdate
+from nadle_backend.utils.jwt import JWTManager, TokenType
+from nadle_backend.utils.password import PasswordManager
+from nadle_backend.repositories.user_repository import UserRepository
+from nadle_backend.exceptions.auth import InvalidCredentialsError
+from nadle_backend.exceptions.user import UserNotFoundError, EmailAlreadyExistsError, HandleAlreadyExistsError
 
 
 @pytest.fixture

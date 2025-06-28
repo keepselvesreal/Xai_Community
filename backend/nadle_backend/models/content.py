@@ -3,7 +3,7 @@
 """
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
-from src.models.core import ContentType
+from nadle_backend.models.core import ContentType
 
 
 class ContentMetadata(BaseModel):

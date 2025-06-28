@@ -4,9 +4,9 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch
 from beanie import PydanticObjectId
-from src.models.core import Post, PostCreate, PostUpdate, PostMetadata
-from src.repositories.post_repository import PostRepository
-from src.exceptions.post import PostNotFoundError
+from nadle_backend.models.core import Post, PostCreate, PostUpdate, PostMetadata
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.exceptions.post import PostNotFoundError
 
 
 class TestPostRepositorySimple:

@@ -4,8 +4,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
-from src.models.core import PostMetadata
-from src.exceptions.post import PostNotFoundError, PostPermissionError
+from nadle_backend.models.core import PostMetadata
+from nadle_backend.exceptions.post import PostNotFoundError, PostPermissionError
 
 
 @pytest.fixture
@@ -24,8 +24,8 @@ def mock_posts_service():
 @pytest.fixture
 def app_with_posts(mock_posts_service):
     """Create test app with mocked posts service."""
-    from src.routers.posts import router, get_posts_service
-    from src.dependencies.auth import get_current_active_user, get_optional_current_active_user
+    from nadle_backend.routers.posts import router, get_posts_service
+    from nadle_backend.dependencies.auth import get_current_active_user, get_optional_current_active_user
     
     app = FastAPI()
     
@@ -112,7 +112,7 @@ class TestPostCreation:
         
         with client as c:
             # Remove auth dependency override
-            from src.dependencies.auth import get_current_active_user
+            from nadle_backend.dependencies.auth import get_current_active_user
             if get_current_active_user in c.app.dependency_overrides:
                 del c.app.dependency_overrides[get_current_active_user]
             
@@ -278,7 +278,7 @@ class TestPostUpdate:
         update_data = {"title": "Updated Title"}
         
         with client as c:
-            from src.dependencies.auth import get_current_active_user
+            from nadle_backend.dependencies.auth import get_current_active_user
             if get_current_active_user in c.app.dependency_overrides:
                 del c.app.dependency_overrides[get_current_active_user]
             

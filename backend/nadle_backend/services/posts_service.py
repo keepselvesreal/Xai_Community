@@ -1,10 +1,10 @@
 """Posts service layer for business logic."""
 
 from typing import List, Dict, Any, Optional
-from src.models.core import User, Post, PostCreate, PostUpdate, PostResponse, PaginatedResponse, PostMetadata, UserReaction, Comment
-from src.repositories.post_repository import PostRepository
-from src.exceptions.post import PostNotFoundError, PostPermissionError
-from src.utils.permissions import check_post_permission
+from nadle_backend.models.core import User, Post, PostCreate, PostUpdate, PostResponse, PaginatedResponse, PostMetadata, UserReaction, Comment
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.exceptions.post import PostNotFoundError, PostPermissionError
+from nadle_backend.utils.permissions import check_post_permission
 
 
 class PostsService:

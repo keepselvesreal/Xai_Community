@@ -39,7 +39,7 @@ class TestContentService:
         입력: str (markdown_content)
         출력: str (rendered_html)
         """
-        from src.services.content_service import ContentService
+        from nadle_backend.services.content_service import ContentService
         
         service = ContentService()
         markdown_content = TestData.BASIC_MARKDOWN
@@ -72,7 +72,7 @@ class TestContentService:
         입력: str (markdown_with_images)
         출력: str (html_with_img_tags)
         """
-        from src.services.content_service import ContentService
+        from nadle_backend.services.content_service import ContentService
         
         service = ContentService()
         markdown_content = TestData.MARKDOWN_WITH_IMAGES
@@ -125,7 +125,7 @@ class TestContentService:
         입력: str (malicious_html)
         출력: str (sanitized_safe_html)
         """
-        from src.services.content_service import ContentService
+        from nadle_backend.services.content_service import ContentService
         
         service = ContentService()
         malicious_html = TestData.MALICIOUS_HTML
@@ -177,8 +177,8 @@ class TestContentService:
         입력: str (content_text)
         출력: ContentMetadata (word_count, reading_time)
         """
-        from src.services.content_service import ContentService
-        from src.models.content import ContentMetadata
+        from nadle_backend.services.content_service import ContentService
+        from nadle_backend.models.content import ContentMetadata
         
         service = ContentService()
         content = "이것은 테스트 콘텐츠입니다. " * 50  # 약 200단어
@@ -247,8 +247,8 @@ class TestContentService:
         입력: str (raw_markdown), str (content_type)
         출력: ProcessedContent (rendered_html, metadata, file_ids)
         """
-        from src.services.content_service import ContentService
-        from src.models.content import ProcessedContent
+        from nadle_backend.services.content_service import ContentService
+        from nadle_backend.models.content import ProcessedContent
         
         service = ContentService()
         raw_content = TestData.MARKDOWN_WITH_IMAGES

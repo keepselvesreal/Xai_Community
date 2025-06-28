@@ -3,8 +3,8 @@
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from beanie.operators import In
-from src.models.core import User, UserCreate, UserUpdate
-from src.exceptions.user import UserNotFoundError, DuplicateUserError
+from nadle_backend.models.core import User, UserCreate, UserUpdate
+from nadle_backend.exceptions.user import UserNotFoundError, DuplicateUserError
 
 
 class UserRepository:

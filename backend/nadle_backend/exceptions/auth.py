@@ -1,6 +1,6 @@
 """Authentication and authorization related exceptions."""
 
-from src.exceptions.base import AuthenticationError, AuthorizationError
+from nadle_backend.exceptions.base import AuthenticationError, AuthorizationError
 
 
 class InvalidTokenError(AuthenticationError):

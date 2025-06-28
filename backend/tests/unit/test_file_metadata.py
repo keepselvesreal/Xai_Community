@@ -9,7 +9,7 @@ Tests for file metadata functions including:
 import pytest
 from datetime import datetime
 from unittest.mock import Mock
-from src.services.file_metadata import (
+from nadle_backend.services.file_metadata import (
     extract_file_metadata,
     create_file_document
 )

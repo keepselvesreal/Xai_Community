@@ -4,9 +4,9 @@ import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch
 from beanie import PydanticObjectId
-from src.models.core import Comment, CommentCreate, CommentDetail
-from src.repositories.comment_repository import CommentRepository
-from src.exceptions.comment import CommentNotFoundError, CommentDepthExceededError
+from nadle_backend.models.core import Comment, CommentCreate, CommentDetail
+from nadle_backend.repositories.comment_repository import CommentRepository
+from nadle_backend.exceptions.comment import CommentNotFoundError, CommentDepthExceededError
 
 
 class TestCommentRepository:

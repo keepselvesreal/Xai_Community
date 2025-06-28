@@ -2,14 +2,14 @@
 
 from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from src.models.core import (
+from nadle_backend.models.core import (
     PostCreate, PostUpdate, PostResponse, PaginatedResponse, User
 )
-from src.services.posts_service import PostsService
-from src.dependencies.auth import (
+from nadle_backend.services.posts_service import PostsService
+from nadle_backend.dependencies.auth import (
     get_current_active_user, get_optional_current_active_user
 )
-from src.exceptions.post import PostNotFoundError, PostPermissionError
+from nadle_backend.exceptions.post import PostNotFoundError, PostPermissionError
 
 
 # Create router
@@ -127,7 +127,7 @@ async def get_post(
         # Get user reaction if authenticated
         user_reaction = None
         if current_user:
-            from src.models.core import UserReaction
+            from nadle_backend.models.core import UserReaction
             reaction = await UserReaction.find_one({
                 "user_id": str(current_user.id),
                 "target_type": "post",
@@ -381,7 +381,7 @@ async def get_post_stats(
         
         # Add user reaction if authenticated
         if current_user:
-            from src.models.core import UserReaction
+            from nadle_backend.models.core import UserReaction
             user_reaction = await UserReaction.find_one({
                 "user_id": str(current_user.id),
                 "target_type": "post",

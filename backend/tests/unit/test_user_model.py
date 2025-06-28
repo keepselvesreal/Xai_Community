@@ -1,7 +1,7 @@
 import pytest
 from datetime import datetime
 from pydantic import ValidationError
-from src.models.core import UserBase, UserCreate, UserResponse, UserStatus
+from nadle_backend.models.core import UserBase, UserCreate, UserResponse, UserStatus
 
 
 class TestUserBaseModel:

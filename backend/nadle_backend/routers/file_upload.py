@@ -12,20 +12,20 @@ import logging
 from datetime import datetime
 
 # Import all required services
-from src.services.file_validator import (
+from nadle_backend.services.file_validator import (
     validate_file_type,
     validate_file_size, 
     validate_file_extension
 )
-from src.services.file_storage import (
+from nadle_backend.services.file_storage import (
     generate_file_path,
     save_file_to_disk
 )
-from src.services.file_metadata import (
+from nadle_backend.services.file_metadata import (
     extract_file_metadata,
     create_file_document
 )
-from src.repositories.file_repository import save_file_record
+from nadle_backend.repositories.file_repository import save_file_record
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["files"])
@@ -137,7 +137,7 @@ async def get_file(file_id: str):
     """Get file by ID"""
     try:
         from fastapi.responses import FileResponse
-        from src.repositories.file_repository import get_file_record
+        from nadle_backend.repositories.file_repository import get_file_record
         
         # Get file record from database
         file_record = await get_file_record(file_id)
@@ -167,7 +167,7 @@ async def get_file(file_id: str):
 async def get_file_info(file_id: str):
     """Get file metadata"""
     try:
-        from src.repositories.file_repository import get_file_record
+        from nadle_backend.repositories.file_repository import get_file_record
         
         # Get file record from database
         file_record = await get_file_record(file_id)

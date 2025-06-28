@@ -42,12 +42,12 @@ PermissionChecker:
 import pytest
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
-from src.utils.jwt import JWTManager, TokenType
-from src.utils.password import PasswordManager
-from src.utils.permissions import PermissionChecker
-from src.exceptions.auth import InvalidTokenError, ExpiredTokenError
-from src.exceptions.post import PostPermissionError
-from src.exceptions.comment import CommentPermissionError
+from nadle_backend.utils.jwt import JWTManager, TokenType
+from nadle_backend.utils.password import PasswordManager
+from nadle_backend.utils.permissions import PermissionChecker
+from nadle_backend.exceptions.auth import InvalidTokenError, ExpiredTokenError
+from nadle_backend.exceptions.post import PostPermissionError
+from nadle_backend.exceptions.comment import CommentPermissionError
 
 
 class TestJWTManager:

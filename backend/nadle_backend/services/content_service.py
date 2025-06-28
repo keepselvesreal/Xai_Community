@@ -8,8 +8,8 @@ from markdown import markdown
 import bleach
 from bs4 import BeautifulSoup
 
-from src.models.content import ContentMetadata, ProcessedContent
-from src.models.core import ContentType
+from nadle_backend.models.content import ContentMetadata, ProcessedContent
+from nadle_backend.models.core import ContentType
 
 
 class ContentService:

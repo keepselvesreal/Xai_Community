@@ -1,5 +1,5 @@
 import pytest
-from src.utils.password import PasswordManager
+from nadle_backend.utils.password import PasswordManager
 
 
 @pytest.fixture

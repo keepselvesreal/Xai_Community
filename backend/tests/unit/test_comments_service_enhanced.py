@@ -34,12 +34,12 @@ update_comment() → check_permission() → validate_content() → save_changes(
 import pytest
 from datetime import datetime
 from unittest.mock import Mock, AsyncMock, patch
-from src.models.core import User, Post, Comment, CommentCreate, CommentDetail
-from src.services.comments_service import CommentsService
-from src.repositories.comment_repository import CommentRepository
-from src.repositories.post_repository import PostRepository
-from src.exceptions.comment import CommentNotFoundError, CommentPermissionError, CommentDepthExceededError
-from src.exceptions.post import PostNotFoundError
+from nadle_backend.models.core import User, Post, Comment, CommentCreate, CommentDetail
+from nadle_backend.services.comments_service import CommentsService
+from nadle_backend.repositories.comment_repository import CommentRepository
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.exceptions.comment import CommentNotFoundError, CommentPermissionError, CommentDepthExceededError
+from nadle_backend.exceptions.post import PostNotFoundError
 
 
 class TestCommentsServiceEnhanced:

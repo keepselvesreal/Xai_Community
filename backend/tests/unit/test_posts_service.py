@@ -3,11 +3,11 @@
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, Mock, patch
-from src.models.core import User, Post, PostCreate, PostUpdate, PostResponse
-from src.services.posts_service import PostsService
-from src.repositories.post_repository import PostRepository
-from src.exceptions.user import UserNotFoundError
-from src.exceptions.post import PostNotFoundError, PostPermissionError
+from nadle_backend.models.core import User, Post, PostCreate, PostUpdate, PostResponse
+from nadle_backend.services.posts_service import PostsService
+from nadle_backend.repositories.post_repository import PostRepository
+from nadle_backend.exceptions.user import UserNotFoundError
+from nadle_backend.exceptions.post import PostNotFoundError, PostPermissionError
 
 
 class TestPostsService:

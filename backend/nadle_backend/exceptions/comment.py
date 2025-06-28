@@ -1,6 +1,6 @@
 """Comment-related exception classes."""
 
-from src.exceptions.base import BaseAppException
+from nadle_backend.exceptions.base import BaseAppException
 
 
 class CommentNotFoundError(BaseAppException):
