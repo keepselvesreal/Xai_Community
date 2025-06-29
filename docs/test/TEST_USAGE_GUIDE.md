@@ -170,7 +170,7 @@ uv run pytest tests/unit/ tests/integration/ \
 #### 🎯 전체 검증 (< 30분)
 ```bash
 # 모든 테스트 실행
-uv run pytest tests/ -v --cov=src --cov-report=html
+uv run pytest tests/ -v --cov=nadle_backend --cov-report=html
 ```
 
 ### 회귀 테스트 시나리오
@@ -245,7 +245,7 @@ uv run pytest tests/contract/ tests/security/ -v
 
 # 6. 커버리지 확인
 echo "📊 커버리지 측정..."
-uv run pytest tests/ --cov=src --cov-report=term --cov-fail-under=85
+uv run pytest tests/ --cov=nadle_backend --cov-report=term --cov-fail-under=85
 
 echo "✅ 모든 회귀 테스트 완료!"
 ```
@@ -349,7 +349,7 @@ uv run pytest tests/unit/test_*_service.py -v --tb=short -x
 # 전체 테스트 스위트 실행
 export TEST_ENV=testing
 export DATABASE_URL=mongodb://test-db:27017/test_db
-uv run pytest tests/ -v --cov=src --maxfail=10
+uv run pytest tests/ -v --cov=nadle_backend --maxfail=10
 ```
 
 #### 🚀 스테이징 환경
@@ -548,7 +548,7 @@ jobs:
       
       - name: Run unit tests
         run: |
-          uv run pytest tests/unit/ -v --cov=src --cov-report=xml
+          uv run pytest tests/unit/ -v --cov=nadle_backend --cov-report=xml
       
       - name: Run integration tests
         run: |
@@ -594,7 +594,7 @@ jobs:
       - name: Pre-deployment regression tests
         run: |
           # 전체 테스트 스위트 실행
-          uv run pytest tests/ -v --cov=src --cov-fail-under=85
+          uv run pytest tests/ -v --cov=nadle_backend --cov-fail-under=85
           
           # 보안 테스트 필수 실행
           uv run pytest tests/security/ -v --maxfail=1
@@ -822,7 +822,7 @@ rm -rf .pytest_cache/
 ### 품질 게이트
 ```bash
 # 품질 기준을 통과해야 배포 가능
-uv run pytest tests/ --cov=src --cov-fail-under=85
+uv run pytest tests/ --cov=nadle_backend --cov-fail-under=85
 uv run pytest tests/security/ --maxfail=0
 uv run pytest tests/contract/ --maxfail=0
 ```

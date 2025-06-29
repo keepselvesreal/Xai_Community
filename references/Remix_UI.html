@@ -1,0 +1,3590 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAI 아파트 커뮤니티</title>
+    <style>
+        :root {
+            --bg-primary: #FAFAFA;
+            --bg-secondary: white;
+            --bg-card: white;
+            --text-primary: #2F2F2F;
+            --text-secondary: #595959;
+            --text-muted: #8C8C8C;
+            --border-color: #D9D9D9;
+            --border-light: #F5F5F5;
+            --accent-primary: #6B8E23;
+            --accent-secondary: #9ACD32;
+            --accent-hover: #556B2F;
+            --bg-hover: #F0F8E8;
+            --bg-section: #F8F9FA;
+            --shadow-card: rgba(107, 142, 35, 0.15);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-card: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-muted: #808080;
+            --border-color: #404040;
+            --border-light: #404040;
+            --accent-primary: #8FAE3A;
+            --accent-secondary: #A8CD45;
+            --accent-hover: #7A9A32;
+            --bg-hover: #3a4a2a;
+            --bg-section: #333333;
+            --shadow-card: rgba(143, 174, 58, 0.15);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 16px 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        .user-info {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-horizontal {
+            display: flex;
+            gap: 8px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .nav-item {
+            padding: 12px 20px;
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+        
+        .nav-item:hover,
+        .nav-item.active {
+            background: rgba(255,255,255,0.2);
+            opacity: 1;
+        }
+        
+        /* Main Content */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px 24px;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .page-title {
+            color: var(--text-primary);
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            text-align: center;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        /* 로그인/회원가입 폼 스타일 */
+        .auth-container {
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 48px 32px;
+            background: var(--bg-card);
+            border-radius: 20px;
+            box-shadow: 0 8px 32px var(--shadow-card);
+            border: 1px solid var(--border-color);
+        }
+        
+        .auth-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+        
+        .auth-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        
+        .auth-subtitle {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            color: var(--text-secondary);
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 16px;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        
+        .form-input:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px rgba(107, 142, 35, 0.1);
+        }
+        
+        .form-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        .form-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+        }
+        
+        .form-checkbox input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            accent-color: var(--accent-primary);
+        }
+        
+        .form-checkbox label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            cursor: pointer;
+        }
+        
+        .btn-auth {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            background: var(--accent-primary);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 16px;
+        }
+        
+        .btn-auth:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        
+        .auth-divider {
+            text-align: center;
+            margin: 24px 0;
+            position: relative;
+            color: var(--text-muted);
+            font-size: 14px;
+        }
+        
+        .auth-divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: var(--border-light);
+        }
+        
+        .auth-divider span {
+            background: var(--bg-card);
+            padding: 0 16px;
+        }
+        
+        .auth-links {
+            text-align: center;
+        }
+        
+        .auth-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            transition: color 0.2s ease;
+        }
+        
+        .auth-link:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+        
+        .forgot-password {
+            text-align: center;
+            margin-top: 16px;
+        }
+        
+        .forgot-password a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .forgot-password a:hover {
+            color: var(--accent-primary);
+            text-decoration: underline;
+        }
+        
+        /* 마이페이지 그리드 */
+        .mypage-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+        
+        /* 마이페이지 카드 */
+        .mypage-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 32px;
+            transition: all 0.2s ease;
+        }
+        
+        .mypage-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 8px 24px var(--shadow-card);
+        }
+        
+        .mypage-card-header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 24px;
+            font-weight: 600;
+            font-size: 18px;
+            margin: -32px -32px 24px -32px;
+            border-radius: 16px 16px 0 0;
+        }
+        
+        /* 요약 정보 스타일 */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-bottom: 32px;
+        }
+        
+        .summary-item {
+            text-align: center;
+            padding: 20px;
+            background: var(--bg-section);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+        }
+        
+        .summary-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--accent-primary);
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        .summary-label {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        /* 활동 목록 스타일 */
+        .activity-section {
+            margin-bottom: 24px;
+        }
+        
+        .activity-section h4 {
+            color: var(--accent-primary);
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .activity-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--bg-section);
+            border-radius: 8px;
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 8px;
+        }
+        
+        .activity-item:hover {
+            border-color: var(--accent-primary);
+            background: var(--bg-hover);
+        }
+        
+        .activity-name {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        .activity-count {
+            color: var(--accent-primary);
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .activity-action {
+            color: var(--text-muted);
+            font-size: 12px;
+            font-weight: 400;
+        }
+        
+        .loading {
+            color: var(--accent-primary);
+            font-size: 12px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        /* 상세 목록 스타일 */
+        .detail-list {
+            margin-top: 12px;
+            padding-left: 16px;
+            border-left: 3px solid var(--accent-primary);
+            background: var(--bg-section);
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .detail-item {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+        
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-item:hover {
+            background: var(--bg-hover);
+        }
+        
+        .detail-title {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 14px;
+            margin-bottom: 4px;
+        }
+        
+        .detail-meta {
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        
+        /* 내 정보 카드 스타일 */
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            font-size: 14px;
+            min-width: 80px;
+        }
+        
+        .info-content {
+            flex: 1;
+            margin: 0 16px;
+        }
+        
+        .info-value {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .info-detail {
+            color: var(--text-muted);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+        
+        .btn-change {
+            padding: 8px 16px;
+            border: 1px solid var(--accent-primary);
+            border-radius: 6px;
+            background: transparent;
+            color: var(--accent-primary);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .btn-change:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .btn-edit-profile {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 8px;
+            background: var(--accent-primary);
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-top: 24px;
+        }
+        
+        .btn-edit-profile:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        
+        /* 보안 설정 링크 */
+        .security-links {
+            display: flex;
+            justify-content: center;
+            gap: 24px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .security-link {
+            color: var(--text-muted);
+            font-size: 12px;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        
+        .security-link:hover {
+            color: var(--accent-primary);
+            text-decoration: underline;
+        }
+        
+        /* Tab Navigation */
+        .tab-nav {
+            display: flex;
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            padding: 8px;
+            margin-bottom: 24px;
+            gap: 8px;
+        }
+        
+        .tab-btn {
+            flex: 1;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .tab-btn:hover,
+        .tab-btn.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Card Components */
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+        
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+        
+        .card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 8px 24px var(--shadow-card);
+            transform: translateY(-4px);
+        }
+        
+        .card-header {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            color: white;
+            padding: 24px;
+            font-weight: 600;
+            font-size: 18px;
+        }
+        
+        .card-body {
+            padding: 24px;
+        }
+        
+        .card-title {
+            color: var(--text-primary);
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        
+        .card-text {
+            color: var(--text-secondary);
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        
+        /* 액션 그룹 스타일 */
+        .action-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+        
+        .action-group .btn-write {
+            background: var(--bg-section);
+            color: var(--accent-primary);
+            border: 1px solid #D4E8C4;
+            padding: 12px 24px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 0;
+            width: 280px;
+        }
+        
+        .action-group .btn-write:hover {
+            background: var(--accent-primary);
+            color: white;
+            border-color: var(--accent-primary);
+        }
+        
+        .search-container {
+            background: var(--bg-section);
+            border: 1px solid #D4E8C4;
+            border-radius: 20px;
+            padding: 12px 16px;
+            width: 280px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: border-color 0.2s ease;
+        }
+        
+        .search-container:focus-within {
+            border-color: var(--accent-primary);
+        }
+        
+        .search-input {
+            border: none;
+            background: transparent;
+            flex: 1;
+            outline: none;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+        
+        .search-input::placeholder {
+            color: var(--text-muted);
+        }
+        
+        /* Buttons */
+        .btn {
+            padding: 16px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn-primary {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: var(--accent-hover);
+            transform: translateY(-2px);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            color: var(--accent-primary);
+            border: 2px solid var(--accent-primary);
+        }
+        
+        .btn-outline:hover {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 8px 12px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .badge-important {
+            background: #FF4D4F;
+            color: white;
+        }
+        
+        .badge-new {
+            background: #1890FF;
+            color: white;
+        }
+        
+        .badge-verified {
+            background: #52C41A;
+            color: white;
+        }
+        
+        /* Post Tags */
+        .post-tag {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            margin-right: 8px;
+        }
+        
+        .post-tag.info {
+            background: #E6F7FF;
+            color: #1890FF;
+        }
+        
+        .post-tag.life {
+            background: #F6FFED;
+            color: #52C41A;
+        }
+        
+        .post-tag.story {
+            background: #FFF2E8;
+            color: #FA8C16;
+        }
+        
+        /* Post Stats */
+        .post-stats {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            color: var(--text-muted);
+            font-size: 13px;
+        }
+        
+        .stat-icon {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        /* Tags */
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        
+        .tag {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            background: var(--bg-hover);
+            color: #556B2F;
+            border: 1px solid #D4E8C4;
+        }
+        
+        /* Post List */
+        .post-list {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+        
+        .post-item {
+            padding: 20px 0;
+            border-bottom: 1px solid var(--border-light);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .post-item:last-child {
+            border-bottom: none;
+        }
+        
+        .post-content {
+            flex: 1;
+        }
+        
+        .post-title {
+            color: var(--text-primary);
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .post-meta {
+            color: var(--text-muted);
+            font-size: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        /* Filter Bar */
+        .filter-bar {
+            background: var(--bg-card);
+            padding: 24px;
+            border-radius: 16px;
+            margin-bottom: 24px;
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-label {
+            color: var(--text-primary);
+            font-weight: 600;
+            margin-right: 8px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-btn:hover,
+        .filter-btn.active {
+            border-color: var(--accent-primary);
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        /* Info Section */
+        .info-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 32px;
+            margin-bottom: 24px;
+        }
+        
+        .info-title {
+            color: var(--text-primary);
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+            border-bottom: 2px solid var(--accent-primary);
+            padding-bottom: 16px;
+        }
+        
+        .info-item {
+            margin-bottom: 24px;
+        }
+        
+        .info-item h3 {
+            color: #556B2F;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        
+        .info-item p {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        /* Service Provider Card */
+        .provider-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            transition: all 0.2s ease;
+        }
+        
+        .provider-card:hover {
+            border-color: var(--accent-primary);
+            box-shadow: 0 8px 24px var(--shadow-card);
+        }
+        
+        .provider-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 16px;
+        }
+        
+        .provider-name {
+            color: var(--text-primary);
+            font-size: 20px;
+            font-weight: 700;
+        }
+        
+        .provider-category {
+            background: var(--accent-primary);
+            color: white;
+            padding: 6px 16px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .provider-services {
+            margin-bottom: 20px;
+        }
+        
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        .service-item:last-child {
+            border-bottom: none;
+        }
+        
+        .service-name {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        
+        .service-price {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+        }
+        
+        .original-price {
+            color: var(--text-muted);
+            text-decoration: line-through;
+            font-size: 14px;
+        }
+        
+        .discount-price {
+            color: #FF4D4F;
+            font-size: 16px;
+        }
+        
+        .provider-contact {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .contact-info {
+            display: flex;
+            gap: 16px;
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        /* Provider Stats */
+        .provider-stats {
+            display: flex;
+            gap: 20px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .stat-item {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        /* 게시판 전용 글쓰기 버튼 */
+        .board-write-button {
+            display: block;
+        }
+        
+        #board:not(.active) .board-write-button,
+        .page:not(#board) .board-write-button {
+            display: none !important;
+        }
+        
+        /* 필터 버튼 바 */
+        .filter-bar-buttons {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .filter-btn {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+        
+        .filter-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+        
+        .filter-btn.active {
+            border-color: var(--accent-primary);
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        /* 정렬 옵션 */
+        .sort-options {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .sort-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+        
+        .sort-select {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            outline: none;
+        }
+        
+        .sort-select:hover,
+        .sort-select:focus {
+            border-color: var(--accent-primary);
+        }
+        
+        /* 전문가 팁 통계 */
+        .tip-stats {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border-light);
+        }
+        
+        .tip-date {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        .tip-stats-right {
+            display: flex;
+            gap: 12px;
+        }
+        
+        .tip-stat {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        /* 스크롤 컨테이너 */
+        .posts-scroll-container {
+            position: relative;
+            height: 420px; /* 고정 높이 */
+            overflow-y: auto;
+            overflow-x: hidden;
+            border: 1px solid var(--border-light);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+        
+        /* 스크롤바 스타일링 */
+        .posts-scroll-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .posts-scroll-container::-webkit-scrollbar-track {
+            background: var(--border-light);
+            border-radius: 4px;
+        }
+        
+        .posts-scroll-container::-webkit-scrollbar-thumb {
+            background: var(--accent-primary);
+            border-radius: 4px;
+        }
+        
+        .posts-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-hover);
+        }
+        
+        /* 페이드 그라디언트 */
+        .fade-gradient {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 40px;
+            background: linear-gradient(transparent, var(--bg-card));
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            border-radius: 0 0 12px 12px;
+        }
+        
+        .fade-gradient.hidden {
+            opacity: 0;
+        }
+        
+        /* 스크롤 인디케이터 */
+        .scroll-indicator {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 0 4px;
+        }
+        
+        .scroll-progress {
+            width: 200px;
+            height: 4px;
+            background: var(--border-light);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .scroll-progress-bar {
+            height: 100%;
+            background: var(--accent-primary);
+            border-radius: 2px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        #scroll-counter {
+            font-size: 14px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+        
+        /* 스크롤 힌트 */
+        .scroll-hint {
+            text-align: center;
+            padding: 12px;
+            background: var(--bg-hover);
+            color: #556B2F;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: opacity 0.3s ease;
+        }
+        
+        .scroll-hint.hidden {
+            opacity: 0;
+        }
+        
+        /* 게시글 아이템 컴팩트 스타일 */
+        #posts-container .post-item {
+            padding: 14px 16px;
+            margin: 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+        
+        #posts-container .post-item:last-child {
+            border-bottom: none;
+        }
+        
+        #posts-container .post-title {
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+        
+        #posts-container .post-meta {
+            font-size: 13px;
+        }
+        
+        #posts-container .post-stats {
+            gap: 10px;
+        }
+        
+        #posts-container .stat-icon {
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-top">
+            <div class="logo">xai</div>
+            <div class="user-info">
+                <button class="theme-toggle" onclick="toggleTheme()">🌙 다크모드</button>
+                <span id="user-display" style="display: none;">홍길동님 (101동 1502호)</span>
+                <span id="auth-links">
+                    <a href="#" onclick="showPage('login')" style="color: white; text-decoration: none; margin-right: 16px;">로그인</a>
+                    <a href="#" onclick="showPage('signup')" style="color: white; text-decoration: none;">회원가입</a>
+                </span>
+                <span id="logout-link" style="display: none;">
+                    <a href="#" onclick="logout()" style="color: white; text-decoration: none;">로그아웃</a>
+                </span>
+            </div>
+        </div>
+        <nav class="nav-horizontal" id="main-nav">
+            <a href="#" class="nav-item" onclick="showPage('board')">게시판</a>
+            <a href="#" class="nav-item" onclick="showPage('info')">정보</a>
+            <a href="#" class="nav-item" onclick="showPage('services')">입주 업체 서비스</a>
+            <a href="#" class="nav-item" onclick="showPage('tips')">전문가 꿀정보</a>
+            <a href="#" class="nav-item" onclick="showPage('userinfo')">회원 정보</a>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main">
+        <!-- 로그인 페이지 -->
+        <div id="login" class="page">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h1 class="auth-title">로그인</h1>
+                    <p class="auth-subtitle">XAI 아파트 커뮤니티에 오신 것을 환영합니다</p>
+                </div>
+                
+                <form id="loginForm" onsubmit="handleLogin(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="loginEmail">이메일</label>
+                        <input type="email" id="loginEmail" class="form-input" placeholder="이메일을 입력하세요" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="loginPassword">비밀번호</label>
+                        <input type="password" id="loginPassword" class="form-input" placeholder="비밀번호를 입력하세요" required>
+                    </div>
+                    
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="rememberMe">
+                        <label for="rememberMe">로그인 상태 유지</label>
+                    </div>
+                    
+                    <button type="submit" class="btn-auth">로그인</button>
+                </form>
+                
+                <div class="forgot-password">
+                    <a href="#" onclick="showForgotPassword()">비밀번호를 잊으셨나요?</a>
+                </div>
+                
+                <div class="auth-divider">
+                    <span>또는</span>
+                </div>
+                
+                <div class="auth-links">
+                    <span style="color: var(--text-muted);">계정이 없으신가요? </span>
+                    <a href="#" class="auth-link" onclick="showPage('signup')">회원가입</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 회원가입 페이지 -->
+        <div id="signup" class="page">
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h1 class="auth-title">회원가입</h1>
+                    <p class="auth-subtitle">새로운 계정을 만들어주세요</p>
+                </div>
+                
+                <!-- 이메일 인증 단계 -->
+                <div id="emailVerificationStep">
+                    <form id="emailVerifyForm" onsubmit="handleEmailVerification(event)">
+                        <div class="form-group">
+                            <label class="form-label" for="verifyEmail">이메일</label>
+                            <input type="email" id="verifyEmail" class="form-input" placeholder="이메일을 입력하세요" required>
+                        </div>
+                        
+                        <div class="form-checkbox">
+                            <input type="checkbox" id="agreeTermsEmail" required>
+                            <label for="agreeTermsEmail">이용약관 및 개인정보 처리방침에 동의합니다</label>
+                        </div>
+                        
+                        <button type="submit" class="btn-auth" id="sendVerificationBtn">인증 이메일 발송</button>
+                    </form>
+                </div>
+                
+                <!-- 인증 코드 입력 단계 -->
+                <div id="codeVerificationStep" style="display: none;">
+                    <div class="verification-info">
+                        <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 20px; text-align: center;">
+                            <span id="sentEmailAddress"></span>로<br>
+                            인증 코드가 발송되었습니다.
+                        </p>
+                    </div>
+                    
+                    <form id="codeVerifyForm" onsubmit="handleCodeVerification(event)">
+                        <div class="form-group">
+                            <label class="form-label" for="verificationCode">인증 코드</label>
+                            <input type="text" id="verificationCode" class="form-input" placeholder="6자리 인증 코드를 입력하세요" required maxlength="6">
+                        </div>
+                        
+                        <button type="submit" class="btn-auth">인증 확인</button>
+                        
+                        <div style="text-align: center; margin-top: 16px;">
+                            <button type="button" class="auth-link" onclick="resendVerificationCode()" style="background: none; border: none; cursor: pointer;">
+                                인증 코드 재발송
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- 계정 정보 입력 단계 -->
+                <div id="accountInfoStep" style="display: none;">
+                    <div class="verification-success">
+                        <p style="color: var(--accent-primary); font-size: 14px; margin-bottom: 20px; text-align: center;">
+                            ✅ 이메일 인증이 완료되었습니다!
+                        </p>
+                    </div>
+                    
+                    <form id="signupForm" onsubmit="handleSignup(event)">
+                        <div class="form-group">
+                            <label class="form-label" for="signupId">아이디</label>
+                            <input type="text" id="signupId" class="form-input" placeholder="아이디를 입력하세요" required>
+                            <small style="color: var(--text-muted); font-size: 12px;">기본값: 이메일 주소</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="signupPassword">비밀번호</label>
+                            <input type="password" id="signupPassword" class="form-input" placeholder="8자 이상 입력하세요" required minlength="8">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label" for="signupPasswordConfirm">비밀번호 확인</label>
+                            <input type="password" id="signupPasswordConfirm" class="form-input" placeholder="비밀번호를 다시 입력하세요" required>
+                        </div>
+                        
+                        <button type="submit" class="btn-auth">회원가입 완료</button>
+                    </form>
+                </div>
+                
+                <div class="auth-divider">
+                    <span>또는</span>
+                </div>
+                
+                <div class="auth-links">
+                    <span style="color: var(--text-muted);">이미 계정이 있으신가요? </span>
+                    <a href="#" class="auth-link" onclick="showPage('login')">로그인</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 1. 게시판 페이지 -->
+        <div id="board" class="page active">
+            <!-- 글쓰기 + 검색 액션 그룹 -->
+            <div class="action-group">
+                <button class="btn-write" onclick="showWritePage()">✏️ 글쓰기</button>
+                <div class="search-container">
+                    <span>🔍</span>
+                    <input type="text" class="search-input" placeholder="게시글 검색..." onkeypress="handleSearch(event)">
+                </div>
+            </div>
+            
+            <!-- 필터바와 정렬 옵션 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <!-- 필터 바 -->
+                <div class="filter-bar-buttons">
+                    <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">전체</button>
+                    <button class="filter-btn" data-filter="info" onclick="setFilter('info')">입주 정보</button>
+                    <button class="filter-btn" data-filter="life" onclick="setFilter('life')">생활 정보</button>
+                    <button class="filter-btn" data-filter="story" onclick="setFilter('story')">이야기</button>
+                </div>
+                <!-- 정렬 옵션 -->
+                <div class="sort-options">
+                    <span class="sort-label">정렬:</span>
+                    <select id="sort-select" class="sort-select" onchange="sortPosts()">
+                        <option value="latest">최신순</option>
+                        <option value="views">조회수</option>
+                        <option value="likes">추천수</option>
+                        <option value="comments">댓글수</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 자유게시판 -->
+            <div class="post-list">
+                <!-- 스크롤 인디케이터 -->
+                <div class="scroll-indicator">
+                    <span id="scroll-counter">1-7 / 15개 게시글</span>
+                    <div class="scroll-progress">
+                        <div class="scroll-progress-bar" id="progress-bar"></div>
+                    </div>
+                </div>
+                
+                <!-- 게시글 컨테이너 (고정 높이) -->
+                <div class="posts-scroll-container" id="posts-scroll-container">
+                    <div id="posts-container">
+                        <!-- 게시글들이 여기에 동적으로 로드됩니다 -->
+                    </div>
+                    <!-- 페이드 그라디언트 오버레이 -->
+                    <div class="fade-gradient" id="fade-gradient"></div>
+                </div>
+                
+                <!-- 하단 안내 배너 -->
+                <div class="scroll-hint" id="scroll-hint">
+                    👇 아래로 스크롤하여 더 많은 게시글을 확인하세요
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. 정보 페이지 -->
+        <div id="info" class="page">
+            <!-- 검색 기능 -->
+            <div style="text-align: center; margin-bottom: 24px;">
+                <div class="search-container" style="margin: 0 auto;">
+                    <span>🔍</span>
+                    <input type="text" class="search-input" placeholder="정보 검색..." onkeypress="handleInfoSearch(event)">
+                </div>
+            </div>
+            
+            <!-- 필터바와 정렬 옵션 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <!-- 필터 바 -->
+                <div class="filter-bar-buttons">
+                    <button class="filter-btn active" data-filter="all" onclick="setInfoFilter('all')">전체</button>
+                    <button class="filter-btn" data-filter="tag1" onclick="setInfoFilter('tag1')">태그1</button>
+                    <button class="filter-btn" data-filter="tag2" onclick="setInfoFilter('tag2')">태그2</button>
+                    <button class="filter-btn" data-filter="tag3" onclick="setInfoFilter('tag3')">태그3</button>
+                </div>
+                <!-- 정렬 옵션 -->
+                <div class="sort-options">
+                    <span class="sort-label">정렬:</span>
+                    <select id="info-sort-select" class="sort-select" onchange="sortInfoPosts()">
+                        <option value="latest">최신순</option>
+                        <option value="views">조회수</option>
+                        <option value="likes">추천수</option>
+                        <option value="comments">댓글수</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 정보 게시판 -->
+            <div class="post-list">
+                <!-- 스크롤 인디케이터 -->
+                <div class="scroll-indicator">
+                    <span id="info-scroll-counter">1-5 / 8개 정보</span>
+                    <div class="scroll-progress">
+                        <div class="scroll-progress-bar" id="info-progress-bar"></div>
+                    </div>
+                </div>
+                
+                <!-- 정보 컨테이너 (고정 높이) -->
+                <div class="posts-scroll-container" id="info-scroll-container">
+                    <div id="info-posts-container">
+                        <!-- 정보들이 여기에 동적으로 로드됩니다 -->
+                    </div>
+                    <!-- 페이드 그라디언트 오버레이 -->
+                    <div class="fade-gradient" id="info-fade-gradient"></div>
+                </div>
+                
+                <!-- 하단 안내 배너 -->
+                <div class="scroll-hint" id="info-scroll-hint">
+                    👇 아래로 스크롤하여 더 많은 정보를 확인하세요
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. 입주 업체 서비스 페이지 -->
+        <div id="services" class="page">
+            <!-- 필터 바와 정렬 옵션 -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+                <!-- 필터 바 -->
+                <div class="filter-bar-buttons">
+                    <button class="filter-btn active" data-filter="all" onclick="setProviderFilter('all')">전체</button>
+                    <button class="filter-btn" data-filter="cleaning" onclick="setProviderFilter('cleaning')">청소</button>
+                    <button class="filter-btn" data-filter="interior" onclick="setProviderFilter('interior')">인테리어</button>
+                    <button class="filter-btn" data-filter="delivery" onclick="setProviderFilter('delivery')">택배/배송</button>
+                    <button class="filter-btn" data-filter="pet" onclick="setProviderFilter('pet')">반려동물</button>
+                    <button class="filter-btn" data-filter="etc" onclick="setProviderFilter('etc')">기타</button>
+                </div>
+                <!-- 정렬 옵션 -->
+                <div class="sort-options">
+                    <span class="sort-label">정렬:</span>
+                    <select id="provider-sort-select" class="sort-select" onchange="sortProviders()">
+                        <option value="interest">관심순</option>
+                        <option value="reviews">후기순</option>
+                        <option value="rating">평점순</option>
+                        <option value="inquiry">문의순</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 업체 목록 -->
+            <div class="card-grid" id="providers-container">
+                <!-- 업체들이 여기에 동적으로 로드됩니다 -->
+            </div>
+        </div>
+
+        <!-- 4. 전문가 꿀정보 페이지 -->
+        <div id="tips" class="page">
+            <!-- 필터 바 -->
+            <div class="filter-bar">
+                <span class="filter-label">카테고리:</span>
+                <button class="filter-btn active">전체</button>
+                <button class="filter-btn">청소/정리</button>
+                <button class="filter-btn">인테리어</button>
+                <button class="filter-btn">생활</button>
+                <button class="filter-btn">절약</button>
+                <button class="filter-btn">원예</button>
+            </div>
+
+            <!-- 팁 목록 -->
+            <div class="card-grid">
+                <div class="card" onclick="showTipDetail(3)">
+                    <div class="card-header">클린 라이프 🌱 원예 전문가 김○○</div>
+                    <div class="card-body">
+                        <div class="card-title">겨울철 실내 화분 관리법<span class="badge badge-new">NEW</span></div>
+                        <div class="card-text">
+                            실내 온도와 습도 조절을 통한 효과적인 식물 관리 방법을 알려드립니다. 겨울철 특히 주의해야 할 포인트들을 정리했습니다.
+                        </div>
+                        <div class="tag-container">
+                            <span class="tag">#실내화분</span>
+                            <span class="tag">#겨울관리</span>
+                            <span class="tag">#습도조절</span>
+                        </div>
+                        <div class="tip-stats">
+                            <div class="tip-date">2일 전</div>
+                            <div class="tip-stats-right">
+                                <span class="tip-stat">👁️ 245</span>
+                                <span class="tip-stat">👍 32</span>
+                                <span class="tip-stat">📌 18</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" onclick="showTipDetail(4)">
+                    <div class="card-header">하우스키퍼 🧹 청소 전문가 박○○</div>
+                    <div class="card-body">
+                        <div class="card-title">아파트 곰팡이 예방법</div>
+                        <div class="card-text">
+                            습도가 높은 계절에 발생하기 쉬운 곰팡이를 예방하는 실용적인 방법들을 소개합니다. 천연 재료로도 가능한 방법들이 있어요.
+                        </div>
+                        <div class="tag-container">
+                            <span class="tag">#곰팡이예방</span>
+                            <span class="tag">#천연재료</span>
+                            <span class="tag">#습도관리</span>
+                        </div>
+                        <div class="tip-stats">
+                            <div class="tip-date">3일 전</div>
+                            <div class="tip-stats-right">
+                                <span class="tip-stat">👁️ 189</span>
+                                <span class="tip-stat">👍 28</span>
+                                <span class="tip-stat">📌 15</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" onclick="showTipDetail(5)">
+                    <div class="card-header">스마트홈 💡 생활 전문가 이○○</div>
+                    <div class="card-body">
+                        <div class="card-title">전기요금 절약하는 10가지 방법</div>
+                        <div class="card-text">
+                            아파트 생활에서 실제로 효과가 있는 전기요금 절약 노하우를 공유합니다. 월 10만원 이상 절약도 가능해요!
+                        </div>
+                        <div class="tag-container">
+                            <span class="tag">#전기요금절약</span>
+                            <span class="tag">#생활비절약</span>
+                            <span class="tag">#에너지효율</span>
+                        </div>
+                        <div class="tip-stats">
+                            <div class="tip-date">1주일 전</div>
+                            <div class="tip-stats-right">
+                                <span class="tip-stat">👁️ 456</span>
+                                <span class="tip-stat">👍 67</span>
+                                <span class="tip-stat">📌 34</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" onclick="showTipDetail(6)">
+                    <div class="card-header">모던스페이스 🎨 인테리어 전문가 최○○</div>
+                    <div class="card-body">
+                        <div class="card-title">좁은 공간 넓어 보이게 하는 인테리어</div>
+                        <div class="card-text">
+                            작은 평수도 넓고 쾌적하게 꾸밀 수 있는 인테리어 팁들을 소개합니다. 색상과 조명 활용법이 핵심입니다.
+                        </div>
+                        <div class="tag-container">
+                            <span class="tag">#공간활용</span>
+                            <span class="tag">#색상조합</span>
+                            <span class="tag">#조명인테리어</span>
+                        </div>
+                        <div class="tip-stats">
+                            <div class="tip-date">1주일 전</div>
+                            <div class="tip-stats-right">
+                                <span class="tip-stat">👁️ 312</span>
+                                <span class="tip-stat">👍 45</span>
+                                <span class="tip-stat">📌 22</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">퍼펙트클린 🧼 청소 전문가 정○○</div>
+                    <div class="card-body">
+                        <div class="card-title">에어컨 필터 청소 완벽 가이드</div>
+                        <div class="card-text">
+                            에어컨 필터를 제대로 청소하는 방법과 주기, 필요한 도구들을 상세히 설명해드립니다. 전기요금 절약 효과도 얻을 수 있어요.
+                        </div>
+                        <div class="tag-container">
+                            <span class="tag">#에어컨청소</span>
+                            <span class="tag">#필터청소</span>
+                            <span class="tag">#전기요금절약</span>
+                        </div>
+                        <div class="tip-stats">
+                            <div class="tip-date">2주일 전</div>
+                            <div class="tip-stats-right">
+                                <span class="tip-stat">👁️ 378</span>
+                                <span class="tip-stat">👍 52</span>
+                                <span class="tip-stat">📌 29</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">그린가든 🍀 원예 전문가 한○○</div>
+                    <div class="card-body">
+                        <div class="card-title">베란다 텃밭 만들기 A to Z</div>
+                        <div class="card-text">
+                            아파트 베란다에서도 충분히 키울 수 있는 채소들과 관리 방법을 소개합니다. 초보자도 쉽게 따라할 수 있는 실용적인 팁들이에요.
+                        </div>
+                        <div class="tag-container">
+                            <span class="tag">#베란다텃밭</span>
+                            <span class="tag">#채소재배</span>
+                            <span class="tag">#초보자가이드</span>
+                        </div>
+                        <div class="tip-stats">
+                            <div class="tip-date">3주일 전</div>
+                            <div class="tip-stats-right">
+                                <span class="tip-stat">👁️ 267</span>
+                                <span class="tip-stat">👍 39</span>
+                                <span class="tip-stat">📌 21</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. 회원 정보 (구 마이페이지) -->
+        <div id="userinfo" class="page">
+            <div class="mypage-grid">
+                <!-- 내 정보 카드 -->
+                <div class="mypage-card">
+                    <div class="mypage-card-header">👤 내 정보</div>
+                    
+                    <!-- 계정 정보 -->
+                    <div class="profile-info">
+                        <div class="info-row">
+                            <div class="info-label">아이디</div>
+                            <div class="info-content">
+                                <div class="info-value">hong_gildong</div>
+                                <div class="info-detail">로그인에 사용되는 아이디</div>
+                            </div>
+                            <button class="btn-change" onclick="changeUserId()">변경</button>
+                        </div>
+                        
+                        <div class="info-row">
+                            <div class="info-label">이메일</div>
+                            <div class="info-content">
+                                <div class="info-value">hong@email.com</div>
+                                <div class="info-detail">알림 및 계정 복구용 이메일</div>
+                            </div>
+                            <button class="btn-change" onclick="changeEmail()">변경</button>
+                        </div>
+                        
+                        <div class="info-row">
+                            <div class="info-label">비밀번호</div>
+                            <div class="info-content">
+                                <div class="info-value">••••••••</div>
+                                <div class="info-detail">마지막 변경: 2024년 10월 15일</div>
+                            </div>
+                            <button class="btn-change" onclick="changePassword()">변경</button>
+                        </div>
+                    </div>
+                    
+                    <!-- 전체 프로필 수정 버튼 -->
+                    <button class="btn-edit-profile" onclick="editProfile()">수정</button>
+                    
+                    <!-- 보안 설정 링크 -->
+                    <div class="security-links">
+                        <a href="#" class="security-link" onclick="showLoginHistory()">로그인 기록</a>
+                        <a href="#" class="security-link" onclick="show2FA()">2단계 인증</a>
+                        <a href="#" class="security-link" onclick="showPrivacySettings()">개인정보 설정</a>
+                    </div>
+                </div>
+
+                <!-- 내 활동 카드 -->
+                <div class="mypage-card">
+                    <div class="mypage-card-header">📊 내 활동</div>
+                    
+                    <!-- 요약 정보 -->
+                    <div class="summary-grid">
+                        <div class="summary-item">
+                            <span class="summary-number">2</span>
+                            <div class="summary-label">총 작성 글</div>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number">8</span>
+                            <div class="summary-label">총 반응</div>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number">15</span>
+                            <div class="summary-label">받은 추천</div>
+                        </div>
+                        <div class="summary-item">
+                            <span class="summary-number">3일</span>
+                            <div class="summary-label">연속 활동</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 탭 네비게이션 -->
+                    <div class="tab-nav">
+                        <button class="tab-btn active" onclick="showMypageTab('write')">✏️ 작성</button>
+                        <button class="tab-btn" onclick="showMypageTab('reaction')">👍 반응</button>
+                    </div>
+                    
+                    <!-- 작성 탭 -->
+                    <div class="tab-content active" id="activity-write-tab">
+                        <div class="activity-section">
+                            <h4>📝 게시판</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('board-posts', this)">
+                                <span class="activity-name">📝 글</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('board-comments', this)">
+                                <span class="activity-name">💬 댓글</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-section">
+                            <h4>📋 정보</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('info-posts', this)">
+                                <span class="activity-name">📝 글</span>
+                                <span class="activity-count">
+                                    0개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('info-comments', this)">
+                                <span class="activity-name">💬 댓글</span>
+                                <span class="activity-count">
+                                    2개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-section">
+                            <h4>🏢 입주 업체 서비스</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('service-inquiries', this)">
+                                <span class="activity-name">❓ 문의</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('service-reviews', this)">
+                                <span class="activity-name">⭐ 후기</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-section">
+                            <h4>💡 전문가 꿀정보</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('tips-posts', this)">
+                                <span class="activity-name">📝 글</span>
+                                <span class="activity-count">
+                                    0개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('tips-comments', this)">
+                                <span class="activity-name">💬 댓글</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 반응 탭 -->
+                    <div class="tab-content" id="activity-reaction-tab">
+                        <div class="activity-section">
+                            <h4>📝 게시판</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('board-likes', this)">
+                                <span class="activity-name">👍 추천</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('board-dislikes', this)">
+                                <span class="activity-name">👎 비추천</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('board-saves', this)">
+                                <span class="activity-name">📌 저장</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-section">
+                            <h4>📋 정보</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('info-likes', this)">
+                                <span class="activity-name">👍 추천</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('info-saves', this)">
+                                <span class="activity-name">📌 저장</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-section">
+                            <h4>🏢 입주 업체 서비스</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('service-interests', this)">
+                                <span class="activity-name">❤️ 관심</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="activity-section">
+                            <h4>💡 전문가 꿀정보</h4>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('tips-likes', this)">
+                                <span class="activity-name">👍 추천</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                            
+                            <div class="activity-item" onclick="loadActivityDetail('tips-saves', this)">
+                                <span class="activity-name">📌 저장</span>
+                                <span class="activity-count">
+                                    1개 
+                                    <span class="activity-action">보기</span>
+                                    <span class="loading hidden">로딩중...</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. 글쓰기 페이지 -->
+        <div id="write" class="page">
+            <div class="auth-container" style="max-width: 800px;">
+                <div class="auth-header">
+                    <h1 class="auth-title">✏️ 글쓰기</h1>
+                    <p class="auth-subtitle">커뮤니티에 새로운 글을 작성해보세요</p>
+                </div>
+                
+                <form id="writeForm" onsubmit="handleWritePost(event)">
+                    <div class="form-group">
+                        <label class="form-label" for="writeCategory">카테고리</label>
+                        <select id="writeCategory" class="form-input" required>
+                            <option value="">카테고리를 선택하세요</option>
+                            <option value="info">입주 정보</option>
+                            <option value="life">생활 정보</option>
+                            <option value="story">이야기</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="writeTitle">제목</label>
+                        <input type="text" id="writeTitle" class="form-input" placeholder="제목을 입력하세요" required maxlength="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="writeContent">내용</label>
+                        <textarea id="writeContent" class="form-input" placeholder="내용을 입력하세요" required 
+                                  style="min-height: 300px; resize: vertical;"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label" for="writeTags">태그 (선택)</label>
+                        <input type="text" id="writeTags" class="form-input" placeholder="#태그1 #태그2 #태그3">
+                        <small style="color: var(--text-muted); font-size: 12px;">태그는 #으로 구분하여 입력하세요</small>
+                    </div>
+                    
+                    <div class="form-checkbox">
+                        <input type="checkbox" id="agreePost" required>
+                        <label for="agreePost">커뮤니티 가이드라인에 동의합니다</label>
+                    </div>
+                    
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn-auth" onclick="showPage('board')" 
+                                style="background: var(--text-muted); flex: 1;">취소</button>
+                        <button type="submit" class="btn-auth" style="flex: 2;">글 작성하기</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 로그인 상태 관리
+        let isLoggedIn = false;
+        let currentUser = null;
+
+        // 다크 모드 토글
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeToggle.innerHTML = '🌙 다크모드';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeToggle.innerHTML = '☀️ 라이트모드';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // 페이지 로드 시 테마 복원
+        function initializeTheme() {
+            const savedTheme = localStorage.getItem('theme');
+            const themeToggle = document.querySelector('.theme-toggle');
+            
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                themeToggle.innerHTML = '☀️ 라이트모드';
+            } else {
+                themeToggle.innerHTML = '🌙 다크모드';
+            }
+        }
+
+        // 로그인 처리
+        function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            // 간단한 인증 (실제로는 서버에서 처리)
+            if (email && password) {
+                // 로그인 성공 시뮬레이션
+                isLoggedIn = true;
+                currentUser = {
+                    email: email,
+                    name: '홍길동',
+                    building: '101동',
+                    unit: '1502호'
+                };
+                
+                // UI 업데이트
+                updateLoginUI();
+                showPage('board');
+                
+                alert('로그인되었습니다!');
+            } else {
+                alert('이메일과 비밀번호를 입력해주세요.');
+            }
+        }
+
+        // 이메일 인증 관련 변수
+        let verificationEmail = '';
+        let verificationCode = '';
+        let isEmailVerified = false;
+
+        // 이메일 인증 처리
+        function handleEmailVerification(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('verifyEmail').value;
+            const agreeTerms = document.getElementById('agreeTermsEmail').checked;
+            
+            if (!agreeTerms) {
+                alert('이용약관에 동의해주세요.');
+                return;
+            }
+            
+            // 이메일 형식 검증
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(email)) {
+                alert('올바른 이메일 형식을 입력해주세요.');
+                return;
+            }
+            
+            // 인증 코드 생성 (실제로는 서버에서 처리)
+            verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+            verificationEmail = email;
+            
+            // UI 업데이트
+            document.getElementById('emailVerificationStep').style.display = 'none';
+            document.getElementById('codeVerificationStep').style.display = 'block';
+            document.getElementById('sentEmailAddress').textContent = email;
+            
+            // 시뮬레이션: 실제로는 서버에서 이메일 발송
+            alert(`인증 코드가 ${email}로 발송되었습니다.\n\n[개발용 인증 코드: ${verificationCode}]`);
+        }
+
+        // 인증 코드 확인
+        function handleCodeVerification(event) {
+            event.preventDefault();
+            
+            const inputCode = document.getElementById('verificationCode').value;
+            
+            if (inputCode === verificationCode) {
+                isEmailVerified = true;
+                
+                // 계정 정보 입력 단계로 이동
+                document.getElementById('codeVerificationStep').style.display = 'none';
+                document.getElementById('accountInfoStep').style.display = 'block';
+                
+                // 아이디 필드에 이메일 기본값 설정
+                document.getElementById('signupId').value = verificationEmail;
+                
+                alert('이메일 인증이 완료되었습니다!');
+            } else {
+                alert('인증 코드가 올바르지 않습니다. 다시 확인해주세요.');
+            }
+        }
+
+        // 인증 코드 재발송
+        function resendVerificationCode() {
+            // 새로운 인증 코드 생성
+            verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            alert(`인증 코드가 ${verificationEmail}로 재발송되었습니다.\n\n[개발용 인증 코드: ${verificationCode}]`);
+        }
+
+        // 회원가입 처리 (수정된 버전)
+        function handleSignup(event) {
+            event.preventDefault();
+            
+            if (!isEmailVerified) {
+                alert('이메일 인증을 먼저 완료해주세요.');
+                return;
+            }
+            
+            const userId = document.getElementById('signupId').value;
+            const password = document.getElementById('signupPassword').value;
+            const passwordConfirm = document.getElementById('signupPasswordConfirm').value;
+            
+            // 유효성 검사
+            if (password !== passwordConfirm) {
+                alert('비밀번호가 일치하지 않습니다.');
+                return;
+            }
+            
+            if (password.length < 8) {
+                alert('비밀번호는 8자 이상이어야 합니다.');
+                return;
+            }
+            
+            // 아이디 중복 확인 (시뮬레이션)
+            if (userId === 'admin' || userId === 'test') {
+                alert('이미 사용 중인 아이디입니다.');
+                return;
+            }
+            
+            // 회원가입 성공
+            alert('회원가입이 완료되었습니다! 로그인해주세요.');
+            
+            // 폼 초기화
+            resetSignupForm();
+            showPage('login');
+        }
+
+        // 회원가입 폼 초기화
+        function resetSignupForm() {
+            // 모든 단계 초기화
+            document.getElementById('emailVerificationStep').style.display = 'block';
+            document.getElementById('codeVerificationStep').style.display = 'none';
+            document.getElementById('accountInfoStep').style.display = 'none';
+            
+            // 변수 초기화
+            verificationEmail = '';
+            verificationCode = '';
+            isEmailVerified = false;
+            
+            // 폼 필드 초기화
+            document.getElementById('emailVerifyForm').reset();
+            document.getElementById('codeVerifyForm').reset();
+            document.getElementById('signupForm').reset();
+        }
+
+        // 로그아웃 처리
+        function logout() {
+            if (confirm('로그아웃하시겠습니까?')) {
+                isLoggedIn = false;
+                currentUser = null;
+                updateLoginUI();
+                showPage('login');
+                alert('로그아웃되었습니다.');
+            }
+        }
+
+        // 로그인 UI 업데이트
+        function updateLoginUI() {
+            const userDisplay = document.getElementById('user-display');
+            const authLinks = document.getElementById('auth-links');
+            const logoutLink = document.getElementById('logout-link');
+            const mainNav = document.getElementById('main-nav');
+            
+            if (isLoggedIn && currentUser) {
+                userDisplay.textContent = `${currentUser.name}님 (${currentUser.building} ${currentUser.unit})`;
+                userDisplay.style.display = 'inline';
+                authLinks.style.display = 'none';
+                logoutLink.style.display = 'inline';
+                mainNav.style.display = 'flex';
+            } else {
+                userDisplay.style.display = 'none';
+                authLinks.style.display = 'inline';
+                logoutLink.style.display = 'none';
+                mainNav.style.display = 'flex'; // 항상 네비게이션 표시
+            }
+        }
+
+        // 비밀번호 찾기
+        function showForgotPassword() {
+            const email = prompt('가입하신 이메일을 입력해주세요:');
+            if (email && email.includes('@')) {
+                alert('비밀번호 재설정 링크가 이메일로 발송되었습니다.');
+            } else if (email) {
+                alert('올바른 이메일을 입력해주세요.');
+            }
+        }
+
+        // 게시판 데이터 (시간 정보 추가)
+        const posts = [
+            {
+                id: 1,
+                tag: 'info',
+                tagText: '입주 정보',
+                title: '이사 관련 문의드립니다',
+                author: '301호 김○○',
+                time: '3시간 전',
+                timeValue: 3, // 정렬용 시간 값 (시간)
+                views: 42,
+                likes: 8,
+                dislikes: 1,
+                comments: 5,
+                isNew: true
+            },
+            {
+                id: 2,
+                tag: 'life',
+                tagText: '생활 정보',
+                title: '반려동물 산책 매너에 대해',
+                author: '205호 박○○',
+                time: '5시간 전',
+                timeValue: 5,
+                views: 156,
+                likes: 23,
+                dislikes: 3,
+                comments: 12,
+                isNew: false
+            },
+            {
+                id: 3,
+                tag: 'story',
+                tagText: '이야기',
+                title: '택배 보관함 위치 문의',
+                author: '107호 이○○',
+                time: '1일 전',
+                timeValue: 24,
+                views: 89,
+                likes: 15,
+                dislikes: 0,
+                comments: 3,
+                isNew: false
+            },
+            {
+                id: 4,
+                tag: 'life',
+                tagText: '생활 정보',
+                title: '아파트 소음 관련 건의',
+                author: '1503호 정○○',
+                time: '1일 전',
+                timeValue: 24,
+                views: 234,
+                likes: 45,
+                dislikes: 8,
+                comments: 18,
+                isNew: false
+            },
+            {
+                id: 5,
+                tag: 'info',
+                tagText: '입주 정보',
+                title: '주차 공간 배정 문의',
+                author: '802호 최○○',
+                time: '2일 전',
+                timeValue: 48,
+                views: 67,
+                likes: 12,
+                dislikes: 2,
+                comments: 7,
+                isNew: false
+            },
+            {
+                id: 6,
+                tag: 'story',
+                tagText: '이야기',
+                title: '우리 아파트 카페 추천',
+                author: '1201호 윤○○',
+                time: '2일 전',
+                timeValue: 48,
+                views: 145,
+                likes: 28,
+                dislikes: 1,
+                comments: 15,
+                isNew: false
+            },
+            {
+                id: 7,
+                tag: 'life',
+                tagText: '생활 정보',
+                title: '겨울철 난방비 절약 꿀팁',
+                author: '405호 강○○',
+                time: '3일 전',
+                timeValue: 72,
+                views: 312,
+                likes: 67,
+                dislikes: 4,
+                comments: 22,
+                isNew: false
+            },
+            {
+                id: 8,
+                tag: 'info',
+                tagText: '입주 정보',
+                title: '관리비 내역 문의',
+                author: '1105호 송○○',
+                time: '3일 전',
+                timeValue: 72,
+                views: 98,
+                likes: 14,
+                dislikes: 6,
+                comments: 9,
+                isNew: false
+            },
+            {
+                id: 9,
+                tag: 'story',
+                tagText: '이야기',
+                title: '아이들 놀이터 이용시간',
+                author: '703호 임○○',
+                time: '4일 전',
+                timeValue: 96,
+                views: 187,
+                likes: 35,
+                dislikes: 2,
+                comments: 13,
+                isNew: false
+            },
+            {
+                id: 10,
+                tag: 'life',
+                tagText: '생활 정보',
+                title: '분리수거 요일 변경 안내',
+                author: '1008호 조○○',
+                time: '4일 전',
+                timeValue: 96,
+                views: 256,
+                likes: 41,
+                dislikes: 3,
+                comments: 8,
+                isNew: false
+            },
+            {
+                id: 11,
+                tag: 'info',
+                tagText: '입주 정보',
+                title: '엘리베이터 이용 규칙',
+                author: '1402호 한○○',
+                time: '5일 전',
+                timeValue: 120,
+                views: 134,
+                likes: 22,
+                dislikes: 1,
+                comments: 11,
+                isNew: false
+            },
+            {
+                id: 12,
+                tag: 'story',
+                tagText: '이야기',
+                title: '새로 이사온 인사드려요',
+                author: '901호 배○○',
+                time: '5일 전',
+                timeValue: 120,
+                views: 289,
+                likes: 58,
+                dislikes: 0,
+                comments: 24,
+                isNew: false
+            },
+            {
+                id: 13,
+                tag: 'life',
+                tagText: '생활 정보',
+                title: '화재 대피로 안내',
+                author: '604호 신○○',
+                time: '6일 전',
+                timeValue: 144,
+                views: 178,
+                likes: 31,
+                dislikes: 2,
+                comments: 6,
+                isNew: false
+            },
+            {
+                id: 14,
+                tag: 'info',
+                tagText: '입주 정보',
+                title: '방문차량 등록 방법',
+                author: '1306호 오○○',
+                time: '6일 전',
+                timeValue: 144,
+                views: 112,
+                likes: 19,
+                dislikes: 1,
+                comments: 4,
+                isNew: false
+            },
+            {
+                id: 15,
+                tag: 'story',
+                tagText: '이야기',
+                title: '아파트 생활 1년 후기',
+                author: '507호 구○○',
+                time: '1주일 전',
+                timeValue: 168,
+                views: 423,
+                likes: 89,
+                dislikes: 5,
+                comments: 31,
+                isNew: false
+            }
+        ];
+
+        // 정보 페이지 데이터
+        const infoPosts = [
+            {
+                id: 1,
+                tag: 'tag1',
+                tagText: '태그1',
+                title: '2024년 아파트 시세 동향 분석',
+                author: '부동산 전문가',
+                time: '1일 전',
+                timeValue: 24,
+                views: 324,
+                likes: 42,
+                dislikes: 3,
+                comments: 18,
+                isNew: true
+            },
+            {
+                id: 2,
+                tag: 'tag2',
+                tagText: '태그2',
+                title: '전세 계약 시 체크해야 할 필수 사항',
+                author: '법무 전문가',
+                time: '2일 전',
+                timeValue: 48,
+                views: 256,
+                likes: 35,
+                dislikes: 2,
+                comments: 12,
+                isNew: false
+            },
+            {
+                id: 3,
+                tag: 'tag3',
+                tagText: '태그3',
+                title: '입주 후 각종 신고 및 등록 절차 안내',
+                author: '행정 담당자',
+                time: '3일 전',
+                timeValue: 72,
+                views: 189,
+                likes: 28,
+                dislikes: 1,
+                comments: 9,
+                isNew: false
+            },
+            {
+                id: 4,
+                tag: 'tag1',
+                tagText: '태그1',
+                title: '대출 금리 변동과 아파트 매매 영향',
+                author: '금융 전문가',
+                time: '4일 전',
+                timeValue: 96,
+                views: 412,
+                likes: 58,
+                dislikes: 4,
+                comments: 23,
+                isNew: false
+            },
+            {
+                id: 5,
+                tag: 'tag2',
+                tagText: '태그2',
+                title: '월세 vs 전세 장단점 비교분석',
+                author: '부동산 컨설턴트',
+                time: '5일 전',
+                timeValue: 120,
+                views: 298,
+                likes: 41,
+                dislikes: 6,
+                comments: 15,
+                isNew: false
+            },
+            {
+                id: 6,
+                tag: 'tag3',
+                tagText: '태그3',
+                title: '아파트 관리비 절약 방법',
+                author: '관리사무소',
+                time: '1주일 전',
+                timeValue: 168,
+                views: 167,
+                likes: 22,
+                dislikes: 1,
+                comments: 8,
+                isNew: false
+            },
+            {
+                id: 7,
+                tag: 'tag1',
+                tagText: '태그1',
+                title: '재개발 예정 단지 투자 가이드',
+                author: '투자 전문가',
+                time: '1주일 전',
+                timeValue: 168,
+                views: 534,
+                likes: 73,
+                dislikes: 12,
+                comments: 31,
+                isNew: false
+            },
+            {
+                id: 8,
+                tag: 'tag2',
+                tagText: '태그2',
+                title: '임대차 보호법 주요 변경사항',
+                author: '법무팀',
+                time: '2주일 전',
+                timeValue: 336,
+                views: 445,
+                likes: 67,
+                dislikes: 8,
+                comments: 26,
+                isNew: false
+            }
+        ];
+
+        // 업체 데이터
+        const providers = [
+            {
+                id: 1,
+                name: '클린 하우스 청소',
+                category: 'cleaning',
+                categoryText: '청소',
+                verified: true,
+                services: [
+                    { name: '일반 청소', price: '50,000원' },
+                    { name: '입주 청소', price: '150,000원', originalPrice: '200,000원' },
+                    { name: '이사 청소', price: '80,000원' }
+                ],
+                contact: {
+                    phone: '02-1234-5678',
+                    hours: '평일 09:00-18:00'
+                },
+                stats: {
+                    interest: 24,
+                    inquiry: 8,
+                    reviews: 15
+                },
+                rating: 4.8
+            },
+            {
+                id: 2,
+                name: '홈스타일 인테리어',
+                category: 'interior',
+                categoryText: '인테리어',
+                verified: true,
+                services: [
+                    { name: '부분 인테리어', price: '300,000원~' },
+                    { name: '전체 리모델링', price: '1,200,000원', originalPrice: '1,500,000원' },
+                    { name: '도배/장판', price: '500,000원~' }
+                ],
+                contact: {
+                    phone: '02-2345-6789',
+                    hours: '평일 09:00-19:00'
+                },
+                stats: {
+                    interest: 156,
+                    inquiry: 23,
+                    reviews: 89
+                },
+                rating: 4.6
+            },
+            {
+                id: 3,
+                name: '퀵배송 서비스',
+                category: 'delivery',
+                categoryText: '택배/배송',
+                verified: false,
+                services: [
+                    { name: '당일 배송', price: '5,000원' },
+                    { name: '대형 가구 배송', price: '30,000원', originalPrice: '50,000원' },
+                    { name: '이사 도움', price: '100,000원~' }
+                ],
+                contact: {
+                    phone: '02-3456-7890',
+                    hours: '평일 08:00-20:00'
+                },
+                stats: {
+                    interest: 89,
+                    inquiry: 15,
+                    reviews: 42
+                },
+                rating: 4.2
+            },
+            {
+                id: 4,
+                name: '펫케어 클리닉',
+                category: 'pet',
+                categoryText: '반려동물',
+                verified: false,
+                services: [
+                    { name: '기본 진료', price: '30,000원' },
+                    { name: '미용 서비스', price: '60,000원', originalPrice: '80,000원' },
+                    { name: '응급 진료', price: '50,000원' }
+                ],
+                contact: {
+                    phone: '02-4567-8901',
+                    hours: '평일 09:00-21:00'
+                },
+                stats: {
+                    interest: 67,
+                    inquiry: 12,
+                    reviews: 31
+                },
+                rating: 4.5
+            },
+            {
+                id: 5,
+                name: '스마트 전자기기 수리',
+                category: 'etc',
+                categoryText: '기타',
+                verified: true,
+                services: [
+                    { name: '스마트폰 수리', price: '50,000원~' },
+                    { name: '노트북 수리', price: '80,000원~' },
+                    { name: '가전제품 수리', price: '40,000원~' }
+                ],
+                contact: {
+                    phone: '02-5678-9012',
+                    hours: '평일 10:00-19:00'
+                },
+                stats: {
+                    interest: 45,
+                    inquiry: 18,
+                    reviews: 22
+                },
+                rating: 4.3
+            },
+            {
+                id: 6,
+                name: '청춘 청소 대행',
+                category: 'cleaning',
+                categoryText: '청소',
+                verified: false,
+                services: [
+                    { name: '원룸 청소', price: '35,000원' },
+                    { name: '사무실 청소', price: '80,000원' },
+                    { name: '카펫 청소', price: '25,000원' }
+                ],
+                contact: {
+                    phone: '02-6789-0123',
+                    hours: '평일 09:00-18:00'
+                },
+                stats: {
+                    interest: 78,
+                    inquiry: 25,
+                    reviews: 56
+                },
+                rating: 4.4
+            }
+        ];
+
+        // 더미 데이터
+        const activityDummyData = {
+            'board-posts': [
+                {
+                    id: 1,
+                    title: '겨울철 난방비 절약 꿀팁',
+                    date: '2024-12-28',
+                    views: 42,
+                    likes: 8
+                }
+            ],
+            'board-comments': [
+                {
+                    id: 1,
+                    title: '반려동물 산책 매너에 대해',
+                    comment: '좋은 말씀이네요! 우리 강아지도...',
+                    date: '2024-12-27'
+                }
+            ],
+            'info-posts': [
+                // 정보 페이지에 작성한 글이 없는 상태
+            ],
+            'info-comments': [
+                {
+                    id: 1,
+                    title: '2024년 아파트 시세 동향 분석',
+                    comment: '정말 유용한 정보네요. 감사합니다!',
+                    date: '2024-12-27'
+                },
+                {
+                    id: 2,
+                    title: '전세 계약 시 체크해야 할 필수 사항',
+                    comment: '저도 전세 계약 예정인데 도움이 됐어요.',
+                    date: '2024-12-26'
+                }
+            ],
+            'service-inquiries': [
+                {
+                    id: 1,
+                    title: '클린 하우스 청소 문의',
+                    status: '답변 완료',
+                    date: '2024-12-26'
+                }
+            ],
+            'service-reviews': [
+                {
+                    id: 1,
+                    title: '클린 하우스 청소 후기',
+                    rating: 5,
+                    date: '2024-12-25'
+                }
+            ],
+            'tips-posts': [
+                // 전문가 꿀정보에 작성한 글이 없는 상태 (일반 사용자이므로)
+            ],
+            'tips-comments': [
+                {
+                    id: 1,
+                    title: '겨울철 실내 화분 관리법',
+                    comment: '덕분에 우리집 화분이 건강해졌어요!',
+                    date: '2024-12-27'
+                }
+            ],
+            'board-likes': [
+                {
+                    id: 1,
+                    title: '아파트 소음 관련 건의',
+                    author: '1503호 정○○',
+                    date: '2024-12-27'
+                }
+            ],
+            'board-dislikes': [
+                {
+                    id: 1,
+                    title: '불법 주차 관련',
+                    author: '802호 최○○',
+                    date: '2024-12-26'
+                }
+            ],
+            'board-saves': [
+                {
+                    id: 1,
+                    title: '택배 보관함 위치 문의',
+                    author: '107호 이○○',
+                    date: '2024-12-25'
+                }
+            ],
+            'info-likes': [
+                {
+                    id: 1,
+                    title: '2024년 아파트 시세 동향 분석',
+                    author: '부동산 전문가',
+                    date: '2024-12-27'
+                }
+            ],
+            'info-saves': [
+                {
+                    id: 1,
+                    title: '전세 계약 시 체크해야 할 필수 사항',
+                    author: '법무 전문가',
+                    date: '2024-12-26'
+                }
+            ],
+            'service-interests': [
+                {
+                    id: 1,
+                    title: '홈스타일 인테리어',
+                    category: '인테리어',
+                    rating: 4.6
+                }
+            ],
+            'tips-likes': [
+                {
+                    id: 1,
+                    title: '겨울철 실내 화분 관리법',
+                    expert: '김○○',
+                    date: '2024-12-27'
+                }
+            ],
+            'tips-saves': [
+                {
+                    id: 1,
+                    title: '아파트 곰팡이 예방법',
+                    expert: '박○○',
+                    date: '2024-12-26'
+                }
+            ]
+        };
+
+        // 정보 페이지 관련 변수
+        let sortedInfoPosts = [...infoPosts];
+        let filteredInfoPosts = [...infoPosts];
+        let currentInfoFilter = 'all';
+
+        // 현재 정렬된 게시글 배열
+        let sortedPosts = [...posts];
+        let filteredPosts = [...posts];
+        let currentFilter = 'all';
+
+        // 현재 정렬된 업체 배열
+        let sortedProviders = [...providers];
+        let filteredProviders = [...providers];
+        let currentProviderFilter = 'all';
+
+        // 마이페이지 관련 함수들 (수정된 부분)
+        function showMypageTab(tabName) {
+            // 모든 탭 버튼에서 active 클래스 제거
+            document.querySelectorAll('#userinfo .tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 모든 탭 콘텐츠 숨기기
+            document.querySelectorAll('#userinfo .tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // 선택된 탭 버튼에 active 클래스 추가
+            event.target.classList.add('active');
+            
+            // 선택된 탭 콘텐츠 보이기
+            document.getElementById('activity-' + tabName + '-tab').classList.add('active');
+        }
+
+        function loadActivityDetail(activityType, element) {
+            // 이미 로드된 경우 토글
+            const existingDetail = element.nextElementSibling;
+            if (existingDetail && existingDetail.classList.contains('detail-list')) {
+                existingDetail.remove();
+                // 상태 초기화
+                const actionSpan = element.querySelector('.activity-action');
+                const loadingSpan = element.querySelector('.loading');
+                actionSpan.classList.remove('hidden');
+                loadingSpan.classList.add('hidden');
+                actionSpan.textContent = '보기';
+                return;
+            }
+
+            // 로딩 상태 표시
+            const actionSpan = element.querySelector('.activity-action');
+            const loadingSpan = element.querySelector('.loading');
+            actionSpan.classList.add('hidden');
+            loadingSpan.classList.remove('hidden');
+
+            // API 호출 시뮬레이션 (1초 지연)
+            setTimeout(() => {
+                loadingSpan.classList.add('hidden');
+                actionSpan.classList.remove('hidden');
+                actionSpan.textContent = '목록 접기';
+
+                // 상세 데이터 렌더링
+                const detailList = createActivityDetailList(activityType);
+                element.parentNode.insertBefore(detailList, element.nextSibling);
+            }, 1000);
+        }
+
+        function createActivityDetailList(activityType) {
+            const data = activityDummyData[activityType] || [];
+            const detailDiv = document.createElement('div');
+            detailDiv.className = 'detail-list';
+
+            if (data.length === 0) {
+                const emptyItem = document.createElement('div');
+                emptyItem.className = 'detail-item';
+                emptyItem.innerHTML = '<div class="detail-title" style="color: var(--text-muted); text-align: center;">활동 내역이 없습니다</div>';
+                detailDiv.appendChild(emptyItem);
+                return detailDiv;
+            }
+
+            data.forEach(item => {
+                const detailItem = document.createElement('div');
+                detailItem.className = 'detail-item';
+                detailItem.onclick = () => goToActivityDetail(activityType, item.id);
+
+                let content = `<div class="detail-title">${item.title}</div>`;
+                
+                // 활동 유형별로 다른 메타 정보 표시
+                if (activityType.includes('posts')) {
+                    if (item.views !== undefined && item.likes !== undefined) {
+                        content += `<div class="detail-meta">${item.date} • 조회수 ${item.views} • 추천 ${item.likes}</div>`;
+                    } else {
+                        content += `<div class="detail-meta">${item.date}</div>`;
+                    }
+                } else if (activityType.includes('comments')) {
+                    content += `<div class="detail-meta">${item.comment}</div>`;
+                    content += `<div class="detail-meta" style="margin-top: 4px; font-size: 11px;">${item.date}</div>`;
+                } else if (activityType.includes('inquiries')) {
+                    content += `<div class="detail-meta">${item.date} • ${item.status}</div>`;
+                } else if (activityType.includes('reviews')) {
+                    content += `<div class="detail-meta">${item.date} • ${'⭐'.repeat(item.rating)}</div>`;
+                } else if (activityType.includes('interests')) {
+                    content += `<div class="detail-meta">${item.category} • ⭐ ${item.rating}</div>`;
+                } else {
+                    content += `<div class="detail-meta">${item.author || item.expert} • ${item.date}</div>`;
+                }
+
+                detailItem.innerHTML = content;
+                detailDiv.appendChild(detailItem);
+            });
+
+            return detailDiv;
+        }
+
+        function goToActivityDetail(activityType, itemId) {
+            alert(`${activityType} ${itemId}번 상세 페이지로 이동합니다.`);
+        }
+
+        // 내 정보 관련 함수들
+        function changeUserId() {
+            const newUserId = prompt('새로운 아이디를 입력하세요:', 'hong_gildong');
+            if (newUserId && newUserId !== 'hong_gildong') {
+                // 아이디 중복 확인 로직
+                if (confirm(`아이디를 '${newUserId}'로 변경하시겠습니까?`)) {
+                    document.querySelector('#userinfo .info-row:nth-child(1) .info-value').textContent = newUserId;
+                    alert('아이디가 성공적으로 변경되었습니다.');
+                }
+            }
+        }
+        
+        function changeEmail() {
+            const newEmail = prompt('새로운 이메일을 입력하세요:', 'hong@email.com');
+            if (newEmail && newEmail !== 'hong@email.com' && newEmail.includes('@')) {
+                if (confirm(`이메일을 '${newEmail}'로 변경하시겠습니까?\n인증 이메일이 발송됩니다.`)) {
+                    document.querySelector('#userinfo .info-row:nth-child(2) .info-value').textContent = newEmail;
+                    alert('인증 이메일이 발송되었습니다. 이메일을 확인해주세요.');
+                }
+            } else if (newEmail && !newEmail.includes('@')) {
+                alert('올바른 이메일 형식을 입력해주세요.');
+            }
+        }
+        
+        function changePassword() {
+            const currentPassword = prompt('현재 비밀번호를 입력하세요:');
+            if (currentPassword) {
+                const newPassword = prompt('새로운 비밀번호를 입력하세요:');
+                if (newPassword && newPassword.length >= 8) {
+                    const confirmPassword = prompt('새로운 비밀번호를 다시 입력하세요:');
+                    if (newPassword === confirmPassword) {
+                        const today = new Date().toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                        });
+                        document.querySelector('#userinfo .info-row:nth-child(3) .info-detail').textContent = `마지막 변경: ${today}`;
+                        alert('비밀번호가 성공적으로 변경되었습니다.');
+                    } else {
+                        alert('비밀번호가 일치하지 않습니다.');
+                    }
+                } else {
+                    alert('비밀번호는 8자 이상이어야 합니다.');
+                }
+            }
+        }
+        
+        function editProfile() {
+            alert('수정 페이지로 이동합니다.');
+        }
+        
+        function showLoginHistory() {
+            alert('로그인 기록 페이지를 표시합니다.\n\n최근 로그인:\n• 2024-12-28 14:30 (현재 세션)\n• 2024-12-27 09:15\n• 2024-12-26 18:42');
+        }
+        
+        function show2FA() {
+            if (confirm('2단계 인증을 설정하시겠습니까?\n보안이 더욱 강화됩니다.')) {
+                alert('2단계 인증 설정 페이지로 이동합니다.');
+            }
+        }
+        
+        function showPrivacySettings() {
+            alert('개인정보 설정 페이지로 이동합니다.\n\n설정 가능한 항목:\n• 이름 공개 여부\n• 동/호수 공개 여부\n• 활동 기록 공개 여부');
+        }
+
+        // 업체 필터 설정 함수
+        function setProviderFilter(filterValue) {
+            currentProviderFilter = filterValue;
+            
+            // 모든 필터 버튼에서 active 클래스 제거
+            document.querySelectorAll('#services .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 선택된 버튼에 active 클래스 추가
+            document.querySelector(`#services [data-filter="${filterValue}"]`).classList.add('active');
+            
+            // 필터링 적용
+            if (filterValue === 'all') {
+                filteredProviders = [...providers];
+            } else {
+                filteredProviders = providers.filter(provider => provider.category === filterValue);
+            }
+            
+            // 필터링 후 정렬 적용
+            applySortToFilteredProviders();
+        }
+
+        // 필터링된 업체에 정렬 적용
+        function applySortToFilteredProviders() {
+            const sortBy = document.getElementById('provider-sort-select').value;
+            
+            switch(sortBy) {
+                case 'interest':
+                    sortedProviders = [...filteredProviders].sort((a, b) => b.stats.interest - a.stats.interest);
+                    break;
+                case 'reviews':
+                    sortedProviders = [...filteredProviders].sort((a, b) => b.stats.reviews - a.stats.reviews);
+                    break;
+                case 'rating':
+                    sortedProviders = [...filteredProviders].sort((a, b) => b.rating - a.rating);
+                    break;
+                case 'inquiry':
+                    sortedProviders = [...filteredProviders].sort((a, b) => b.stats.inquiry - a.stats.inquiry);
+                    break;
+                default:
+                    sortedProviders = [...filteredProviders];
+            }
+            
+            renderProviders();
+        }
+
+        // 업체 정렬 함수
+        function sortProviders() {
+            applySortToFilteredProviders();
+        }
+
+        // 업체 렌더링 함수
+        function renderProviders() {
+            const container = document.getElementById('providers-container');
+            
+            container.innerHTML = sortedProviders.map(provider => `
+                <div class="provider-card" onclick="showProviderDetail(${provider.id})">
+                    <div class="provider-header">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div class="provider-category">${provider.categoryText}</div>
+                            <div class="provider-name">${provider.name}${provider.verified ? '<span class="badge badge-verified">인증</span>' : ''}</div>
+                        </div>
+                    </div>
+                    <div class="provider-services">
+                        ${provider.services.map(service => `
+                            <div class="service-item">
+                                <span class="service-name">${service.name}</span>
+                                <span class="service-price">
+                                    ${service.originalPrice ? `<span class="original-price">${service.originalPrice}</span>` : ''}
+                                    ${service.originalPrice ? `<span class="discount-price">${service.price}</span>` : service.price}
+                                </span>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <div class="provider-contact">
+                        <div class="contact-info">
+                            <span>📞 ${provider.contact.phone}</span>
+                            <span>⏰ ${provider.contact.hours}</span>
+                        </div>
+                    </div>
+                    <div class="provider-stats">
+                        <span class="stat-item">관심 ${provider.stats.interest}</span>
+                        <span class="stat-item">문의 ${provider.stats.inquiry}</span>
+                        <span class="stat-item">후기 ${provider.stats.reviews}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function setFilter(filterValue) {
+            currentFilter = filterValue;
+            
+            // 모든 필터 버튼에서 active 클래스 제거
+            document.querySelectorAll('#board .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 선택된 버튼에 active 클래스 추가
+            document.querySelector(`#board [data-filter="${filterValue}"]`).classList.add('active');
+            
+            // 필터링 적용
+            if (filterValue === 'all') {
+                filteredPosts = [...posts];
+            } else {
+                filteredPosts = posts.filter(post => post.tag === filterValue);
+            }
+            
+            // 필터링 후 정렬 적용
+            applySortToFilteredPosts();
+        }
+
+        // 필터링된 게시글에 정렬 적용
+        function applySortToFilteredPosts() {
+            const sortBy = document.getElementById('sort-select').value;
+            
+            switch(sortBy) {
+                case 'latest':
+                    sortedPosts = [...filteredPosts].sort((a, b) => a.timeValue - b.timeValue);
+                    break;
+                case 'views':
+                    sortedPosts = [...filteredPosts].sort((a, b) => b.views - a.views);
+                    break;
+                case 'likes':
+                    sortedPosts = [...filteredPosts].sort((a, b) => b.likes - a.likes);
+                    break;
+                case 'comments':
+                    sortedPosts = [...filteredPosts].sort((a, b) => b.comments - a.comments);
+                    break;
+                default:
+                    sortedPosts = [...filteredPosts];
+            }
+            
+            renderPosts();
+            // 스크롤을 맨 위로 이동
+            const container = document.getElementById('posts-scroll-container');
+            if (container) {
+                container.scrollTop = 0;
+                updateScrollIndicator();
+            }
+        }
+
+        // 게시글 정렬 함수
+        function sortPosts() {
+            applySortToFilteredPosts();
+        }
+
+        // 게시글 렌더링 함수
+        function renderPosts() {
+            const container = document.getElementById('posts-container');
+            if (!container) return;
+            
+            container.innerHTML = sortedPosts.map(post => `
+                <div class="post-item" onclick="showPostDetail(${post.id})">
+                    <div class="post-content">
+                        <div class="post-title">
+                            <span class="post-tag ${post.tag}">${post.tagText}</span>${post.title}${post.isNew ? '<span class="badge badge-new">NEW</span>' : ''}
+                        </div>
+                        <div class="post-meta">
+                            <span>${post.author} · ${post.time}</span>
+                            <div class="post-stats">
+                                <span class="stat-icon">👁️ ${post.views}</span>
+                                <span class="stat-icon">👍 ${post.likes}</span>
+                                <span class="stat-icon">👎 ${post.dislikes}</span>
+                                <span class="stat-icon">💬 ${post.comments}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 정보 페이지 관련 함수들
+        function setInfoFilter(filterValue) {
+            currentInfoFilter = filterValue;
+            
+            // 모든 필터 버튼에서 active 클래스 제거
+            document.querySelectorAll('#info .filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 선택된 버튼에 active 클래스 추가
+            document.querySelector(`#info [data-filter="${filterValue}"]`).classList.add('active');
+            
+            // 필터링 적용
+            if (filterValue === 'all') {
+                filteredInfoPosts = [...infoPosts];
+            } else {
+                filteredInfoPosts = infoPosts.filter(post => post.tag === filterValue);
+            }
+            
+            // 필터링 후 정렬 적용
+            applySortToFilteredInfoPosts();
+        }
+
+        function applySortToFilteredInfoPosts() {
+            const sortBy = document.getElementById('info-sort-select').value;
+            
+            switch(sortBy) {
+                case 'latest':
+                    sortedInfoPosts = [...filteredInfoPosts].sort((a, b) => a.timeValue - b.timeValue);
+                    break;
+                case 'views':
+                    sortedInfoPosts = [...filteredInfoPosts].sort((a, b) => b.views - a.views);
+                    break;
+                case 'likes':
+                    sortedInfoPosts = [...filteredInfoPosts].sort((a, b) => b.likes - a.likes);
+                    break;
+                case 'comments':
+                    sortedInfoPosts = [...filteredInfoPosts].sort((a, b) => b.comments - a.comments);
+                    break;
+                default:
+                    sortedInfoPosts = [...filteredInfoPosts];
+            }
+            
+            renderInfoPosts();
+            // 스크롤을 맨 위로 이동
+            const container = document.getElementById('info-scroll-container');
+            if (container) {
+                container.scrollTop = 0;
+                updateInfoScrollIndicator();
+            }
+        }
+
+        function sortInfoPosts() {
+            applySortToFilteredInfoPosts();
+        }
+
+        function renderInfoPosts() {
+            const container = document.getElementById('info-posts-container');
+            if (!container) return;
+            
+            container.innerHTML = sortedInfoPosts.map(post => `
+                <div class="post-item" onclick="showInfoPostDetail(${post.id})">
+                    <div class="post-content">
+                        <div class="post-title">
+                            <span class="post-tag ${post.tag}">${post.tagText}</span>${post.title}${post.isNew ? '<span class="badge badge-new">NEW</span>' : ''}
+                        </div>
+                        <div class="post-meta">
+                            <span>${post.author} · ${post.time}</span>
+                            <div class="post-stats">
+                                <span class="stat-icon">👁️ ${post.views}</span>
+                                <span class="stat-icon">👍 ${post.likes}</span>
+                                <span class="stat-icon">👎 ${post.dislikes}</span>
+                                <span class="stat-icon">💬 ${post.comments}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 스크롤 인디케이터 업데이트
+        function updateScrollIndicator() {
+            const container = document.getElementById('posts-scroll-container');
+            const counter = document.getElementById('scroll-counter');
+            const progressBar = document.getElementById('progress-bar');
+            const fadeGradient = document.getElementById('fade-gradient');
+            const scrollHint = document.getElementById('scroll-hint');
+            
+            if (!container || !counter || !progressBar) return;
+            
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            const maxScroll = scrollHeight - clientHeight;
+            
+            // 스크롤 진행률 계산
+            const scrollPercent = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0;
+            progressBar.style.width = scrollPercent + '%';
+            
+            // 현재 보이는 게시글 범위 계산 (대략적)
+            const itemHeight = 70; // 게시글 하나의 대략적인 높이
+            const visibleStart = Math.floor(scrollTop / itemHeight) + 1;
+            const visibleEnd = Math.min(visibleStart + Math.floor(clientHeight / itemHeight) - 1, sortedPosts.length);
+            
+            counter.textContent = `${visibleStart}-${visibleEnd} / ${sortedPosts.length}개 게시글`;
+            
+            // 페이드 그라디언트 표시/숨김
+            if (fadeGradient && scrollHint) {
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                    // 맨 아래 도달
+                    fadeGradient.classList.add('hidden');
+                    scrollHint.classList.add('hidden');
+                } else {
+                    fadeGradient.classList.remove('hidden');
+                    scrollHint.classList.remove('hidden');
+                }
+            }
+        }
+
+        function updateInfoScrollIndicator() {
+            const container = document.getElementById('info-scroll-container');
+            const counter = document.getElementById('info-scroll-counter');
+            const progressBar = document.getElementById('info-progress-bar');
+            const fadeGradient = document.getElementById('info-fade-gradient');
+            const scrollHint = document.getElementById('info-scroll-hint');
+            
+            if (!container || !counter || !progressBar) return;
+            
+            const scrollTop = container.scrollTop;
+            const scrollHeight = container.scrollHeight;
+            const clientHeight = container.clientHeight;
+            const maxScroll = scrollHeight - clientHeight;
+            
+            // 스크롤 진행률 계산
+            const scrollPercent = maxScroll > 0 ? (scrollTop / maxScroll) * 100 : 0;
+            progressBar.style.width = scrollPercent + '%';
+            
+            // 현재 보이는 게시글 범위 계산 (대략적)
+            const itemHeight = 70; // 게시글 하나의 대략적인 높이
+            const visibleStart = Math.floor(scrollTop / itemHeight) + 1;
+            const visibleEnd = Math.min(visibleStart + Math.floor(clientHeight / itemHeight) - 1, sortedInfoPosts.length);
+            
+            counter.textContent = `${visibleStart}-${visibleEnd} / ${sortedInfoPosts.length}개 정보`;
+            
+            // 페이드 그라디언트 표시/숨김
+            if (fadeGradient && scrollHint) {
+                if (scrollTop + clientHeight >= scrollHeight - 5) {
+                    // 맨 아래 도달
+                    fadeGradient.classList.add('hidden');
+                    scrollHint.classList.add('hidden');
+                } else {
+                    fadeGradient.classList.remove('hidden');
+                    scrollHint.classList.remove('hidden');
+                }
+            }
+        }
+
+        // 스크롤 이벤트 리스너 추가
+        function initializeScrollContainer() {
+            const container = document.getElementById('posts-scroll-container');
+            if (container) {
+                container.addEventListener('scroll', updateScrollIndicator);
+                updateScrollIndicator();
+            }
+        }
+
+        function initializeInfoScrollContainer() {
+            const container = document.getElementById('info-scroll-container');
+            if (container) {
+                container.addEventListener('scroll', updateInfoScrollIndicator);
+                updateInfoScrollIndicator();
+            }
+        }
+
+        function showPage(pageId) {
+            // 회원가입 페이지로 이동할 때 폼 초기화
+            if (pageId === 'signup') {
+                resetSignupForm();
+            }
+
+            // 모든 페이지 숨기기
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+            
+            // 모든 네비게이션 아이템 비활성화
+            const navItems = document.querySelectorAll('.nav-item');
+            navItems.forEach(item => item.classList.remove('active'));
+            
+            // 선택된 페이지 보이기
+            document.getElementById(pageId).classList.add('active');
+            
+            // 해당 네비게이션 아이템 활성화
+            if (event && event.target) {
+                event.target.classList.add('active');
+            }
+
+            // 게시판 페이지일 때 게시글 렌더링
+            if (pageId === 'board') {
+                setTimeout(() => {
+                    setFilter('all');
+                    setTimeout(initializeScrollContainer, 100);
+                }, 100);
+            }
+            
+            // 정보 페이지일 때 정보 게시글 렌더링
+            if (pageId === 'info') {
+                setTimeout(() => {
+                    setInfoFilter('all');
+                    setTimeout(initializeInfoScrollContainer, 100);
+                }, 100);
+            }
+            
+            // 입주 업체 서비스 페이지일 때 업체 렌더링
+            if (pageId === 'services') {
+                setTimeout(() => {
+                    setProviderFilter('all');
+                }, 100);
+            }
+        }
+
+        // 검색 기능 처리
+        function handleSearch(event) {
+            if (event.key === 'Enter') {
+                const searchTerm = event.target.value.trim();
+                if (searchTerm) {
+                    searchPosts(searchTerm);
+                } else {
+                    // 검색어가 없으면 전체 게시글 표시
+                    setFilter(currentFilter);
+                }
+            }
+        }
+
+        function handleInfoSearch(event) {
+            if (event.key === 'Enter') {
+                const searchTerm = event.target.value.trim();
+                if (searchTerm) {
+                    searchInfoPosts(searchTerm);
+                } else {
+                    // 검색어가 없으면 전체 정보 표시
+                    setInfoFilter(currentInfoFilter);
+                }
+            }
+        }
+
+        // 게시글 검색 함수
+        function searchPosts(searchTerm) {
+            const searchResults = posts.filter(post => 
+                post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                post.author.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            // 검색 결과를 현재 필터에도 적용
+            if (currentFilter !== 'all') {
+                filteredPosts = searchResults.filter(post => post.tag === currentFilter);
+            } else {
+                filteredPosts = searchResults;
+            }
+            
+            // 정렬 적용
+            applySortToFilteredPosts();
+            
+            // 검색 결과 안내
+            const counter = document.getElementById('scroll-counter');
+            if (counter) {
+                if (searchResults.length === 0) {
+                    counter.textContent = `"${searchTerm}" 검색 결과: 0개`;
+                } else {
+                    counter.textContent = `"${searchTerm}" 검색 결과: ${filteredPosts.length}개`;
+                }
+            }
+        }
+
+        function searchInfoPosts(searchTerm) {
+            const searchResults = infoPosts.filter(post => 
+                post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                post.author.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            // 검색 결과를 현재 필터에도 적용
+            if (currentInfoFilter !== 'all') {
+                filteredInfoPosts = searchResults.filter(post => post.tag === currentInfoFilter);
+            } else {
+                filteredInfoPosts = searchResults;
+            }
+            
+            // 정렬 적용
+            applySortToFilteredInfoPosts();
+            
+            // 검색 결과 안내
+            const counter = document.getElementById('info-scroll-counter');
+            if (counter) {
+                if (searchResults.length === 0) {
+                    counter.textContent = `"${searchTerm}" 검색 결과: 0개`;
+                } else {
+                    counter.textContent = `"${searchTerm}" 검색 결과: ${filteredInfoPosts.length}개`;
+                }
+            }
+        }
+
+        function showPostDetail(postId) {
+            alert(`게시글 ${postId}번 상세 페이지`);
+        }
+
+        function showInfoPostDetail(postId) {
+            alert(`정보 ${postId}번 상세 페이지`);
+        }
+
+        function showProviderDetail(providerId) {
+            alert(`업체 ${providerId}번 상세 페이지`);
+        }
+
+        function showTipDetail(tipId) {
+            alert(`전문가 팁 ${tipId}번 상세 페이지`);
+        }
+
+        function showWritePage() {
+            showPage('write');
+        }
+
+        // 글 작성 처리
+        function handleWritePost(event) {
+            event.preventDefault();
+            
+            const category = document.getElementById('writeCategory').value;
+            const title = document.getElementById('writeTitle').value;
+            const content = document.getElementById('writeContent').value;
+            const tags = document.getElementById('writeTags').value;
+            
+            if (!category || !title || !content) {
+                alert('모든 필수 항목을 입력해주세요.');
+                return;
+            }
+            
+            // 새 게시글 생성
+            const newPost = {
+                id: posts.length + 1,
+                tag: category,
+                tagText: category === 'info' ? '입주 정보' : category === 'life' ? '생활 정보' : '이야기',
+                title: title,
+                author: isLoggedIn ? `${currentUser.building} ${currentUser.name}` : '익명 사용자',
+                time: '방금 전',
+                timeValue: 0,
+                views: 0,
+                likes: 0,
+                dislikes: 0,
+                comments: 0,
+                isNew: true
+            };
+            
+            // 게시글 목록에 추가
+            posts.unshift(newPost);
+            
+            // 폼 초기화
+            document.getElementById('writeForm').reset();
+            
+            // 게시판으로 이동
+            showPage('board');
+            
+            // 게시글 다시 렌더링
+            setFilter('all');
+            
+            alert('글이 성공적으로 작성되었습니다!');
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeTheme();
+            updateLoginUI();
+            
+            // 게시판 페이지 초기화
+            setTimeout(() => {
+                setFilter('all');
+                setTimeout(initializeScrollContainer, 100);
+            }, 100);
+            
+            console.log('XAI 아파트 커뮤니티 로드 완료');
+        });
+    </script>
+</body>
+</html>

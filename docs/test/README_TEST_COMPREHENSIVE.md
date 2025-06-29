@@ -257,7 +257,7 @@ def posts_service(mock_post_repository):
 #### 🛠️ Utils 계층 (순수 함수)
 ```python
 # ❌ 잘못된 사용
-@patch('src.utils.jwt.JWTManager')
+@patch('nadle_backend.utils.jwt.JWTManager')
 
 # ✅ 올바른 사용
 @pytest.fixture
@@ -294,7 +294,7 @@ uv run pytest tests/integration/ -v
 uv run pytest tests/unit/test_posts_service.py tests/unit/test_comments_service.py -v
 
 # 커버리지 확인
-uv run pytest tests/unit/ --cov=src --cov-report=html
+uv run pytest tests/unit/ --cov=nadle_backend --cov-report=html
 ```
 
 ### 3. 배포 전 전체 검증
@@ -314,7 +314,7 @@ uv run pytest tests/integration/ --maxfail=1
 # GitHub Actions 예시
 - name: Run Tests
   run: |
-    uv run pytest tests/unit/ -v --cov=src
+    uv run pytest tests/unit/ -v --cov=nadle_backend
     uv run pytest tests/integration/ -v
     uv run pytest tests/contract/ -v
     uv run pytest tests/security/ -v
@@ -372,7 +372,7 @@ uv run pytest tests/ --maxfail=1
 
 #### 커버리지 리포트
 ```bash
-uv run pytest tests/ --cov=src --cov-report=html
+uv run pytest tests/ --cov=nadle_backend --cov-report=html
 ```
 
 #### 병렬 실행
