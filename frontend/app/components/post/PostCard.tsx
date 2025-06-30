@@ -43,23 +43,23 @@ const PostCard = ({ post, onClick, className }: PostCardProps) => {
       <div className="flex items-center gap-4 text-sm text-gray-500">
         <div className="flex items-center gap-1">
           <span>👁</span>
-          <span>{formatNumber(post.stats?.views || 0)}</span>
+          <span>{formatNumber(post.stats?.view_count || post.stats?.views || 0)}</span>
         </div>
         <div className="flex items-center gap-1">
           <span>👍</span>
-          <span>{formatNumber(post.stats?.likes || 0)}</span>
+          <span>{formatNumber(post.stats?.like_count || post.stats?.likes || 0)}</span>
         </div>
         <div className="flex items-center gap-1">
           <span>👎</span>
-          <span>{formatNumber(post.stats?.dislikes || 0)}</span>
+          <span>{formatNumber(post.stats?.dislike_count || post.stats?.dislikes || 0)}</span>
         </div>
         <div className="flex items-center gap-1">
           <span>💬</span>
-          <span>{formatNumber(post.stats?.comments || 0)}</span>
+          <span>{formatNumber(post.stats?.comment_count || post.stats?.comments || 0)}</span>
         </div>
         <div className="flex items-center gap-1">
           <span>🔖</span>
-          <span>{formatNumber(post.stats?.bookmarks || 0)}</span>
+          <span>{formatNumber(post.stats?.bookmark_count || post.stats?.bookmarks || 0)}</span>
         </div>
       </div>
 

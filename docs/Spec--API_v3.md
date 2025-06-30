@@ -93,23 +93,23 @@ Authentication (/auth):
 Posts (/api/posts):
 ├── GET    /api/posts/search
 ├── GET    /api/posts
-├── GET    /api/posts/{slug}
+├── GET    /api/posts/{slug_or_id}  ← 🆕 v3.2: slug 또는 ID 지원
 ├── POST   /api/posts              ← 🆕 입주민 커뮤니티 전용
-├── PUT    /api/posts/{slug}
-├── DELETE /api/posts/{slug}
-├── POST   /api/posts/{slug}/like
-├── POST   /api/posts/{slug}/dislike
-├── POST   /api/posts/{slug}/bookmark
-└── GET    /api/posts/{slug}/stats
+├── PUT    /api/posts/{slug_or_id}  ← 🆕 v3.2: slug 또는 ID 지원
+├── DELETE /api/posts/{slug_or_id}  ← 🆕 v3.2: slug 또는 ID 지원
+├── POST   /api/posts/{slug_or_id}/like      ← 🆕 v3.2: slug 또는 ID 지원
+├── POST   /api/posts/{slug_or_id}/dislike   ← 🆕 v3.2: slug 또는 ID 지원
+├── POST   /api/posts/{slug_or_id}/bookmark  ← 🆕 v3.2: slug 또는 ID 지원
+└── GET    /api/posts/{slug_or_id}/stats     ← 🆕 v3.2: slug 또는 ID 지원
 
-Comments (/api/posts/{slug}/comments):
-├── GET    /api/posts/{slug}/comments
-├── POST   /api/posts/{slug}/comments
-├── POST   /api/posts/{slug}/comments/{id}/replies
-├── PUT    /api/posts/{slug}/comments/{id}
-├── DELETE /api/posts/{slug}/comments/{id}
-├── POST   /api/posts/{slug}/comments/{id}/like
-└── POST   /api/posts/{slug}/comments/{id}/dislike
+Comments (/api/posts/{slug_or_id}/comments):
+├── GET    /api/posts/{slug_or_id}/comments          ← 🆕 v3.2: slug 또는 ID 지원
+├── POST   /api/posts/{slug_or_id}/comments          ← 🆕 v3.2: slug 또는 ID 지원
+├── POST   /api/posts/{slug_or_id}/comments/{id}/replies ← 🆕 v3.2: slug 또는 ID 지원
+├── PUT    /api/posts/{slug_or_id}/comments/{id}     ← 🆕 v3.2: slug 또는 ID 지원
+├── DELETE /api/posts/{slug_or_id}/comments/{id}     ← 🆕 v3.2: slug 또는 ID 지원
+├── POST   /api/posts/{slug_or_id}/comments/{id}/like ← 🆕 v3.2: slug 또는 ID 지원
+└── POST   /api/posts/{slug_or_id}/comments/{id}/dislike ← 🆕 v3.2: slug 또는 ID 지원
 
 Files (/api/files):
 ├── POST   /api/files/upload
@@ -366,7 +366,7 @@ interface PostListItem {
 }
 ```
 
-### GET /api/posts/{slug} (게시글 상세 조회)
+### GET /api/posts/{slug_or_id} (게시글 상세 조회)
 
 **Response:**
 ```typescript
@@ -443,7 +443,7 @@ interface PostDetailResponse {
 }
 ```
 
-### PUT /api/posts/{slug} (게시글 수정)
+### PUT /api/posts/{slug_or_id} (게시글 수정)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -463,7 +463,7 @@ interface PostDetailResponse {
 }
 ```
 
-### DELETE /api/posts/{slug} (게시글 삭제)
+### DELETE /api/posts/{slug_or_id} (게시글 삭제)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -475,7 +475,7 @@ interface DeleteResponse {
 }
 ```
 
-### POST /api/posts/{slug}/like (좋아요 토글)
+### POST /api/posts/{slug_or_id}/like (좋아요 토글)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -493,7 +493,7 @@ interface ReactionResponse {
 }
 ```
 
-### POST /api/posts/{slug}/dislike (싫어요 토글)
+### POST /api/posts/{slug_or_id}/dislike (싫어요 토글)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -511,7 +511,7 @@ interface ReactionResponse {
 }
 ```
 
-### POST /api/posts/{slug}/bookmark (북마크 토글)
+### POST /api/posts/{slug_or_id}/bookmark (북마크 토글)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -528,7 +528,7 @@ interface ReactionResponse {
 }
 ```
 
-### GET /api/posts/{slug}/stats (게시글 통계 조회)
+### GET /api/posts/{slug_or_id}/stats (게시글 통계 조회)
 
 **Response:**
 ```typescript
@@ -550,7 +550,7 @@ interface StatsResponse {
 
 ## 3. 댓글 API (Comments)
 
-### GET /api/posts/{slug}/comments (댓글 목록 조회)
+### GET /api/posts/{slug_or_id}/comments (댓글 목록 조회)
 
 **Query Parameters:**
 ```typescript
@@ -585,7 +585,7 @@ interface CommentDetail {
 }
 ```
 
-### POST /api/posts/{slug}/comments (댓글 생성)
+### POST /api/posts/{slug_or_id}/comments (댓글 생성)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -603,7 +603,7 @@ interface CommentDetail {
 }
 ```
 
-### POST /api/posts/{slug}/comments/{id}/replies (대댓글 생성)
+### POST /api/posts/{slug_or_id}/comments/{id}/replies (대댓글 생성)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -621,7 +621,7 @@ interface CommentDetail {
 }
 ```
 
-### PUT /api/posts/{slug}/comments/{id} (댓글 수정)
+### PUT /api/posts/{slug_or_id}/comments/{id} (댓글 수정)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -639,7 +639,7 @@ interface CommentDetail {
 }
 ```
 
-### DELETE /api/posts/{slug}/comments/{id} (댓글 삭제)
+### DELETE /api/posts/{slug_or_id}/comments/{id} (댓글 삭제)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -651,7 +651,7 @@ interface DeleteResponse {
 }
 ```
 
-### POST /api/posts/{slug}/comments/{id}/like (댓글 좋아요 토글)
+### POST /api/posts/{slug_or_id}/comments/{id}/like (댓글 좋아요 토글)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -668,7 +668,7 @@ interface CommentReactionResponse {
 }
 ```
 
-### POST /api/posts/{slug}/comments/{id}/dislike (댓글 싫어요 토글)
+### POST /api/posts/{slug_or_id}/comments/{id}/dislike (댓글 싫어요 토글)
 
 **Headers:** `Authorization: Bearer <token>`
 
@@ -994,4 +994,147 @@ service: "residential_community"
 - **태그 표시**: UI에서 category 값을 태그로 표시
 - **하위 호환성**: 기존 게시글은 category=null로 처리
 
-이 명세서는 **실제 구현되고 TDD로 검증된 v3.1 API**의 정확한 반영이며, 입주민 커뮤니티 전용 서비스로 특화된 신뢰할 수 있는 참조 문서입니다.
+---
+
+## 11. 🆕 v3.2 업데이트 (2025-06-30)
+
+### **ID + 한글 Slug 구현 및 API 엔드포인트 개선**
+
+#### 🔧 주요 변경사항
+
+##### 1. **ID + 한글 Slug 생성 시스템**
+```typescript
+// 새로운 Slug 형식
+// 기존: "엘리베이터-점검-안내" (충돌 가능)
+// 신규: "68629582dd98c7381c6b7d19-엘리베이터-점검-안내" (ID + 한글 제목)
+
+interface Post {
+  id: string;                    // MongoDB ObjectId
+  slug: string;                  // "{id}-{korean-title}" 형식
+  title: string;
+  // ...
+}
+```
+
+##### 2. **Slug 생성 규칙**
+- **형식**: `{mongodb_objectid}-{korean_title}`
+- **한글 지원**: 정규식 `[^a-z0-9\s\-가-힣]`로 한글 문자 보존
+- **고유성 보장**: MongoDB ObjectId 접두사로 완전한 고유성
+- **URL 안전성**: 특수문자 제거, 공백을 하이픈으로 변환
+- **SEO 친화적**: URL에 한글 제목 포함으로 가독성 향상
+
+##### 3. **API 엔드포인트 개선**
+모든 게시글 관련 엔드포인트가 **slug와 ID 모두 지원**:
+
+```typescript
+// 기존: slug만 지원
+GET /api/posts/{slug}
+
+// 신규: slug 또는 ID 모두 지원
+GET /api/posts/{slug_or_id}
+PUT /api/posts/{slug_or_id}
+DELETE /api/posts/{slug_or_id}
+POST /api/posts/{slug_or_id}/like
+POST /api/posts/{slug_or_id}/dislike
+POST /api/posts/{slug_or_id}/bookmark
+GET /api/posts/{slug_or_id}/stats
+```
+
+#### 📋 업데이트된 API 엔드포인트
+
+##### **GET /api/posts/{slug_or_id} (게시글 상세 조회)**
+```typescript
+// 요청 예시 (두 방식 모두 동일한 결과)
+GET /api/posts/68629582dd98c7381c6b7d19-엘리베이터-점검-안내  // slug
+GET /api/posts/68629582dd98c7381c6b7d19                      // id
+
+interface PostDetailResponse {
+  id: string;                    // "68629582dd98c7381c6b7d19"
+  slug: string;                  // "68629582dd98c7381c6b7d19-엘리베이터-점검-안내"
+  title: string;                 // "엘리베이터 점검 안내"
+  // ... 기존 필드들
+}
+```
+
+##### **POST /api/posts/{slug_or_id}/like (반응 시스템)**
+```typescript
+// 한글 slug로 접근 가능
+POST /api/posts/68629582dd98c7381c6b7d19-입주민-커뮤니티-이용-안내/like
+
+interface ReactionResponse {
+  message: "Post liked" | "Post like removed";
+  like_count: number;
+  dislike_count: number;
+  user_reaction: {
+    liked: boolean;
+    disliked: boolean;
+    bookmarked: boolean;
+  };
+}
+```
+
+#### 🧪 TDD 검증 결과
+
+##### **테스트 커버리지**
+- ✅ **17개 단위 테스트**: 한글 slug 생성 로직 검증
+- ✅ **7개 통합 테스트**: 게시글 상세 조회 기능 검증
+- ✅ **slug 생성 시나리오**: 
+  - 한글 제목 처리
+  - 영문+한글 혼합 제목
+  - 특수문자 제거
+  - 공백 하이픈 변환
+  - 빈 제목 처리
+  - URL 안전성 검증
+
+##### **실제 테스트 데이터**
+```json
+{
+  "id": "68629582dd98c7381c6b7d19",
+  "slug": "68629582dd98c7381c6b7d19-입주민-커뮤니티-이용-안내",
+  "title": "입주민 커뮤니티 이용 안내"
+}
+
+{
+  "id": "686296f554b90ab2ea1ab1f2", 
+  "slug": "686296f554b90ab2ea1ab1f2-25-06-30-점검5",
+  "title": "25-06-30 점검5"
+}
+```
+
+#### 🔄 마이그레이션 고려사항
+
+##### **기존 게시글 호환성**
+- 기존 slug 형식도 계속 지원
+- 새로운 게시글은 ID + 한글 형식으로 자동 생성
+- API에서 slug/ID 모두 허용하여 하위 호환성 보장
+
+##### **프론트엔드 통합**
+```typescript
+// 프론트엔드에서 간소화된 접근
+// 기존: post.slug || post.id (fallback 로직)
+// 신규: post.slug (항상 존재)
+
+<Link to={`/posts/${post.slug}`}>  {/* 단순화 */}
+```
+
+#### 💡 구현 특징
+
+##### **백엔드 구현**
+1. **PostRepository.create()**: 임시 slug로 생성 후 ID 확정되면 최종 slug 업데이트
+2. **한글 정규식**: `[^a-z0-9\s\-가-힣]`로 한글 문자 보존
+3. **서비스 레이어**: slug 또는 ID로 조회하는 통합 로직
+
+##### **프론트엔드 통합**
+1. **PostCard 컴포넌트**: 불필요한 fallback 로직 제거
+2. **Board 페이지**: Remix navigate 사용한 안정적 라우팅
+3. **타입 정의**: slug 필드를 필수로 변경
+
+#### 🎯 v3.2 장점
+
+1. **SEO 최적화**: URL에 한글 제목 포함으로 검색 엔진 친화적
+2. **사용자 경험**: 의미있는 URL로 접근성 향상  
+3. **고유성 보장**: MongoDB ObjectId로 충돌 방지
+4. **하위 호환성**: 기존 시스템과 완전 호환
+5. **개발 편의성**: slug/ID 양방향 접근으로 유연성 증대
+
+이 명세서는 **실제 구현되고 TDD로 검증된 v3.2 API**의 정확한 반영이며, 입주민 커뮤니티 전용 서비스로 특화된 신뢰할 수 있는 참조 문서입니다.

@@ -28,14 +28,18 @@ export interface RegisterRequest {
   password: string;
 }
 
-// 게시글 관련 타입
+// 게시글 관련 타입 (API v3 명세서 기준)
 export interface PostMetadata {
-  type: string;
-  category: string;
-  tags?: string[];
-  summary?: string;
-  thumbnail?: string;
-  attachments?: string[];
+  type: string;              // 게시판 타입 (예: "자유게시판")
+  category: string;          // 카테고리 (예: "입주정보", "생활정보", "이야기")
+  tags?: string[];           // 사용자 태그 (최대 3개)
+  summary?: string;          // 요약
+  thumbnail?: string;        // 썸네일 URL
+  attachments?: string[];    // 첨부파일 URLs
+  file_ids?: string[];       // 파일 업로드 IDs (백엔드 호환)
+  inline_images?: string[];  // 인라인 이미지 file_ids (백엔드 호환)
+  editor_type?: "plain" | "markdown" | "rich"; // 에디터 타입 (백엔드 호환)
+  visibility?: "public" | "private"; // 공개 설정 (백엔드 호환)
 }
 
 export interface Post {
@@ -53,11 +57,19 @@ export interface Post {
 }
 
 export interface PostStats {
-  views: number;
-  likes: number;
-  dislikes: number;
-  comments: number;
-  bookmarks: number;
+  // 백엔드 API v3와 호환되는 필드명 사용
+  view_count: number;    // 조회수
+  like_count: number;    // 좋아요
+  dislike_count: number; // 싫어요
+  comment_count: number; // 댓글수
+  bookmark_count: number; // 북마크수
+  
+  // 프론트엔드 호환성을 위한 alias (옵셔널)
+  views?: number;        // view_count의 alias
+  likes?: number;        // like_count의 alias
+  dislikes?: number;     // dislike_count의 alias
+  comments?: number;     // comment_count의 alias
+  bookmarks?: number;    // bookmark_count의 alias
 }
 
 export interface CreatePostRequest {
@@ -71,23 +83,29 @@ export type PostType = "자유게시판" | "질문답변" | "공지사항" | "�
 export type ServiceType = "residential_community";
 export type CategoryType = "입주정보" | "생활정보" | "이야기";
 
-// 댓글 관련 타입
+// 댓글 관련 타입 (API v3 백엔드 호환)
 export interface Comment {
-  id: number;
-  post_id: number;
+  id: string;              // 백엔드는 string ID 사용
+  post_id: string;         // 백엔드는 string ID 사용
   author?: User;
   content: string;
   created_at: string;
   updated_at: string;
-  likes?: number;
-  dislikes?: number;
-  parent_id?: number;
+  like_count?: number;     // 백엔드 필드명
+  dislike_count?: number;  // 백엔드 필드명
+  parent_comment_id?: string; // 백엔드 필드명
   replies?: Comment[];
+  
+  // 프론트엔드 호환성을 위한 alias (옵셔널)
+  likes?: number;          // like_count의 alias
+  dislikes?: number;       // dislike_count의 alias
+  parent_id?: string;      // parent_comment_id의 alias
 }
 
 export interface CreateCommentRequest {
   content: string;
-  parent_id?: number;
+  parent_comment_id?: string; // 백엔드 호환 필드명
+  parent_id?: string;         // 호환성을 위한 alias
 }
 
 // 반응 관련 타입

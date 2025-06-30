@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from '@remix-run/react';
-import { AppLayout } from '~/components/layout/AppLayout';
-import { Card } from '~/components/ui/Card';
-import { Button } from '~/components/ui/Button';
-import { Textarea } from '~/components/ui/Textarea';
+import AppLayout from '~/components/layout/AppLayout';
+import Card from '~/components/ui/Card';
+import Button from '~/components/ui/Button';
+import Textarea from '~/components/ui/Textarea';
 import { useAuth } from '~/contexts/AuthContext';
 import { useNotification } from '~/contexts/NotificationContext';
 import { apiClient } from '~/lib/api';
@@ -24,7 +24,7 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
         className="flex items-center space-x-1"
       >
         <span>👍</span>
-        <span>{post.stats?.likes || 0}</span>
+        <span>{post.stats?.like_count || post.stats?.likes || 0}</span>
       </Button>
       <Button
         variant="outline"
@@ -33,7 +33,7 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
         className="flex items-center space-x-1"
       >
         <span>👎</span>
-        <span>{post.stats?.dislikes || 0}</span>
+        <span>{post.stats?.dislike_count || post.stats?.dislikes || 0}</span>
       </Button>
       <Button
         variant="outline"
@@ -42,7 +42,7 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
         className="flex items-center space-x-1"
       >
         <span>🔖</span>
-        <span>{post.stats?.bookmarks || 0}</span>
+        <span>{post.stats?.bookmark_count || post.stats?.bookmarks || 0}</span>
       </Button>
     </div>
   );
@@ -106,7 +106,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded }: CommentSectionPr
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">
-          댓글 <span className="text-blue-600">{comments.length}</span>개
+          댓글 <span className="text-blue-600">{comments?.length || 0}</span>개
         </h3>
       </div>
 
@@ -137,7 +137,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded }: CommentSectionPr
 
       {/* 댓글 목록 */}
       <div className="space-y-4">
-        {comments.map((comment) => (
+        {comments?.map((comment) => (
           <Card key={comment.id}>
             <Card.Content>
               <div className="space-y-3">
@@ -159,7 +159,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded }: CommentSectionPr
           </Card>
         ))}
 
-        {comments.length === 0 && (
+        {(!comments || comments.length === 0) && (
           <div className="text-center py-8 text-gray-500">
             아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!
           </div>
@@ -219,10 +219,26 @@ export default function PostDetail() {
       return;
     }
 
-    if (!post) return;
+    if (!post || !slug) return;
 
     try {
-      const response = await apiClient.toggleReaction(post.id, 'post', reactionType);
+      let response;
+      
+      // API v3 명세서에 따른 개별 엔드포인트 사용
+      switch (reactionType) {
+        case 'like':
+          response = await apiClient.likePost(slug);
+          break;
+        case 'dislike':
+          response = await apiClient.dislikePost(slug);
+          break;
+        case 'bookmark':
+          response = await apiClient.bookmarkPost(slug);
+          break;
+        default:
+          throw new Error('Invalid reaction type');
+      }
+      
       if (response.success) {
         // 게시글 데이터 새로고침
         await loadPost();
@@ -308,7 +324,7 @@ export default function PostDetail() {
                 {post.stats && (
                   <>
                     <span>•</span>
-                    <span>조회 {post.stats.views}</span>
+                    <span>조회 {post.stats.view_count || post.stats.views}</span>
                   </>
                 )}
               </div>

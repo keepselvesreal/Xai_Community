@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { type MetaFunction } from "@remix-run/node";
-import { Link } from "@remix-run/react";
+import { Link, useNavigate } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
 import LoadingSpinner from "~/components/common/LoadingSpinner";
 import { useAuth } from "~/contexts/AuthContext";
@@ -33,6 +33,7 @@ const sortOptions = [
 ];
 
 export default function Board() {
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { showError } = useNotification();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -73,6 +74,8 @@ export default function Board() {
       const response = await apiClient.getPosts(filters);
       
       if (response.success && response.data) {
+        console.log('Board: API response data:', response.data);
+        console.log('Board: First post:', response.data.items[0]);
         setPosts(response.data);
         setFilteredPosts(response.data.items);
         applySortToFilteredPosts(response.data.items, sortBy);
@@ -89,7 +92,7 @@ export default function Board() {
   // 초기 데이터 로드
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // HTML 원본과 동일한 필터링 로직 (API 데이터 기반으로 수정)
   const handleCategoryFilter = (filterValue: string) => {
@@ -130,17 +133,17 @@ export default function Board() {
         break;
       case 'views':
         sorted = [...postsToSort].sort((a, b) => 
-          (b.stats?.views || 0) - (a.stats?.views || 0)
+          (b.stats?.view_count || b.stats?.views || 0) - (a.stats?.view_count || a.stats?.views || 0)
         );
         break;
       case 'likes':
         sorted = [...postsToSort].sort((a, b) => 
-          (b.stats?.likes || 0) - (a.stats?.likes || 0)
+          (b.stats?.like_count || b.stats?.likes || 0) - (a.stats?.like_count || a.stats?.likes || 0)
         );
         break;
       case 'comments':
         sorted = [...postsToSort].sort((a, b) => 
-          (b.stats?.comments || 0) - (a.stats?.comments || 0)
+          (b.stats?.comment_count || b.stats?.comments || 0) - (a.stats?.comment_count || a.stats?.comments || 0)
         );
         break;
       default:
@@ -224,9 +227,11 @@ export default function Board() {
   };
 
   useEffect(() => {
-    setVisiblePostsCount(5); // 초기값 리셋
-    updateScrollCounter(sortedPosts.length);
-  }, [sortedPosts]);
+    if (sortedPosts.length > 0) {
+      setVisiblePostsCount(5); // 초기값 리셋
+      updateScrollCounter(sortedPosts.length);
+    }
+  }, [sortedPosts.length]); // 길이만 의존성으로 변경
 
   return (
     <AppLayout 
@@ -332,12 +337,23 @@ export default function Board() {
             ref={scrollContainerRef}
             className="posts-scroll-container relative h-[600px] overflow-y-auto overflow-x-hidden border border-var-light rounded-xl mb-4 bg-var-card"
             onScroll={handleScroll}
+            style={{ pointerEvents: 'auto' }}
           >
             <div>
               {sortedPosts.length > 0 ? (
-                sortedPosts.map((post: Post) => (
-                  <Link key={post.id} to={`/posts/${post.slug}`}>
-                    <div className="post-item flex items-start cursor-pointer">
+                sortedPosts.map((post: Post) => {
+                  console.log(`Board: Post ${post.id} slug:`, post.slug);
+                  return (
+                    <div 
+                      key={post.id}
+                      className="post-item flex items-start cursor-pointer"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        console.log('Post clicked, navigating to:', `/posts/${post.slug}`);
+                        navigate(`/posts/${post.slug}`);
+                      }}
+                    >
                       <div className="flex-1">
                         <div className="post-title flex items-center gap-2 mb-1">
                           <span className={`post-tag ${getTagColor(post.metadata?.category || 'info')}`}>
@@ -358,26 +374,26 @@ export default function Board() {
                           </span>
                           <div className="flex items-center gap-3">
                             <span className="stat-icon text-var-muted">
-                              👁️ {formatNumber(post.stats?.views || 0)}
+                              👁️ {formatNumber(post.stats?.view_count || post.stats?.views || 0)}
                             </span>
                             <span className="stat-icon text-var-muted">
-                              👍 {formatNumber(post.stats?.likes || 0)}
+                              👍 {formatNumber(post.stats?.like_count || post.stats?.likes || 0)}
                             </span>
                             <span className="stat-icon text-var-muted">
-                              👎 {formatNumber(post.stats?.dislikes || 0)}
+                              👎 {formatNumber(post.stats?.dislike_count || post.stats?.dislikes || 0)}
                             </span>
                             <span className="stat-icon text-var-muted">
-                              💬 {formatNumber(post.stats?.comments || 0)}
+                              💬 {formatNumber(post.stats?.comment_count || post.stats?.comments || 0)}
                             </span>
                             <span className="stat-icon text-var-muted">
-                              🔖 {formatNumber(post.stats?.bookmarks || 0)}
+                              🔖 {formatNumber(post.stats?.bookmark_count || post.stats?.bookmarks || 0)}
                             </span>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </Link>
-                ))
+                  );
+                })
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
                   <div className="text-6xl mb-4">📝</div>

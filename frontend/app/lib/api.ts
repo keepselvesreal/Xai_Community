@@ -310,47 +310,74 @@ class ApiClient {
 
   // 댓글 관련 API
   async getComments(postSlug: string, page: number = 1): Promise<ApiResponse<PaginatedResponse<Comment>>> {
-    return this.request<PaginatedResponse<Comment>>(`/posts/${postSlug}/comments?page=${page}`);
+    return this.request<PaginatedResponse<Comment>>(`/api/posts/${postSlug}/comments?page=${page}`);
   }
 
   async createComment(postSlug: string, commentData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
-    return this.request<Comment>(`/posts/${postSlug}/comments`, {
+    return this.request<Comment>(`/api/posts/${postSlug}/comments`, {
       method: 'POST',
       body: JSON.stringify(commentData),
     });
   }
 
-  async updateComment(commentId: number, content: string): Promise<ApiResponse<Comment>> {
-    return this.request<Comment>(`/comments/${commentId}`, {
+  async updateComment(commentId: string, content: string): Promise<ApiResponse<Comment>> {
+    return this.request<Comment>(`/api/comments/${commentId}`, {
       method: 'PUT',
       body: JSON.stringify({ content }),
     });
   }
 
-  async deleteComment(commentId: number): Promise<ApiResponse<void>> {
-    return this.request<void>(`/comments/${commentId}`, {
+  async deleteComment(commentId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/api/comments/${commentId}`, {
       method: 'DELETE',
     });
   }
 
-  // 반응 관련 API
+  // 반응 관련 API (게시글용 - API v3 명세서 기준)
   async toggleReaction(
-    targetId: number,
+    targetId: string,
     targetType: 'post' | 'comment',
     reactionType: ReactionType
-  ): Promise<ApiResponse<Reaction | null>> {
-    return this.request<Reaction | null>(`/reactions`, {
+  ): Promise<ApiResponse<any>> {
+    if (targetType === 'post') {
+      // 게시글 반응은 slug 기반 개별 엔드포인트 사용
+      return this.request<any>(`/api/posts/${targetId}/${reactionType}`, {
+        method: 'POST',
+      });
+    } else {
+      // 댓글 반응은 일반 reactions 엔드포인트 사용 (구현 예정)
+      return this.request<any>(`/api/reactions`, {
+        method: 'POST',
+        body: JSON.stringify({
+          target_id: targetId,
+          target_type: targetType,
+          reaction_type: reactionType,
+        }),
+      });
+    }
+  }
+
+  async getUserReactions(targetId: string, targetType: 'post' | 'comment'): Promise<ApiResponse<Reaction[]>> {
+    return this.request<Reaction[]>(`/api/reactions?target_id=${targetId}&target_type=${targetType}`);
+  }
+
+  // 게시글 반응 개별 메서드들 (더 명확한 API)
+  async likePost(slug: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/posts/${slug}/like`, {
       method: 'POST',
-      body: JSON.stringify({
-        target_id: targetId,
-        target_type: targetType,
-        reaction_type: reactionType,
-      }),
     });
   }
 
-  async getUserReactions(targetId: number, targetType: 'post' | 'comment'): Promise<ApiResponse<Reaction[]>> {
-    return this.request<Reaction[]>(`/reactions?target_id=${targetId}&target_type=${targetType}`);
+  async dislikePost(slug: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/posts/${slug}/dislike`, {
+      method: 'POST',
+    });
+  }
+
+  async bookmarkPost(slug: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/posts/${slug}/bookmark`, {
+      method: 'POST',
+    });
   }
 
 
