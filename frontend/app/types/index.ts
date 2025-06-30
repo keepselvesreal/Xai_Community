@@ -2,6 +2,7 @@
 export interface User {
   id: string;
   email: string;
+  username?: string;
   user_handle?: string;
   display_name?: string;
   created_at: string;
@@ -244,4 +245,128 @@ export interface PostDetailLoaderData {
   post: Post;
   comments: PaginatedResponse<Comment>;
   userReactions: Reaction[];
+}
+
+// Mock 데이터용 추가 인터페이스 정의
+export interface MockPost {
+  id: number;
+  title: string;
+  author: string;
+  time: string;
+  timeValue: number;
+  tag: string;
+  tagText: string;
+  views: number;
+  likes: number;
+  dislikes: number;
+  comments: number;
+  isNew: boolean;
+  content: string;
+}
+
+export interface MockInfoItem {
+  id: number;
+  title: string;
+  author: string;
+  time: string;
+  timeValue: number;
+  tag: string;
+  tagText: string;
+  views: number;
+  likes: number;
+  dislikes: number;
+  comments: number;
+  isNew: boolean;
+  content: string;
+}
+
+export interface MockService {
+  id: number;
+  name: string;
+  category: string;
+  rating: number;
+  description: string;
+  services: ServiceItem[];
+  stats: ServiceStats;
+  verified: boolean;
+  contact: ContactInfo;
+  reviews: ServiceReview[];
+}
+
+export interface ServiceStats {
+  views: number;
+  inquiries: number;
+  reviews: number;
+}
+
+export interface ServiceItem {
+  name: string;
+  price: string;
+  originalPrice?: string;
+  description: string;
+}
+
+export interface ContactInfo {
+  phone: string;
+  hours: string;
+  address: string;
+  email: string;
+}
+
+export interface ServiceReview {
+  author: string;
+  rating: number;
+  text: string;
+}
+
+export interface MockTip {
+  id: number;
+  title: string;
+  content: string;
+  expert_name: string;
+  expert_title: string;
+  created_at: string;
+  category: string;
+  tags: string[];
+  views_count: number;
+  likes_count: number;
+  saves_count: number;
+  is_new: boolean;
+}
+
+// 공통 반응 시스템 인터페이스
+export interface ItemReactions {
+  views: number;
+  likes: number;
+  dislikes: number;
+  comments: number;
+  saves?: number;
+}
+
+export interface ReactionBarProps {
+  reactions: ItemReactions;
+  onReactionClick?: (type: 'like' | 'dislike' | 'save') => void;
+  showSave?: boolean;
+  itemId?: number;
+  itemType?: 'post' | 'info' | 'service' | 'tip';
+}
+
+// 필터링 및 정렬 관련 인터페이스
+export interface CategoryOption {
+  value: string;
+  label: string;
+}
+
+export interface SortOption {
+  value: string;
+  label: string;
+}
+
+export interface FilterAndSortState<T> {
+  items: T[];
+  filteredItems: T[];
+  sortedItems: T[];
+  currentFilter: string;
+  sortBy: string;
+  searchQuery: string;
 }
