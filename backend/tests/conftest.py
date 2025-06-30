@@ -60,6 +60,15 @@ async def clean_db(test_db: AsyncIOMotorDatabase) -> AsyncIOMotorDatabase:
     for collection_name in collections:
         await test_db[collection_name].drop()
     
+    # Initialize Beanie models for testing
+    from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
+    import beanie
+    
+    await beanie.init_beanie(
+        database=test_db,
+        document_models=[User, Post, Comment, PostStats, UserReaction, Stats, FileRecord]
+    )
+    
     return test_db
 
 
@@ -73,8 +82,28 @@ def client():
 
 
 @pytest.fixture
-async def test_user(clean_db: AsyncIOMotorDatabase) -> Dict[str, Any]:
+async def test_user(clean_db: AsyncIOMotorDatabase):
     """Create a test user."""
+    from nadle_backend.models.core import User
+    from nadle_backend.utils.password import PasswordManager
+    
+    password_manager = PasswordManager()
+    
+    user_data = {
+        "email": "test@example.com",
+        "user_handle": "testuser",
+        "password_hash": password_manager.hash_password("testpass123"),
+        "is_admin": False
+    }
+    
+    user = User(**user_data)
+    await user.insert()
+    
+    return user
+
+@pytest.fixture
+async def test_user_dict(clean_db: AsyncIOMotorDatabase) -> Dict[str, Any]:
+    """Create a test user and return dict for legacy compatibility."""
     from nadle_backend.models.core import User
     from nadle_backend.utils.password import PasswordManager
     
@@ -218,3 +247,57 @@ def test_image():
 def large_test_image():
     """Provide a large test image file (for size limit testing)."""
     return create_test_image(size=(2000, 2000))
+
+
+@pytest.fixture
+async def async_client(clean_db: AsyncIOMotorDatabase) -> AsyncGenerator[AsyncClient, None]:
+    """Provide an async HTTP client for API testing."""
+    from main import app
+    import httpx
+    
+    # Create a proper async transport for the FastAPI app
+    transport = httpx.ASGITransport(app=app)
+    
+    async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
+        yield ac
+
+
+@pytest.fixture
+async def test_post(clean_db: AsyncIOMotorDatabase, test_user):
+    """Create a test post."""
+    from nadle_backend.models.core import Post, PostCreate
+    from nadle_backend.services.posts_service import PostsService
+    
+    posts_service = PostsService()
+    
+    post_data = PostCreate(
+        title="Test Post for Detail Page",
+        content="This is a test post content for detail page testing.",
+        service="residential_community",
+        metadata={
+            "type": "자유게시판",
+            "category": "생활정보",
+            "tags": ["테스트", "상세페이지"]
+        }
+    )
+    
+    post = await posts_service.create_post(post_data, test_user)
+    return post
+
+
+@pytest.fixture
+async def auth_headers(test_user_dict: Dict[str, Any]) -> Dict[str, str]:
+    """Provide authentication headers for API testing."""
+    from nadle_backend.utils.jwt import JWTManager
+    from nadle_backend.config import settings
+    
+    jwt_manager = JWTManager(settings.secret_key)
+    
+    token_data = {
+        "sub": test_user_dict["id"],
+        "email": test_user_dict["email"]
+    }
+    
+    access_token = jwt_manager.create_access_token(token_data)
+    
+    return {"Authorization": f"Bearer {access_token}"}

@@ -3,6 +3,7 @@
 from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
 import re
+import uuid
 from beanie import PydanticObjectId
 from nadle_backend.models.core import Post, PostCreate, PostUpdate, PaginationParams, User
 from nadle_backend.exceptions.post import PostNotFoundError, PostSlugAlreadyExistsError
@@ -24,19 +25,15 @@ class PostRepository:
         Raises:
             PostSlugAlreadyExistsError: If slug already exists
         """
-        # Generate slug from title
-        slug = self._generate_slug(post_data.title)
+        # Create post document first with temporary slug
+        temp_slug = "temp-" + str(uuid.uuid4())[:8]
         
-        # Check if slug already exists and make it unique if necessary
-        unique_slug = await self._ensure_unique_slug(slug)
-        
-        # Create post document
         post = Post(
             title=post_data.title,
             content=post_data.content,
             service=post_data.service,
             metadata=post_data.metadata,
-            slug=unique_slug,
+            slug=temp_slug,  # Temporary slug
             author_id=author_id,
             status="published",
             created_at=datetime.utcnow(),
@@ -48,8 +45,17 @@ class PostRepository:
             comment_count=0
         )
         
-        # Save to database
+        # Save to database to get the ID
         await post.save()
+        
+        # Now generate final slug with post ID + Korean title
+        title_slug = self._generate_slug(post_data.title)
+        final_slug = f"{str(post.id)}-{title_slug}"
+        
+        # Update the post with the final slug
+        post.slug = final_slug
+        await post.save()
+        
         return post
     
     async def get_by_id(self, post_id: str) -> Post:
@@ -264,16 +270,27 @@ class PostRepository:
         Returns:
             URL-friendly slug
         """
+        import uuid
+        
         # Convert to lowercase and replace spaces with hyphens
         slug = title.lower().strip()
-        # Remove special characters except hyphens and alphanumeric
-        slug = re.sub(r"[^a-z0-9\s-]", "", slug)
+        # Remove special characters except hyphens, alphanumeric, and Korean characters
+        slug = re.sub(r"[^a-z0-9\s\-가-힣]", "", slug)
         # Replace multiple spaces/hyphens with single hyphen
         slug = re.sub(r"[\s-]+", "-", slug)
         # Remove leading/trailing hyphens
         slug = slug.strip("-")
         
-        return slug or "untitled"
+        # If slug is empty or only contains Korean characters that might cause URL issues,
+        # generate a unique identifier based on title hash and random string
+        if not slug or len(slug) < 3:
+            # Create a short hash from title + random component for uniqueness
+            import hashlib
+            title_hash = hashlib.md5(title.encode('utf-8')).hexdigest()[:8]
+            random_part = str(uuid.uuid4())[:8]
+            slug = f"post-{title_hash}-{random_part}"
+        
+        return slug
     
     async def _ensure_unique_slug(self, base_slug: str) -> str:
         """Ensure slug is unique by appending number if necessary.

@@ -40,11 +40,11 @@ class PostsService:
         post = await self.post_repository.create(post_data, str(current_user.id))
         return post
     
-    async def get_post(self, slug: str, current_user: Optional[User] = None) -> Post:
-        """Get post by slug.
+    async def get_post(self, slug_or_id: str, current_user: Optional[User] = None) -> Post:
+        """Get post by slug or post ID.
         
         Args:
-            slug: Post slug
+            slug_or_id: Post slug or post ID
             current_user: Current user (optional)
             
         Returns:
@@ -53,8 +53,15 @@ class PostsService:
         Raises:
             PostNotFoundError: If post not found
         """
-        # Get post
-        post = await self.post_repository.get_by_slug(slug)
+        # Try to get post by slug first, then by ID if that fails
+        try:
+            post = await self.post_repository.get_by_slug(slug_or_id)
+        except PostNotFoundError:
+            # If slug lookup fails, try by ID
+            try:
+                post = await self.post_repository.get_by_id(slug_or_id)
+            except PostNotFoundError:
+                raise PostNotFoundError(f"Post not found with slug or ID: {slug_or_id}")
         
         # Increment view count
         print(f"Incrementing view count for post {post.id}")
@@ -327,14 +334,14 @@ class PostsService:
     
     async def toggle_post_reaction(
         self,
-        slug: str,
+        slug_or_id: str,
         reaction_type: str,  # "like" or "dislike"
         current_user: User
     ) -> Dict[str, Any]:
         """Toggle post reaction (like/dislike) for a user.
         
         Args:
-            slug: Post slug
+            slug_or_id: Post slug or ID
             reaction_type: "like" or "dislike"
             current_user: Authenticated user
             
@@ -344,8 +351,15 @@ class PostsService:
         Raises:
             PostNotFoundError: If post not found
         """
-        # Get post by slug
-        post = await self.post_repository.get_by_slug(slug)
+        # Get post by slug or ID (using same logic as get_post method)
+        try:
+            post = await self.post_repository.get_by_slug(slug_or_id)
+        except PostNotFoundError:
+            # If slug lookup fails, try by ID
+            try:
+                post = await self.post_repository.get_by_id(slug_or_id)
+            except PostNotFoundError:
+                raise PostNotFoundError(f"Post not found with slug or ID: {slug_or_id}")
         post_id = str(post.id)
         
         # Find or create user reaction

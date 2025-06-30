@@ -111,15 +111,15 @@ async def list_posts(
         )
 
 
-@router.get("/{slug}", response_model=Dict[str, Any])
+@router.get("/{slug_or_id}", response_model=Dict[str, Any])
 async def get_post(
-    slug: str,
+    slug_or_id: str,
     current_user: Optional[User] = Depends(get_optional_current_active_user),
     posts_service: PostsService = Depends(get_posts_service)
 ):
-    """Get post by slug."""
+    """Get post by slug or ID."""
     try:
-        post = await posts_service.get_post(slug, current_user)
+        post = await posts_service.get_post(slug_or_id, current_user)
         
         # Calculate real-time stats
         real_stats = await posts_service._calculate_post_stats(str(post.id))
@@ -277,15 +277,15 @@ async def delete_post(
         )
 
 
-@router.post("/{slug}/like", status_code=status.HTTP_200_OK)
+@router.post("/{slug_or_id}/like", status_code=status.HTTP_200_OK)
 async def like_post(
-    slug: str,
+    slug_or_id: str,
     current_user: User = Depends(get_current_active_user),
     posts_service: PostsService = Depends(get_posts_service)
 ):
     """Like a post."""
     try:
-        result = await posts_service.toggle_post_reaction(slug, "like", current_user)
+        result = await posts_service.toggle_post_reaction(slug_or_id, "like", current_user)
         return {
             "message": "Post liked" if result["user_reaction"]["liked"] else "Post like removed",
             "like_count": result["like_count"],
@@ -304,15 +304,15 @@ async def like_post(
         )
 
 
-@router.post("/{slug}/dislike", status_code=status.HTTP_200_OK)
+@router.post("/{slug_or_id}/dislike", status_code=status.HTTP_200_OK)
 async def dislike_post(
-    slug: str,
+    slug_or_id: str,
     current_user: User = Depends(get_current_active_user),
     posts_service: PostsService = Depends(get_posts_service)
 ):
     """Dislike a post."""
     try:
-        result = await posts_service.toggle_post_reaction(slug, "dislike", current_user)
+        result = await posts_service.toggle_post_reaction(slug_or_id, "dislike", current_user)
         return {
             "message": "Post disliked" if result["user_reaction"]["disliked"] else "Post dislike removed",
             "like_count": result["like_count"],
@@ -331,15 +331,15 @@ async def dislike_post(
         )
 
 
-@router.post("/{slug}/bookmark", status_code=status.HTTP_200_OK)
+@router.post("/{slug_or_id}/bookmark", status_code=status.HTTP_200_OK)
 async def bookmark_post(
-    slug: str,
+    slug_or_id: str,
     current_user: User = Depends(get_current_active_user),
     posts_service: PostsService = Depends(get_posts_service)
 ):
     """Bookmark a post."""
     try:
-        result = await posts_service.toggle_post_reaction(slug, "bookmark", current_user)
+        result = await posts_service.toggle_post_reaction(slug_or_id, "bookmark", current_user)
         return {
             "action": "bookmarked" if result["user_reaction"]["bookmarked"] else "unbookmarked",
             "bookmark_count": result["bookmark_count"],
@@ -357,16 +357,16 @@ async def bookmark_post(
         )
 
 
-@router.get("/{slug}/stats", status_code=status.HTTP_200_OK)
+@router.get("/{slug_or_id}/stats", status_code=status.HTTP_200_OK)
 async def get_post_stats(
-    slug: str,
+    slug_or_id: str,
     current_user: Optional[User] = Depends(get_optional_current_active_user),
     posts_service: PostsService = Depends(get_posts_service)
 ):
     """Get post statistics."""
     try:
-        # Get post by slug
-        post = await posts_service.get_post_by_slug(slug)
+        # Get post by slug or ID
+        post = await posts_service.get_post(slug_or_id)
         
         # Get post stats
         stats = await posts_service._calculate_post_stats(str(post.id))
