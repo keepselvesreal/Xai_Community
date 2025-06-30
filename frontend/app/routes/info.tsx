@@ -28,6 +28,7 @@ export const loader: LoaderFunction = async () => {
       likes: 42,
       dislikes: 3,
       comments: 18,
+      bookmarks: 25,
       isNew: true,
       content: "2024년 아파트 시세 전망과 동향을 분석한 전문 자료입니다..."
     },
@@ -43,6 +44,7 @@ export const loader: LoaderFunction = async () => {
       likes: 35,
       dislikes: 2,
       comments: 12,
+      bookmarks: 19,
       isNew: false,
       content: "전세 계약 전 반드시 확인해야 할 사항들을 정리했습니다..."
     },
@@ -58,6 +60,7 @@ export const loader: LoaderFunction = async () => {
       likes: 28,
       dislikes: 1,
       comments: 9,
+      bookmarks: 14,
       isNew: false,
       content: "새로 입주하신 분들을 위한 각종 행정 절차 안내입니다..."
     },
@@ -73,6 +76,7 @@ export const loader: LoaderFunction = async () => {
       likes: 51,
       dislikes: 2,
       comments: 23,
+      bookmarks: 31,
       isNew: false,
       content: "관리비를 효율적으로 절약할 수 있는 실용적인 방법들..."
     },
@@ -88,6 +92,7 @@ export const loader: LoaderFunction = async () => {
       likes: 19,
       dislikes: 4,
       comments: 15,
+      bookmarks: 8,
       isNew: false,
       content: "층간소음 문제 발생 시 대처 방법과 해결책 안내..."
     },
@@ -103,6 +108,7 @@ export const loader: LoaderFunction = async () => {
       likes: 12,
       dislikes: 0,
       comments: 6,
+      bookmarks: 7,
       isNew: false,
       content: "CCTV, 출입통제시스템 등 보안 시설 이용 방법..."
     },
@@ -118,6 +124,7 @@ export const loader: LoaderFunction = async () => {
       likes: 24,
       dislikes: 1,
       comments: 8,
+      bookmarks: 16,
       isNew: false,
       content: "화재 발생 시 안전한 대피 방법과 주의사항..."
     },
@@ -133,6 +140,7 @@ export const loader: LoaderFunction = async () => {
       likes: 16,
       dislikes: 0,
       comments: 7,
+      bookmarks: 11,
       isNew: false,
       content: "올바른 재활용 분리배출 방법과 일정 안내..."
     }
@@ -392,7 +400,7 @@ export default function Info() {
                             💬 {item.comments}
                           </span>
                           <span className="stat-icon text-var-muted">
-                            🔖 
+                            🔖 {item.bookmarks}
                           </span>
                         </div>
                       </div>

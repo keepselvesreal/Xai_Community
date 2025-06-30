@@ -13,7 +13,7 @@ from nadle_backend.exceptions.post import PostNotFoundError, PostPermissionError
 
 
 # Create router
-router = APIRouter(prefix="/api/posts", tags=["posts"])
+router = APIRouter(tags=["posts"])
 
 
 def get_posts_service() -> PostsService:

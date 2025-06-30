@@ -165,6 +165,49 @@ class Settings(BaseSettings):
         description="Enable Cross-Origin Resource Sharing (CORS)"
     )
     
+    # Email Configuration
+    smtp_server: str = Field(
+        default="smtp.gmail.com",
+        description="SMTP server for sending emails"
+    )
+    smtp_port: int = Field(
+        default=587,
+        description="SMTP server port (587 for TLS, 465 for SSL)"
+    )
+    smtp_username: str = Field(
+        default="",
+        description="SMTP username for authentication"
+    )
+    smtp_password: str = Field(
+        default="",
+        description="SMTP password or app password"
+    )
+    smtp_use_tls: bool = Field(
+        default=True,
+        description="Use TLS for SMTP connection"
+    )
+    from_email: str = Field(
+        default="noreply@example.com",
+        description="Email address for sending emails"
+    )
+    from_name: str = Field(
+        default="XAI Community",
+        description="Display name for sender"
+    )
+    
+    # Email Verification Settings
+    email_verification_expire_hours: int = Field(
+        default=24,
+        gt=0,
+        description="Email verification token expiration time in hours"
+    )
+    email_verification_code_length: int = Field(
+        default=6,
+        ge=4,
+        le=8,
+        description="Length of email verification code"
+    )
+    
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:

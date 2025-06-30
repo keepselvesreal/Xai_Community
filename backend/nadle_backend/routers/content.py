@@ -7,7 +7,7 @@ from typing import List
 from nadle_backend.models.content import PreviewRequest, PreviewResponse
 from nadle_backend.services.content_service import ContentService
 
-router = APIRouter(prefix="/api/content", tags=["content"])
+router = APIRouter(tags=["content"])
 
 @router.post("/preview", response_model=PreviewResponse)
 async def preview_content(request: PreviewRequest):

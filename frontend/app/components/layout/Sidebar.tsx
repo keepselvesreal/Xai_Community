@@ -52,6 +52,10 @@ const Sidebar = ({ isOpen = true, onClose, isAuthenticated = false, user, onLogo
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  
+  // 디버깅을 위한 로그
+  console.log('Sidebar: isAuthenticated:', isAuthenticated);
+  console.log('Sidebar: user:', user);
 
   const groupedItems = navigationItems.reduce((acc, item) => {
     if (!acc[item.section]) {

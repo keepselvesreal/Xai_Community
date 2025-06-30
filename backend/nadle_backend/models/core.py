@@ -98,6 +98,11 @@ class User(Document, UserBase):
     # Admin privileges
     is_admin: bool = False
     
+    # Email verification
+    email_verified: bool = False
+    email_verification_token: Optional[str] = None
+    email_verification_expires: Optional[datetime] = None
+    
     # Social media profiles
     social_profiles: Dict[ServiceType, str] = Field(default_factory=dict)
     

@@ -127,6 +127,58 @@ class UserRepository:
         await user.save()
         return user
     
+    async def get_user_by_email(self, email: str) -> Optional[User]:
+        """Get user by email - alias for consistency with email service.
+        
+        Args:
+            email: User email
+            
+        Returns:
+            User instance or None if not found
+        """
+        return await self.get_by_email(email)
+    
+    async def set_email_verification_token(self, user_id: str, token: str, expires_at: datetime) -> User:
+        """Set email verification token and expiration.
+        
+        Args:
+            user_id: User ID
+            token: Verification token
+            expires_at: Token expiration datetime
+            
+        Returns:
+            Updated user
+            
+        Raises:
+            UserNotFoundError: If user not found
+        """
+        user = await self.get_by_id(user_id)
+        user.email_verification_token = token
+        user.email_verification_expires = expires_at
+        user.updated_at = datetime.utcnow()
+        await user.save()
+        return user
+    
+    async def mark_email_verified(self, user_id: str) -> User:
+        """Mark user's email as verified and clear verification token.
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            Updated user
+            
+        Raises:
+            UserNotFoundError: If user not found
+        """
+        user = await self.get_by_id(user_id)
+        user.email_verified = True
+        user.email_verification_token = None
+        user.email_verification_expires = None
+        user.updated_at = datetime.utcnow()
+        await user.save()
+        return user
+    
     async def list_users(
         self, 
         page: int = 1, 

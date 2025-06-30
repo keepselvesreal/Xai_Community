@@ -18,7 +18,7 @@ from nadle_backend.exceptions.post import PostNotFoundError
 
 
 # Create router
-router = APIRouter(prefix="/api/posts", tags=["comments"])
+router = APIRouter(tags=["comments"])
 
 
 def get_comments_service() -> CommentsService:

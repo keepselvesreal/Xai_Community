@@ -18,25 +18,34 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   // 초기 인증 상태 확인
   useEffect(() => {
     const initializeAuth = async () => {
-      const savedToken = getLocalStorage(STORAGE_KEYS.AUTH_TOKEN, null);
+      console.log('AuthContext: Initializing auth...');
+      // 직접 localStorage 사용하여 JSON.parse 회피
+      const savedToken = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) : null;
+      console.log('AuthContext: Saved token:', savedToken ? 'Found' : 'Not found');
       
       if (savedToken) {
         setToken(savedToken);
         try {
+          console.log('AuthContext: Fetching current user...');
           const response = await apiClient.getCurrentUser();
+          console.log('AuthContext: getCurrentUser response:', response);
+          
           if (response.success && response.data) {
+            console.log('AuthContext: User loaded successfully:', response.data);
             setUser(response.data);
           } else {
+            console.log('AuthContext: Failed to get user - response not successful:', response);
             // 토큰이 유효하지 않은 경우
             logout();
           }
         } catch (error) {
-          console.error("Failed to get current user:", error);
+          console.error("AuthContext: Failed to get current user - exception caught:", error);
           logout();
         }
       }
       
       setIsLoading(false);
+      console.log('AuthContext: Initialization complete');
     };
 
     initializeAuth();
@@ -45,23 +54,37 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const login = useCallback(async (credentials: LoginRequest) => {
     setIsLoading(true);
     try {
+      console.log('AuthContext: Attempting login...');
       const response = await apiClient.login(credentials);
       
       if (response.success && response.data) {
         const { access_token } = response.data;
-        setToken(access_token);
-        setLocalStorage(STORAGE_KEYS.AUTH_TOKEN, access_token);
+        console.log('AuthContext: Login successful, token:', access_token ? 'Received' : 'Missing');
         
-        // 사용자 정보 가져오기
-        const userResponse = await apiClient.getCurrentUser();
-        if (userResponse.success && userResponse.data) {
-          setUser(userResponse.data);
+        // 토큰 저장 (직접 localStorage 사용하여 JSON.stringify 회피)
+        setToken(access_token);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, access_token);
         }
+        
+        // 로그인 후 즉시 사용자 정보 로드
+        console.log('AuthContext: Loading user info after login...');
+        try {
+          const userResponse = await apiClient.getCurrentUser();
+          if (userResponse.success && userResponse.data) {
+            console.log('AuthContext: User info loaded:', userResponse.data);
+            setUser(userResponse.data);
+          }
+        } catch (error) {
+          console.error("AuthContext: Failed to load user info after login:", error);
+        }
+        
+        console.log('AuthContext: Login process complete');
       } else {
         throw new Error(response.error || "로그인에 실패했습니다.");
       }
     } catch (error) {
-      console.error("Login failed:", error);
+      console.error("AuthContext: Login failed:", error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -88,9 +111,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   }, []);
 
   const logout = useCallback(() => {
+    console.log('AuthContext: Logging out...');
     setUser(null);
     setToken(null);
-    removeLocalStorage(STORAGE_KEYS.AUTH_TOKEN);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+    }
     apiClient.logout();
   }, []);
 

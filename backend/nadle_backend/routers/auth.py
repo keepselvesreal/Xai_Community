@@ -48,6 +48,23 @@ class RefreshTokenResponse(BaseModel):
     token_type: str
 
 
+class EmailVerificationRequest(BaseModel):
+    """Email verification request model."""
+    email: EmailStr
+
+
+class EmailVerificationCodeRequest(BaseModel):
+    """Email verification code request model."""
+    email: EmailStr
+    code: str
+
+
+class EmailVerificationResponse(BaseModel):
+    """Email verification response model."""
+    success: bool
+    message: str
+
+
 class ChangePasswordRequest(BaseModel):
     """Change password request model."""
     current_password: str
@@ -207,7 +224,9 @@ async def get_user_profile(
     """
     try:
         user = await auth_service.get_user_profile(current_user.id)
-        return UserResponse(**user.model_dump())
+        user_data = user.model_dump()
+        user_data["id"] = str(user_data["id"])  # ObjectId를 문자열로 변환
+        return UserResponse(**user_data)
     except UserNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -236,7 +255,9 @@ async def update_user_profile(
     """
     try:
         user = await auth_service.update_user_profile(current_user.id, user_update)
-        return UserResponse(**user.model_dump())
+        user_data = user.model_dump()
+        user_data["id"] = str(user_data["id"])  # ObjectId를 문자열로 변환
+        return UserResponse(**user_data)
     except UserNotFoundError as e:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -306,6 +327,88 @@ async def deactivate_account(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
+        )
+
+
+# Email verification endpoints
+@router.post("/send-verification-email", response_model=EmailVerificationResponse)
+async def send_verification_email(
+    request: EmailVerificationRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Send email verification code.
+    
+    Args:
+        request: Email verification request
+        auth_service: Authentication service
+        
+    Returns:
+        Success status and message
+        
+    Raises:
+        HTTPException: If email sending fails
+    """
+    try:
+        success, message = await auth_service.send_verification_email(request.email)
+        return EmailVerificationResponse(success=success, message=message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send verification email: {str(e)}"
+        )
+
+
+@router.post("/verify-email", response_model=EmailVerificationResponse)
+async def verify_email(
+    request: EmailVerificationCodeRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Verify email with verification code.
+    
+    Args:
+        request: Email verification code request
+        auth_service: Authentication service
+        
+    Returns:
+        Success status and message
+        
+    Raises:
+        HTTPException: If verification fails
+    """
+    try:
+        success, message = await auth_service.verify_email_code(request.email, request.code)
+        return EmailVerificationResponse(success=success, message=message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify email: {str(e)}"
+        )
+
+
+@router.post("/resend-verification-email", response_model=EmailVerificationResponse)
+async def resend_verification_email(
+    request: EmailVerificationRequest,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """Resend email verification code.
+    
+    Args:
+        request: Email verification request
+        auth_service: Authentication service
+        
+    Returns:
+        Success status and message
+        
+    Raises:
+        HTTPException: If email sending fails
+    """
+    try:
+        success, message = await auth_service.resend_verification_email(request.email)
+        return EmailVerificationResponse(success=success, message=message)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to resend verification email: {str(e)}"
         )
 
 

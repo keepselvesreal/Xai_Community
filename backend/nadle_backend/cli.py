@@ -14,6 +14,7 @@ def start_server():
     """Start the FastAPI server."""
     try:
         import uvicorn
+        import os
         # Import from parent directory
         import sys
         from pathlib import Path
@@ -22,6 +23,9 @@ def start_server():
         parent_dir = Path(__file__).parent.parent
         if str(parent_dir) not in sys.path:
             sys.path.insert(0, str(parent_dir))
+        
+        # Change to backend directory
+        os.chdir(parent_dir)
         
         # Set up logging
         logging.basicConfig(
@@ -33,6 +37,7 @@ def start_server():
         logger.info(f"Starting {settings.api_title} server...")
         logger.info(f"Environment: {settings.environment}")
         logger.info(f"Host: {settings.host}:{settings.port}")
+        logger.info(f"Working directory: {os.getcwd()}")
         
         # Start the server
         uvicorn.run(

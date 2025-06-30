@@ -118,8 +118,8 @@ export default function Dashboard() {
 
   return (
     <AppLayout 
-      title="대시보드" 
-      subtitle="API 개발 현황 및 테스트"
+      title="XAI 아파트 커뮤니티" 
+      subtitle="함께 만들어가는 우리 아파트 소통공간"
       user={user}
       onLogout={logout}
     >

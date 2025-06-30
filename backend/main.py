@@ -131,11 +131,11 @@ def create_app() -> FastAPI:
     # 라우터 등록 (안전하게)
     try:
         from nadle_backend.routers import auth, posts, comments, file_upload, content
-        app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
-        app.include_router(posts.router, tags=["Posts"])
-        app.include_router(comments.router, tags=["Comments"])
+        app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+        app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
+        app.include_router(comments.router, prefix="/api/posts", tags=["Comments"])
         app.include_router(file_upload.router, prefix="/api/files", tags=["Files"])
-        app.include_router(content.router, tags=["Content"])
+        app.include_router(content.router, prefix="/api/content", tags=["Content"])
         logger.info("Routers loaded successfully!")
     except Exception as e:
         logger.error(f"Failed to load routers: {e}")

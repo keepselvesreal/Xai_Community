@@ -14,6 +14,7 @@ from nadle_backend.exceptions.user import (
     UserNotActiveError,
     UserSuspendedError
 )
+from nadle_backend.services.email_service import EmailService
 
 
 class AuthService:
@@ -23,7 +24,8 @@ class AuthService:
         self, 
         user_repository: UserRepository = None,
         jwt_manager: JWTManager = None,
-        password_manager: PasswordManager = None
+        password_manager: PasswordManager = None,
+        email_service: EmailService = None
     ):
         """Initialize auth service with dependencies.
         
@@ -31,10 +33,12 @@ class AuthService:
             user_repository: User repository instance
             jwt_manager: JWT manager instance  
             password_manager: Password manager instance
+            email_service: Email service instance
         """
         self.user_repository = user_repository or UserRepository()
         self.jwt_manager = jwt_manager
         self.password_manager = password_manager or PasswordManager()
+        self.email_service = email_service or EmailService(self.user_repository)
     
     async def register_user(self, user_data: UserCreate) -> User:
         """Register a new user.
@@ -362,3 +366,49 @@ class AuthService:
             return True
         except UserNotFoundError:
             return False
+    
+    # Email verification methods
+    async def send_verification_email(self, email: str) -> tuple[bool, str]:
+        """Send email verification code.
+        
+        Args:
+            email: Email address to send verification code
+            
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        return await self.email_service.send_verification_email(email)
+    
+    async def verify_email_code(self, email: str, code: str) -> tuple[bool, str]:
+        """Verify email verification code.
+        
+        Args:
+            email: Email address
+            code: Verification code
+            
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        return await self.email_service.verify_email_code(email, code)
+    
+    async def resend_verification_email(self, email: str) -> tuple[bool, str]:
+        """Resend email verification code.
+        
+        Args:
+            email: Email address to resend verification code
+            
+        Returns:
+            Tuple of (success: bool, message: str)
+        """
+        return await self.email_service.resend_verification_email(email)
+    
+    async def is_email_verified(self, email: str) -> bool:
+        """Check if email is verified.
+        
+        Args:
+            email: Email address to check
+            
+        Returns:
+            True if email is verified, False otherwise
+        """
+        return await self.email_service.is_email_verified(email)
