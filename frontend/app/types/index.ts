@@ -2,9 +2,8 @@
 export interface User {
   id: string;
   email: string;
-  username?: string;
   user_handle?: string;
-  display_name?: string;
+  full_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -30,18 +29,27 @@ export interface RegisterRequest {
 }
 
 // 게시글 관련 타입
+export interface PostMetadata {
+  type: string;
+  category: string;
+  tags?: string[];
+  summary?: string;
+  thumbnail?: string;
+  attachments?: string[];
+}
+
 export interface Post {
-  id: number;
+  id: string;
   title: string;
   content: string;
   slug: string;
   author?: User;
-  type: PostType;
+  author_id?: string; // 백엔드 API 응답에서 제공되는 필드
   service: ServiceType;
+  metadata: PostMetadata;
   created_at: string;
   updated_at: string;
   stats?: PostStats;
-  tags?: string[];
 }
 
 export interface PostStats {
@@ -56,12 +64,12 @@ export interface CreatePostRequest {
   title: string;
   content: string;
   service: ServiceType;
-  type?: PostType;
-  tags?: string[];
+  metadata: PostMetadata;
 }
 
 export type PostType = "자유게시판" | "질문답변" | "공지사항" | "후기";
-export type ServiceType = "community" | "shopping" | "apartment";
+export type ServiceType = "residential_community";
+export type CategoryType = "입주정보" | "생활정보" | "이야기";
 
 // 댓글 관련 타입
 export interface Comment {

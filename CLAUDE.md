@@ -49,26 +49,26 @@ v5/
 
 ### Key Components
 
-**Database Foundation** (`backend/src/database/connection.py`, `backend/src/config.py`):
+**Database Foundation** (`backend/nadle_backend/database/connection.py`, `backend/nadle_backend/config.py`):
 - Uses Motor (async MongoDB driver) with connection pooling
 - Pydantic for type-safe configuration management
 - Beanie ODM for document modeling
 - Database health checks and connection management
 
-**Configuration Management** (`backend/src/config.py`):
+**Configuration Management** (`backend/nadle_backend/config.py`):
 - Environment-based configuration with Pydantic Settings
-- Configuration file location: `backend/config/.env` (not root `.env`)
+- Configuration file location: `backend/.env` (at backend root level)
 - Type validation and environment-specific overrides
 - MongoDB Atlas connection with security validation
 
-**Data Models** (`backend/src/models/core.py`, `backend/src/models/content.py`):
+**Data Models** (`backend/nadle_backend/models/core.py`, `backend/nadle_backend/models/content.py`):
 - Document models: User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
 - Request/Response models for API contracts
 - Rich text content processing models
 - Enum definitions for controlled values
 - Pydantic validation with custom validators
 
-**Database Indexes** (`backend/src/database/manager.py`):
+**Database Indexes** (`backend/nadle_backend/database/manager.py`):
 - Query-optimized compound indexes
 - Text search indexes with weighted fields
 - Unique constraints for data integrity
@@ -82,13 +82,13 @@ v5/
 - Responsive design with mobile support
 - JavaScript-based dynamic interactions
 
-**File Management System** (`backend/src/services/file_*.py`, `backend/src/routers/file_upload.py`):
+**File Management System** (`backend/nadle_backend/services/file_*.py`, `backend/nadle_backend/routers/file_upload.py`):
 - Complete file upload API with validation
 - File storage and metadata management
 - Image processing and optimization
 - Secure file serving with access control
 
-**Rich Text Editor System** (`backend/src/services/content_service.py`, `backend/src/routers/content.py`):
+**Rich Text Editor System** (`backend/nadle_backend/services/content_service.py`, `backend/nadle_backend/routers/content.py`):
 - TDD-based rich text editor implementation
 - Content processing and sanitization pipeline
 - HTML content validation and transformation
@@ -161,6 +161,10 @@ cd backend && uv run pytest tests/integration/ -v
 
 # Development server (when FastAPI app is implemented)
 cd backend && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000
+# Alternative using CLI interface
+cd backend && uv run python main.py
+# Or using the package CLI
+cd backend && uv run nadle-backend
 
 # Frontend development server (development tool)
 cd frontend && npm run dev
@@ -180,7 +184,7 @@ The project follows a structured task system located in `tasks/` directory:
 
 ### Configuration Setup
 
-1. **Environment Variables**: Located in `config/.env` (not root level)
+1. **Environment Variables**: Located in `backend/.env` (at backend root level)
 2. **Secret Key**: Must be 32+ characters for production
 3. **MongoDB Connection**: Configured for MongoDB Atlas with connection pooling
 4. **Development vs Production**: Settings automatically adjust based on environment
@@ -189,8 +193,9 @@ The project follows a structured task system located in `tasks/` directory:
 
 ```
 backend/
-├── src/
+├── nadle_backend/               # Main package directory
 │   ├── config.py                # Configuration management
+│   ├── cli.py                   # CLI interface
 │   ├── database/
 │   │   ├── connection.py        # Database connection and utilities
 │   │   └── manager.py           # Index management
@@ -208,6 +213,7 @@ backend/
 │   │   ├── posts_service.py     # Post management logic
 │   │   ├── comments_service.py  # Comment operations logic
 │   │   ├── content_service.py   # Rich text processing
+│   │   ├── email_service.py     # Email operations
 │   │   ├── file_validator.py    # File validation logic
 │   │   ├── file_storage.py      # File storage management
 │   │   └── file_metadata.py     # File metadata extraction
@@ -219,8 +225,8 @@ backend/
 │   ├── dependencies/            # FastAPI dependency injection
 │   │   └── auth.py             # Authentication dependencies
 │   ├── utils/                  # Utility functions
-│   │   ├── jwt_utils.py        # JWT token management
-│   │   ├── password_utils.py   # Password hashing
+│   │   ├── jwt.py              # JWT token management
+│   │   ├── password.py         # Password hashing
 │   │   └── permissions.py      # Permission checking
 │   └── exceptions/             # Custom exception classes
 │       ├── auth_exceptions.py  # Authentication errors
@@ -228,15 +234,15 @@ backend/
 │       ├── post_exceptions.py  # Post operation errors
 │       └── comment_exceptions.py # Comment operation errors
 ├── main.py                      # FastAPI application setup (complete)
+├── start_server.sh              # Server startup script
 ├── tests/                       # Test files
-│   ├── unit/                    # Unit tests (implemented)
+│   ├── unit/                    # Unit tests (40+ test files)
 │   ├── integration/             # Integration tests (implemented)
 │   └── conftest.py              # Test fixtures
-├── pyproject.toml               # Project dependencies
+├── pyproject.toml               # Project dependencies and package configuration
 ├── Makefile                     # Development commands
-└── config/
-    ├── .env                     # Environment variables
-    └── .env.example             # Environment template
+├── .env                         # Environment variables
+└── .env.example                 # Environment template
 ```
 
 ### Frontend Organization
@@ -253,14 +259,15 @@ frontend/                        # Development tool (Remix React)
 
 ### Import Conventions
 
-- Use absolute imports from `src/` root
+- Use absolute imports from `nadle_backend/` root
 - Avoid relative imports (`from ..module import`)
 - Follow import order: standard library → third-party → local modules
+- Example: `from nadle_backend.models.core import User`
 
 ### Testing Strategy
 
 The project implements comprehensive TDD:
-- **Unit Tests**: Test individual components in isolation with mocks (33+ test files)
+- **Unit Tests**: Test individual components in isolation with mocks (40+ test files)
   - ✅ Configuration validation (`test_config_settings.py`)
   - ✅ Database connection (`test_database_connection.py`)
   - ✅ Model validation (`test_models_validation.py`)
@@ -282,9 +289,9 @@ The project implements comprehensive TDD:
 
 ### Database Operations
 
-- **Connection**: Managed through `backend/src/database/connection.py` Database class
-- **Models**: Use Beanie ODM with Pydantic validation in `backend/src/models/core.py`
-- **Indexes**: Managed through `backend/src/database/manager.py`, created on startup
+- **Connection**: Managed through `backend/nadle_backend/database/connection.py` Database class
+- **Models**: Use Beanie ODM with Pydantic validation in `backend/nadle_backend/models/core.py`
+- **Indexes**: Managed through `backend/nadle_backend/database/manager.py`, created on startup
 - **Environment**: MongoDB Atlas connection with optimized settings
 - **Health Checks**: Built-in connection monitoring and validation
 
@@ -305,7 +312,7 @@ The project implements comprehensive TDD:
 
 ### Performance Considerations
 
-- Database queries use optimized indexes (see `src/database/manager.py`)
+- Database queries use optimized indexes (see `nadle_backend/database/manager.py`)
 - Async/await pattern throughout for non-blocking operations
 - Connection pooling configured for MongoDB
 - Pagination implemented for list endpoints
@@ -314,21 +321,21 @@ The project implements comprehensive TDD:
 
 ### Adding New Features
 
-1. **Model Definition**: Add/update models in `backend/src/models/core.py` or create new model files
-2. **Repository Layer**: Implement data access in `backend/src/repositories/` (follow existing patterns)
-3. **Service Layer**: Add business logic in `backend/src/services/` (include validation and processing)
-4. **API Layer**: Create endpoints in `backend/src/routers/` (follow FastAPI conventions)
-5. **Dependencies**: Wire up dependency injection in `backend/src/dependencies/`
-6. **Exception Handling**: Add custom exceptions in `backend/src/exceptions/`
-7. **Utils**: Add utility functions in `backend/src/utils/` if needed
+1. **Model Definition**: Add/update models in `backend/nadle_backend/models/core.py` or create new model files
+2. **Repository Layer**: Implement data access in `backend/nadle_backend/repositories/` (follow existing patterns)
+3. **Service Layer**: Add business logic in `backend/nadle_backend/services/` (include validation and processing)
+4. **API Layer**: Create endpoints in `backend/nadle_backend/routers/` (follow FastAPI conventions)
+5. **Dependencies**: Wire up dependency injection in `backend/nadle_backend/dependencies/`
+6. **Exception Handling**: Add custom exceptions in `backend/nadle_backend/exceptions/`
+7. **Utils**: Add utility functions in `backend/nadle_backend/utils/` if needed
 8. **Tests**: Write comprehensive tests for each layer (TDD approach)
 9. **Frontend Integration**: Update `frontend-prototypes/UI.html` to use new APIs
 10. **API Testing**: Add endpoint testing to HTML dashboard interface
 
 ### Database Schema Changes
 
-1. Update models in `backend/src/models/core.py`
-2. Add/modify indexes in `backend/src/database/manager.py`
+1. Update models in `backend/nadle_backend/models/core.py`
+2. Add/modify indexes in `backend/nadle_backend/database/manager.py`
 3. Create migration scripts if needed
 4. Update tests to reflect schema changes
 5. Update HTML UI forms to match new schema

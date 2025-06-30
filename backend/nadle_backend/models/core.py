@@ -9,7 +9,7 @@ from ..config import settings
 
 
 # Enums and Types
-ServiceType = Literal["shopping", "apartment", "community", "X", "Threads", "Bluesky", "Mastodon"]
+ServiceType = Literal["residential_community"]
 PostStatus = Literal["draft", "published", "archived", "deleted"]
 UserStatus = Literal["active", "inactive", "suspended"]
 CommentStatus = Literal["active", "deleted", "hidden", "pending"]
@@ -46,7 +46,8 @@ class UserBase(BaseModel):
 
 class PostMetadata(BaseModel):
     """Post metadata model."""
-    type: Optional[str] = None  # Service-specific post type
+    type: Optional[str] = None  # Service-specific post type (e.g., "board")
+    category: Optional[str] = None  # Category within the type (e.g., "입주 정보", "생활 정보", "이야기")
     tags: Optional[List[str]] = Field(default_factory=list, max_items=3)
     attachments: Optional[List[str]] = Field(default_factory=list)  # Image URLs
     file_ids: Optional[List[str]] = Field(default_factory=list)  # File upload IDs

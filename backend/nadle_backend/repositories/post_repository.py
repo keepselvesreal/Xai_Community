@@ -4,7 +4,7 @@ from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
 import re
 from beanie import PydanticObjectId
-from nadle_backend.models.core import Post, PostCreate, PostUpdate, PaginationParams
+from nadle_backend.models.core import Post, PostCreate, PostUpdate, PaginationParams, User
 from nadle_backend.exceptions.post import PostNotFoundError, PostSlugAlreadyExistsError
 
 
@@ -292,3 +292,26 @@ class PostRepository:
             counter += 1
         
         return slug
+    
+    async def get_authors_by_ids(self, author_ids: List[str]) -> List[User]:
+        """Get authors by their IDs.
+        
+        Args:
+            author_ids: List of author IDs
+            
+        Returns:
+            List of User instances
+        """
+        if not author_ids:
+            return []
+        
+        try:
+            # Convert string IDs to ObjectIds
+            object_ids = [PydanticObjectId(author_id) for author_id in author_ids]
+            
+            # Query users collection
+            authors = await User.find({"_id": {"$in": object_ids}}).to_list()
+            return authors
+        except Exception as e:
+            print(f"Error fetching authors: {e}")
+            return []

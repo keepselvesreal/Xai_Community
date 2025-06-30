@@ -272,14 +272,14 @@ class ApiClient {
     const queryParams = new URLSearchParams();
     
     if (filters.type) queryParams.append('type', filters.type);
-    if (filters.service) queryParams.append('service', filters.service);
-    if (filters.sortBy) queryParams.append('sort', filters.sortBy);
+    if (filters.service) queryParams.append('service_type', filters.service);
+    if (filters.sortBy) queryParams.append('sort_by', filters.sortBy);
     if (filters.search) queryParams.append('search', filters.search);
     if (filters.page) queryParams.append('page', filters.page.toString());
     if (filters.size) queryParams.append('size', filters.size.toString());
 
     const query = queryParams.toString();
-    const endpoint = `/api/posts${query ? `?${query}` : ''}`;
+    const endpoint = `/api/posts/${query ? `?${query}` : ''}`;
 
     return this.request<PaginatedResponse<Post>>(endpoint);
   }

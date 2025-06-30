@@ -30,9 +30,11 @@ class PostsService:
         """
         # Ensure metadata has type field
         if not post_data.metadata:
-            post_data.metadata = PostMetadata(type="자유게시판")
+            post_data.metadata = PostMetadata(type="board", category="입주 정보")
         elif not post_data.metadata.type:
-            post_data.metadata.type = "자유게시판"
+            post_data.metadata.type = "board"
+            if not post_data.metadata.category:
+                post_data.metadata.category = "입주 정보"
             
         # Create post with current user as author
         post = await self.post_repository.create(post_data, str(current_user.id))
@@ -100,7 +102,12 @@ class PostsService:
                 str(current_user.id), post_ids
             )
         
-        # Add user reaction data to posts
+        # Get author information for all posts
+        author_ids = list(set(str(post.author_id) for post in posts))
+        authors = await self.post_repository.get_authors_by_ids(author_ids)
+        authors_dict = {str(author.id): author for author in authors}
+        
+        # Add user reaction data and author info to posts
         posts_with_reactions = []
         for post in posts:
             post_dict = post.model_dump()
@@ -108,6 +115,18 @@ class PostsService:
             # Convert ObjectIds to strings
             post_dict["_id"] = str(post.id)
             post_dict["author_id"] = str(post.author_id)
+            
+            # Add author information
+            author = authors_dict.get(str(post.author_id))
+            if author:
+                post_dict["author"] = {
+                    "id": str(author.id),
+                    "email": author.email,
+                    "user_handle": author.user_handle,
+                    "display_name": author.display_name,
+                    "created_at": author.created_at.isoformat() if author.created_at else None,
+                    "updated_at": author.updated_at.isoformat() if author.updated_at else None
+                }
             
             # Calculate real-time stats from UserReaction and Comment collections
             real_stats = await self._calculate_post_stats(str(post.id))

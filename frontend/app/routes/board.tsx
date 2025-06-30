@@ -1,10 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { useLoaderData, Link } from "@remix-run/react";
+import { type MetaFunction } from "@remix-run/node";
+import { Link } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
+import LoadingSpinner from "~/components/common/LoadingSpinner";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
-import type { MockPost } from "~/types";
+import { apiClient } from "~/lib/api";
+import { formatRelativeTime, formatNumber } from "~/lib/utils";
+import type { Post, PaginatedResponse, PostFilters } from "~/types";
 
 export const meta: MetaFunction = () => {
   return [
@@ -13,253 +16,7 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async () => {
-  // 15개 게시글 Mock 데이터
-  const posts = [
-    {
-      id: 1,
-      title: "새로 이사오신 분들 환영합니다! 🏠",
-      author: "관리사무소",
-      time: "1시간 전",
-      timeValue: 1,
-      tag: "info",
-      tagText: "입주정보",
-      views: 127,
-      likes: 15,
-      dislikes: 0,
-      comments: 8,
-      bookmarks: 3,
-      isNew: true,
-      content: "안녕하세요! 새로 이사오신 주민 여러분을 환영합니다. 입주 관련 필요한 절차와 정보를 안내드립니다..."
-    },
-    {
-      id: 2,
-      title: "엘리베이터 정기점검 안내 📢",
-      author: "관리사무소",
-      time: "3시간 전",
-      timeValue: 3,
-      tag: "info",
-      tagText: "입주정보",
-      views: 89,
-      likes: 12,
-      dislikes: 1,
-      comments: 5,
-      bookmarks: 7,
-      isNew: true,
-      content: "다음 주 화요일 오전 10시부터 12시까지 엘리베이터 정기점검이 있습니다..."
-    },
-    {
-      id: 3,
-      title: "겨울철 난방비 절약 꿀팁 공유 ❄️",
-      author: "절약왕303호",
-      time: "5시간 전",
-      timeValue: 5,
-      tag: "life",
-      tagText: "생활정보",
-      views: 234,
-      likes: 45,
-      dislikes: 2,
-      comments: 23,
-      bookmarks: 18,
-      isNew: false,
-      content: "겨울철 난방비를 30% 절약할 수 있는 실용적인 방법들을 공유합니다..."
-    },
-    {
-      id: 4,
-      title: "우리 아파트 반려동물 친구들 🐕🐱",
-      author: "펫러버501호",
-      time: "1일 전",
-      timeValue: 24,
-      tag: "story",
-      tagText: "이야기",
-      views: 156,
-      likes: 67,
-      dislikes: 0,
-      comments: 34,
-      bookmarks: 12,
-      isNew: false,
-      content: "우리 아파트 귀여운 반려동물 친구들을 소개합니다! 산책 친구도 구해요..."
-    },
-    {
-      id: 5,
-      title: "주차장 에티켓 지켜주세요 🚗",
-      author: "주차지킴이",
-      time: "1일 전",
-      timeValue: 25,
-      tag: "life",
-      tagText: "생활정보",
-      views: 98,
-      likes: 8,
-      dislikes: 3,
-      comments: 12,
-      bookmarks: 5,
-      isNew: false,
-      content: "최근 주차 관련 불편 사항이 늘고 있습니다. 서로 배려하는 주차 문화를 만들어요..."
-    },
-    {
-      id: 6,
-      title: "아이들 놀이터 안전 점검 완료 ✅",
-      author: "관리사무소",
-      time: "2일 전",
-      timeValue: 48,
-      tag: "info",
-      tagText: "입주정보",
-      views: 67,
-      likes: 14,
-      dislikes: 0,
-      comments: 3,
-      bookmarks: 9,
-      isNew: false,
-      content: "어린이 놀이터 안전 점검이 완료되었습니다. 모든 시설이 안전함을 확인했습니다..."
-    },
-    {
-      id: 7,
-      title: "층간소음 신고 관련 안내 🔇",
-      author: "관리사무소",
-      time: "3일 전",
-      timeValue: 72,
-      tag: "info",
-      tagText: "입주정보",
-      views: 203,
-      likes: 19,
-      dislikes: 5,
-      comments: 28,
-      bookmarks: 15,
-      isNew: false,
-      content: "층간소음 신고 절차와 해결 방안에 대해 안내드립니다..."
-    },
-    {
-      id: 8,
-      title: "봄맞이 화단 정리 자원봉사 모집 🌸",
-      author: "꽃사랑회",
-      time: "4일 전",
-      timeValue: 96,
-      tag: "story",
-      tagText: "이야기",
-      views: 134,
-      likes: 28,
-      dislikes: 1,
-      comments: 16,
-      bookmarks: 6,
-      isNew: false,
-      content: "봄을 맞아 아파트 화단을 예쁘게 꾸밀 자원봉사자를 모집합니다..."
-    },
-    {
-      id: 9,
-      title: "택배 보관함 이용 안내 📦",
-      author: "관리사무소",
-      time: "5일 전",
-      timeValue: 120,
-      tag: "info",
-      tagText: "입주정보",
-      views: 95,
-      likes: 11,
-      dislikes: 0,
-      comments: 6,
-      bookmarks: 11,
-      isNew: false,
-      content: "택배 보관함 이용 방법과 주의사항을 안내드립니다..."
-    },
-    {
-      id: 10,
-      title: "공동 구매 제안 - 생필품 🛒",
-      author: "알뜰주부202호",
-      time: "5일 전",
-      timeValue: 125,
-      tag: "story",
-      tagText: "이야기",
-      views: 178,
-      likes: 32,
-      dislikes: 2,
-      comments: 19,
-      bookmarks: 8,
-      isNew: false,
-      content: "생필품 공동구매로 비용을 절약해보아요! 참여하실 분들 댓글 남겨주세요..."
-    },
-    {
-      id: 11,
-      title: "헬스장 운영시간 변경 안내 💪",
-      author: "관리사무소",
-      time: "6일 전",
-      timeValue: 144,
-      tag: "info",
-      tagText: "입주정보",
-      views: 142,
-      likes: 8,
-      dislikes: 4,
-      comments: 11,
-      bookmarks: 4,
-      isNew: false,
-      content: "헬스장 운영시간이 변경됩니다. 새로운 이용시간을 확인해주세요..."
-    },
-    {
-      id: 12,
-      title: "분리수거 요일 변경 ♻️",
-      author: "관리사무소",
-      time: "1주 전",
-      timeValue: 168,
-      tag: "info",
-      tagText: "입주정보",
-      views: 201,
-      likes: 16,
-      dislikes: 1,
-      comments: 7,
-      bookmarks: 10,
-      isNew: false,
-      content: "분리수거 배출 요일이 변경됩니다. 새로운 일정을 확인해주세요..."
-    },
-    {
-      id: 13,
-      title: "우리 아파트 독서모임 📚",
-      author: "책사랑404호",
-      time: "1주 전",
-      timeValue: 172,
-      tag: "story",
-      tagText: "이야기",
-      views: 87,
-      likes: 23,
-      dislikes: 0,
-      comments: 14,
-      bookmarks: 2,
-      isNew: false,
-      content: "독서를 좋아하시는 분들과 함께 모임을 만들어보고 싶어요..."
-    },
-    {
-      id: 14,
-      title: "겨울철 배관 동파 방지 안내 🧊",
-      author: "관리사무소",
-      time: "1주 전",
-      timeValue: 180,
-      tag: "life",
-      tagText: "생활정보",
-      views: 165,
-      likes: 21,
-      dislikes: 0,
-      comments: 9,
-      bookmarks: 13,
-      isNew: false,
-      content: "겨울철 배관 동파 방지를 위한 주의사항을 안내드립니다..."
-    },
-    {
-      id: 15,
-      title: "커뮤니티 공간 예약 방법 🏢",
-      author: "관리사무소",
-      time: "1주 전",
-      timeValue: 185,
-      tag: "info",
-      tagText: "입주정보",
-      views: 112,
-      likes: 13,
-      dislikes: 0,
-      comments: 4,
-      bookmarks: 1,
-      isNew: false,
-      content: "커뮤니티 공간 예약 방법과 이용 규칙을 안내드립니다..."
-    }
-  ];
-
-  return json({ posts });
-};
+// Client-side data fetching으로 변경 (loader 제거)
 
 const categories = [
   { value: "all", label: "전체" },
@@ -276,53 +33,118 @@ const sortOptions = [
 ];
 
 export default function Board() {
-  const { posts: initialPosts } = useLoaderData<typeof loader>();
   const { user, logout } = useAuth();
   const { showError } = useNotification();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
-  const [filteredPosts, setFilteredPosts] = useState(initialPosts);
-  const [sortedPosts, setSortedPosts] = useState(initialPosts);
+  // State for data and UI
+  const [posts, setPosts] = useState<PaginatedResponse<Post>>({
+    items: [],
+    total: 0,
+    page: 1,
+    size: 50, // 한 번에 많은 데이터 가져오기
+    pages: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
+  const [sortedPosts, setSortedPosts] = useState<Post[]>([]);
   const [currentFilter, setCurrentFilter] = useState("all");
   const [sortBy, setSortBy] = useState("latest");
   const [searchQuery, setSearchQuery] = useState("");
-  const [scrollCounter, setScrollCounter] = useState("1-5 / 15개 게시글");
-  const [visiblePostsCount, setVisiblePostsCount] = useState(5); // 표시되는 게시글 수
+  const [scrollCounter, setScrollCounter] = useState("0 / 0개 게시글");
+  const [visiblePostsCount, setVisiblePostsCount] = useState(5);
   const [hasMorePosts, setHasMorePosts] = useState(true);
 
-  // HTML 원본과 동일한 필터링 로직
+  // API 호출 함수
+  const fetchPosts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const filters: PostFilters = {
+        service: "residential_community",
+        sortBy: "created_at",
+        page: 1,
+        size: 50
+      };
+      
+      const response = await apiClient.getPosts(filters);
+      
+      if (response.success && response.data) {
+        setPosts(response.data);
+        setFilteredPosts(response.data.items);
+        applySortToFilteredPosts(response.data.items, sortBy);
+      } else {
+        setError(response.error || 'Failed to fetch posts');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 초기 데이터 로드
+  useEffect(() => {
+    fetchPosts();
+  }, []);
+
+  // HTML 원본과 동일한 필터링 로직 (API 데이터 기반으로 수정)
   const handleCategoryFilter = (filterValue: string) => {
     setCurrentFilter(filterValue);
     
     let filtered;
     if (filterValue === 'all') {
-      filtered = [...initialPosts];
+      filtered = [...posts.items];
     } else {
-      filtered = initialPosts.filter((post: MockPost) => post.tag === filterValue);
+      // category 필드를 사용하여 필터링
+      const categoryMapping: { [key: string]: string[] } = {
+        'info': ['입주 정보', '입주정보'],
+        'life': ['생활 정보', '생활정보'], 
+        'story': ['이야기']
+      };
+      
+      filtered = posts.items.filter((post: Post) => {
+        const postCategory = post.metadata?.category;
+        if (!postCategory) return false;
+        
+        const acceptedCategories = categoryMapping[filterValue];
+        return acceptedCategories && acceptedCategories.includes(postCategory);
+      });
     }
     
     setFilteredPosts(filtered);
     applySortToFilteredPosts(filtered, sortBy);
   };
 
-  // HTML 원본과 동일한 정렬 로직
-  const applySortToFilteredPosts = (posts: MockPost[], sortOption: string) => {
+  // API 데이터에 맞게 수정된 정렬 로직
+  const applySortToFilteredPosts = (postsToSort: Post[], sortOption: string) => {
     let sorted;
     switch(sortOption) {
       case 'latest':
-        sorted = [...posts].sort((a, b) => a.timeValue - b.timeValue);
+        sorted = [...postsToSort].sort((a, b) => 
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
         break;
       case 'views':
-        sorted = [...posts].sort((a, b) => b.views - a.views);
+        sorted = [...postsToSort].sort((a, b) => 
+          (b.stats?.views || 0) - (a.stats?.views || 0)
+        );
         break;
       case 'likes':
-        sorted = [...posts].sort((a, b) => b.likes - a.likes);
+        sorted = [...postsToSort].sort((a, b) => 
+          (b.stats?.likes || 0) - (a.stats?.likes || 0)
+        );
         break;
       case 'comments':
-        sorted = [...posts].sort((a, b) => b.comments - a.comments);
+        sorted = [...postsToSort].sort((a, b) => 
+          (b.stats?.comments || 0) - (a.stats?.comments || 0)
+        );
         break;
       default:
-        sorted = [...posts];
+        sorted = [...postsToSort];
     }
     
     setSortedPosts(sorted);
@@ -337,15 +159,15 @@ export default function Board() {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      const filtered = initialPosts.filter((post: MockPost) =>
+      const filtered = posts.items.filter((post: Post) =>
         post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         post.content.toLowerCase().includes(searchQuery.toLowerCase())
       );
       setFilteredPosts(filtered);
       applySortToFilteredPosts(filtered, sortBy);
     } else {
-      setFilteredPosts(initialPosts);
-      applySortToFilteredPosts(initialPosts, sortBy);
+      setFilteredPosts(posts.items);
+      applySortToFilteredPosts(posts.items, sortBy);
     }
   };
 
@@ -383,12 +205,21 @@ export default function Board() {
     }
   };
 
-  const getTagColor = (tag: string) => {
-    switch (tag) {
-      case 'info': return 'post-tag-info';
-      case 'life': return 'post-tag-life';
-      case 'story': return 'post-tag-story';
-      default: return 'post-tag-info';
+  const getTagColor = (category: string) => {
+    switch (category) {
+      case '입주 정보':
+      case '입주정보':
+      case 'info': 
+        return 'post-tag-info';
+      case '생활 정보':
+      case '생활정보':
+      case 'life': 
+        return 'post-tag-life';
+      case '이야기':
+      case 'story': 
+        return 'post-tag-story';
+      default: 
+        return 'post-tag-info';
     }
   };
 
@@ -460,97 +291,118 @@ export default function Board() {
         </div>
       </div>
 
-      {/* 자유게시판 */}
-      <div className="post-list mt-4">
-        {/* 스크롤 인디케이터 */}
-        <div className="flex justify-between items-center mb-4 text-sm text-var-muted">
-          <span>{scrollCounter}</span>
-          <div className="flex-1 mx-4 h-1 bg-var-section rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-accent-primary transition-all duration-300"
-              style={{ width: `${Math.min(100, (visiblePostsCount / Math.max(1, sortedPosts.length)) * 100)}%` }}
-            />
-          </div>
+      {/* 로딩 상태 */}
+      {loading && (
+        <div className="flex justify-center py-12">
+          <LoadingSpinner />
         </div>
-        
-        {/* 게시글 컨테이너 (고정 높이) */}
-        <div 
-          ref={scrollContainerRef}
-          className="posts-scroll-container relative h-[600px] overflow-y-auto overflow-x-hidden border border-var-light rounded-xl mb-4 bg-var-card"
-          onScroll={handleScroll}
-        >
-          <div>
-            {sortedPosts.length > 0 ? (
-              sortedPosts.map((post: MockPost) => (
-                <Link key={post.id} to={`/posts/${post.id}`}>
-                  <div className="post-item flex items-start cursor-pointer">
-                    <div className="flex-1">
-                      <div className="post-title flex items-center gap-2 mb-1">
-                        <span className={`post-tag ${
-                          post.tag === 'info' 
-                            ? 'post-tag-info'
-                            : post.tag === 'life'
-                            ? 'post-tag-life'
-                            : 'post-tag-story'
-                        }`}>
-                          {post.tagText}
-                        </span>
-                        <span className="text-var-primary font-medium text-lg">
-                          {post.title}
-                        </span>
-                        {post.isNew && (
-                          <span className="badge-new">NEW</span>
-                        )}
-                      </div>
-                      
-                      <div className="post-meta">
-                        <span className="text-var-muted text-sm">{post.author} · {post.time}</span>
-                        <div className="flex items-center gap-3">
-                          <span className="stat-icon text-var-muted">
-                            👁️ {post.views}
+      )}
+
+      {/* 에러 상태 */}
+      {error && !loading && (
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">⚠️</div>
+          <h3 className="text-xl font-semibold text-red-600 mb-2">오류가 발생했습니다</h3>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <button
+            onClick={fetchPosts}
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+          >
+            다시 시도
+          </button>
+        </div>
+      )}
+
+      {/* 자유게시판 */}
+      {!loading && !error && (
+        <div className="post-list mt-4">
+          {/* 스크롤 인디케이터 */}
+          <div className="flex justify-between items-center mb-4 text-sm text-var-muted">
+            <span>{scrollCounter}</span>
+            <div className="flex-1 mx-4 h-1 bg-var-section rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-accent-primary transition-all duration-300"
+                style={{ width: `${Math.min(100, (visiblePostsCount / Math.max(1, sortedPosts.length)) * 100)}%` }}
+              />
+            </div>
+          </div>
+          
+          {/* 게시글 컨테이너 (고정 높이) */}
+          <div 
+            ref={scrollContainerRef}
+            className="posts-scroll-container relative h-[600px] overflow-y-auto overflow-x-hidden border border-var-light rounded-xl mb-4 bg-var-card"
+            onScroll={handleScroll}
+          >
+            <div>
+              {sortedPosts.length > 0 ? (
+                sortedPosts.map((post: Post) => (
+                  <Link key={post.id} to={`/posts/${post.slug}`}>
+                    <div className="post-item flex items-start cursor-pointer">
+                      <div className="flex-1">
+                        <div className="post-title flex items-center gap-2 mb-1">
+                          <span className={`post-tag ${getTagColor(post.metadata?.category || 'info')}`}>
+                            {post.metadata?.category || '일반'}
                           </span>
-                          <span className="stat-icon text-var-muted">
-                            👍 {post.likes}
+                          <span className="text-var-primary font-medium text-lg">
+                            {post.title}
                           </span>
-                          <span className="stat-icon text-var-muted">
-                            👎 {post.dislikes}
+                          {/* 새 게시글 표시 (24시간 이내) */}
+                          {new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000 && (
+                            <span className="badge-new">NEW</span>
+                          )}
+                        </div>
+                        
+                        <div className="post-meta">
+                          <span className="text-var-muted text-sm">
+                            {post.author?.display_name || post.author?.user_handle || '익명'} · {formatRelativeTime(post.created_at)}
                           </span>
-                          <span className="stat-icon text-var-muted">
-                            💬 {post.comments}
-                          </span>
-                          <span className="stat-icon text-var-muted">
-                            🔖 {post.bookmarks}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="stat-icon text-var-muted">
+                              👁️ {formatNumber(post.stats?.views || 0)}
+                            </span>
+                            <span className="stat-icon text-var-muted">
+                              👍 {formatNumber(post.stats?.likes || 0)}
+                            </span>
+                            <span className="stat-icon text-var-muted">
+                              👎 {formatNumber(post.stats?.dislikes || 0)}
+                            </span>
+                            <span className="stat-icon text-var-muted">
+                              💬 {formatNumber(post.stats?.comments || 0)}
+                            </span>
+                            <span className="stat-icon text-var-muted">
+                              🔖 {formatNumber(post.stats?.bookmarks || 0)}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              ))
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                <div className="text-6xl mb-4">📝</div>
-                <h3 className="text-var-primary font-semibold text-lg mb-2">
-                  게시글이 없습니다
-                </h3>
-                <p className="text-var-secondary">
-                  {searchQuery ? '검색 결과가 없습니다. 다른 키워드로 검색해보세요.' : '첫 번째 게시글을 작성해보세요!'}
-                </p>
-              </div>
-            )}
+                  </Link>
+                ))
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                  <div className="text-6xl mb-4">📝</div>
+                  <h3 className="text-var-primary font-semibold text-lg mb-2">
+                    게시글이 없습니다
+                  </h3>
+                  <p className="text-var-secondary">
+                    {searchQuery ? '검색 결과가 없습니다. 다른 키워드로 검색해보세요.' : '첫 번째 게시글을 작성해보세요!'}
+                  </p>
+                </div>
+              )}
+            </div>
+            
+            {/* 페이드 그라디언트 오버레이 */}
+            <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-var-primary to-transparent pointer-events-none" />
           </div>
           
-          {/* 페이드 그라디언트 오버레이 */}
-          <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-var-primary to-transparent pointer-events-none" />
+          {/* 하단 안내 배너 */}
+          {hasMorePosts && (
+            <div className="text-center text-var-muted text-sm py-3 rounded-lg" style={{ backgroundColor: '#f0f8e8' }}>
+              👇 아래로 스크롤하여 더 많은 게시글을 확인하세요
+            </div>
+          )}
         </div>
-        
-        {/* 하단 안내 배너 */}
-        {hasMorePosts && (
-          <div className="text-center text-var-muted text-sm py-3 rounded-lg" style={{ backgroundColor: '#f0f8e8' }}>
-            👇 아래로 스크롤하여 더 많은 게시글을 확인하세요
-          </div>
-        )}
-      </div>
+      )}
     </AppLayout>
   );
 }

@@ -21,12 +21,12 @@ const PostCard = ({ post, onClick, className }: PostCardProps) => {
       {/* Post meta info */}
       <div className="flex items-center gap-3 mb-3 text-sm text-gray-500">
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-          {post.type}
+          {post.metadata?.type || '일반'}
         </span>
         <span>•</span>
         <span>{formatRelativeTime(post.created_at)}</span>
         <span>•</span>
-        <span>작성자: {post.author?.display_name || post.author?.user_handle || '익명'}</span>
+        <span>작성자: {post.author?.display_name || post.author?.user_handle || (post.author_id ? post.author_id : '익명')}</span>
       </div>
 
       {/* Post title */}
@@ -64,9 +64,9 @@ const PostCard = ({ post, onClick, className }: PostCardProps) => {
       </div>
 
       {/* Tags */}
-      {post.tags && post.tags.length > 0 && (
+      {post.metadata?.tags && post.metadata.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mt-3">
-          {post.tags.slice(0, 3).map((tag, index) => (
+          {post.metadata.tags.slice(0, 3).map((tag, index) => (
             <span
               key={index}
               className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-600"
@@ -74,9 +74,9 @@ const PostCard = ({ post, onClick, className }: PostCardProps) => {
               #{tag}
             </span>
           ))}
-          {post.tags.length > 3 && (
+          {post.metadata.tags.length > 3 && (
             <span className="text-xs text-gray-500">
-              +{post.tags.length - 3} more
+              +{post.metadata.tags.length - 3} more
             </span>
           )}
         </div>
