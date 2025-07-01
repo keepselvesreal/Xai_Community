@@ -5,6 +5,7 @@
  */
 
 import type { MockService, ServiceItem } from './index';
+import type { BaseListItem, ItemStats } from './listTypes';
 
 // 업체 정보 타입
 export interface CompanyInfo {
@@ -40,6 +41,74 @@ export interface ServicePost {
 
 // 서비스 카테고리 타입
 export type ServiceCategory = "이사" | "청소" | "에어컨";
+
+// UI에 필요한 모든 필드를 포함한 완전한 서비스 타입
+export interface Service extends ServicePost, BaseListItem {
+  /** 업체명 (company.name의 편의 필드) */
+  name: string;
+  /** URL 슬러그 (네비게이션용) */
+  slug?: string;
+  /** 서비스 카테고리 */
+  category: ServiceCategory;
+  /** 업체 평점 (0-5) */
+  rating: number;
+  /** 업체 설명 (company.description의 편의 필드) */
+  description: string;
+  /** 통계 정보 (BaseListItem과 호환) */
+  stats?: ItemStats;
+  /** 서비스별 통계 정보 */
+  serviceStats?: ServiceStats;
+  /** 좋아요 수 */
+  likes?: number;
+  /** 싫어요 수 */
+  dislikes?: number;
+  /** 북마크 수 */
+  bookmarks?: number;
+  /** 인증 여부 */
+  verified: boolean;
+  /** 연락처 정보 (확장된 형태) */
+  contact: ServiceContactInfo;
+  /** 고객 후기 */
+  reviews: ServiceReview[];
+  /** 원본 Post ID (상세 페이지 네비게이션용) */
+  postId?: string;
+  /** 수정일 */
+  updated_at?: string;
+}
+
+// 서비스 통계 타입
+export interface ServiceStats {
+  /** 조회수 */
+  views: number;
+  /** 문의수 */
+  inquiries: number;
+  /** 후기수 */
+  reviews: number;
+}
+
+// 확장된 연락처 정보
+export interface ServiceContactInfo {
+  /** 전화번호 */
+  phone: string;
+  /** 운영시간 */
+  hours: string;
+  /** 주소 */
+  address: string;
+  /** 이메일 */
+  email: string;
+}
+
+// 고객 후기 타입
+export interface ServiceReview {
+  /** 작성자 */
+  author: string;
+  /** 평점 (1-5) */
+  rating: number;
+  /** 후기 내용 */
+  text: string;
+  /** 작성일 */
+  date?: string;
+}
 
 // 입력 검증 함수
 function validateServicePost(data: any): data is ServicePost {
@@ -283,4 +352,73 @@ export function getMaxPrice(servicePost: ServicePost): number {
  */
 export function getSpecialPriceCount(servicePost: ServicePost): number {
   return servicePost.services.filter(service => service.specialPrice !== undefined).length;
+}
+
+/**
+ * Post를 Service로 직접 변환 (단순화된 변환)
+ * @param post Post 객체
+ * @returns Service 객체 또는 null (파싱 실패 시)
+ */
+export function convertPostToService(post: any): Service | null {
+  try {
+    console.log('Converting post to service:', post);
+    
+    // metadata.type이 "moving services"인지 확인
+    if (post.metadata?.type !== 'moving services') {
+      console.warn('Post metadata.type is not "moving services":', post.metadata?.type);
+      return null;
+    }
+    
+    // Post의 content를 ServicePost로 파싱
+    const serviceData = parseServicePost(post.content);
+    const category = (post.metadata?.category as ServiceCategory) || '이사';
+    
+    // ID 처리 - MongoDB _id나 id 필드 사용
+    const serviceId = post._id || post.id || '';
+    
+    return {
+      // ServicePost 필드들
+      company: serviceData.company,
+      services: serviceData.services,
+      
+      // 추가 UI 필드들
+      id: serviceId,
+      title: serviceData.company.name, // BaseListItem 호환성을 위한 title 필드
+      name: serviceData.company.name,
+      slug: post.slug, // 게시판과 동일한 슬러그 사용
+      category,
+      rating: 0, // 기본값 (추후 실제 평점 시스템 구현 시 수정)
+      description: serviceData.company.description,
+      stats: {
+        view_count: post.view_count || 0,
+        like_count: post.like_count || 0,
+        dislike_count: post.dislike_count || 0,
+        comment_count: post.comment_count || 0,
+        bookmark_count: post.bookmark_count || 0
+      },
+      serviceStats: {
+        views: post.view_count || 0,
+        inquiries: 0, // 실제 문의 데이터가 없으므로 0으로 설정
+        reviews: post.comment_count || 0
+      },
+      // 실제 반응 데이터 매핑
+      likes: post.like_count || 0,
+      dislikes: post.dislike_count || 0,
+      bookmarks: post.bookmark_count || 0,
+      verified: false, // 기본값 (추후 인증 시스템 구현 시 수정)
+      contact: {
+        phone: serviceData.company.contact,
+        hours: serviceData.company.availableHours,
+        address: '', // 기본값
+        email: '' // 기본값
+      },
+      reviews: [], // 기본값 (추후 후기 시스템 구현 시 수정)
+      postId: serviceId,
+      created_at: post.created_at,
+      updated_at: post.updated_at
+    };
+  } catch (error) {
+    console.warn('Failed to convert post to service:', post._id || post.id, error);
+    return null;
+  }
 }

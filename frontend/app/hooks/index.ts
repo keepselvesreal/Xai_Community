@@ -8,7 +8,9 @@ export { default as usePagination } from './usePagination';
 // 새로 추가된 훅들
 export { useFilterAndSort } from './useFilterAndSort';
 export { useReactions } from './useReactions';
+export { useListData } from './useListData';
 
 // 타입 export
 export type { UseFilterAndSortOptions } from './useFilterAndSort';
 export type { UseReactionsOptions } from './useReactions';
+export type { UseListDataResult } from './useListData';

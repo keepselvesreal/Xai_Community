@@ -1,8 +1,12 @@
-import { useState } from "react";
-import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { useLoaderData, useNavigate } from "@remix-run/react";
+import { useState, useEffect } from "react";
+import { type MetaFunction } from "@remix-run/node";
+import { useParams, useNavigate } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
 import { useAuth } from "~/contexts/AuthContext";
+import { useNotification } from "~/contexts/NotificationContext";
+import { apiClient } from "~/lib/api";
+import { convertPostToService } from "~/types/service-types";
+import type { Service } from "~/types/service-types";
 
 export const meta: MetaFunction = () => {
   return [
@@ -11,134 +15,95 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-export const loader: LoaderFunction = async ({ params }) => {
-  const { id } = params;
-  
-  if (!id) {
-    throw new Response("서비스 ID가 필요합니다", { status: 400 });
-  }
-
-  // MongoDB ObjectId 형식 검증 (24자리 16진수)
-  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
-  if (!isValidObjectId && isNaN(parseInt(id))) {
-    throw new Response("잘못된 서비스 ID 형식입니다", { status: 400 });
-  }
-  
-  try {
-    // 실제 API에서 특정 서비스 데이터 조회
-    const { apiClient } = await import('~/lib/api');
-    console.log('Attempting to fetch service with ID:', id);
-    const response = await apiClient.getPost(id as string);
-    console.log('API response:', response);
-    
-    if (response.success && response.data) {
-      // Post 데이터를 ServicePost 형식으로 변환
-      const { parseServicePost, convertServicePostToMockService } = await import('~/types/service-types');
-      
-      try {
-        const servicePost = parseServicePost(response.data.content);
-        const category = response.data.metadata?.category || '이사';
-        
-        // MockService 형식으로 변환하여 기존 UI와 호환되도록 함
-        const service = convertServicePostToMockService(
-          servicePost,
-          parseInt(id as string) || 1,
-          category
-        );
-        
-        // 실제 Post ID를 저장
-        service.postId = response.data.id;
-        
-        return json({ service, fromApi: true });
-      } catch (parseError) {
-        console.error('Failed to parse service content:', parseError);
-        throw new Error('Invalid service data format');
-      }
-    } else {
-      throw new Error('Service not found in API');
-    }
-  } catch (error) {
-    console.error('Error loading service from API:', error);
-    
-    // Fallback: Mock 서비스 데이터
-    const fallbackServices = [
-      {
-        id: 1,
-        name: '빠른이사 서비스',
-        category: '이사',
-        rating: 4.8,
-        description: '빠르고 안전한 이사 서비스를 제공합니다.',
-        services: [
-          { name: '원룸 이사', price: '150,000원', description: '원룸 이사 서비스' },
-          { name: '투룸 이사', price: '250,000원', originalPrice: '300,000원', description: '투룸 이사 서비스' }
-        ],
-        contact: {
-          phone: '02-3456-7890',
-          hours: '평일 08:00-20:00',
-          address: '서울시 강남구 xx동',
-          email: 'quick@moving.com'
-        },
-        reviews: [
-          { author: '박상준', rating: 5, text: '정말 꼼꼼하게 이사해주셨어요. 만족합니다!' }
-        ]
-      },
-      {
-        id: 2,
-        name: '청준 청소 대행',
-        category: '청소',
-        rating: 4.4,
-        description: '아파트 전문 청소 서비스를 제공합니다.',
-        services: [
-          { name: '의류 청소', price: '35,000원', description: '의류 전문 청소' }
-        ],
-        contact: {
-          phone: '02-8765-4321',
-          hours: '평일 09:00-18:00',
-          address: '서울시 송파구 xx동',
-          email: 'clean@service.com'
-        },
-        reviews: [
-          { author: '정현우', rating: 4, text: '청소가 깔끔하고 만족스러웠습니다.' }
-        ]
-      },
-      {
-        id: 3,
-        name: '시원한 에어컨 서비스',
-        category: '에어컨',
-        rating: 4.7,
-        description: '에어컨 전문 설치, 수리, 청소 서비스를 제공합니다.',
-        services: [
-          { name: '에어컨 청소', price: '80,000원', description: '에어컨 전문 청소' },
-          { name: '에어컨 설치', price: '120,000원', originalPrice: '150,000원', description: '에어컨 설치 서비스' }
-        ],
-        contact: {
-          phone: '02-9876-5432',
-          hours: '평일 09:00-18:00',
-          address: '서울시 마포구 xx동',
-          email: 'cool@aircon.com'
-        },
-        reviews: [
-          { author: '이민정', rating: 5, text: '에어컨 청소를 정말 깨끗하게 해주셨어요.' }
-        ]
-      }
-    ];
-    
-    const service = fallbackServices.find(s => s.id === parseInt(id as string));
-    
-    if (!service) {
-      throw new Response("서비스를 찾을 수 없습니다", { status: 404 });
-    }
-
-    return json({ service, fromApi: false });
-  }
-};
 
 export default function ServiceDetail() {
-  const { service } = useLoaderData<typeof loader>();
-  const { user, logout } = useAuth();
+  const { slug } = useParams();
   const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const { showError, showSuccess } = useNotification();
+  
+  const [service, setService] = useState<Service | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [isLiked, setIsLiked] = useState(false);
+
+  const loadService = async () => {
+    if (!slug) return;
+    
+    console.log('🔍 Loading service with slug:', slug);
+    setIsLoading(true);
+    
+    try {
+      // 게시판과 동일하게 slug로 API 호출
+      const response = await apiClient.getPost(slug);
+      console.log('📡 API response:', response);
+      
+      if (response.success && response.data) {
+        console.log('📦 Raw post data:', response.data);
+        
+        // Post 데이터를 Service로 변환
+        const serviceData = convertPostToService(response.data);
+        if (serviceData) {
+          console.log('✅ Service conversion successful:', serviceData.name);
+          setService(serviceData);
+        } else {
+          console.error('❌ Service conversion failed');
+          setIsNotFound(true);
+          showError('서비스 데이터 변환에 실패했습니다');
+        }
+      } else {
+        console.error('❌ API call failed');
+        setIsNotFound(true);
+        showError('서비스를 찾을 수 없습니다');
+      }
+    } catch (error) {
+      console.error('🚨 Error loading service:', error);
+      setIsNotFound(true);
+      showError('서비스를 불러오는 중 오류가 발생했습니다');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadService();
+  }, [slug]);
+
+  // 로딩 상태
+  if (isLoading) {
+    return (
+      <AppLayout user={user} onLogout={logout}>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="text-4xl mb-4">⏳</div>
+            <p className="text-var-secondary">서비스 정보를 불러오는 중...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // 404 상태
+  if (isNotFound || !service) {
+    return (
+      <AppLayout user={user} onLogout={logout}>
+        <div className="flex justify-center items-center h-64">
+          <div className="text-center">
+            <div className="text-6xl mb-4">❌</div>
+            <h3 className="text-xl font-semibold text-red-600 mb-2">서비스를 찾을 수 없습니다</h3>
+            <p className="text-var-secondary mb-4">요청하신 서비스가 존재하지 않거나 삭제되었을 수 있습니다.</p>
+            <button
+              onClick={() => navigate('/services')}
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              서비스 목록으로 돌아가기
+            </button>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
@@ -235,10 +200,12 @@ export default function ServiceDetail() {
                       <p className="text-var-secondary text-sm">{item.description}</p>
                     </div>
                     <div className="text-right ml-4">
-                      {item.originalPrice && (
-                        <div className="text-gray-400 line-through text-sm">{item.originalPrice}</div>
+                      {item.specialPrice && (
+                        <div className="text-gray-400 line-through text-sm">{item.price.toLocaleString()}원</div>
                       )}
-                      <div className="text-red-500 font-bold text-lg">{item.price}</div>
+                      <div className="text-red-500 font-bold text-lg">
+                        {item.specialPrice ? item.specialPrice.toLocaleString() : item.price.toLocaleString()}원
+                      </div>
                     </div>
                   </div>
                 ))}
