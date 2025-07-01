@@ -29,7 +29,8 @@ const sortOptions = [
   { value: "latest", label: "최신순" },
   { value: "views", label: "조회수" },
   { value: "likes", label: "추천수" },
-  { value: "comments", label: "댓글수" }
+  { value: "comments", label: "댓글수" },
+  { value: "saves", label: "저장수" }
 ];
 
 export default function Board() {
@@ -66,6 +67,7 @@ export default function Board() {
       
       const filters: PostFilters = {
         service: "residential_community",
+        metadata_type: "board",
         sortBy: "created_at",
         page: 1,
         size: 50
@@ -144,6 +146,11 @@ export default function Board() {
       case 'comments':
         sorted = [...postsToSort].sort((a, b) => 
           (b.stats?.comment_count || b.stats?.comments || 0) - (a.stats?.comment_count || a.stats?.comments || 0)
+        );
+        break;
+      case 'saves':
+        sorted = [...postsToSort].sort((a, b) => 
+          (b.stats?.bookmark_count || b.stats?.bookmarks || 0) - (a.stats?.bookmark_count || a.stats?.bookmarks || 0)
         );
         break;
       default:

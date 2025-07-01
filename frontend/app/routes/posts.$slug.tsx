@@ -247,11 +247,11 @@ export default function PostDetail() {
             ...prev,
             stats: {
               ...prev.stats,
-              like_count: response.data.like_count || prev.stats?.like_count || 0,
-              dislike_count: response.data.dislike_count || prev.stats?.dislike_count || 0,
-              bookmark_count: response.data.bookmark_count || prev.stats?.bookmark_count || 0,
-              view_count: prev.stats?.view_count || 0,
-              comment_count: prev.stats?.comment_count || 0,
+              like_count: response.data.like_count ?? prev.stats?.like_count ?? 0,
+              dislike_count: response.data.dislike_count ?? prev.stats?.dislike_count ?? 0,
+              bookmark_count: response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0,
+              view_count: prev.stats?.view_count ?? 0,
+              comment_count: prev.stats?.comment_count ?? 0,
             }
           } : prev);
         }

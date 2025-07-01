@@ -14,85 +14,123 @@ export const meta: MetaFunction = () => {
 export const loader: LoaderFunction = async ({ params }) => {
   const { id } = params;
   
-  // Mock 서비스 데이터 - 실제로는 API에서 가져올 데이터
-  const services = [
-    {
-      id: 1,
-      name: '홈스타일 인테리어',
-      category: '인테리어 전문업체',
-      rating: 4.6,
-      description: '아파트 맞춤형 인테리어 전문 업체입니다. 소규모 시공부터 전체 리모델링까지 다양한 서비스를 제공합니다.',
-      services: [
-        { name: '부분 인테리어', price: '300,000원~', description: '벽지, 바닥재 등 부분 시공' },
-        { name: '전체 리모델링', price: '1,200,000원', originalPrice: '1,500,000원', description: '전체 공간 리모델링' },
-        { name: '도배/장판', price: '500,000원~', description: '도배, 장판 시공' }
-      ],
-      contact: {
-        phone: '02-2345-6789',
-        hours: '평일 09:00-19:00',
-        address: '서울시 서초구 xx동',
-        email: 'home@style.com'
-      },
-      reviews: [
-        { author: '김민수', rating: 5, text: '꼼꼼하고 정성스럽게 작업해주셔서 만족합니다. 추천합니다!' },
-        { author: '이영희', rating: 4, text: '가격 대비 품질이 좋아요. 다음에도 이용할 예정입니다.' },
-        { author: '박철수', rating: 5, text: '전문적이고 신속한 작업이 인상적이었습니다.' },
-        { author: '최수연', rating: 4, text: '친절한 상담과 합리적인 가격이 좋았어요.' }
-      ]
-    },
-    {
-      id: 2,
-      name: '클린마스터',
-      category: '청소 전문업체',
-      rating: 4.8,
-      description: '입주 청소 및 이사 청소 전문 업체입니다. 친환경 세제 사용으로 안전하고 깨끗한 청소를 제공합니다.',
-      services: [
-        { name: '입주 청소', price: '150,000원~', description: '입주 전 전체 청소' },
-        { name: '이사 청소', price: '200,000원~', description: '이사 후 청소 서비스' },
-        { name: '정기 청소', price: '80,000원~', description: '월 1회 정기 청소' }
-      ],
-      contact: {
-        phone: '02-1234-5678',
-        hours: '평일 08:00-18:00',
-        address: '서울시 강남구 xx동',
-        email: 'clean@master.com'
-      },
-      reviews: [
-        { author: '박상준', rating: 5, text: '정말 깨끗하게 청소해주셨어요. 만족합니다!' },
-        { author: '최수진', rating: 5, text: '친절하고 꼼꼼하게 해주시네요. 다음에도 부탁드릴게요.' }
-      ]
-    },
-    {
-      id: 3,
-      name: '안전한 보안',
-      category: '보안 전문업체',
-      rating: 4.4,
-      description: '디지털 도어락, CCTV 설치 및 보안 시스템 전문 업체입니다. 24시간 A/S 서비스를 제공합니다.',
-      services: [
-        { name: '디지털 도어락', price: '250,000원~', description: '현관문 디지털 도어락 설치' },
-        { name: 'CCTV 설치', price: '400,000원~', description: '실내외 CCTV 설치' },
-        { name: '보안 시스템', price: '800,000원~', description: '종합 보안 시스템 구축' }
-      ],
-      contact: {
-        phone: '02-3456-7890',
-        hours: '평일 09:00-18:00',
-        address: '서울시 송파구 xx동',
-        email: 'safe@security.com'
-      },
-      reviews: [
-        { author: '정현우', rating: 4, text: '설치 기술이 좋고 사후 관리도 잘해주세요.' },
-        { author: '김소영', rating: 5, text: '빠른 설치와 친절한 설명이 좋았습니다.' }
-      ]
-    }
-  ];
-
-  const service = services.find(s => s.id === parseInt(id as string));
-  
-  if (!service) {
-    throw new Response("서비스를 찾을 수 없습니다", { status: 404 });
+  if (!id) {
+    throw new Response("서비스 ID가 필요합니다", { status: 400 });
   }
 
-  return json({ service });
+  // MongoDB ObjectId 형식 검증 (24자리 16진수)
+  const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+  if (!isValidObjectId && isNaN(parseInt(id))) {
+    throw new Response("잘못된 서비스 ID 형식입니다", { status: 400 });
+  }
+  
+  try {
+    // 실제 API에서 특정 서비스 데이터 조회
+    const { apiClient } = await import('~/lib/api');
+    console.log('Attempting to fetch service with ID:', id);
+    const response = await apiClient.getPost(id as string);
+    console.log('API response:', response);
+    
+    if (response.success && response.data) {
+      // Post 데이터를 ServicePost 형식으로 변환
+      const { parseServicePost, convertServicePostToMockService } = await import('~/types/service-types');
+      
+      try {
+        const servicePost = parseServicePost(response.data.content);
+        const category = response.data.metadata?.category || '이사';
+        
+        // MockService 형식으로 변환하여 기존 UI와 호환되도록 함
+        const service = convertServicePostToMockService(
+          servicePost,
+          parseInt(id as string) || 1,
+          category
+        );
+        
+        // 실제 Post ID를 저장
+        service.postId = response.data.id;
+        
+        return json({ service, fromApi: true });
+      } catch (parseError) {
+        console.error('Failed to parse service content:', parseError);
+        throw new Error('Invalid service data format');
+      }
+    } else {
+      throw new Error('Service not found in API');
+    }
+  } catch (error) {
+    console.error('Error loading service from API:', error);
+    
+    // Fallback: Mock 서비스 데이터
+    const fallbackServices = [
+      {
+        id: 1,
+        name: '빠른이사 서비스',
+        category: '이사',
+        rating: 4.8,
+        description: '빠르고 안전한 이사 서비스를 제공합니다.',
+        services: [
+          { name: '원룸 이사', price: '150,000원', description: '원룸 이사 서비스' },
+          { name: '투룸 이사', price: '250,000원', originalPrice: '300,000원', description: '투룸 이사 서비스' }
+        ],
+        contact: {
+          phone: '02-3456-7890',
+          hours: '평일 08:00-20:00',
+          address: '서울시 강남구 xx동',
+          email: 'quick@moving.com'
+        },
+        reviews: [
+          { author: '박상준', rating: 5, text: '정말 꼼꼼하게 이사해주셨어요. 만족합니다!' }
+        ]
+      },
+      {
+        id: 2,
+        name: '청준 청소 대행',
+        category: '청소',
+        rating: 4.4,
+        description: '아파트 전문 청소 서비스를 제공합니다.',
+        services: [
+          { name: '의류 청소', price: '35,000원', description: '의류 전문 청소' }
+        ],
+        contact: {
+          phone: '02-8765-4321',
+          hours: '평일 09:00-18:00',
+          address: '서울시 송파구 xx동',
+          email: 'clean@service.com'
+        },
+        reviews: [
+          { author: '정현우', rating: 4, text: '청소가 깔끔하고 만족스러웠습니다.' }
+        ]
+      },
+      {
+        id: 3,
+        name: '시원한 에어컨 서비스',
+        category: '에어컨',
+        rating: 4.7,
+        description: '에어컨 전문 설치, 수리, 청소 서비스를 제공합니다.',
+        services: [
+          { name: '에어컨 청소', price: '80,000원', description: '에어컨 전문 청소' },
+          { name: '에어컨 설치', price: '120,000원', originalPrice: '150,000원', description: '에어컨 설치 서비스' }
+        ],
+        contact: {
+          phone: '02-9876-5432',
+          hours: '평일 09:00-18:00',
+          address: '서울시 마포구 xx동',
+          email: 'cool@aircon.com'
+        },
+        reviews: [
+          { author: '이민정', rating: 5, text: '에어컨 청소를 정말 깨끗하게 해주셨어요.' }
+        ]
+      }
+    ];
+    
+    const service = fallbackServices.find(s => s.id === parseInt(id as string));
+    
+    if (!service) {
+      throw new Response("서비스를 찾을 수 없습니다", { status: 404 });
+    }
+
+    return json({ service, fromApi: false });
+  }
 };
 
 export default function ServiceDetail() {

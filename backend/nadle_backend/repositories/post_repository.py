@@ -58,11 +58,12 @@ class PostRepository:
         
         return post
     
-    async def get_by_id(self, post_id: str) -> Post:
+    async def get_by_id(self, post_id: str, include_deleted: bool = False) -> Post:
         """Get post by ID.
         
         Args:
             post_id: Post ID
+            include_deleted: Whether to include deleted posts (for admin operations)
             
         Returns:
             Post instance
@@ -71,7 +72,11 @@ class PostRepository:
             PostNotFoundError: If post not found
         """
         try:
-            post = await Post.get(PydanticObjectId(post_id))
+            if include_deleted:
+                post = await Post.get(PydanticObjectId(post_id))
+            else:
+                post = await Post.find_one({"_id": PydanticObjectId(post_id), "status": {"$ne": "deleted"}})
+            
             if post is None:
                 raise PostNotFoundError(post_id=post_id)
             return post
@@ -90,7 +95,7 @@ class PostRepository:
         Raises:
             PostNotFoundError: If post not found
         """
-        post = await Post.find_one(Post.slug == slug)
+        post = await Post.find_one({"slug": slug, "status": {"$ne": "deleted"}})
         if post is None:
             raise PostNotFoundError(slug=slug)
         return post
@@ -132,7 +137,7 @@ class PostRepository:
         return post
     
     async def delete(self, post_id: str) -> bool:
-        """Delete post.
+        """Soft delete post (mark as deleted instead of physical deletion).
         
         Args:
             post_id: Post ID
@@ -143,8 +148,16 @@ class PostRepository:
         Raises:
             PostNotFoundError: If post not found
         """
-        post = await self.get_by_id(post_id)
-        await post.delete()
+        from datetime import datetime
+        
+        # Include deleted posts in case we need to re-delete or handle edge cases
+        post = await self.get_by_id(post_id, include_deleted=True)
+        
+        # Soft delete: update status to 'deleted' instead of physical deletion
+        post.status = "deleted"
+        post.updated_at = datetime.utcnow()
+        await post.save()
+        
         return True
     
     async def list_posts(
@@ -152,6 +165,7 @@ class PostRepository:
         page: int = 1, 
         page_size: int = 20,
         service_type: Optional[str] = None,
+        metadata_type: Optional[str] = None,
         author_id: Optional[str] = None,
         status: str = "published",
         sort_by: str = "created_at"
@@ -162,6 +176,7 @@ class PostRepository:
             page: Page number (1-based)
             page_size: Number of items per page
             service_type: Filter by service type
+            metadata_type: Filter by metadata type
             author_id: Filter by author ID
             status: Filter by status
             sort_by: Sort field
@@ -169,10 +184,14 @@ class PostRepository:
         Returns:
             Tuple of (posts list, total count)
         """
-        # Build query
-        query = {"status": status}
+        # Build query - exclude deleted posts
+        query = {"status": {"$ne": "deleted"}}
+        if status != "all":
+            query["status"] = status
         if service_type:
             query["service"] = service_type
+        if metadata_type:
+            query["metadata.type"] = metadata_type
         if author_id:
             query["author_id"] = author_id
         
@@ -207,9 +226,9 @@ class PostRepository:
         Returns:
             Tuple of (posts list, total count)
         """
-        # Build search query
+        # Build search query - exclude deleted posts
         search_filter = {
-            "status": "published",
+            "status": {"$ne": "deleted"},
             "$or": [
                 {"title": {"$regex": query, "$options": "i"}},
                 {"content": {"$regex": query, "$options": "i"}},

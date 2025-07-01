@@ -222,6 +222,8 @@ export interface DashboardStats {
 export interface PostFilters {
   type?: PostType;
   service?: ServiceType;
+  metadata_type?: string; // 메타데이터 타입 필터링 추가
+  category?: string; // 카테고리 필터링 추가
   sortBy?: "created_at" | "views" | "likes";
   search?: string;
   page?: number;

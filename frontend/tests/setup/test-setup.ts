@@ -3,8 +3,15 @@
  * Vitest가 테스트를 실행하기 전에 로드되는 설정 파일
  */
 
-import { vi, beforeAll, afterAll, afterEach } from 'vitest';
 import '@testing-library/jest-dom';
+
+// Vitest globals are available because globals: true in vitest.config.ts
+declare global {
+  const vi: typeof import('vitest')['vi'];
+  const beforeAll: typeof import('vitest')['beforeAll'];
+  const afterAll: typeof import('vitest')['afterAll'];
+  const afterEach: typeof import('vitest')['afterEach'];
+}
 
 // Local Storage mock
 const localStorageMock = {

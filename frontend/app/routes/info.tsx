@@ -160,7 +160,8 @@ const sortOptions = [
   { value: "latest", label: "최신순" },
   { value: "views", label: "조회수" },
   { value: "likes", label: "추천수" },
-  { value: "comments", label: "댓글수" }
+  { value: "comments", label: "댓글수" },
+  { value: "saves", label: "저장수" }
 ];
 
 export default function Info() {
@@ -208,6 +209,9 @@ export default function Info() {
         break;
       case 'comments':
         sorted = [...items].sort((a, b) => b.comments - a.comments);
+        break;
+      case 'saves':
+        sorted = [...items].sort((a, b) => b.bookmarks - a.bookmarks);
         break;
       default:
         sorted = [...items];

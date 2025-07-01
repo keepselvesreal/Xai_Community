@@ -230,7 +230,9 @@ class ApiClient {
   }
 
   logout(): void {
+    console.log('ApiClient: Logout called');
     this.removeToken();
+    console.log('ApiClient: Token removed');
   }
 
   // 테스트를 위한 public 메서드들 (원래는 private이지만 테스트 접근을 위해 public으로 노출)
@@ -287,6 +289,7 @@ class ApiClient {
     
     if (filters.type) queryParams.append('type', filters.type);
     if (filters.service) queryParams.append('service_type', filters.service);
+    if (filters.metadata_type) queryParams.append('metadata_type', filters.metadata_type);
     if (filters.sortBy) queryParams.append('sort_by', filters.sortBy);
     if (filters.search) queryParams.append('search', filters.search);
     if (filters.page) queryParams.append('page', filters.page.toString());

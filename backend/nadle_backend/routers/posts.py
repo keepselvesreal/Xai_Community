@@ -74,6 +74,7 @@ async def list_posts(
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     service_type: Optional[str] = Query(None, description="Filter by service type"),
+    metadata_type: Optional[str] = Query(None, description="Filter by metadata type"),
     author_id: Optional[str] = Query(None, description="Filter by author ID"),
     sort_by: str = Query("created_at", description="Sort field"),
     current_user: Optional[User] = Depends(get_optional_current_active_user),
@@ -85,6 +86,7 @@ async def list_posts(
             page=page,
             page_size=page_size,
             service_type=service_type,
+            metadata_type=metadata_type,
             author_id=author_id,
             sort_by=sort_by,
             current_user=current_user

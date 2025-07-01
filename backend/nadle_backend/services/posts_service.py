@@ -75,6 +75,7 @@ class PostsService:
         page: int = 1,
         page_size: int = 20,
         service_type: Optional[str] = None,
+        metadata_type: Optional[str] = None,
         author_id: Optional[str] = None,
         sort_by: str = "created_at",
         current_user: Optional[User] = None
@@ -85,6 +86,7 @@ class PostsService:
             page: Page number
             page_size: Items per page
             service_type: Filter by service type
+            metadata_type: Filter by metadata type
             author_id: Filter by author ID
             sort_by: Sort field
             current_user: Current user (optional)
@@ -97,6 +99,7 @@ class PostsService:
             page=page,
             page_size=page_size,
             service_type=service_type,
+            metadata_type=metadata_type,
             author_id=author_id,
             sort_by=sort_by
         )

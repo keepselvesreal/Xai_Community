@@ -140,7 +140,12 @@ const Sidebar = ({ isOpen = true, onClose, isAuthenticated = false, user, onLogo
                     {user.email}님
                   </div>
                   <button
-                    onClick={onLogout}
+                    onClick={() => {
+                      console.log('Sidebar: Logout button clicked');
+                      if (onLogout) {
+                        onLogout();
+                      }
+                    }}
                     className="w-full bg-black/20 hover:bg-black/30 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-white border border-white/20"
                   >
                     로그아웃

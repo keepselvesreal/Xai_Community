@@ -104,42 +104,93 @@ export const loader: LoaderFunction = async () => {
   return json({ tips });
 };
 
-const categories = ["전체", "청소/정리", "인테리어", "생활", "절약", "원예"];
+const categories = ["전체", "청소/정리", "인테리어", "생활", "절약", "반려동물"];
+
+const sortOptions = [
+  { value: "latest", label: "최신순" },
+  { value: "views", label: "조회수" },
+  { value: "likes", label: "추천수" },
+  { value: "comments", label: "댓글수" },
+  { value: "saves", label: "저장수" }
+];
 
 export default function Tips() {
   const { tips: initialTips } = useLoaderData<typeof loader>();
   const { user, logout } = useAuth();
   
   const [tips, setTips] = useState(initialTips);
+  const [filteredTips, setFilteredTips] = useState(initialTips);
+  const [sortedTips, setSortedTips] = useState(initialTips);
   const [selectedCategory, setSelectedCategory] = useState("전체");
+  const [sortBy, setSortBy] = useState("latest");
   const [searchQuery, setSearchQuery] = useState("");
 
   const handleCategoryFilter = (category: string) => {
     setSelectedCategory(category);
-    applyFilters(category);
+    applyFilters(category, sortBy);
   };
 
-
-  const applyFilters = (category: string) => {
-    let filteredTips = initialTips;
+  const applyFilters = (category: string, sortOption: string) => {
+    let filtered = initialTips;
     
     if (category !== "전체") {
-      filteredTips = filteredTips.filter((tip: MockTip) => tip.category === category);
+      filtered = filtered.filter((tip: MockTip) => tip.category === category);
     }
     
-    setTips(filteredTips);
+    setFilteredTips(filtered);
+    applySortToFilteredTips(filtered, sortOption);
+  };
+  
+  const applySortToFilteredTips = (tipsToSort: MockTip[], sortOption: string) => {
+    let sorted;
+    switch(sortOption) {
+      case 'latest':
+        // 날짜 기준으로 정렬 (가장 최신 순)
+        sorted = [...tipsToSort].sort((a, b) => {
+          const aDate = new Date(a.created_at.replace(/[가-힣\s]/g, ''));
+          const bDate = new Date(b.created_at.replace(/[가-힣\s]/g, ''));
+          return b.id - a.id; // ID 기준으로 최신순 (높은 ID가 최신)
+        });
+        break;
+      case 'views':
+        sorted = [...tipsToSort].sort((a, b) => b.views_count - a.views_count);
+        break;
+      case 'likes':
+        sorted = [...tipsToSort].sort((a, b) => b.likes_count - a.likes_count);
+        break;
+      case 'comments':
+        // 댓글수 계산 (조회수의 10%로 가정)
+        sorted = [...tipsToSort].sort((a, b) => 
+          Math.floor(b.views_count * 0.1) - Math.floor(a.views_count * 0.1)
+        );
+        break;
+      case 'saves':
+        sorted = [...tipsToSort].sort((a, b) => b.saves_count - a.saves_count);
+        break;
+      default:
+        sorted = [...tipsToSort];
+    }
+    
+    setSortedTips(sorted);
+  };
+  
+  const handleSort = (sortOption: string) => {
+    setSortBy(sortOption);
+    applySortToFilteredTips(filteredTips, sortOption);
   };
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      const filteredTips = initialTips.filter((tip: MockTip) =>
+      const filtered = initialTips.filter((tip: MockTip) =>
         tip.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         tip.content.toLowerCase().includes(searchQuery.toLowerCase())
       );
-      setTips(filteredTips);
+      setFilteredTips(filtered);
+      applySortToFilteredTips(filtered, sortBy);
     } else {
-      setTips(initialTips);
+      setFilteredTips(initialTips);
+      applySortToFilteredTips(initialTips, sortBy);
     }
   };
 
@@ -151,8 +202,15 @@ export default function Tips() {
     >
       {/* 검색 및 필터 섹션 */}
       <div className="mb-8">
-        {/* 검색 */}
+        {/* 글쓰기 버튼과 검색창 - 나란히 배치 */}
         <div className="flex justify-center items-center gap-4 mb-6">
+          <Link
+            to="/tips/write"
+            className="w-full max-w-xs px-6 py-3 bg-var-card border border-var-color rounded-full hover:border-accent-primary hover:bg-var-hover transition-all duration-200 font-medium text-var-primary flex items-center justify-center gap-2"
+          >
+            ✏️ 글쓰기
+          </Link>
+          
           <div className="flex items-center gap-3 bg-var-card border border-var-color rounded-full px-4 py-3 w-full max-w-xs">
             <span className="text-var-muted">🔍</span>
             <input
@@ -166,29 +224,48 @@ export default function Tips() {
           </div>
         </div>
 
-        {/* 필터바 */}
-        <div className="flex gap-2">
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => handleCategoryFilter(category)}
-              className={`px-4 py-2 border rounded-full text-sm font-medium transition-all duration-200 ${
-                selectedCategory === category
-                  ? 'border-accent-primary bg-accent-primary text-white'
-                  : 'border-var-color bg-var-card text-var-secondary hover:border-accent-primary hover:text-accent-primary'
-              }`}
+        {/* 필터바와 정렬 옵션 */}
+        <div className="flex justify-between items-center mb-4">
+          {/* 필터 바 */}
+          <div className="flex gap-2">
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => handleCategoryFilter(category)}
+                className={`px-4 py-2 border rounded-full text-sm font-medium transition-all duration-200 ${
+                  selectedCategory === category
+                    ? 'border-accent-primary bg-accent-primary text-white'
+                    : 'border-var-color bg-var-card text-var-secondary hover:border-accent-primary hover:text-accent-primary'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+
+          {/* 정렬 옵션 */}
+          <div className="flex items-center gap-2">
+            <span className="text-var-muted text-sm">정렬:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => handleSort(e.target.value)}
+              className="bg-var-card border border-var-color rounded-lg px-3 py-1 text-sm text-var-primary"
             >
-              {category}
-            </button>
-          ))}
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
       </div>
 
       {/* 전문가 꿀정보 목록 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {tips.length > 0 ? (
-          tips.map((tip: MockTip) => (
+        {sortedTips.length > 0 ? (
+          sortedTips.map((tip: MockTip) => (
             <Link key={tip.id} to={`/expert/${tip.id}`}>
               <div className="card p-6 hover:shadow-var-card transition-all duration-200 cursor-pointer h-full">
                   <div className="flex items-start justify-between mb-3">
@@ -215,7 +292,7 @@ export default function Tips() {
                     ))}
                   </div>
 
-                  {/* 통계 및 날짜 */}
+                  {/* 사용자 반응 및 날짜 */}
                   <div className="flex items-center justify-between text-var-muted text-sm">
                     <span className="text-var-secondary font-medium">{tip.created_at}</span>
                     <div className="flex items-center gap-3">
@@ -226,7 +303,13 @@ export default function Tips() {
                         👍 {tip.likes_count}
                       </span>
                       <span className="flex items-center gap-1">
-                        📌 {tip.saves_count}
+                        👎 {Math.floor(tip.likes_count * 0.2)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        💬 {Math.floor(tip.views_count * 0.1)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        🔖 {tip.saves_count}
                       </span>
                     </div>
                   </div>

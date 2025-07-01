@@ -14,6 +14,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [renderKey, setRenderKey] = useState(0); // 강제 리렌더링을 위한 키
 
   // 초기 인증 상태 확인
   useEffect(() => {
@@ -35,12 +36,23 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(response.data);
           } else {
             console.log('AuthContext: Failed to get user - response not successful:', response);
-            // 토큰이 유효하지 않은 경우
-            logout();
+            // 토큰이 유효하지 않은 경우 - 직접 상태 정리
+            setUser(null);
+            setToken(null);
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+            }
+            apiClient.logout();
           }
         } catch (error) {
           console.error("AuthContext: Failed to get current user - exception caught:", error);
-          logout();
+          // 예외 발생 시 - 직접 상태 정리
+          setUser(null);
+          setToken(null);
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+          }
+          apiClient.logout();
         }
       }
       
@@ -112,13 +124,33 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const logout = useCallback(() => {
     console.log('AuthContext: Logging out...');
+    console.log('AuthContext: Current user before logout:', user);
+    console.log('AuthContext: Current token before logout:', token);
+    
+    // 상태 즉시 업데이트
     setUser(null);
     setToken(null);
+    setIsLoading(false);
+    setRenderKey(prev => prev + 1); // 강제 리렌더링
+    
+    // localStorage 정리
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+      console.log('AuthContext: Token removed from localStorage');
     }
+    
+    // API 클라이언트 로그아웃
     apiClient.logout();
-  }, []);
+    
+    console.log('AuthContext: Logout complete');
+    
+    // 로그아웃 후 홈페이지로 리디렉션
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        window.location.href = '/';
+      }, 100); // 상태 업데이트가 완료된 후 리디렉션
+    }
+  }, [user, token]);
 
   const value: AuthContextType = {
     user,
@@ -129,6 +161,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     isLoading,
     isAuthenticated: !!user && !!token,
   };
+  
+  console.log('AuthContext: Current state - user:', !!user, 'token:', !!token, 'isAuthenticated:', !!user && !!token, 'renderKey:', renderKey);
 
   return (
     <AuthContext.Provider value={value}>
