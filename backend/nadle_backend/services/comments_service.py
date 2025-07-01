@@ -433,9 +433,35 @@ class CommentsService:
         Returns:
             CommentDetail instance
         """
+        # Get author information
+        author = None
+        if comment.author_id:
+            try:
+                from nadle_backend.models.core import User
+                from beanie import PydanticObjectId
+                user = await User.get(PydanticObjectId(comment.author_id))
+                if user:
+                    from nadle_backend.models.core import UserResponse
+                    author = UserResponse(
+                        id=str(user.id),
+                        name=user.name,
+                        email=user.email,
+                        user_handle=user.user_handle,
+                        display_name=user.display_name,
+                        bio=user.bio,
+                        avatar_url=user.avatar_url,
+                        status=user.status,
+                        created_at=user.created_at,
+                        updated_at=user.updated_at
+                    )
+            except Exception:
+                # If user not found, leave author as None
+                pass
+        
         return CommentDetail(
             id=str(comment.id),
             author_id=comment.author_id,
+            author=author,
             content=comment.content,
             parent_comment_id=comment.parent_comment_id,
             status=comment.status,

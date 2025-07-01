@@ -137,6 +137,18 @@ export interface PaginatedResponse<T> {
   pages: number;
 }
 
+export interface CommentListResponse {
+  comments: Comment[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
 // UI 상태 타입
 export interface NotificationState {
   id: string;
@@ -349,10 +361,11 @@ export interface ServiceReview {
   text: string;
 }
 
-export interface MockTip {
+export interface Tip {
   id: number;
   title: string;
   content: string;
+  slug: string;
   expert_name: string;
   expert_title: string;
   created_at: string;
@@ -379,6 +392,101 @@ export interface ReactionBarProps {
   showSave?: boolean;
   itemId?: number;
   itemType?: 'post' | 'info' | 'service' | 'tip';
+}
+
+// 콘텐츠 타입 정의
+export type ContentType = "interactive_chart" | "ai_article" | "data_visualization" | "mixed_content";
+
+// 정보 페이지 관련 타입
+export interface InfoMetadata {
+  type: string;
+  category: string;
+  tags?: string[];
+  content_type?: ContentType;
+  summary?: string;
+  data_source?: string;
+  chart_config?: any;
+  ai_prompt?: string;
+}
+
+export interface InfoItem {
+  id: string;
+  title: string;
+  content: string;
+  slug: string;
+  author_id: string;
+  content_type: ContentType;
+  metadata: InfoMetadata;
+  created_at: string;
+  updated_at?: string;
+  stats?: PostStats;
+}
+
+// Post를 InfoItem으로 변환하는 함수
+export function convertPostToInfoItem(post: Post): InfoItem {
+  return {
+    id: post.id,
+    title: post.title,
+    content: post.content,
+    slug: post.slug,
+    author_id: post.author_id || '',
+    content_type: (post.metadata?.content_type as ContentType) || 'ai_article',
+    metadata: {
+      type: post.metadata?.type || 'property_information',
+      category: post.metadata?.category || '',
+      tags: post.metadata?.tags || [],
+      content_type: (post.metadata?.content_type as ContentType) || 'ai_article',
+      summary: post.metadata?.summary,
+      data_source: post.metadata?.data_source,
+      chart_config: post.metadata?.chart_config,
+      ai_prompt: post.metadata?.ai_prompt
+    },
+    created_at: post.created_at,
+    updated_at: post.updated_at,
+    stats: post.stats
+  };
+}
+
+// InfoItem 필터링 함수
+export function infoFilterFunction(item: InfoItem, category: string, query: string): boolean {
+  // 카테고리 필터
+  if (category !== 'all') {
+    if (item.metadata.category !== category) {
+      return false;
+    }
+  }
+  
+  // 검색 필터
+  if (query && query.trim()) {
+    const searchLower = query.toLowerCase();
+    return (
+      item.title.toLowerCase().includes(searchLower) ||
+      item.content.toLowerCase().includes(searchLower) ||
+      (item.metadata.tags && item.metadata.tags.some(tag => 
+        tag.toLowerCase().includes(searchLower)
+      ))
+    );
+  }
+  
+  return true;
+}
+
+// InfoItem 정렬 함수
+export function infoSortFunction(a: InfoItem, b: InfoItem, sortBy: string): number {
+  switch(sortBy) {
+    case 'latest':
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    case 'views':
+      return (b.stats?.view_count || 0) - (a.stats?.view_count || 0);
+    case 'likes':
+      return (b.stats?.like_count || 0) - (a.stats?.like_count || 0);
+    case 'comments':
+      return (b.stats?.comment_count || 0) - (a.stats?.comment_count || 0);
+    case 'saves':
+      return (b.stats?.bookmark_count || 0) - (a.stats?.bookmark_count || 0);
+    default:
+      return 0;
+  }
 }
 
 // 필터링 및 정렬 관련 인터페이스

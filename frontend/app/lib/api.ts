@@ -7,6 +7,7 @@ import type {
   CreatePostRequest,
   Comment,
   CreateCommentRequest,
+  CommentListResponse,
   Reaction,
   ReactionType,
   ApiResponse,
@@ -24,15 +25,20 @@ const API_BASE_URL = process.env.NODE_ENV === 'production'
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
+  private refreshToken: string | null = null;
+  private isRefreshing: boolean = false;
+  private refreshPromise: Promise<boolean> | null = null;
+  private tokenCheckInterval: number | null = null;
 
   constructor(baseURL: string = API_BASE_URL) {
     this.baseURL = baseURL;
-    this.loadToken();
+    this.loadTokens();
   }
 
-  private loadToken(): void {
+  private loadTokens(): void {
     if (typeof window !== 'undefined') {
       let token = localStorage.getItem('authToken');
+      let refreshToken = localStorage.getItem('refreshToken');
       
       // JSON.stringify로 저장된 경우 파싱
       if (token && (token.startsWith('"') && token.endsWith('"'))) {
@@ -55,25 +61,96 @@ class ApiClient {
       }
       
       this.token = token;
-      console.log('ApiClient: Token loaded from localStorage:', this.token ? `${this.token.substring(0, 10)}...` : 'null');
+      this.refreshToken = refreshToken;
+      console.log('ApiClient: Tokens loaded from localStorage:', 
+        this.token ? `access: ${this.token.substring(0, 10)}...` : 'access: null',
+        this.refreshToken ? `refresh: ${this.refreshToken.substring(0, 10)}...` : 'refresh: null'
+      );
+      
+      // 토큰이 있으면 자동 갱신 타이머 시작
+      if (this.token && this.refreshToken) {
+        this.startTokenRefreshTimer();
+      }
     }
   }
 
-  private saveToken(token: string): void {
+  private saveTokens(accessToken: string, refreshToken?: string): void {
     // Bearer 접두사 제거 (토큰만 저장)
-    const cleanToken = token.startsWith('Bearer ') ? token.substring(7) : token;
+    const cleanToken = accessToken.startsWith('Bearer ') ? accessToken.substring(7) : accessToken;
     
     this.token = cleanToken;
+    if (refreshToken) {
+      this.refreshToken = refreshToken;
+    }
+    
     if (typeof window !== 'undefined') {
       localStorage.setItem('authToken', cleanToken);
-      console.log('ApiClient: Token saved to localStorage:', cleanToken ? `${cleanToken.substring(0, 10)}...` : 'null');
+      if (refreshToken) {
+        localStorage.setItem('refreshToken', refreshToken);
+      }
+      console.log('ApiClient: Tokens saved to localStorage:', 
+        cleanToken ? `access: ${cleanToken.substring(0, 10)}...` : 'access: null',
+        refreshToken ? `refresh: ${refreshToken.substring(0, 10)}...` : 'refresh: unchanged'
+      );
     }
   }
 
-  private removeToken(): void {
+  private removeTokens(): void {
     this.token = null;
+    this.refreshToken = null;
     if (typeof window !== 'undefined') {
       localStorage.removeItem('authToken');
+      localStorage.removeItem('refreshToken');
+    }
+    this.stopTokenRefreshTimer();
+  }
+
+  private startTokenRefreshTimer(): void {
+    if (typeof window === 'undefined') return;
+    
+    // 기존 타이머 정리
+    this.stopTokenRefreshTimer();
+    
+    // 5분마다 토큰 상태 확인
+    this.tokenCheckInterval = window.setInterval(() => {
+      this.checkAndRefreshToken();
+    }, 5 * 60 * 1000); // 5분
+  }
+
+  private stopTokenRefreshTimer(): void {
+    if (this.tokenCheckInterval) {
+      clearInterval(this.tokenCheckInterval);
+      this.tokenCheckInterval = null;
+    }
+  }
+
+  private async checkAndRefreshToken(): Promise<void> {
+    if (!this.token || !this.refreshToken) {
+      return;
+    }
+
+    try {
+      // 토큰이 10분 이내에 만료되는지 확인
+      if (this.isTokenExpired(this.token) || this.isTokenExpiringSoon(this.token, 10 * 60)) {
+        console.log('ApiClient: Token is expired or expiring soon, refreshing...');
+        await this.refreshAccessToken();
+      }
+    } catch (error) {
+      console.error('ApiClient: Error checking token expiration:', error);
+    }
+  }
+
+  private isTokenExpiringSoon(token: string, secondsBeforeExpiry: number): boolean {
+    try {
+      const payload = this.decodeJWTPayload(token);
+      const now = Math.floor(Date.now() / 1000);
+      const expiresAt = payload.exp;
+      
+      // 현재 시간 + secondsBeforeExpiry가 만료 시간보다 크거나 같으면 곧 만료됨
+      return (now + secondsBeforeExpiry) >= expiresAt;
+    } catch (error) {
+      console.error('ApiClient: Error checking token expiration:', error);
+      return true; // 파싱 실패 시 안전하게 만료된 것으로 처리
     }
   }
 
@@ -94,11 +171,91 @@ class ApiClient {
     return headers;
   }
 
+  private async refreshAccessToken(): Promise<boolean> {
+    if (!this.refreshToken) {
+      console.log('ApiClient: No refresh token available');
+      return false;
+    }
+
+    if (this.isRefreshing) {
+      // 이미 토큰 갱신 중이면 기존 프로미스를 기다림
+      return this.refreshPromise || Promise.resolve(false);
+    }
+
+    this.isRefreshing = true;
+    this.refreshPromise = this.performTokenRefresh();
+    
+    const result = await this.refreshPromise;
+    this.isRefreshing = false;
+    this.refreshPromise = null;
+    
+    return result;
+  }
+
+  private async performTokenRefresh(): Promise<boolean> {
+    try {
+      console.log('ApiClient: Attempting to refresh access token...');
+      
+      const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ refresh_token: this.refreshToken }),
+      });
+
+      if (!response.ok) {
+        console.error('ApiClient: Token refresh failed:', response.status, response.statusText);
+        // 리프레시 토큰이 만료되었거나 무효함 - 로그아웃 처리
+        this.removeTokens();
+        return false;
+      }
+
+      const data = await response.json();
+      console.log('ApiClient: Token refresh successful');
+      
+      // 새로운 access token 저장 (refresh token은 그대로 유지)
+      this.saveTokens(data.access_token);
+      
+      // 토큰 갱신 후 타이머 재시작
+      this.startTokenRefreshTimer();
+      
+      return true;
+    } catch (error) {
+      console.error('ApiClient: Token refresh error:', error);
+      this.removeTokens();
+      return false;
+    }
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
+    return this.makeRequestWithRetry<T>(endpoint, options, false);
+  }
+
+  private async makeRequestWithRetry<T>(
+    endpoint: string,
+    options: RequestInit = {},
+    isRetry: boolean = false
+  ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
+    
+    // 토큰이 없고 refresh token이 있다면 먼저 토큰 갱신 시도
+    if (!this.token && this.refreshToken && !isRetry) {
+      console.log('ApiClient: No access token but refresh token exists, attempting refresh...');
+      const refreshSuccess = await this.refreshAccessToken();
+      if (!refreshSuccess) {
+        console.log('ApiClient: Token refresh failed before request');
+        this.notifyTokenExpired();
+        return {
+          success: false,
+          error: 'Authorization header is required',
+          timestamp: new Date().toISOString(),
+        };
+      }
+    }
     
     const config: RequestInit = {
       headers: this.getHeaders(),
@@ -106,9 +263,25 @@ class ApiClient {
     };
 
     try {
-      console.log('ApiClient: Making request to:', url);
+      console.log('ApiClient: Making request to:', url, isRetry ? '(retry)' : '');
       const response = await fetch(url, config);
       console.log('ApiClient: Response received:', response.status, response.statusText);
+      
+      // 401 Unauthorized 처리 - 토큰 갱신 시도
+      if (response.status === 401 && !isRetry && this.refreshToken) {
+        console.log('ApiClient: Received 401, attempting token refresh...');
+        const refreshSuccess = await this.refreshAccessToken();
+        
+        if (refreshSuccess) {
+          console.log('ApiClient: Token refreshed successfully, retrying request...');
+          // 토큰 갱신 성공 시 요청 재시도
+          return this.makeRequestWithRetry<T>(endpoint, options, true);
+        } else {
+          console.log('ApiClient: Token refresh failed, user needs to login again');
+          // 토큰 갱신 실패 시 로그아웃 이벤트 발생
+          this.notifyTokenExpired();
+        }
+      }
       
       // 빈 응답 처리
       let data;
@@ -163,6 +336,13 @@ class ApiClient {
     }
   }
 
+  private notifyTokenExpired(): void {
+    // 토큰 만료 이벤트를 발생시켜 AuthContext가 로그아웃 처리하도록 함
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('tokenExpired'));
+    }
+  }
+
   // 인증 관련 API
   async login(credentials: LoginRequest): Promise<ApiResponse<AuthToken>> {
     // OAuth2PasswordRequestForm expects form-data with username/password fields
@@ -198,7 +378,10 @@ class ApiClient {
         throw new Error(data.message || data.detail || `HTTP error! status: ${response.status}`);
       }
 
-      this.saveToken(data.access_token);
+      this.saveTokens(data.access_token, data.refresh_token);
+      
+      // 로그인 성공 시 토큰 자동 갱신 타이머 시작
+      this.startTokenRefreshTimer();
       
       return {
         success: true,
@@ -231,13 +414,13 @@ class ApiClient {
 
   logout(): void {
     console.log('ApiClient: Logout called');
-    this.removeToken();
-    console.log('ApiClient: Token removed');
+    this.removeTokens();
+    console.log('ApiClient: Tokens removed');
   }
 
   // 테스트를 위한 public 메서드들 (원래는 private이지만 테스트 접근을 위해 public으로 노출)
-  public saveTokenPublic(token: string): void {
-    return this.saveToken(token);
+  public saveTokenPublic(token: string, refreshToken?: string): void {
+    return this.saveTokens(token, refreshToken);
   }
 
   public getHeadersPublic(): Record<string, string> {
@@ -326,8 +509,8 @@ class ApiClient {
   }
 
   // 댓글 관련 API
-  async getComments(postSlug: string, page: number = 1): Promise<ApiResponse<PaginatedResponse<Comment>>> {
-    return this.request<PaginatedResponse<Comment>>(`/api/posts/${postSlug}/comments?page=${page}`);
+  async getComments(postSlug: string, page: number = 1): Promise<ApiResponse<CommentListResponse>> {
+    return this.request<CommentListResponse>(`/api/posts/${postSlug}/comments?page=${page}`);
   }
 
   async createComment(postSlug: string, commentData: CreateCommentRequest): Promise<ApiResponse<Comment>> {

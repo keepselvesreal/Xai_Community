@@ -207,7 +207,7 @@ export default function PostDetail() {
     try {
       const response = await apiClient.getComments(slug);
       if (response.success && response.data) {
-        setComments(response.data.items);
+        setComments(response.data.comments || []);
       }
     } catch (error) {
       console.error('댓글 로드 실패:', error);
