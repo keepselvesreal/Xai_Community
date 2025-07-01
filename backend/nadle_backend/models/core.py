@@ -414,6 +414,7 @@ class CommentDetail(BaseModel):
     """Comment detail model for API responses."""
     id: str = Field(alias="_id")
     author_id: str
+    author: Optional["UserResponse"] = None  # Author information
     content: str
     parent_comment_id: Optional[str]
     status: CommentStatus
@@ -482,3 +483,7 @@ class PaginatedResponse(BaseModel):
             page_size=page_size,
             total_pages=total_pages
         )
+
+
+# Model rebuilds for forward references
+CommentDetail.model_rebuild()
