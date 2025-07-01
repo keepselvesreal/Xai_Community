@@ -110,7 +110,21 @@ class ApiClient {
       const response = await fetch(url, config);
       console.log('ApiClient: Response received:', response.status, response.statusText);
       
-      const data = await response.json();
+      // 빈 응답 처리
+      let data;
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const text = await response.text();
+        if (text.trim()) {
+          data = JSON.parse(text);
+        } else {
+          // 빈 JSON 응답 처리
+          data = { success: true };
+        }
+      } else {
+        // JSON이 아닌 응답
+        data = { success: true };
+      }
       console.log('ApiClient: Response data:', data);
 
       if (!response.ok) {

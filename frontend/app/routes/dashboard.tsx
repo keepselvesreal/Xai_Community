@@ -154,7 +154,7 @@ export default function Dashboard() {
       <div className="mb-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">🚀 빠른 액션</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/posts')}>
+          <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/board')}>
             <Card.Content className="text-center py-6">
               <div className="text-3xl mb-3">📄</div>
               <div className="font-semibold text-gray-900">게시글 목록</div>
@@ -192,7 +192,7 @@ export default function Dashboard() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-2xl font-bold text-gray-900">📝 최근 게시글</h2>
-          <Button variant="outline" onClick={() => navigate('/posts')}>
+          <Button variant="outline" onClick={() => navigate('/board')}>
             모든 게시글 보기
           </Button>
         </div>

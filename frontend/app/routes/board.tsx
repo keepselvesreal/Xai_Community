@@ -355,7 +355,8 @@ export default function Board() {
                       }}
                     >
                       <div className="flex-1">
-                        <div className="post-title flex items-center gap-2 mb-1">
+                        {/* 카테고리와 제목 (같은 줄) */}
+                        <div className="post-title flex items-center gap-2 mb-2">
                           <span className={`post-tag ${getTagColor(post.metadata?.category || 'info')}`}>
                             {post.metadata?.category || '일반'}
                           </span>
@@ -368,11 +369,39 @@ export default function Board() {
                           )}
                         </div>
                         
-                        <div className="post-meta">
-                          <span className="text-var-muted text-sm">
-                            {post.author?.display_name || post.author?.user_handle || '익명'} · {formatRelativeTime(post.created_at)}
-                          </span>
-                          <div className="flex items-center gap-3">
+                        {/* 하단: 태그 및 작성자/시간/통계 */}
+                        <div className="post-meta flex items-center justify-between text-sm text-var-muted">
+                          {/* 좌측: 사용자 태그 */}
+                          <div className="flex items-center gap-1">
+                            {post.metadata?.tags && post.metadata.tags.length > 0 ? (
+                              <>
+                                {post.metadata.tags.slice(0, 3).map((tag, index) => (
+                                  <span
+                                    key={index}
+                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200"
+                                  >
+                                    #{tag}
+                                  </span>
+                                ))}
+                                {post.metadata.tags.length > 3 && (
+                                  <span className="text-xs text-var-muted px-1">
+                                    +{post.metadata.tags.length - 3}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <div></div>
+                            )}
+                          </div>
+                          
+                          {/* 우측: 작성자, 시간, 통계 */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-var-secondary">
+                              {post.author?.display_name || post.author?.user_handle || '익명'}
+                            </span>
+                            <span>·</span>
+                            <span>{formatRelativeTime(post.created_at)}</span>
+                            <span>·</span>
                             <span className="stat-icon text-var-muted">
                               👁️ {formatNumber(post.stats?.view_count || post.stats?.views || 0)}
                             </span>

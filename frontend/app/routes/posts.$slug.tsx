@@ -99,6 +99,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded }: CommentSectionPr
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Asia/Seoul', // 한국 시간대 명시적 설정
     });
   };
 
@@ -173,7 +174,7 @@ export default function PostDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { showError } = useNotification();
+  const { showError, showSuccess } = useNotification();
   
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -240,8 +241,20 @@ export default function PostDetail() {
       }
       
       if (response.success) {
-        // 게시글 데이터 새로고침
-        await loadPost();
+        // 페이지 전체 새로고침 대신 직접 상태 업데이트
+        if (response.data) {
+          setPost(prev => prev ? {
+            ...prev,
+            stats: {
+              ...prev.stats,
+              like_count: response.data.like_count || prev.stats?.like_count || 0,
+              dislike_count: response.data.dislike_count || prev.stats?.dislike_count || 0,
+              bookmark_count: response.data.bookmark_count || prev.stats?.bookmark_count || 0,
+              view_count: prev.stats?.view_count || 0,
+              comment_count: prev.stats?.comment_count || 0,
+            }
+          } : prev);
+        }
       } else {
         showError(response.error || '반응 처리에 실패했습니다');
       }
@@ -262,7 +275,58 @@ export default function PostDetail() {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
+      timeZone: 'Asia/Seoul', // 한국 시간대 명시적 설정
     });
+  };
+
+  // 작성자 권한 체크 함수
+  const isAuthor = () => {
+    if (!user || !post) return false;
+    
+    // User ID로 비교 (문자열 변환)
+    const userId = String(user.id);
+    const authorId = String(post.author_id);
+    
+    if (userId === authorId) {
+      return true;
+    }
+    
+    // author 객체가 있으면 ID 비교
+    if (post.author && String(user.id) === String(post.author.id)) {
+      return true;
+    }
+    
+    // 추가적인 비교: email 또는 user_handle
+    if (post.author) {
+      if (user.email && user.email === post.author.email) {
+        return true;
+      }
+      if (user.user_handle && user.user_handle === post.author.user_handle) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  const handleEditPost = () => {
+    navigate(`/posts/${slug}/edit`);
+  };
+
+  const handleDeletePost = async () => {
+    if (!confirm('정말로 삭제하시겠습니까?')) return;
+    
+    try {
+      const response = await apiClient.deletePost(slug!);
+      if (response.success) {
+        showSuccess('게시글이 삭제되었습니다');
+        navigate('/board');
+      } else {
+        showError(response.error || '게시글 삭제에 실패했습니다');
+      }
+    } catch (error) {
+      showError('게시글 삭제 중 오류가 발생했습니다');
+    }
   };
 
   useEffect(() => {
@@ -290,7 +354,7 @@ export default function PostDetail() {
           <p className="text-gray-600 mb-6">
             요청하신 게시글이 존재하지 않거나 삭제되었습니다.
           </p>
-          <Button onClick={() => navigate('/posts')}>
+          <Button onClick={() => navigate('/board')}>
             게시글 목록으로 돌아가기
           </Button>
         </div>
@@ -333,6 +397,30 @@ export default function PostDetail() {
                 post={post} 
                 onReactionChange={handleReactionChange}
               />
+              
+              {/* 수정/삭제 버튼 (작성자만 보이도록) */}
+              {isAuthor() && (
+                <div className="flex items-center space-x-2 pt-2 border-t border-gray-200">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleEditPost}
+                    className="flex items-center space-x-1"
+                  >
+                    <span>✏️</span>
+                    <span>수정</span>
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleDeletePost}
+                    className="flex items-center space-x-1 text-red-600 hover:bg-red-50"
+                  >
+                    <span>🗑️</span>
+                    <span>삭제</span>
+                  </Button>
+                </div>
+              )}
             </div>
           </Card.Header>
         </Card>

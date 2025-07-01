@@ -140,6 +140,26 @@ async def get_post(
                     "bookmarked": reaction.bookmarked
                 }
         
+        # Get author information
+        author_info = None
+        try:
+            author = await User.get(post.author_id)
+            if author:
+                author_info = {
+                    "id": str(author.id),
+                    "user_handle": author.user_handle,
+                    "display_name": author.display_name,
+                    "name": author.name
+                }
+        except Exception as e:
+            print(f"Failed to get author info: {e}")
+            author_info = {
+                "id": str(post.author_id),
+                "user_handle": "익명",
+                "display_name": "익명",
+                "name": "익명"
+            }
+        
         # Build response with stats
         response = {
             "id": str(post.id),
@@ -151,6 +171,7 @@ async def get_post(
             "metadata": post.metadata,
             "file_ids": post.metadata.file_ids if post.metadata else [],  # 파일 IDs 추가
             "author_id": str(post.author_id),
+            "author": author_info,  # 작성자 정보 추가
             "status": post.status,
             "created_at": post.created_at,
             "updated_at": post.updated_at,
@@ -259,7 +280,7 @@ async def delete_post(
     """Delete post by slug."""
     try:
         await posts_service.delete_post(slug, current_user)
-        return None
+        return {"success": True, "message": "게시글이 삭제되었습니다"}
     except PostNotFoundError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
