@@ -284,3 +284,82 @@ async def dislike_comment(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to dislike comment: {str(e)}"
         )
+
+
+# 🆕 TDD: 문의/후기 전용 API 엔드포인트 추가
+@router.post("/{slug}/comments/inquiry", response_model=CommentDetail, status_code=status.HTTP_201_CREATED)
+async def create_service_inquiry(
+    slug: str = Path(..., description="Post slug"),
+    comment_data: CommentCreate = ...,
+    current_user: User = Depends(get_current_active_user),
+    comments_service: CommentsService = Depends(get_comments_service)
+):
+    """Create a service inquiry."""
+    try:
+        # metadata에 subtype 설정 (기존 metadata와 병합)
+        if not comment_data.metadata:
+            comment_data.metadata = {}
+        comment_data.metadata["subtype"] = "service_inquiry"
+        
+        # 기존 create_comment 메서드 재사용
+        inquiry = await comments_service.create_comment(
+            post_slug=slug,
+            comment_data=comment_data,
+            current_user=current_user
+        )
+        return inquiry
+        
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except CommentValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create inquiry: {str(e)}"
+        )
+
+
+@router.post("/{slug}/comments/review", response_model=CommentDetail, status_code=status.HTTP_201_CREATED)
+async def create_service_review(
+    slug: str = Path(..., description="Post slug"),
+    comment_data: CommentCreate = ...,
+    current_user: User = Depends(get_current_active_user),
+    comments_service: CommentsService = Depends(get_comments_service)
+):
+    """Create a service review."""
+    try:
+        # metadata에 subtype 설정 (기존 metadata와 병합)
+        if not comment_data.metadata:
+            comment_data.metadata = {}
+        comment_data.metadata["subtype"] = "service_review"
+        
+        # 기존 create_comment 메서드 재사용
+        review = await comments_service.create_comment(
+            post_slug=slug,
+            comment_data=comment_data,
+            current_user=current_user
+        )
+        return review
+        
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except CommentValidationError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create review: {str(e)}"
+        )

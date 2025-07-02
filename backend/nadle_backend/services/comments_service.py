@@ -42,6 +42,10 @@ class CommentsService:
         # Get post by slug to get post ID
         post = await self.post_repo.get_by_slug(post_slug)
         
+        # 🆕 metadata 처리: subtype이 있는 경우 post_title 자동 추가
+        if comment_data.metadata and comment_data.metadata.get("subtype"):
+            comment_data.metadata["post_title"] = post.title
+        
         # Create comment
         comment = await self.comment_repo.create(
             comment_data=comment_data,
@@ -83,23 +87,34 @@ class CommentsService:
         post = await self.post_repo.get_by_slug(post_slug)
         
         # Get comments with replies
+        from nadle_backend.config import get_settings
+        settings = get_settings()
         comments_with_replies, total = await self.comment_repo.get_comments_with_replies(
             post_id=str(post.id),
             page=page,
             page_size=page_size,
-            status="active"
+            status="active",
+            max_depth=settings.max_comment_depth
         )
         
         # Convert to comment details with user reactions
         comment_details = []
         all_comment_ids = []
         
-        # Collect all comment IDs for batch reaction lookup
-        for item in comments_with_replies:
+        # Collect all comment IDs for batch reaction lookup (recursive)
+        def collect_comment_ids(item):
+            """Recursively collect comment IDs from nested structure."""
             comment = item["comment"]
             replies = item["replies"]
-            all_comment_ids.append(str(comment.id))
-            all_comment_ids.extend([str(reply.id) for reply in replies])
+            ids = [str(comment.id)]
+            
+            for reply_item in replies:
+                ids.extend(collect_comment_ids(reply_item))
+            
+            return ids
+        
+        for item in comments_with_replies:
+            all_comment_ids.extend(collect_comment_ids(item))
         
         # Get user reactions if authenticated
         user_reactions = {}
@@ -119,17 +134,16 @@ class CommentsService:
                 for reaction in reactions
             }
         
-        # Convert to response format
-        for item in comments_with_replies:
+        # Convert to response format (recursive)
+        async def convert_comment_item(item):
+            """Recursively convert comment item with nested replies."""
             comment = item["comment"]
             replies = item["replies"]
             
-            # Convert replies
+            # Convert nested replies
             reply_details = []
-            for reply in replies:
-                reply_detail = await self._convert_to_comment_detail(
-                    reply, user_reactions.get(str(reply.id))
-                )
+            for reply_item in replies:
+                reply_detail = await convert_comment_item(reply_item)
                 reply_details.append(reply_detail)
             
             # Convert main comment
@@ -138,6 +152,10 @@ class CommentsService:
             )
             comment_detail.replies = reply_details
             
+            return comment_detail
+        
+        for item in comments_with_replies:
+            comment_detail = await convert_comment_item(item)
             comment_details.append(comment_detail)
         
         return comment_details, total
@@ -469,6 +487,7 @@ class CommentsService:
             dislike_count=comment.dislike_count,
             reply_count=comment.reply_count,
             user_reaction=user_reaction,
+            metadata=comment.metadata or {},  # 🆕 metadata 필드 추가
             created_at=comment.created_at,
             updated_at=comment.updated_at,
             replies=None  # Will be populated by caller if needed

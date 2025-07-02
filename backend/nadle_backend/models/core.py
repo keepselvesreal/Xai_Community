@@ -403,6 +403,7 @@ class CommentCreate(BaseModel):
     """Model for creating a new comment."""
     content: str = Field(..., min_length=1, max_length=1000)
     parent_comment_id: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
 class CommentUpdate(BaseModel):
@@ -422,6 +423,7 @@ class CommentDetail(BaseModel):
     dislike_count: int = 0  # Calculated from UserReaction
     reply_count: int = 0  # Calculated from child comments
     user_reaction: Optional[Dict[str, bool]] = None  # liked, disliked
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)  # 🆕 metadata 필드 추가
     created_at: datetime
     updated_at: datetime
     replies: Optional[List["CommentDetail"]] = None  # 1 level only

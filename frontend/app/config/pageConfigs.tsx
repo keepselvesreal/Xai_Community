@@ -278,13 +278,7 @@ const ServiceCardRenderer = ({ service }: { service: Service }) => {
             👁️ {service.serviceStats?.views || service.stats?.view_count || 0}
           </span>
           <span className="flex items-center gap-1">
-            👍 {service.likes || service.stats?.like_count || 0}
-          </span>
-          <span className="flex items-center gap-1">
-            👎 {service.dislikes || service.stats?.dislike_count || 0}
-          </span>
-          <span className="flex items-center gap-1">
-            🔖 {service.bookmarks || service.stats?.bookmark_count || 0}
+            관심 {service.bookmarks || service.stats?.bookmark_count || 0}
           </span>
           <span className="flex items-center gap-1">
             문의 {service.serviceStats?.inquiries || 0}

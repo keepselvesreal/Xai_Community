@@ -133,6 +133,7 @@ export interface CreateCommentRequest {
   content: string;
   parent_comment_id?: string; // 백엔드 호환 필드명
   parent_id?: string;         // 호환성을 위한 alias
+  metadata?: { [key: string]: any }; // 메타데이터 필드 추가
 }
 
 // 반응 관련 타입

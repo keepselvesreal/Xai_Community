@@ -15,7 +15,6 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-
 export default function ServiceDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -27,6 +26,19 @@ export default function ServiceDetail() {
   const [isNotFound, setIsNotFound] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [isLiked, setIsLiked] = useState(false);
+  const [selectedRating, setSelectedRating] = useState(0);
+  const [showInquiryForm, setShowInquiryForm] = useState(false);
+  const [inquiryTitle, setInquiryTitle] = useState("");
+  const [inquiryContent, setInquiryContent] = useState("");
+  const [inquiryContact, setInquiryContact] = useState("");
+  const [isInquiryPublic, setIsInquiryPublic] = useState(true);
+  const [comments, setComments] = useState<any[]>([]);
+  const [isLoadingComments, setIsLoadingComments] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<string | null>(null);
+  const [replyContent, setReplyContent] = useState("");
+  const [replyContentMap, setReplyContentMap] = useState<{[key: string]: string}>({});
+  const [editingComment, setEditingComment] = useState<string | null>(null);
+  const [editContentMap, setEditContentMap] = useState<{[key: string]: string}>({});
 
   const loadService = async () => {
     if (!slug) return;
@@ -66,8 +78,56 @@ export default function ServiceDetail() {
     }
   };
 
+  // 데이터 변환 유틸리티 함수
+  const ensureId = (item: any) => {
+    const processedItem = {
+      ...item,
+      id: item.id || item._id
+    };
+    
+    // author 정보 처리
+    if (processedItem.author) {
+      processedItem.author = {
+        ...processedItem.author,
+        id: processedItem.author.id || processedItem.author._id
+      };
+    }
+    
+    return processedItem;
+  };
+
+  // 재귀적 댓글 데이터 처리
+  const processCommentsRecursive = (comments: any[]): any[] => {
+    return comments.map(comment => {
+      const processedComment = ensureId(comment);
+      if (processedComment.replies && processedComment.replies.length > 0) {
+        processedComment.replies = processCommentsRecursive(processedComment.replies);
+      }
+      return processedComment;
+    });
+  };
+
+  const loadComments = async () => {
+    if (!slug) return;
+    
+    setIsLoadingComments(true);
+    try {
+      const response = await apiClient.getComments(slug);
+      if (response.success && response.data) {
+        const processedComments = processCommentsRecursive(response.data.comments || []);
+        console.log('📦 Processed comments:', processedComments);
+        setComments(processedComments);
+      }
+    } catch (error) {
+      console.error('댓글 불러오기 오류:', error);
+    } finally {
+      setIsLoadingComments(false);
+    }
+  };
+
   useEffect(() => {
     loadService();
+    loadComments();
   }, [slug]);
 
   // 로딩 상태
@@ -113,6 +173,80 @@ export default function ServiceDetail() {
     ));
   };
 
+  const renderInteractiveStars = (rating: number, onRatingChange: (rating: number) => void) => {
+    const stars = [];
+    for (let i = 1; i <= 5; i++) {
+      const isHalfFilled = rating >= i - 0.5 && rating < i;
+      const isFilled = rating >= i;
+      const isEmpty = rating < i - 0.5;
+      
+      stars.push(
+        <div key={i} className="relative inline-block cursor-pointer group">
+          {/* 기본 회색 별 */}
+          <span className="text-gray-300 text-2xl select-none">★</span>
+          
+          {/* 채워진 별 (전체) */}
+          {isFilled && (
+            <span className="absolute inset-0 text-yellow-400 text-2xl overflow-hidden select-none transition-colors duration-200">
+              ★
+            </span>
+          )}
+          
+          {/* 반 채워진 별 */}
+          {isHalfFilled && (
+            <span 
+              className="absolute inset-0 text-yellow-400 text-2xl overflow-hidden select-none transition-colors duration-200" 
+              style={{ width: '50%' }}
+            >
+              ★
+            </span>
+          )}
+          
+          {/* 호버 효과 - 왼쪽 반 */}
+          <div 
+            className="absolute inset-0 w-1/2 h-full opacity-0 hover:opacity-100 transition-opacity duration-200"
+            onMouseEnter={() => {
+              // 호버 시 미리보기 효과 (선택사항)
+            }}
+          >
+            <span className="text-yellow-200 text-2xl select-none">★</span>
+          </div>
+          
+          {/* 호버 효과 - 오른쪽 반 */}
+          <div 
+            className="absolute inset-0 w-1/2 h-full ml-auto opacity-0 hover:opacity-100 transition-opacity duration-200"
+            onMouseEnter={() => {
+              // 호버 시 미리보기 효과 (선택사항)
+            }}
+          >
+            <span className="text-yellow-200 text-2xl select-none">★</span>
+          </div>
+          
+          {/* 클릭 영역 - 왼쪽 반 (0.5점) */}
+          <button 
+            className="absolute inset-0 w-1/2 h-full opacity-0 cursor-pointer hover:bg-yellow-100 hover:opacity-20 rounded-l transition-all duration-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRatingChange(i - 0.5);
+            }}
+            title={`${i - 0.5}점`}
+          />
+          
+          {/* 클릭 영역 - 오른쪽 반 (1점) */}
+          <button 
+            className="absolute inset-0 w-1/2 h-full ml-auto opacity-0 cursor-pointer hover:bg-yellow-100 hover:opacity-20 rounded-r transition-all duration-200"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRatingChange(i);
+            }}
+            title={`${i}점`}
+          />
+        </div>
+      );
+    }
+    return stars;
+  };
+
   const handleBackClick = () => {
     navigate('/services');
   };
@@ -125,11 +259,385 @@ export default function ServiceDetail() {
     setIsLiked(!isLiked);
   };
 
-  const handleReviewSubmit = () => {
-    if (reviewText.trim()) {
-      // 리뷰 제출 로직 (실제로는 API 호출)
-      alert('후기가 등록되었습니다!');
-      setReviewText('');
+  const handleReviewSubmit = async () => {
+    if (reviewText.trim() && selectedRating > 0) {
+      try {
+        const response = await apiClient.createServiceReview(slug!, {
+          content: `평점: ${selectedRating}점\n\n${reviewText}`
+        });
+        
+        if (response.success) {
+          showSuccess('후기가 등록되었습니다!');
+          setReviewText('');
+          setSelectedRating(0);
+          // 댓글 새로고침하여 새로운 후기 표시
+          await loadComments();
+        } else {
+          showError('후기 등록에 실패했습니다');
+        }
+      } catch (error) {
+        console.error('후기 등록 오류:', error);
+        showError('후기 등록 중 오류가 발생했습니다');
+      }
+    } else {
+      showError('별점과 후기 내용을 모두 입력해주세요.');
+    }
+  };
+
+  const handleReplySubmit = async (commentId: string) => {
+    const content = replyContentMap[commentId] || '';
+    console.log('🔍 Reply submit:', { commentId, content, slug });
+    
+    if (!content.trim()) {
+      showError('답글 내용을 입력해주세요.');
+      return;
+    }
+
+    if (!commentId || commentId === 'undefined') {
+      console.error('❌ Invalid commentId:', commentId);
+      showError('답글을 작성할 댓글을 찾을 수 없습니다.');
+      return;
+    }
+
+    try {
+      const response = await apiClient.createReply(slug!, commentId, content);
+      if (response.success) {
+        showSuccess('답글이 등록되었습니다!');
+        setReplyContentMap(prev => ({ ...prev, [commentId]: '' }));
+        setReplyingTo(null);
+        await loadComments();
+      } else {
+        showError('답글 등록에 실패했습니다');
+      }
+    } catch (error) {
+      console.error('답글 등록 오류:', error);
+      showError('답글 등록 중 오류가 발생했습니다');
+    }
+  };
+
+  // 재귀적 답글 렌더링 컴포넌트
+  const renderReply = (reply: any, depth: number = 0, maxDepth: number = 3) => {
+    const isMaxDepth = depth >= maxDepth;
+    const isOwner = isCommentOwner(reply);
+    
+    return (
+      <div key={reply.id} className={`bg-gray-50 rounded-lg p-3 ${depth > 0 ? 'ml-4' : ''}`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-blue-600">
+              {reply.author?.display_name || reply.author?.user_handle || '익명'}
+            </span>
+            <span className="text-xs text-var-muted">
+              {new Date(reply.created_at).toLocaleDateString()}
+            </span>
+          </div>
+          {/* 작성자 수정/삭제 버튼 */}
+          {isOwner && (
+            <div className="flex items-center gap-2">
+              <button 
+                className="text-xs text-gray-600 hover:text-blue-600 transition-colors"
+                onClick={() => handleEditReply(reply.id)}
+              >
+                {editingComment === reply.id ? '저장' : '수정'}
+              </button>
+              <button 
+                className="text-xs text-gray-600 hover:text-red-600 transition-colors"
+                onClick={() => handleDeleteReply(reply.id)}
+              >
+                삭제
+              </button>
+            </div>
+          )}
+        </div>
+        {/* 수정 모드인 경우 텍스트 영역, 아닌 경우 일반 텍스트 */}
+        {editingComment === reply.id ? (
+          <div className="space-y-3">
+            <textarea
+              value={editContentMap[reply.id] || ''}
+              onChange={(e) => setEditContentMap(prev => ({ ...prev, [reply.id]: e.target.value }))}
+              className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+              rows={3}
+              placeholder="답글 내용을 수정해주세요..."
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEditReply(reply.id)}
+                className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                disabled={!(editContentMap[reply.id] || '').trim()}
+              >
+                저장
+              </button>
+              <button
+                onClick={() => {
+                  setEditingComment(null);
+                  setEditContentMap(prev => ({ ...prev, [reply.id]: '' }));
+                }}
+                className="px-3 py-1 border border-gray-300 text-sm rounded hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        ) : (
+          <p className="text-sm text-var-secondary whitespace-pre-line">
+            {reply.content}
+          </p>
+        )}
+        
+        {/* 답글 버튼 (최대 깊이가 아닌 경우에만) */}
+        {user && !isMaxDepth && (
+          <div className="mt-3 flex items-center gap-3">
+            <button
+              onClick={() => setReplyingTo(replyingTo === reply.id ? null : reply.id)}
+              className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+            >
+              {replyingTo === reply.id ? '답글 취소' : '답글'}
+            </button>
+          </div>
+        )}
+
+        {/* 답글 작성 폼 */}
+        {replyingTo === reply.id && (
+          <div className="mt-3 pl-4 border-l-2 border-blue-200">
+            <textarea
+              value={replyContentMap[reply.id] || ''}
+              onChange={(e) => setReplyContentMap(prev => ({ ...prev, [reply.id]: e.target.value }))}
+              placeholder="답글을 작성해주세요..."
+              className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+              rows={3}
+            />
+            <div className="flex gap-2 mt-2">
+              <button
+                onClick={() => {
+                  console.log('🔘 Nested reply button clicked for:', reply.id);
+                  handleReplySubmit(reply.id);
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                disabled={!(replyContentMap[reply.id] || '').trim()}
+              >
+                답글 작성
+              </button>
+              <button
+                onClick={() => {
+                  setReplyingTo(null);
+                  setReplyContentMap(prev => ({ ...prev, [reply.id]: '' }));
+                }}
+                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                취소
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {/* 중첩된 답글들 */}
+        {reply.replies && reply.replies.length > 0 && (
+          <div className="mt-4 space-y-3">
+            {reply.replies.map((nestedReply: any) => renderReply(nestedReply, depth + 1, maxDepth))}
+          </div>
+        )}
+        
+        {/* 최대 깊이 도달 안내 */}
+        {isMaxDepth && reply.replies && reply.replies.length > 0 && (
+          <div className="mt-2 text-xs text-gray-500 italic">
+            💡 더 깊은 답글은 지원되지 않습니다 (최대 {maxDepth}단계)
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 사용자 소유권 확인 함수
+  const isCommentOwner = (comment: any) => {
+    if (!user || !comment.author) {
+      console.log('🔍 Owner check - missing data:', { hasUser: !!user, hasAuthor: !!comment.author });
+      return false;
+    }
+    
+    // 여러 방법으로 소유권 확인
+    const userIdMatch = comment.author.id === user.id;
+    const userHandleMatch = comment.author.user_handle === user.user_handle;
+    const emailMatch = comment.author.email === user.email;
+    
+    const isOwner = userIdMatch || userHandleMatch || emailMatch;
+    
+    console.log('🔍 Owner check:', { 
+      isOwner, 
+      userIdMatch,
+      userHandleMatch,
+      emailMatch,
+      userId: user.id, 
+      userHandle: user.user_handle,
+      userEmail: user.email,
+      authorId: comment.author.id, 
+      authorHandle: comment.author.user_handle,
+      authorEmail: comment.author.email
+    });
+    
+    return isOwner;
+  };
+
+  // 댓글 수정 함수
+  const handleEditComment = async (commentId: string) => {
+    console.log('🖊️ Edit comment:', commentId);
+    
+    if (editingComment === commentId) {
+      // 수정 모드에서 저장
+      const newContent = editContentMap[commentId];
+      if (!newContent || !newContent.trim()) {
+        showError('내용을 입력해주세요.');
+        return;
+      }
+      
+      try {
+        const response = await apiClient.updateComment(slug!, commentId, newContent.trim());
+        if (response.success) {
+          showSuccess('댓글이 수정되었습니다.');
+          setEditingComment(null);
+          setEditContentMap(prev => ({ ...prev, [commentId]: '' }));
+          await loadComments();
+        } else {
+          showError('댓글 수정에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('댓글 수정 오류:', error);
+        showError('댓글 수정 중 오류가 발생했습니다.');
+      }
+    } else {
+      // 수정 모드 활성화
+      const comment = comments.find(c => c.id === commentId);
+      if (comment) {
+        setEditingComment(commentId);
+        setEditContentMap(prev => ({ ...prev, [commentId]: comment.content }));
+        // 다른 수정/답글 모드 취소
+        setReplyingTo(null);
+      }
+    }
+  };
+
+  // 댓글 삭제 함수
+  const handleDeleteComment = async (commentId: string) => {
+    console.log('🗑️ Delete comment:', commentId);
+    if (confirm('정말 삭제하시겠습니까?')) {
+      try {
+        const response = await apiClient.deleteComment(slug!, commentId);
+        if (response.success) {
+          showSuccess('댓글이 삭제되었습니다.');
+          await loadComments();
+        } else {
+          showError('댓글 삭제에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('댓글 삭제 오류:', error);
+        showError('댓글 삭제 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
+  // 답글 수정 함수
+  const handleEditReply = async (replyId: string) => {
+    console.log('🖊️ Edit reply:', replyId);
+    
+    if (editingComment === replyId) {
+      // 수정 모드에서 저장
+      const newContent = editContentMap[replyId];
+      if (!newContent || !newContent.trim()) {
+        showError('내용을 입력해주세요.');
+        return;
+      }
+      
+      try {
+        const response = await apiClient.updateComment(slug!, replyId, newContent.trim());
+        if (response.success) {
+          showSuccess('답글이 수정되었습니다.');
+          setEditingComment(null);
+          setEditContentMap(prev => ({ ...prev, [replyId]: '' }));
+          await loadComments();
+        } else {
+          showError('답글 수정에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('답글 수정 오류:', error);
+        showError('답글 수정 중 오류가 발생했습니다.');
+      }
+    } else {
+      // 수정 모드 활성화 - 중첩된 답글에서 답글 찾기
+      const findReplyInComments = (comments: any[], targetId: string): any => {
+        for (const comment of comments) {
+          if (comment.id === targetId) return comment;
+          if (comment.replies) {
+            const found = findReplyInComments(comment.replies, targetId);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      
+      const reply = findReplyInComments(comments, replyId);
+      if (reply) {
+        setEditingComment(replyId);
+        setEditContentMap(prev => ({ ...prev, [replyId]: reply.content }));
+        // 다른 수정/답글 모드 취소
+        setReplyingTo(null);
+      }
+    }
+  };
+
+  // 답글 삭제 함수
+  const handleDeleteReply = async (replyId: string) => {
+    console.log('🗑️ Delete reply:', replyId);
+    if (confirm('정말 삭제하시겠습니까?')) {
+      try {
+        const response = await apiClient.deleteComment(slug!, replyId);
+        if (response.success) {
+          showSuccess('답글이 삭제되었습니다.');
+          await loadComments();
+        } else {
+          showError('답글 삭제에 실패했습니다.');
+        }
+      } catch (error) {
+        console.error('답글 삭제 오류:', error);
+        showError('답글 삭제 중 오류가 발생했습니다.');
+      }
+    }
+  };
+
+  const handleInquirySubmit = async () => {
+    if (inquiryTitle.trim() && inquiryContent.trim()) {
+      try {
+        console.log('🔍 Submitting inquiry:', { 
+          slug, 
+          title: inquiryTitle, 
+          content: inquiryContent, 
+          isPublic: isInquiryPublic 
+        });
+        
+        const response = await apiClient.createServiceInquiry(slug!, {
+          content: `제목: ${inquiryTitle}\n\n${inquiryContent}${inquiryContact ? `\n\n연락처: ${inquiryContact}` : ''}`,
+          metadata: {
+            isPublic: isInquiryPublic
+          }
+        });
+        
+        if (response.success) {
+          showSuccess('문의가 등록되었습니다!');
+          setInquiryTitle('');
+          setInquiryContent('');
+          setInquiryContact('');
+          setIsInquiryPublic(true);
+          setShowInquiryForm(false);
+          // 댓글 새로고침하여 새로운 문의 표시
+          await loadComments();
+        } else {
+          console.error('❌ Inquiry submission failed:', response);
+          showError('문의 등록에 실패했습니다');
+        }
+      } catch (error) {
+        console.error('🚨 문의 등록 오류:', error);
+        showError('문의 등록 중 오류가 발생했습니다');
+      }
+    } else {
+      showError('제목과 내용을 모두 입력해주세요.');
     }
   };
 
@@ -184,151 +692,519 @@ export default function ServiceDetail() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* 왼쪽 컬럼 - 서비스 및 가격 */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* 서비스 및 가격 */}
-            <div className="bg-var-card rounded-2xl p-6 border border-var-color">
-              <h2 className="text-xl font-bold text-var-primary mb-4 flex items-center gap-2">
-                🔧 서비스 및 가격
-              </h2>
-              <div className="space-y-4">
-                {service.services.map((item: any, idx: number) => (
-                  <div key={idx} className="flex justify-between items-start p-4 bg-var-section rounded-lg">
-                    <div className="flex-1">
-                      <h3 className="font-medium text-var-primary mb-1">{item.name}</h3>
-                      <p className="text-var-secondary text-sm">{item.description}</p>
-                    </div>
-                    <div className="text-right ml-4">
-                      {item.specialPrice && (
-                        <div className="text-gray-400 line-through text-sm">{item.price.toLocaleString()}원</div>
-                      )}
-                      <div className="text-red-500 font-bold text-lg">
-                        {item.specialPrice ? item.specialPrice.toLocaleString() : item.price.toLocaleString()}원
+        <div className="space-y-8">
+          {/* 서비스 가격 및 연락처 통합 섹션 */}
+          <div className="bg-var-card rounded-2xl p-6 border border-var-color">
+            <h2 className="text-xl font-bold text-var-primary mb-6 flex items-center gap-2">
+              🔧 서비스 가격 및 연락처
+            </h2>
+            
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* 왼쪽: 서비스 및 가격 */}
+              <div>
+                <h3 className="text-lg font-semibold text-var-primary mb-4">💰 서비스 가격</h3>
+                <div className="space-y-4">
+                  {service.services.map((item: any, idx: number) => (
+                    <div key={idx} className="flex justify-between items-start p-4 bg-var-section rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium text-var-primary mb-1">{item.name}</h4>
+                        <p className="text-var-secondary text-sm">{item.description}</p>
+                      </div>
+                      <div className="text-right ml-4">
+                        {item.specialPrice && (
+                          <div className="text-gray-400 line-through text-sm">{item.price.toLocaleString()}원</div>
+                        )}
+                        <div className="text-red-500 font-bold text-lg">
+                          {item.specialPrice ? item.specialPrice.toLocaleString() : item.price.toLocaleString()}원
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
+                
+                <div className="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                  <p className="text-sm text-yellow-800">💡 정확한 견적은 현장 상담 후 제공됩니다.</p>
+                </div>
               </div>
-            </div>
-
-            {/* 후기 섹션 */}
-            <div className="bg-var-card rounded-2xl p-6 border border-var-color">
-              <h2 className="text-xl font-bold text-var-primary mb-4">후기 {service.reviews.length}개</h2>
               
-              {/* 평점 표시 */}
-              <div className="mb-6 p-4 bg-var-section rounded-lg">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-sm text-var-muted">평점:</span>
-                  <div className="flex items-center gap-1">
-                    {renderStars(service.rating)}
-                  </div>
-                </div>
-              </div>
-
-              {/* 기존 후기 목록 */}
-              <div className="space-y-4 mb-6">
-                {service.reviews.map((review: any, idx: number) => (
-                  <div key={idx} className="border-b border-var-light last:border-b-0 pb-4 last:pb-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="font-medium text-var-primary">{review.author}</span>
-                      <div className="flex items-center gap-1">
-                        {renderStars(review.rating)}
-                      </div>
-                    </div>
-                    <p className="text-var-secondary">{review.text}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* 후기 작성 */}
-              <div className="border-t border-var-light pt-6">
-                <h3 className="font-medium text-var-primary mb-3">후기 작성</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-sm text-var-muted">평점:</span>
-                    <div className="flex items-center gap-1">
-                      {Array.from({ length: 5 }, (_, i) => (
-                        <button key={i} className="text-yellow-400 hover:text-yellow-500">
-                          ⭐
-                        </button>
-                      ))}
+              {/* 오른쪽: 연락처 정보 */}
+              <div>
+                <h3 className="text-lg font-semibold text-var-primary mb-4">📞 연락처 정보</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3 p-3 bg-var-section rounded-lg">
+                    <span className="text-red-500 text-xl">📞</span>
+                    <div>
+                      <div className="font-medium text-var-primary">{service.contact.phone}</div>
+                      <div className="text-var-muted text-sm">전화 문의</div>
                     </div>
                   </div>
-                  <textarea
-                    value={reviewText}
-                    onChange={(e) => setReviewText(e.target.value)}
-                    placeholder="후기를 작성해주세요..."
-                    className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
-                    rows={4}
-                  />
-                  <button 
-                    onClick={handleReviewSubmit}
-                    className="bg-green-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-700 transition-colors"
-                  >
-                    후기 작성
-                  </button>
+                  
+                  <div className="flex items-center gap-3 p-3 bg-var-section rounded-lg">
+                    <span className="text-orange-500 text-xl">⏰</span>
+                    <div>
+                      <div className="font-medium text-var-primary">{service.contact.hours}</div>
+                      <div className="text-var-muted text-sm">운영 시간</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-3 bg-var-section rounded-lg">
+                    <span className="text-red-500 text-xl">📍</span>
+                    <div>
+                      <div className="font-medium text-var-primary">{service.contact.address}</div>
+                      <div className="text-var-muted text-sm">사업장 위치</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-3 p-3 bg-var-section rounded-lg">
+                    <span className="text-blue-500 text-xl">📧</span>
+                    <div>
+                      <div className="font-medium text-var-primary">{service.contact.email}</div>
+                      <div className="text-var-muted text-sm">이메일 문의</div>
+                    </div>
+                  </div>
                 </div>
+                
+                <button 
+                  onClick={handleInquiry}
+                  className="w-full mt-4 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition-colors"
+                >
+                  📞 전화 상담 신청
+                </button>
               </div>
             </div>
           </div>
 
-          {/* 오른쪽 컬럼 - 연락처 정보 */}
-          <div className="space-y-6">
-            <div className="bg-var-card rounded-2xl p-6 border border-var-color">
-              <h2 className="text-xl font-bold text-var-primary mb-4 flex items-center gap-2">
-                📞 연락처 정보
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-center gap-3">
-                  <span className="text-red-500 text-xl">📞</span>
-                  <div>
-                    <div className="font-medium text-var-primary">{service.contact.phone}</div>
-                    <div className="text-var-muted text-sm">전화 문의</div>
-                  </div>
+          {/* 문의 내용과 답변 섹션 */}
+          <div className="bg-var-card rounded-2xl p-6 border border-var-color">
+            <h2 className="text-xl font-bold text-var-primary mb-6 flex items-center gap-2">
+              💬 문의 내용
+            </h2>
+            
+            {/* 실제 문의 내용 */}
+            <div className="space-y-4 mb-6">
+              {isLoadingComments ? (
+                <div className="text-center py-4">
+                  <p className="text-var-secondary">문의 내용을 불러오는 중...</p>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  <span className="text-orange-500 text-xl">⏰</span>
-                  <div>
-                    <div className="font-medium text-var-primary">{service.contact.hours}</div>
-                    <div className="text-var-muted text-sm">운영 시간</div>
-                  </div>
+              ) : comments.length > 0 ? (
+                comments
+                  .filter(comment => comment.metadata?.subtype === 'service_inquiry')
+                  .map((comment, idx) => (
+                    <div key={idx} className="border border-var-light rounded-lg p-4">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-var-primary">
+                            {comment.author?.display_name || comment.author?.user_handle || '익명'}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            comment.metadata?.isPublic === false 
+                              ? 'bg-red-100 text-red-600' 
+                              : 'bg-green-100 text-green-600'
+                          }`}>
+                            {comment.metadata?.isPublic === false ? '비공개' : '공개'}
+                          </span>
+                        </div>
+                        <span className="text-sm text-var-muted">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      {/* 수정 모드인 경우 텍스트 영역, 아닌 경우 일반 텍스트 */}
+                      {editingComment === comment.id ? (
+                        <div className="space-y-3">
+                          <textarea
+                            value={editContentMap[comment.id] || ''}
+                            onChange={(e) => setEditContentMap(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                            className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+                            rows={4}
+                            placeholder="문의 내용을 수정해주세요..."
+                          />
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditComment(comment.id)}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              disabled={!(editContentMap[comment.id] || '').trim()}
+                            >
+                              저장
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingComment(null);
+                                setEditContentMap(prev => ({ ...prev, [comment.id]: '' }));
+                              }}
+                              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-var-secondary text-sm whitespace-pre-line">
+                          {(() => {
+                            // 비공개 문의 처리 로직
+                            console.log('🔒 Privacy check for comment:', { 
+                              commentId: comment.id,
+                              isPublic: comment.metadata?.isPublic, 
+                              metadata: comment.metadata,
+                              author: comment.author,
+                              content: comment.content?.substring(0, 50) + '...'
+                            });
+                            
+                            // 비공개 체크 - 여러 방식으로 확인
+                            const isPrivate = comment.metadata?.isPublic === false || 
+                                            comment.metadata?.isPublic === 'false' ||
+                                            comment.metadata?.visibility === 'private';
+                            
+                            console.log('🔒 Privacy result:', { isPrivate });
+                            
+                            if (isPrivate) {
+                              console.log('🔒 Private comment detected - hiding content regardless of ownership');
+                              return "[비공개 문의입니다]";
+                            }
+                            return comment.content;
+                          })()}
+                        </div>
+                      )}
+                      
+                      {/* 작성자 수정/삭제 및 답글 버튼 */}
+                      <div className="mt-3 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          {user && (
+                            <button
+                              onClick={() => setReplyingTo(replyingTo === comment.id ? null : comment.id)}
+                              className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                            >
+                              {replyingTo === comment.id ? '답글 취소' : '답글'}
+                            </button>
+                          )}
+                        </div>
+                        {/* 작성자 수정/삭제 버튼 */}
+                        {isCommentOwner(comment) && (
+                          <div className="flex items-center gap-3">
+                            <button 
+                              className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
+                              onClick={() => handleEditComment(comment.id)}
+                            >
+                              {editingComment === comment.id ? '저장' : '수정'}
+                            </button>
+                            <button 
+                              className="text-sm text-gray-600 hover:text-red-600 transition-colors"
+                              onClick={() => handleDeleteComment(comment.id)}
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 답글 작성 폼 */}
+                      {replyingTo === comment.id && (
+                        <div className="mt-3 pl-4 border-l-2 border-blue-200">
+                          <textarea
+                            value={replyContentMap[comment.id] || ''}
+                            onChange={(e) => setReplyContentMap(prev => ({ ...prev, [comment.id]: e.target.value }))}
+                            placeholder="답글을 작성해주세요..."
+                            className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+                            rows={3}
+                          />
+                          <div className="flex gap-2 mt-2">
+                            <button
+                              onClick={() => {
+                                console.log('🔘 Reply button clicked for comment:', comment.id);
+                                handleReplySubmit(comment.id);
+                              }}
+                              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                              disabled={!(replyContentMap[comment.id] || '').trim()}
+                            >
+                              답글 작성
+                            </button>
+                            <button
+                              onClick={() => {
+                                setReplyingTo(null);
+                                setReplyContentMap(prev => ({ ...prev, [comment.id]: '' }));
+                              }}
+                              className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              취소
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* 답글이 있는 경우 표시 (중첩 답글 지원) */}
+                      {comment.replies && comment.replies.length > 0 && (
+                        <div className="mt-4 space-y-3">
+                          {comment.replies.map((reply: any) => renderReply(reply, 0, 3))}
+                        </div>
+                      )}
+                    </div>
+                  ))
+              ) : (
+                <div className="text-center py-8 text-var-muted">
+                  <p>아직 문의 내용이 없습니다.</p>
+                  <p className="text-sm mt-1">첫 번째 문의를 남겨보세요!</p>
                 </div>
-                
-                <div className="flex items-center gap-3">
-                  <span className="text-red-500 text-xl">📍</span>
-                  <div>
-                    <div className="font-medium text-var-primary">{service.contact.address}</div>
-                    <div className="text-var-muted text-sm">사업장 위치</div>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <span className="text-blue-500 text-xl">📧</span>
-                  <div>
-                    <div className="font-medium text-var-primary">{service.contact.email}</div>
-                    <div className="text-var-muted text-sm">이메일 문의</div>
-                  </div>
-                </div>
-              </div>
-              
-              <button 
-                onClick={handleInquiry}
-                className="w-full mt-6 bg-green-600 text-white py-3 rounded-xl font-medium hover:bg-green-700 transition-colors"
-              >
-                전화 상담 신청
-              </button>
+              )}
             </div>
 
-            {/* 주의사항 */}
-            <div className="bg-gray-50 rounded-2xl p-6">
-              <h3 className="font-medium text-var-primary mb-3">📋 이용 안내</h3>
-              <div className="text-sm text-var-secondary space-y-2">
-                <p>• 정확한 견적은 현장 상담 후 제공됩니다.</p>
-                <p>• 시공 일정은 업체와 협의하여 결정됩니다.</p>
-                <p>• A/S 및 하자보수는 업체 정책에 따릅니다.</p>
-                <p>• 계약 전 상세 조건을 반드시 확인하세요.</p>
+            {/* 가운데 정렬된 문의하기 버튼 */}
+            <div className="flex justify-center mb-6">
+              <button 
+                onClick={() => setShowInquiryForm(!showInquiryForm)}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                {showInquiryForm ? '문의 작성 취소' : '💬 문의하기'}
+              </button>
+            </div>
+            
+            {/* 문의 작성 폼 */}
+            {showInquiryForm && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <h3 className="font-medium text-var-primary mb-4">문의 작성</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-var-secondary mb-2">제목 *</label>
+                    <input
+                      type="text"
+                      value={inquiryTitle}
+                      onChange={(e) => setInquiryTitle(e.target.value)}
+                      placeholder="문의 제목을 입력해주세요"
+                      className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-var-secondary mb-2">내용 *</label>
+                    <textarea
+                      value={inquiryContent}
+                      onChange={(e) => setInquiryContent(e.target.value)}
+                      placeholder="문의 내용을 상세히 작성해주세요"
+                      className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+                      rows={4}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-var-secondary mb-2">연락처 (선택)</label>
+                    <input
+                      type="text"
+                      value={inquiryContact}
+                      onChange={(e) => setInquiryContact(e.target.value)}
+                      placeholder="연락받을 전화번호 또는 이메일"
+                      className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary"
+                    />
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      id="inquiryPublic"
+                      checked={isInquiryPublic}
+                      onChange={(e) => setIsInquiryPublic(e.target.checked)}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <label htmlFor="inquiryPublic" className="text-sm text-var-secondary">
+                      문의 내용을 공개합니다 (다른 사용자들이 볼 수 있습니다)
+                    </label>
+                  </div>
+                  
+                  <button 
+                    onClick={handleInquirySubmit}
+                    className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    문의 등록
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* 후기 섹션 */}
+          <div className="bg-var-card rounded-2xl p-6 border border-var-color">
+            {(() => {
+              const reviewComments = comments.filter(comment => comment.metadata?.subtype === 'service_review');
+              return (
+                <>
+                  <h2 className="text-xl font-bold text-var-primary mb-4">🌟 후기 {reviewComments.length}개</h2>
+                  
+                  {/* 평점 표시 */}
+                  <div className="mb-6 p-4 bg-var-section rounded-lg">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-sm text-var-muted">평점:</span>
+                      <div className="flex items-center gap-1">
+                        {renderStars(service.rating)}
+                      </div>
+                      <span className="text-var-primary font-medium">({service.rating})</span>
+                    </div>
+                  </div>
+
+                  {/* 실제 후기 목록 */}
+                  <div className="space-y-4 mb-6">
+                    {isLoadingComments ? (
+                      <div className="text-center py-4">
+                        <p className="text-var-secondary">후기를 불러오는 중...</p>
+                      </div>
+                    ) : reviewComments.length > 0 ? (
+                      reviewComments.map((review: any, idx: number) => (
+                        <div key={idx} className="border-b border-var-light last:border-b-0 pb-4 last:pb-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            <span className="font-medium text-var-primary">
+                              {review.author?.display_name || review.author?.user_handle || '익명'}
+                            </span>
+                            <div className="flex items-center gap-1">
+                              {renderStars(5)} {/* 기본 5점으로 표시, 나중에 평점 파싱 로직 추가 가능 */}
+                            </div>
+                            <span className="text-sm text-var-muted">
+                              {new Date(review.created_at).toLocaleDateString()}
+                            </span>
+                          </div>
+                          {/* 수정 모드인 경우 텍스트 영역, 아닌 경우 일반 텍스트 */}
+                          {editingComment === review.id ? (
+                            <div className="space-y-3">
+                              <textarea
+                                value={editContentMap[review.id] || ''}
+                                onChange={(e) => setEditContentMap(prev => ({ ...prev, [review.id]: e.target.value }))}
+                                className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+                                rows={4}
+                                placeholder="후기 내용을 수정해주세요..."
+                              />
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleEditComment(review.id)}
+                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                  disabled={!(editContentMap[review.id] || '').trim()}
+                                >
+                                  저장
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditingComment(null);
+                                    setEditContentMap(prev => ({ ...prev, [review.id]: '' }));
+                                  }}
+                                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-var-secondary whitespace-pre-line">{review.content}</p>
+                          )}
+                          
+                          {/* 작성자 수정/삭제 및 답글 버튼 */}
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              {user && (
+                                <button
+                                  onClick={() => setReplyingTo(replyingTo === review.id ? null : review.id)}
+                                  className="text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                                >
+                                  {replyingTo === review.id ? '답글 취소' : '답글'}
+                                </button>
+                              )}
+                            </div>
+                            {/* 작성자 수정/삭제 버튼 */}
+                            {isCommentOwner(review) && (
+                              <div className="flex items-center gap-3">
+                                <button 
+                                  className="text-sm text-gray-600 hover:text-blue-600 transition-colors"
+                                  onClick={() => handleEditComment(review.id)}
+                                >
+                                  {editingComment === review.id ? '저장' : '수정'}
+                                </button>
+                                <button 
+                                  className="text-sm text-gray-600 hover:text-red-600 transition-colors"
+                                  onClick={() => handleDeleteComment(review.id)}
+                                >
+                                  삭제
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* 답글 작성 폼 */}
+                          {replyingTo === review.id && (
+                            <div className="mt-3 pl-4 border-l-2 border-blue-200">
+                              <textarea
+                                value={replyContentMap[review.id] || ''}
+                                onChange={(e) => setReplyContentMap(prev => ({ ...prev, [review.id]: e.target.value }))}
+                                placeholder="답글을 작성해주세요..."
+                                className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+                                rows={3}
+                              />
+                              <div className="flex gap-2 mt-2">
+                                <button
+                                  onClick={() => {
+                                    console.log('🔘 Reply button clicked for review:', review.id);
+                                    handleReplySubmit(review.id);
+                                  }}
+                                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                  disabled={!(replyContentMap[review.id] || '').trim()}
+                                >
+                                  답글 작성
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setReplyingTo(null);
+                                    setReplyContentMap(prev => ({ ...prev, [review.id]: '' }));
+                                  }}
+                                  className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                >
+                                  취소
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 답글이 있는 경우 표시 (중첩 답글 지원) */}
+                          {review.replies && review.replies.length > 0 && (
+                            <div className="mt-4 space-y-3">
+                              {review.replies.map((reply: any) => renderReply(reply, 0, 3))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center py-8 text-var-muted">
+                        <p>아직 후기가 없습니다.</p>
+                        <p className="text-sm mt-1">첫 번째 후기를 남겨보세요!</p>
+                      </div>
+                    )}
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* 후기 작성 */}
+            <div className="border-t border-var-light pt-6">
+              <h3 className="font-medium text-var-primary mb-3">후기 작성</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-var-secondary mb-2">별점 평가 *</label>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      {renderInteractiveStars(selectedRating, setSelectedRating)}
+                    </div>
+                    <span className="text-sm text-var-muted ml-2">({selectedRating}점)</span>
+                  </div>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-var-secondary mb-2">후기 내용 *</label>
+                  <textarea
+                    value={reviewText}
+                    onChange={(e) => setReviewText(e.target.value)}
+                    placeholder="서비스 이용 후기를 상세히 작성해주세요..."
+                    className="w-full p-3 border border-var-color rounded-lg bg-var-background text-var-primary resize-none"
+                    rows={4}
+                  />
+                </div>
+                
+                <button 
+                  onClick={handleReviewSubmit}
+                  className="bg-green-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-700 transition-colors"
+                >
+                  후기 등록
+                </button>
               </div>
             </div>
           </div>

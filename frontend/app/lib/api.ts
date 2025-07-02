@@ -617,6 +617,20 @@ class ApiClient {
     });
   }
 
+  // 🆕 서비스 문의/후기 API
+  async createServiceInquiry(postSlug: string, inquiryData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
+    return this.request<Comment>(`/api/posts/${postSlug}/comments/inquiry`, {
+      method: 'POST',
+      body: JSON.stringify(inquiryData),
+    });
+  }
+
+  async createServiceReview(postSlug: string, reviewData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
+    return this.request<Comment>(`/api/posts/${postSlug}/comments/review`, {
+      method: 'POST',
+      body: JSON.stringify(reviewData),
+    });
+  }
 
   // API 테스트용 메서드
   async testApiCall(request: ApiTestRequest): Promise<ApiTestResponse> {

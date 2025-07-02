@@ -208,6 +208,14 @@ class Settings(BaseSettings):
         description="Length of email verification code"
     )
     
+    # Comment Configuration
+    max_comment_depth: int = Field(
+        default=3,
+        ge=1,
+        le=10,
+        description="Maximum depth for nested comment replies (1-10)"
+    )
+    
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:

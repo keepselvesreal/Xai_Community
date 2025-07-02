@@ -430,3 +430,165 @@ class TestCommentsServiceEnhanced:
             page_size=page_size,
             status="active"
         )
+    
+    # 🆕 TDD: 문의/후기 기능 테스트 추가
+    @pytest.mark.asyncio
+    async def test_create_service_inquiry_with_metadata(self, comments_service, mock_comment_repository, 
+                                                       mock_post_repository, sample_user, sample_post):
+        """Test creating service inquiry with metadata."""
+        # Arrange
+        post_slug = "test-service-post"
+        sample_post.title = "이사 서비스"  # 서비스 제목
+        comment_data = CommentCreate(
+            content="이사 비용 문의드립니다",
+            metadata={"subtype": "service_inquiry"}
+        )
+        
+        mock_post_repository.get_by_slug.return_value = sample_post
+        mock_comment = Mock()
+        mock_comment.id = "inquiry123"
+        mock_comment.author_id = "user123"
+        mock_comment.content = "이사 비용 문의드립니다"
+        mock_comment.parent_comment_id = None
+        mock_comment.status = "active"
+        mock_comment.like_count = 0
+        mock_comment.dislike_count = 0
+        mock_comment.reply_count = 0
+        mock_comment.created_at = datetime.utcnow()
+        mock_comment.updated_at = datetime.utcnow()
+        mock_comment.metadata = {
+            "subtype": "service_inquiry",
+            "post_title": "이사 서비스"
+        }
+        mock_comment_repository.create.return_value = mock_comment
+        
+        # Act
+        result = await comments_service.create_comment(post_slug, comment_data, sample_user)
+        
+        # Assert
+        assert result is not None
+        mock_post_repository.get_by_slug.assert_called_once_with(post_slug)
+        mock_comment_repository.create.assert_called_once()
+        
+        # metadata에 post_title이 추가되었는지 확인
+        # 키워드 인수로 호출되므로 call_kwargs 확인
+        call_args, call_kwargs = mock_comment_repository.create.call_args
+        created_comment_data = call_kwargs.get("comment_data")
+        assert created_comment_data is not None
+        assert created_comment_data.metadata.get("post_title") == "이사 서비스"
+    
+    @pytest.mark.asyncio
+    async def test_create_service_review_with_metadata(self, comments_service, mock_comment_repository, 
+                                                      mock_post_repository, sample_user, sample_post):
+        """Test creating service review with metadata."""
+        # Arrange
+        post_slug = "test-service-post"
+        sample_post.title = "청소 서비스"  # 서비스 제목
+        comment_data = CommentCreate(
+            content="서비스 정말 만족합니다!",
+            metadata={"subtype": "service_review"}
+        )
+        
+        mock_post_repository.get_by_slug.return_value = sample_post
+        mock_comment = Mock()
+        mock_comment.id = "review123"
+        mock_comment.author_id = "user123"
+        mock_comment.content = "서비스 정말 만족합니다!"
+        mock_comment.parent_comment_id = None
+        mock_comment.status = "active"
+        mock_comment.like_count = 0
+        mock_comment.dislike_count = 0
+        mock_comment.reply_count = 0
+        mock_comment.created_at = datetime.utcnow()
+        mock_comment.updated_at = datetime.utcnow()
+        mock_comment.metadata = {
+            "subtype": "service_review",
+            "post_title": "청소 서비스"
+        }
+        mock_comment_repository.create.return_value = mock_comment
+        
+        # Act
+        result = await comments_service.create_comment(post_slug, comment_data, sample_user)
+        
+        # Assert
+        assert result is not None
+        mock_post_repository.get_by_slug.assert_called_once_with(post_slug)
+        mock_comment_repository.create.assert_called_once()
+        
+        # metadata에 post_title이 추가되었는지 확인
+        call_args, call_kwargs = mock_comment_repository.create.call_args
+        created_comment_data = call_kwargs.get("comment_data")
+        assert created_comment_data is not None
+        assert created_comment_data.metadata.get("post_title") == "청소 서비스"
+    
+    @pytest.mark.asyncio
+    async def test_metadata_post_title_auto_addition(self, comments_service, mock_comment_repository, 
+                                                    mock_post_repository, sample_user, sample_post):
+        """Test automatic post_title addition when subtype exists in metadata."""
+        # Arrange
+        post_slug = "test-post"
+        sample_post.title = "테스트 포스트"
+        comment_data = CommentCreate(
+            content="일반 댓글",
+            metadata={}  # subtype 없음
+        )
+        
+        mock_post_repository.get_by_slug.return_value = sample_post
+        mock_comment = Mock()
+        mock_comment.id = "comment123"
+        mock_comment.author_id = "user123"
+        mock_comment.content = "일반 댓글"
+        mock_comment.parent_comment_id = None
+        mock_comment.status = "active"
+        mock_comment.like_count = 0
+        mock_comment.dislike_count = 0
+        mock_comment.reply_count = 0
+        mock_comment.created_at = datetime.utcnow()
+        mock_comment.updated_at = datetime.utcnow()
+        mock_comment_repository.create.return_value = mock_comment
+        
+        # Act
+        await comments_service.create_comment(post_slug, comment_data, sample_user)
+        
+        # Assert
+        call_args, call_kwargs = mock_comment_repository.create.call_args
+        created_comment_data = call_kwargs.get("comment_data")
+        assert created_comment_data is not None
+        # subtype이 없으면 post_title도 추가되지 않아야 함
+        assert "post_title" not in created_comment_data.metadata
+    
+    @pytest.mark.asyncio
+    async def test_regular_comment_without_metadata_modification(self, comments_service, mock_comment_repository, 
+                                                               mock_post_repository, sample_user, sample_post):
+        """Test regular comment creation without metadata modification."""
+        # Arrange
+        post_slug = "test-post"
+        sample_post.title = "테스트 포스트"
+        comment_data = CommentCreate(
+            content="일반 댓글입니다",
+            metadata=None  # metadata 없음
+        )
+        
+        mock_post_repository.get_by_slug.return_value = sample_post
+        mock_comment = Mock()
+        mock_comment.id = "comment123"
+        mock_comment.author_id = "user123"
+        mock_comment.content = "일반 댓글입니다"
+        mock_comment.parent_comment_id = None
+        mock_comment.status = "active"
+        mock_comment.like_count = 0
+        mock_comment.dislike_count = 0
+        mock_comment.reply_count = 0
+        mock_comment.created_at = datetime.utcnow()
+        mock_comment.updated_at = datetime.utcnow()
+        mock_comment_repository.create.return_value = mock_comment
+        
+        # Act
+        await comments_service.create_comment(post_slug, comment_data, sample_user)
+        
+        # Assert
+        call_args, call_kwargs = mock_comment_repository.create.call_args
+        created_comment_data = call_kwargs.get("comment_data")
+        assert created_comment_data is not None
+        # metadata가 None이면 수정하지 않아야 함
+        assert created_comment_data.metadata is None

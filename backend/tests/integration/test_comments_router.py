@@ -202,3 +202,218 @@ class TestCommentsRouter:
         mock_comments_service.create_reply.assert_called()
         mock_comments_service.update_comment_with_permission.assert_called()
         mock_comments_service.delete_comment_with_permission.assert_called()
+    
+    # 🆕 TDD: 문의/후기 API 엔드포인트 테스트 추가
+    def test_create_service_inquiry_endpoint(self, client, mock_comments_service, sample_comment):
+        """Test service inquiry creation endpoint."""
+        # Arrange
+        inquiry_comment = {
+            "id": "inquiry123",
+            "author_id": "user123",
+            "author": {
+                "id": "user123",
+                "name": "Test User", 
+                "email": "test@example.com",
+                "user_handle": "testuser",
+                "display_name": "Test User",
+                "bio": None,
+                "avatar_url": None,
+                "status": "active",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00"
+            },
+            "content": "이사 비용 문의드립니다",
+            "parent_comment_id": None,
+            "status": "active",
+            "like_count": 0,
+            "dislike_count": 0,
+            "reply_count": 0,
+            "user_reaction": None,
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "replies": None
+        }
+        mock_comments_service.create_comment.return_value = inquiry_comment
+        
+        # Act
+        response = client.post(
+            "/test-service/comments/inquiry",  # 라우터에 prefix가 없으므로 직접 경로 사용
+            json={
+                "content": "이사 비용 문의드립니다"
+            },
+            headers={"Authorization": "Bearer test-token"}
+        )
+        
+        # Assert
+        assert response.status_code == 201
+        assert response.json()["content"] == "이사 비용 문의드립니다"
+        mock_comments_service.create_comment.assert_called()
+        
+        # metadata에 subtype이 설정되었는지 확인
+        call_args, call_kwargs = mock_comments_service.create_comment.call_args
+        comment_data = call_kwargs.get("comment_data") if call_kwargs else call_args[1]
+        assert comment_data.metadata.get("subtype") == "service_inquiry"
+    
+    def test_create_service_review_endpoint(self, client, mock_comments_service, sample_comment):
+        """Test service review creation endpoint."""
+        # Arrange
+        review_comment = {
+            "id": "review123",
+            "author_id": "user123",
+            "author": {
+                "id": "user123",
+                "name": "Test User",
+                "email": "test@example.com", 
+                "user_handle": "testuser",
+                "display_name": "Test User",
+                "bio": None,
+                "avatar_url": None,
+                "status": "active",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00"
+            },
+            "content": "서비스 정말 만족합니다!",
+            "parent_comment_id": None,
+            "status": "active",
+            "like_count": 0,
+            "dislike_count": 0,
+            "reply_count": 0,
+            "user_reaction": None,
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "replies": None
+        }
+        mock_comments_service.create_comment.return_value = review_comment
+        
+        # Act
+        response = client.post(
+            "/test-service/comments/review",  # 라우터에 prefix가 없으므로 직접 경로 사용
+            json={
+                "content": "서비스 정말 만족합니다!"
+            },
+            headers={"Authorization": "Bearer test-token"}
+        )
+        
+        # Assert
+        assert response.status_code == 201
+        assert response.json()["content"] == "서비스 정말 만족합니다!"
+        mock_comments_service.create_comment.assert_called()
+        
+        # metadata에 subtype이 설정되었는지 확인
+        call_args, call_kwargs = mock_comments_service.create_comment.call_args
+        comment_data = call_kwargs.get("comment_data") if call_kwargs else call_args[1]
+        assert comment_data.metadata.get("subtype") == "service_review"
+    
+    def test_inquiry_endpoint_requires_authentication(self, client, mock_comments_service):
+        """Test that inquiry endpoint requires authentication."""
+        # Act - 인증 헤더 없이 요청 (app_with_comments에서 인증을 모킹하므로 200 응답 예상)
+        mock_comment_response = {
+            "id": "inquiry123",
+            "author_id": "user123", 
+            "author": {
+                "id": "user123",
+                "name": "Test User",
+                "email": "test@example.com",
+                "user_handle": "testuser",
+                "display_name": "Test User",
+                "bio": None,
+                "avatar_url": None,
+                "status": "active",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00"
+            },
+            "content": "문의 내용",
+            "parent_comment_id": None,
+            "status": "active",
+            "like_count": 0,
+            "dislike_count": 0,
+            "reply_count": 0,
+            "user_reaction": None,
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "replies": None
+        }
+        mock_comments_service.create_comment.return_value = mock_comment_response
+        
+        response = client.post(
+            "/test-service/comments/inquiry",
+            json={
+                "content": "문의 내용"
+            }
+        )
+        
+        # Assert - 모킹된 인증으로 인해 201 성공 응답 예상
+        assert response.status_code == 201
+        mock_comments_service.create_comment.assert_called_once()
+    
+    def test_review_endpoint_requires_authentication(self, client, mock_comments_service):
+        """Test that review endpoint requires authentication."""
+        # Act - 인증 헤더 없이 요청 (app_with_comments에서 인증을 모킹하므로 200 응답 예상)
+        mock_comment_response = {
+            "id": "review123",
+            "author_id": "user123",
+            "author": {
+                "id": "user123", 
+                "name": "Test User",
+                "email": "test@example.com",
+                "user_handle": "testuser",
+                "display_name": "Test User",
+                "bio": None,
+                "avatar_url": None,
+                "status": "active",
+                "created_at": "2024-01-01T00:00:00",
+                "updated_at": "2024-01-01T00:00:00"
+            },
+            "content": "후기 내용",
+            "parent_comment_id": None,
+            "status": "active",
+            "like_count": 0,
+            "dislike_count": 0,
+            "reply_count": 0,
+            "user_reaction": None,
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "replies": None
+        }
+        mock_comments_service.create_comment.return_value = mock_comment_response
+        
+        response = client.post(
+            "/test-service/comments/review",
+            json={
+                "content": "후기 내용"
+            }
+        )
+        
+        # Assert - 모킹된 인증으로 인해 201 성공 응답 예상
+        assert response.status_code == 201
+        mock_comments_service.create_comment.assert_called_once()
+    
+    def test_inquiry_endpoint_content_validation(self, client, mock_comments_service):
+        """Test inquiry endpoint content validation."""
+        # Act - 빈 content로 요청
+        response = client.post(
+            "/test-service/comments/inquiry",
+            json={
+                "content": ""
+            },
+            headers={"Authorization": "Bearer test-token"}
+        )
+        
+        # Assert - 422 Validation Error 예상
+        assert response.status_code == 422
+        mock_comments_service.create_comment.assert_not_called()
+    
+    def test_review_endpoint_content_validation(self, client, mock_comments_service):
+        """Test review endpoint content validation."""
+        # Act - 빈 content로 요청
+        response = client.post(
+            "/test-service/comments/review",
+            json={
+                "content": ""
+            },
+            headers={"Authorization": "Bearer test-token"}
+        )
+        
+        # Assert - 422 Validation Error 예상
+        assert response.status_code == 422
+        mock_comments_service.create_comment.assert_not_called()

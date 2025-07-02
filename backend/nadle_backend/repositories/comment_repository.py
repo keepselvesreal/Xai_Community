@@ -5,6 +5,7 @@ from datetime import datetime
 from beanie import PydanticObjectId
 from nadle_backend.models.core import Comment, CommentCreate, CommentDetail, PaginationParams
 from nadle_backend.exceptions.comment import CommentNotFoundError, CommentDepthExceededError
+from nadle_backend.config import get_settings
 
 
 class CommentRepository:
@@ -26,7 +27,8 @@ class CommentRepository:
         """
         # Check reply depth if this is a reply to another comment
         if comment_data.parent_comment_id:
-            await self._validate_reply_depth(comment_data.parent_comment_id)
+            settings = get_settings()
+            await self._validate_reply_depth(comment_data.parent_comment_id, settings.max_comment_depth)
         
         # Create comment document
         comment = Comment(
@@ -38,7 +40,7 @@ class CommentRepository:
             status="active",
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow(),
-            metadata={}
+            metadata=comment_data.metadata or {}
         )
         
         # Save to database
@@ -171,12 +173,49 @@ class CommentRepository:
         replies = await Comment.find(query).sort("created_at").to_list()
         return replies
     
+    async def get_replies_recursive(self, parent_comment_id: str, status: str = "active", max_depth: int = 3, current_depth: int = 0) -> List[Dict[str, Any]]:
+        """Get replies to a comment recursively with nested structure.
+        
+        Args:
+            parent_comment_id: Parent comment ID
+            status: Filter by status
+            max_depth: Maximum depth for nested replies
+            current_depth: Current recursion depth
+            
+        Returns:
+            List of reply comment dictionaries with nested replies
+        """
+        if current_depth >= max_depth:
+            return []
+            
+        # Get direct replies to this comment
+        replies = await self.get_replies(parent_comment_id, status)
+        
+        replies_with_nested = []
+        for reply in replies:
+            # Get nested replies for each reply
+            nested_replies = await self.get_replies_recursive(
+                str(reply.id), 
+                status, 
+                max_depth, 
+                current_depth + 1
+            )
+            
+            reply_dict = {
+                "comment": reply,
+                "replies": nested_replies
+            }
+            replies_with_nested.append(reply_dict)
+        
+        return replies_with_nested
+    
     async def get_comments_with_replies(
         self,
         post_id: str,
         page: int = 1,
         page_size: int = 20,
-        status: str = "active"
+        status: str = "active",
+        max_depth: int = 3
     ) -> Tuple[List[Dict[str, Any]], int]:
         """Get comments with their replies in hierarchical structure.
         
@@ -185,6 +224,7 @@ class CommentRepository:
             page: Page number
             page_size: Number of items per page
             status: Filter by status
+            max_depth: Maximum depth for nested replies
             
         Returns:
             Tuple of (comments with replies, total count)
@@ -200,8 +240,8 @@ class CommentRepository:
         comments_with_replies = []
         
         for comment in top_comments:
-            # Get replies for this comment
-            replies = await self.get_replies(str(comment.id), status=status)
+            # Get replies for this comment recursively
+            replies = await self.get_replies_recursive(str(comment.id), status=status, max_depth=max_depth)
             
             comment_dict = {
                 "comment": comment,
@@ -245,7 +285,7 @@ class CommentRepository:
         except Exception:
             return False
     
-    async def _validate_reply_depth(self, parent_comment_id: str, max_depth: int = 2) -> None:
+    async def _validate_reply_depth(self, parent_comment_id: str, max_depth: int = 3) -> None:
         """Validate that reply depth doesn't exceed maximum.
         
         Args:

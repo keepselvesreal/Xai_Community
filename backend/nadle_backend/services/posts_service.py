@@ -326,14 +326,8 @@ class PostsService:
             import traceback
             print(f"Error calculating post stats for {post_id}: {e}")
             print(f"Traceback: {traceback.format_exc()}")
-            # Return default stats on error
-            return {
-                "view_count": 0,
-                "like_count": 0,
-                "dislike_count": 0,
-                "comment_count": 0,
-                "bookmark_count": 0
-            }
+            # Re-raise the exception to see the actual error
+            raise e
     
     async def toggle_post_reaction(
         self,
