@@ -109,16 +109,22 @@ export default function TipsWrite() {
     setIsSubmitting(true);
     
     try {
+      // JSON 형태로 content 구성 (자기소개 + 내용)
+      const contentData = {
+        introduction: formData.introduction.trim(),
+        content: formData.content.trim()
+      };
+
       // 백엔드 API 호출 데이터 구성
       const postData: CreatePostRequest = {
         title: formData.title.trim(),
-        content: formData.content.trim(),
-        service: "expert_tips",
+        content: JSON.stringify(contentData),
+        service: "residential_community",
         metadata: {
-          type: "expert_tip",
+          type: "expert_tips",
           category: getCategoryLabel(formData.category),
           tags: tags.length > 0 ? tags : undefined,
-          introduction: formData.introduction.trim(),
+          expert_name: user?.display_name || user?.user_handle || "익명 전문가",
         }
       };
 

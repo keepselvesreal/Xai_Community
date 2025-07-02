@@ -1,9 +1,15 @@
 // 사용자 관련 타입
 export interface User {
   id: string;
+  _id?: string;  // 백엔드 호환성을 위한 필드
   email: string;
   user_handle?: string;
   full_name?: string;
+  name?: string;  // 백엔드 UserResponse 호환
+  display_name?: string;  // 백엔드 UserResponse 호환
+  bio?: string;  // 백엔드 UserResponse 호환
+  avatar_url?: string;  // 백엔드 UserResponse 호환
+  status?: "active" | "inactive" | "suspended";  // 백엔드 UserResponse 호환
   created_at: string;
   updated_at: string;
 }
@@ -83,23 +89,44 @@ export type PostType = "자유게시판" | "질문답변" | "공지사항" | "�
 export type ServiceType = "residential_community";
 export type CategoryType = "입주정보" | "생활정보" | "이야기";
 
-// 댓글 관련 타입 (API v3 백엔드 호환)
-export interface Comment {
-  id: string;              // 백엔드는 string ID 사용
-  post_id: string;         // 백엔드는 string ID 사용
-  author?: User;
-  content: string;
+// 댓글 작성자 타입 (백엔드 UserResponse와 동일)
+export interface CommentAuthor {
+  id: string;
+  name?: string;
+  email: string;
+  user_handle: string;
+  display_name?: string;
+  bio?: string;
+  avatar_url?: string;
+  status: "active" | "inactive" | "suspended";
   created_at: string;
   updated_at: string;
-  like_count?: number;     // 백엔드 필드명
-  dislike_count?: number;  // 백엔드 필드명
-  parent_comment_id?: string; // 백엔드 필드명
-  replies?: Comment[];
+}
+
+// 댓글 관련 타입 (백엔드 CommentDetail과 완전 호환)
+export interface Comment {
+  id: string;                    // 백엔드 CommentDetail의 id
+  author_id: string;             // 백엔드 CommentDetail의 author_id  
+  author?: CommentAuthor;        // 백엔드 CommentDetail의 author (UserResponse)
+  content: string;
+  parent_comment_id?: string;    // 백엔드 CommentDetail의 parent_comment_id
+  status: "active" | "deleted" | "hidden" | "pending"; // 백엔드 CommentStatus
+  like_count: number;            // 백엔드 CommentDetail의 like_count
+  dislike_count: number;         // 백엔드 CommentDetail의 dislike_count  
+  reply_count: number;           // 백엔드 CommentDetail의 reply_count
+  user_reaction?: {              // 백엔드 CommentDetail의 user_reaction
+    liked?: boolean;
+    disliked?: boolean;
+  };
+  created_at: string;
+  updated_at: string;
+  replies?: Comment[];           // 백엔드 CommentDetail의 replies
   
   // 프론트엔드 호환성을 위한 alias (옵셔널)
-  likes?: number;          // like_count의 alias
-  dislikes?: number;       // dislike_count의 alias
-  parent_id?: string;      // parent_comment_id의 alias
+  post_id?: string;              // 호환성을 위한 필드
+  likes?: number;                // like_count의 alias
+  dislikes?: number;             // dislike_count의 alias
+  parent_id?: string;            // parent_comment_id의 alias
 }
 
 export interface CreateCommentRequest {

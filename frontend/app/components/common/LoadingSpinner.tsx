@@ -32,7 +32,11 @@ export default function LoadingSpinner({
   };
 
   const spinner = (
-    <div className={`flex flex-col items-center justify-center gap-3 ${className}`}>
+    <div 
+      className={`flex flex-col items-center justify-center gap-3 ${className}`}
+      role="status"
+      aria-label={text || "Loading"}
+    >
       <div
         className={`
           ${sizeClasses[size]}

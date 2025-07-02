@@ -13,6 +13,7 @@ interface AuthProviderProps {
 export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [renderKey, setRenderKey] = useState(0); // 강제 리렌더링을 위한 키
 
@@ -22,10 +23,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.log('AuthContext: Initializing auth...');
       // 직접 localStorage 사용하여 JSON.parse 회피
       const savedToken = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) : null;
-      console.log('AuthContext: Saved token:', savedToken ? 'Found' : 'Not found');
+      const savedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
+      console.log('AuthContext: Saved tokens:', savedToken ? 'access found' : 'access not found', savedRefreshToken ? 'refresh found' : 'refresh not found');
       
       if (savedToken) {
         setToken(savedToken);
+        setRefreshToken(savedRefreshToken);
         try {
           console.log('AuthContext: Fetching current user...');
           const response = await apiClient.getCurrentUser();
@@ -33,14 +36,21 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           
           if (response.success && response.data) {
             console.log('AuthContext: User loaded successfully:', response.data);
-            setUser(response.data);
+            // id 필드 보장 (백엔드에서 _id로 올 수 있음)
+            const userData = {
+              ...response.data,
+              id: response.data.id || response.data._id
+            };
+            setUser(userData);
           } else {
             console.log('AuthContext: Failed to get user - response not successful:', response);
             // 토큰이 유효하지 않은 경우 - 직접 상태 정리
             setUser(null);
             setToken(null);
+            setRefreshToken(null);
             if (typeof window !== 'undefined') {
               localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+              localStorage.removeItem('refreshToken');
             }
             apiClient.logout();
           }
@@ -49,8 +59,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           // 예외 발생 시 - 직접 상태 정리
           setUser(null);
           setToken(null);
+          setRefreshToken(null);
           if (typeof window !== 'undefined') {
             localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+            localStorage.removeItem('refreshToken');
           }
           apiClient.logout();
         }
@@ -63,6 +75,42 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     initializeAuth();
   }, []);
 
+  // 토큰 만료 이벤트 리스너
+  useEffect(() => {
+    const handleTokenExpired = () => {
+      console.log('AuthContext: Token expired event received, logging out...');
+      // 상태 즉시 업데이트
+      setUser(null);
+      setToken(null);
+      setRefreshToken(null);
+      setIsLoading(false);
+      setRenderKey(prev => prev + 1);
+      
+      // localStorage 정리
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+        localStorage.removeItem('refreshToken');
+      }
+      
+      // API 클라이언트 로그아웃
+      apiClient.logout();
+      
+      // 홈페이지로 리디렉션
+      if (typeof window !== 'undefined') {
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
+      }
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('tokenExpired', handleTokenExpired);
+      return () => {
+        window.removeEventListener('tokenExpired', handleTokenExpired);
+      };
+    }
+  }, []);
+
   const login = useCallback(async (credentials: LoginRequest) => {
     setIsLoading(true);
     try {
@@ -70,13 +118,17 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const response = await apiClient.login(credentials);
       
       if (response.success && response.data) {
-        const { access_token } = response.data;
-        console.log('AuthContext: Login successful, token:', access_token ? 'Received' : 'Missing');
+        const { access_token, refresh_token } = response.data;
+        console.log('AuthContext: Login successful, tokens:', access_token ? 'access received' : 'access missing', refresh_token ? 'refresh received' : 'refresh missing');
         
         // 토큰 저장 (직접 localStorage 사용하여 JSON.stringify 회피)
         setToken(access_token);
+        setRefreshToken(refresh_token);
         if (typeof window !== 'undefined') {
           localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, access_token);
+          if (refresh_token) {
+            localStorage.setItem('refreshToken', refresh_token);
+          }
         }
         
         // 로그인 후 즉시 사용자 정보 로드
@@ -85,7 +137,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           const userResponse = await apiClient.getCurrentUser();
           if (userResponse.success && userResponse.data) {
             console.log('AuthContext: User info loaded:', userResponse.data);
-            setUser(userResponse.data);
+            // id 필드 보장 (백엔드에서 _id로 올 수 있음)
+            const userData = {
+              ...userResponse.data,
+              id: userResponse.data.id || userResponse.data._id
+            };
+            setUser(userData);
           }
         } catch (error) {
           console.error("AuthContext: Failed to load user info after login:", error);
@@ -130,13 +187,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     // 상태 즉시 업데이트
     setUser(null);
     setToken(null);
+    setRefreshToken(null);
     setIsLoading(false);
     setRenderKey(prev => prev + 1); // 강제 리렌더링
     
     // localStorage 정리
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-      console.log('AuthContext: Token removed from localStorage');
+      localStorage.removeItem('refreshToken');
+      console.log('AuthContext: Tokens removed from localStorage');
     }
     
     // API 클라이언트 로그아웃

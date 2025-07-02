@@ -1,10 +1,10 @@
 // 통합 목록 페이지를 위한 타입 정의
 
-import type { User } from './index';
+import type { User, Tip } from './index';
 
 /**
  * 모든 목록 아이템의 기본 인터페이스
- * Post, MockService, MockTip 등 모든 목록 아이템이 이 인터페이스를 구현해야 함
+ * Post, MockService, Tip 등 모든 목록 아이템이 이 인터페이스를 구현해야 함
  */
 export interface BaseListItem {
   id: string;
@@ -42,6 +42,16 @@ export interface SortOption {
 }
 
 /**
+ * 빈 상태 설정
+ */
+export interface EmptyStateConfig {
+  icon: string;
+  title: string;
+  description: string;
+  actionLabel: string;
+}
+
+/**
  * 목록 페이지 설정
  * 각 페이지별로 이 설정을 정의하여 통합 컴포넌트에서 사용
  */
@@ -60,6 +70,7 @@ export interface ListPageConfig<T extends BaseListItem> {
   categories: CategoryOption[];
   sortOptions: SortOption[];
   cardLayout: 'list' | 'grid' | 'card';
+  emptyState?: EmptyStateConfig;
   
   // 데이터 변환 함수 (API 응답을 T 타입으로 변환)
   transformData?: (rawData: any[]) => T[];
@@ -147,8 +158,8 @@ export function serviceToBaseListItem(service: any): BaseListItem {
   };
 }
 
-// MockTip을 BaseListItem으로 변환
-export function tipToBaseListItem(tip: any): BaseListItem {
+// Tip을 BaseListItem으로 변환
+export function tipToBaseListItem(tip: Tip): BaseListItem {
   return {
     id: tip.id.toString(),
     title: tip.title,

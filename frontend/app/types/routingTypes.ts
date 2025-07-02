@@ -7,7 +7,7 @@
  */
 
 // 지원되는 페이지 타입 정의
-export type PageType = 'board' | 'services' | 'tips' | 'notices' | 'events';
+export type PageType = 'board' | 'services' | 'tips' | 'info' | 'notices' | 'events';
 
 // 라우팅 패턴 타입
 export type RoutePattern = {
@@ -32,8 +32,13 @@ export const ROUTING_PATTERNS: Record<PageType, RoutePattern> = {
   },
   tips: {
     listRoute: '/tips',
-    detailRoute: '/tips-post', 
-    fileName: 'tips-post.$slug.tsx'
+    detailRoute: '/expert-tips', 
+    fileName: 'expert-tips.$slug.tsx'
+  },
+  info: {
+    listRoute: '/info',
+    detailRoute: '/property-info',
+    fileName: 'property-info.$slug.tsx'
   },
   notices: {
     listRoute: '/notices',
@@ -106,7 +111,8 @@ export function validateRoutingPattern(pageName: string): boolean {
 export const METADATA_TYPE_TO_PAGE_TYPE: Record<string, PageType> = {
   'board': 'board',
   'moving services': 'services',
-  'tips': 'tips',
+  'expert_tips': 'tips',
+  'property_information': 'info',
   'notices': 'notices',
   'events': 'events'
 } as const;

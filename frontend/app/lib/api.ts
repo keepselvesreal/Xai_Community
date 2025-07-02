@@ -520,16 +520,53 @@ class ApiClient {
     });
   }
 
-  async updateComment(commentId: string, content: string): Promise<ApiResponse<Comment>> {
-    return this.request<Comment>(`/api/comments/${commentId}`, {
+  async updateComment(postSlug: string, commentId: string, content: string): Promise<ApiResponse<Comment>> {
+    console.log('API updateComment 호출:', { postSlug, commentId, content });
+    const endpoint = `/api/posts/${postSlug}/comments/${commentId}`;
+    console.log('편집 요청 URL:', endpoint);
+    
+    return this.request<Comment>(endpoint, {
       method: 'PUT',
       body: JSON.stringify({ content }),
     });
   }
 
-  async deleteComment(commentId: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/api/comments/${commentId}`, {
+  async deleteComment(postSlug: string, commentId: string): Promise<ApiResponse<void>> {
+    console.log('API deleteComment 호출:', { postSlug, commentId });
+    const endpoint = `/api/posts/${postSlug}/comments/${commentId}`;
+    console.log('삭제 요청 URL:', endpoint);
+    
+    return this.request<void>(endpoint, {
       method: 'DELETE',
+    });
+  }
+
+  // 답글 작성 API
+  async createReply(postSlug: string, commentId: string, content: string): Promise<ApiResponse<Comment>> {
+    return this.request<Comment>(`/api/posts/${postSlug}/comments/${commentId}/replies`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  // 댓글 좋아요/싫어요 API
+  async likeComment(postSlug: string, commentId: string): Promise<ApiResponse<any>> {
+    console.log('API likeComment 호출:', { postSlug, commentId });
+    const endpoint = `/api/posts/${postSlug}/comments/${commentId}/like`;
+    console.log('좋아요 요청 URL:', endpoint);
+    
+    return this.request<any>(endpoint, {
+      method: 'POST',
+    });
+  }
+
+  async dislikeComment(postSlug: string, commentId: string): Promise<ApiResponse<any>> {
+    console.log('API dislikeComment 호출:', { postSlug, commentId });
+    const endpoint = `/api/posts/${postSlug}/comments/${commentId}/dislike`;
+    console.log('싫어요 요청 URL:', endpoint);
+    
+    return this.request<any>(endpoint, {
+      method: 'POST',
     });
   }
 

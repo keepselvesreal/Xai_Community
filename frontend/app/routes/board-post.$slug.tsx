@@ -3,7 +3,7 @@ import { useParams, useNavigate } from '@remix-run/react';
 import AppLayout from '~/components/layout/AppLayout';
 import Card from '~/components/ui/Card';
 import Button from '~/components/ui/Button';
-import Textarea from '~/components/ui/Textarea';
+import CommentSection from '~/components/comment/CommentSection';
 import { useAuth } from '~/contexts/AuthContext';
 import { useNotification } from '~/contexts/NotificationContext';
 import { apiClient } from '~/lib/api';
@@ -48,127 +48,6 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
   );
 };
 
-interface CommentSectionProps {
-  postSlug: string;
-  comments: Comment[];
-  onCommentAdded: () => void;
-}
-
-const CommentSection = ({ postSlug, comments, onCommentAdded }: CommentSectionProps) => {
-  const { user } = useAuth();
-  const { showSuccess, showError } = useNotification();
-  const [newComment, setNewComment] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmitComment = async () => {
-    if (!user) {
-      showError('로그인이 필요합니다');
-      return;
-    }
-
-    if (!newComment.trim()) {
-      showError('댓글 내용을 입력해주세요');
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const response = await apiClient.createComment(postSlug, {
-        content: newComment.trim(),
-      });
-
-      if (response.success) {
-        setNewComment('');
-        onCommentAdded();
-        showSuccess('댓글이 작성되었습니다');
-      } else {
-        showError(response.error || '댓글 작성에 실패했습니다');
-      }
-    } catch (error) {
-      showError('댓글 작성 중 오류가 발생했습니다');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Seoul', // 한국 시간대 명시적 설정
-    });
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">
-          댓글 <span className="text-blue-600">{comments?.length || 0}</span>개
-        </h3>
-      </div>
-
-      {/* 댓글 작성 폼 */}
-      {user && (
-        <Card>
-          <Card.Content>
-            <div className="space-y-4">
-              <Textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="댓글을 작성해주세요..."
-                rows={3}
-              />
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSubmitComment}
-                  disabled={!newComment.trim() || isSubmitting}
-                  loading={isSubmitting}
-                >
-                  댓글 작성
-                </Button>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
-      )}
-
-      {/* 댓글 목록 */}
-      <div className="space-y-4">
-        {comments?.map((comment) => (
-          <Card key={comment.id}>
-            <Card.Content>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <span className="font-medium text-gray-900">
-                      {comment.author?.display_name || comment.author?.user_handle || '익명'}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {formatDate(comment.created_at)}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-gray-700 whitespace-pre-wrap">
-                  {comment.content}
-                </div>
-              </div>
-            </Card.Content>
-          </Card>
-        ))}
-
-        {(!comments || comments.length === 0) && (
-          <div className="text-center py-8 text-gray-500">
-            아직 댓글이 없습니다. 첫 번째 댓글을 작성해보세요!
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
 
 export default function PostDetail() {
   const { slug } = useParams();
@@ -207,7 +86,21 @@ export default function PostDetail() {
     try {
       const response = await apiClient.getComments(slug);
       if (response.success && response.data) {
-        setComments(response.data.comments || []);
+        console.log('원본 댓글 데이터:', response.data.comments);
+        
+        // 재귀적으로 모든 중첩된 답글의 id 필드 보장
+        const processCommentsRecursive = (comments: any[]): any[] => {
+          return comments.map(comment => ({
+            ...comment,
+            id: comment.id || comment._id, // id가 없으면 _id 사용
+            replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+          }));
+        };
+        
+        const processedComments = processCommentsRecursive(response.data.comments || []);
+        
+        console.log('처리된 댓글 데이터:', processedComments);
+        setComments(processedComments);
       }
     } catch (error) {
       console.error('댓글 로드 실패:', error);

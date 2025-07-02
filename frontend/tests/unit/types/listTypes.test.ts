@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import type { Post, MockService, MockTip } from '~/types';
+import type { Post, MockService, Tip } from '~/types';
 import type { BaseListItem, ItemStats, ListPageConfig } from '~/types/listTypes';
 
 // 타입 호환성 테스트를 위한 헬퍼 함수
@@ -83,8 +83,8 @@ describe('BaseListItem 인터페이스', () => {
     expect(isBaseListItem(mappedService)).toBe(true);
   });
 
-  test('MockTip 타입과 호환성', () => {
-    const tip: MockTip = {
+  test('Tip 타입과 호환성', () => {
+    const tip: Tip = {
       id: 1,
       title: '겨울철 실내 화분 관리법',
       content: '실내 온도와 습도 조절을 통한 효과적인 식물 관리',

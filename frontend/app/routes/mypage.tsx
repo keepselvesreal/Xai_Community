@@ -503,14 +503,6 @@ export default function MyPage() {
                     </h4>
                     <div className="space-y-2">
                       <ActivityItem 
-                        type="info-posts" 
-                        icon="📝" 
-                        name="글" 
-                        count={user ? 0 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('info-posts')}
-                      />
-                      <ActivityItem 
                         type="info-comments" 
                         icon="💬" 
                         name="댓글" 
@@ -552,14 +544,6 @@ export default function MyPage() {
                       💡 전문가 꿀정보
                     </h4>
                     <div className="space-y-2">
-                      <ActivityItem 
-                        type="tips-posts" 
-                        icon="📝" 
-                        name="글" 
-                        count={user ? 0 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('tips-posts')}
-                      />
                       <ActivityItem 
                         type="tips-comments" 
                         icon="💬" 
