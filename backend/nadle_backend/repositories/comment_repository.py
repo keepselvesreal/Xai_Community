@@ -326,3 +326,18 @@ class CommentRepository:
         # This would typically query the Reaction collection
         # For now, return empty dict as placeholder
         return {}
+    
+    async def find_by_author(self, author_id: str) -> List[Comment]:
+        """Find all comments by author ID.
+        
+        Args:
+            author_id: Author ID
+            
+        Returns:
+            List of comments by the author
+        """
+        try:
+            comments = await Comment.find({"author_id": author_id}).sort("-created_at").to_list()
+            return comments
+        except Exception:
+            return []

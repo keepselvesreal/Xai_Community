@@ -242,6 +242,7 @@ class UserReaction(Document):
     bookmarked: bool = False  # Only applicable for posts
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+    metadata: Optional[Dict[str, Any]] = Field(default_factory=dict)  # For route_path and target_title storage
     
     class Settings:
         name = settings.user_reactions_collection

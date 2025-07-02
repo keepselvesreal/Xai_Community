@@ -351,3 +351,21 @@ class PostRepository:
         except Exception as e:
             print(f"Error fetching authors: {e}")
             return []
+    
+    async def find_by_author(self, author_id: str) -> List[Post]:
+        """Find all posts by author ID.
+        
+        Args:
+            author_id: Author ID
+            
+        Returns:
+            List of posts by the author (excluding deleted posts)
+        """
+        try:
+            posts = await Post.find({
+                "author_id": author_id,
+                "status": {"$ne": "deleted"}
+            }).sort("-created_at").to_list()
+            return posts
+        except Exception:
+            return []

@@ -6,6 +6,7 @@ from nadle_backend.repositories.comment_repository import CommentRepository
 from nadle_backend.repositories.post_repository import PostRepository
 from nadle_backend.exceptions.comment import CommentNotFoundError, CommentPermissionError, CommentValidationError
 from nadle_backend.exceptions.post import PostNotFoundError
+from nadle_backend.services.user_activity_service import normalize_post_type
 from beanie import PydanticObjectId
 
 
@@ -42,9 +43,15 @@ class CommentsService:
         # Get post by slug to get post ID
         post = await self.post_repo.get_by_slug(post_slug)
         
-        # 🆕 metadata 처리: subtype이 있는 경우 post_title 자동 추가
-        if comment_data.metadata and comment_data.metadata.get("subtype"):
-            comment_data.metadata["post_title"] = post.title
+        # 🆕 metadata 처리: 모든 댓글에 post_title과 라우팅 정보 자동 추가
+        if not comment_data.metadata:
+            comment_data.metadata = {}
+        comment_data.metadata["post_title"] = post.title
+        
+        # 라우팅 정보 추가
+        original_type = getattr(post.metadata, "type", "board") if post.metadata else "board"
+        normalized_type = normalize_post_type(original_type) or "board"
+        comment_data.metadata["route_path"] = self._generate_route_path(normalized_type, post.slug)
         
         # Create comment
         comment = await self.comment_repo.create(
@@ -285,10 +292,20 @@ class CommentsService:
         })
         
         if not user_reaction:
+            # Get post information for routing
+            post = await self.post_repo.get_by_id(comment.parent_id)
+            original_type = getattr(post.metadata, "type", "board") if post.metadata else "board"
+            normalized_type = normalize_post_type(original_type) or "board"
+            route_path = self._generate_route_path(normalized_type, post.slug)
+            
             user_reaction = UserReaction(
                 user_id=str(current_user.id),
                 target_type="comment",
-                target_id=comment_id
+                target_id=comment_id,
+                metadata={
+                    "route_path": route_path,
+                    "target_title": comment.content[:50] + "..." if len(comment.content) > 50 else comment.content
+                }
             )
         
         # Toggle reaction
@@ -529,3 +546,22 @@ class CommentsService:
         except Exception:
             # Log error but don't fail the comment deletion
             pass
+    
+    def _generate_route_path(self, page_type: str, slug: str) -> str:
+        """Generate route path based on page type and slug.
+        
+        Args:
+            page_type: Page type (board, info, services, tips)
+            slug: Post slug
+            
+        Returns:
+            Route path string
+        """
+        route_mapping = {
+            "board": f"/board-post/{slug}",
+            "info": f"/property-info/{slug}",
+            "services": f"/moving-services-post/{slug}",
+            "tips": f"/expert-tips/{slug}"
+        }
+        
+        return route_mapping.get(page_type, f"/post/{slug}")

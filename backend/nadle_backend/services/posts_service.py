@@ -367,10 +367,18 @@ class PostsService:
         })
         
         if not user_reaction:
+            # Generate route path for the post
+            page_type = getattr(post.metadata, "type", "board") if post.metadata else "board"
+            route_path = self._generate_route_path(page_type, post.slug)
+            
             user_reaction = UserReaction(
                 user_id=str(current_user.id),
                 target_type="post",
-                target_id=post_id
+                target_id=post_id,
+                metadata={
+                    "route_path": route_path,
+                    "target_title": post.title
+                }
             )
         
         # Toggle reaction
@@ -406,3 +414,22 @@ class PostsService:
                 "bookmarked": user_reaction.bookmarked
             }
         }
+    
+    def _generate_route_path(self, page_type: str, slug: str) -> str:
+        """Generate route path based on page type and slug.
+        
+        Args:
+            page_type: Page type (board, info, services, tips)
+            slug: Post slug
+            
+        Returns:
+            Route path string
+        """
+        route_mapping = {
+            "board": f"/board-post/{slug}",
+            "info": f"/property-info/{slug}",
+            "services": f"/moving-services-post/{slug}",
+            "tips": f"/expert-tips/{slug}"
+        }
+        
+        return route_mapping.get(page_type, f"/post/{slug}")
