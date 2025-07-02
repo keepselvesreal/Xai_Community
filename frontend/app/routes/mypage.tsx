@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { json, redirect, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
 import { useAuth } from "~/contexts/AuthContext";
+import { apiClient } from "~/lib/api";
+import { formatNumber } from "~/lib/utils";
+import type { UserActivityResponse, ActivityItem } from "~/types";
 
 export const meta: MetaFunction = () => {
   return [
@@ -12,53 +15,17 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  // 실제 환경에서는 인증 확인
-  // if (!user) return redirect("/auth/login");
-
-  // Mock 사용자 활동 데이터
-  const userStats = {
-    postsCount: 2,
-    commentsCount: 8,
-    likesReceived: 15,
-    joinDate: "2023-09-15",
-    consecutiveDays: 3
-  };
-
-  const recentPosts = [
-    {
-      id: 1,
-      title: "엘리베이터 점검 관련 문의",
-      category: "문의",
-      created_at: "2024-03-09",
-      comments_count: 3,
-      likes_count: 7
-    },
-    {
-      id: 2,
-      title: "주차 공간 효율적 이용 제안",
-      category: "건의",
-      created_at: "2024-03-07",
-      comments_count: 8,
-      likes_count: 15
+  // 서버 사이드에서는 기본값만 반환, 실제 데이터는 클라이언트에서 로드
+  return json({
+    userActivity: null,
+    userStats: {
+      postsCount: 0,
+      commentsCount: 0,
+      likesReceived: 0,
+      joinDate: "2023-09-15",
+      consecutiveDays: 0
     }
-  ];
-
-  const recentComments = [
-    {
-      id: 1,
-      post_title: "층간소음 관련 건의사항",
-      comment: "저희 집도 같은 문제가 있어서 공감됩니다. 좋은 해결책이 있으면 좋겠어요.",
-      created_at: "2024-03-10"
-    },
-    {
-      id: 2,
-      post_title: "헬스장 이용 문의",
-      comment: "관리사무소에 문의하시면 자세한 안내 받으실 수 있을 거예요.",
-      created_at: "2024-03-09"
-    }
-  ];
-
-  return json({ userStats, recentPosts, recentComments });
+  });
 };
 
 // ActivityItem 컴포넌트
@@ -66,77 +33,12 @@ interface ActivityItemProps {
   type: string;
   icon: string;
   name: string;
-  count: number;
+  items: ActivityItem[];
   onToggle: (type: string) => void;
   isExpanded: boolean;
 }
 
-function ActivityItem({ type, icon, name, count, onToggle, isExpanded }: ActivityItemProps) {
-  const mockData: Record<string, any[]> = {
-    'board-posts': [
-      { title: '엘리베이터 소음 문제', author: '홍길동', date: '2024-03-10' },
-    ],
-    'board-comments': [
-      { title: '층간소음 관련 건의사항', comment: '저희 집도 같은 문제가 있어서 공감됩니다.', date: '2024-03-10' },
-    ],
-    'info-posts': [
-      { title: '헬스장 이용 안내', author: '관리사무소', date: '2024-03-09' },
-    ],
-    'info-comments': [
-      { title: '주차장 이용 규칙', comment: '명확한 안내 감사드립니다.', date: '2024-03-08' },
-    ],
-    'service-inquiries': [
-      { title: '클리닝 서비스 문의', category: '청소', date: '2024-03-09' },
-    ],
-    'service-reviews': [
-      { title: '세탁소 이용 후기', rating: 4.5, comment: '서비스가 매우 만족스럽습니다.', date: '2024-03-08' },
-    ],
-    'tips-posts': [
-      { title: '겨울철 화분 관리법', expert: '김정원', date: '2024-03-07' },
-    ],
-    'tips-comments': [
-      { title: '전기세 절약하는 법', comment: '유용한 팁 감사합니다!', date: '2024-03-06' },
-    ],
-    // 반응 데이터
-    'board-likes': [
-      { title: '공동현관 보안 강화 건의', author: '김철수', date: '2024-03-10' },
-    ],
-    'board-dislikes': [
-      { title: '잘못된 정보 게시글', author: '이영희', date: '2024-03-09' },
-    ],
-    'board-saves': [
-      { title: '아파트 관리비 절약 팁', author: '박민수', date: '2024-03-08' },
-    ],
-    'info-likes': [
-      { title: '재활용 분리수거 안내', author: '관리사무소', date: '2024-03-07' },
-    ],
-    'info-dislikes': [
-      { title: '부정확한 정보 공지', author: '홍길동', date: '2024-03-06' },
-    ],
-    'info-saves': [
-      { title: '응급상황 대처법', author: '안전관리팀', date: '2024-03-05' },
-    ],
-    'service-likes': [
-      { title: 'ABC 마트 할인 이벤트', category: '마트', date: '2024-03-04' },
-    ],
-    'service-dislikes': [
-      { title: '불친절한 서비스', category: '세탁소', date: '2024-03-03' },
-    ],
-    'service-saves': [
-      { title: '좋은 청소 업체 추천', category: '청소', date: '2024-03-02' },
-    ],
-    'tips-likes': [
-      { title: '베란다 정원 가꾸기', expert: '김정원', date: '2024-03-01' },
-    ],
-    'tips-dislikes': [
-      { title: '효과 없는 팁', expert: '이전기', date: '2024-02-28' },
-    ],
-    'tips-saves': [
-      { title: '에너지 절약 비법', expert: '박절약', date: '2024-02-27' },
-    ]
-  };
-
-  const data = mockData[type] || [];
+function ActivityItem({ type, icon, name, items, onToggle, isExpanded }: ActivityItemProps) {
 
   return (
     <>
@@ -149,7 +51,7 @@ function ActivityItem({ type, icon, name, count, onToggle, isExpanded }: Activit
           {name}
         </span>
         <span className="font-semibold text-sm flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-          {count}개
+          {items.length}개
           <span className="text-xs" style={{color: 'var(--text-muted)'}}>{isExpanded ? '숨기기' : '보기'}</span>
         </span>
       </div>
@@ -157,24 +59,84 @@ function ActivityItem({ type, icon, name, count, onToggle, isExpanded }: Activit
       {isExpanded && (
         <div className="ml-4 mt-2 space-y-2">
           <div className="bg-white border border-var-light rounded-lg p-4">
-            <div className="flex justify-between items-center mb-3">
-              <h5 className="font-semibold text-var-primary">{icon} {name}</h5>
-              <span className="text-var-muted text-sm">{data.length}개</span>
-            </div>
             <div className="space-y-3">
-              {data.map((item, index) => (
-                <div key={index} className="border-b border-var-light pb-3 last:border-b-0 last:pb-0">
-                  <div className="font-medium text-var-primary text-sm mb-1">{item.title}</div>
-                  <div className="text-var-muted text-xs space-x-2">
-                    {item.author && <span>작성자: {item.author}</span>}
-                    {item.expert && <span>전문가: {item.expert}</span>}
-                    {item.category && <span>카테고리: {item.category}</span>}
-                    {item.rating && <span>⭐ {item.rating}</span>}
-                    <span>{item.date}</span>
-                  </div>
-                  {item.comment && <div className="text-var-secondary text-sm mt-2 italic">"{item.comment}"</div>}
+              {items.map((item, index) => (
+                <div key={item.id || index} className="border-b border-var-light pb-3 last:border-b-0 last:pb-0">
+                  <Link 
+                    to={item.route_path}
+                    className="block hover:bg-var-hover p-2 rounded transition-colors"
+                  >
+                    {/* 반응 표시 */}
+                    {item.target_type ? (
+                      <>
+                        <div className="font-medium text-var-primary text-sm mb-2">
+                          {item.title || item.target_title || "게시글 정보 없음"}
+                        </div>
+                        
+                        {/* 통계 정보 표시 - PostCard와 동일한 스타일 */}
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                          <span>·</span>
+                          <span className="text-gray-500">
+                            👁 {formatNumber(item.view_count || 0)}
+                          </span>
+                          <span className="text-gray-500">
+                            👍 {formatNumber(item.like_count || 0)}
+                          </span>
+                          <span className="text-gray-500">
+                            👎 {formatNumber(item.dislike_count || 0)}
+                          </span>
+                          <span className="text-gray-500">
+                            💬 {formatNumber(item.comment_count || 0)}
+                          </span>
+                          <span>·</span>
+                          <span className="text-gray-500">
+                            {item.target_type === 'post' ? '게시글' : '댓글'}
+                          </span>
+                        </div>
+                      </>
+                    ) : (
+                      /* 일반 게시글/댓글 표시 */
+                      <>
+                        <div className="font-medium text-var-primary text-sm mb-2">
+                          {item.title || (item.content ? "댓글 대상 게시글 정보 없음" : "게시글 제목 없음")}
+                        </div>
+                        
+                        {/* 통계 정보 표시 - PostCard와 동일한 스타일 */}
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          <span>{new Date(item.created_at).toLocaleDateString()}</span>
+                          <span>·</span>
+                          <span className="text-gray-500">
+                            👁 {formatNumber(item.view_count || 0)}
+                          </span>
+                          <span className="text-gray-500">
+                            👍 {formatNumber(item.like_count || 0)}
+                          </span>
+                          <span className="text-gray-500">
+                            👎 {formatNumber(item.dislike_count || 0)}
+                          </span>
+                          <span className="text-gray-500">
+                            💬 {formatNumber(item.comment_count || 0)}
+                          </span>
+                          {item.subtype && (
+                            <>
+                              <span>·</span>
+                              <span className="inline-block px-2 py-1 bg-accent-light text-accent-primary rounded text-xs">
+                                {item.subtype === 'service_inquiry' ? '문의' : item.subtype === 'service_review' ? '후기' : item.subtype}
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </Link>
                 </div>
               ))}
+              {items.length === 0 && (
+                <div className="text-center text-var-muted py-4">
+                  활동 기록이 없습니다
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -184,10 +146,70 @@ function ActivityItem({ type, icon, name, count, onToggle, isExpanded }: Activit
 }
 
 export default function MyPage() {
-  const { userStats, recentPosts, recentComments } = useLoaderData<typeof loader>();
+  const loaderData = useLoaderData<typeof loader>();
   const { user, logout } = useAuth();
   const [activityTab, setActivityTab] = useState<'write' | 'reaction'>('write');
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
+  const [userActivity, setUserActivity] = useState<UserActivityResponse | null>(null);
+  const [userStats, setUserStats] = useState(loaderData.userStats);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // 댓글을 페이지 타입별로 분류하는 헬퍼 함수
+  const getCommentsByPageType = (comments: ActivityItem[], pageType: string): ActivityItem[] => {
+    if (!comments) return [];
+    
+    return comments.filter(comment => {
+      if (!comment.route_path) return false;
+      
+      switch (pageType) {
+        case 'board':
+          return comment.route_path.startsWith('/board-post/') && !comment.subtype;
+        case 'info':
+          return comment.route_path.startsWith('/property-info/') && !comment.subtype;
+        case 'services':
+          return comment.route_path.startsWith('/moving-services-post/') && !comment.subtype;
+        case 'tips':
+          return comment.route_path.startsWith('/expert-tips/') && !comment.subtype;
+        default:
+          return false;
+      }
+    });
+  };
+
+  // 사용자 활동 데이터 로드 함수
+  const loadUserActivity = async () => {
+    if (!user || !apiClient.isAuthenticated()) {
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const activity = await apiClient.getUserActivity();
+      setUserActivity(activity);
+      setUserStats({
+        postsCount: activity.summary.total_posts,
+        commentsCount: activity.summary.total_comments,
+        likesReceived: activity.summary.total_reactions,
+        joinDate: loaderData.userStats.joinDate,
+        consecutiveDays: loaderData.userStats.consecutiveDays
+      });
+    } catch (err) {
+      console.error('Failed to load user activity:', err);
+      setError('활동 기록을 불러오는데 실패했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 초기 로드
+  useEffect(() => {
+    loadUserActivity();
+  }, [user, loaderData.userStats]);
+
+  // 페이지 포커스 시 자동 새로고침 제거 (수동 새로고침만 사용)
 
   // 게스트 사용자를 위한 기본 데이터
   const displayUser = user || {
@@ -469,227 +491,235 @@ export default function MyPage() {
 
             {/* 활동 내용 */}
             <div className="space-y-6">
-              {activityTab === 'write' && (
+              {isLoading && (
+                <div className="text-center py-8">
+                  <div className="text-accent-primary">로딩 중...</div>
+                </div>
+              )}
+
+              {error && (
+                <div className="text-center py-8">
+                  <div className="text-red-500">{error}</div>
+                </div>
+              )}
+
+              {!isLoading && !error && activityTab === 'write' && (
                 <>
                   {/* 게시판 활동 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      📝 게시판
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="board-posts" 
-                        icon="📝" 
-                        name="글" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('board-posts')}
-                      />
-                      <ActivityItem 
-                        type="board-comments" 
-                        icon="💬" 
-                        name="댓글" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('board-comments')}
-                      />
+                  {userActivity && (
+                    (userActivity.posts.board?.length > 0 || getCommentsByPageType(userActivity.comments, 'board').length > 0)
+                  ) && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        📝 게시판
+                      </h4>
+                      <div className="space-y-2">
+                        {userActivity?.posts.board?.length > 0 && (
+                          <ActivityItem 
+                            type="board-posts" 
+                            icon="📝" 
+                            name="글" 
+                            items={userActivity.posts.board}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('board-posts')}
+                          />
+                        )}
+                        {getCommentsByPageType(userActivity?.comments || [], 'board').length > 0 && (
+                          <ActivityItem 
+                            type="board-comments" 
+                            icon="💬" 
+                            name="댓글" 
+                            items={getCommentsByPageType(userActivity.comments, 'board')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('board-comments')}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* 정보 활동 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      📋 정보
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="info-comments" 
-                        icon="💬" 
-                        name="댓글" 
-                        count={user ? 2 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('info-comments')}
-                      />
+                  {userActivity && (
+                    (userActivity.posts.info?.length > 0 || getCommentsByPageType(userActivity.comments, 'info').length > 0)
+                  ) && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        📋 정보
+                      </h4>
+                      <div className="space-y-2">
+                        {userActivity?.posts.info?.length > 0 && (
+                          <ActivityItem 
+                            type="info-posts" 
+                            icon="📝" 
+                            name="글" 
+                            items={userActivity.posts.info}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('info-posts')}
+                          />
+                        )}
+                        {getCommentsByPageType(userActivity?.comments || [], 'info').length > 0 && (
+                          <ActivityItem 
+                            type="info-comments" 
+                            icon="💬" 
+                            name="댓글" 
+                            items={getCommentsByPageType(userActivity.comments, 'info')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('info-comments')}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* 입주 업체 서비스 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      🏢 입주 업체 서비스
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="service-inquiries" 
-                        icon="❓" 
-                        name="문의" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('service-inquiries')}
-                      />
-                      <ActivityItem 
-                        type="service-reviews" 
-                        icon="⭐" 
-                        name="후기" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('service-reviews')}
-                      />
+                  {userActivity && (
+                    (userActivity.posts.services?.length > 0 || 
+                     getCommentsByPageType(userActivity.comments, 'services').length > 0 ||
+                     userActivity.comments.filter(c => c.subtype === 'service_inquiry').length > 0 ||
+                     userActivity.comments.filter(c => c.subtype === 'service_review').length > 0)
+                  ) && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        🏢 입주 업체 서비스
+                      </h4>
+                      <div className="space-y-2">
+                        {userActivity?.posts.services?.length > 0 && (
+                          <ActivityItem 
+                            type="service-posts" 
+                            icon="📝" 
+                            name="글" 
+                            items={userActivity.posts.services}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('service-posts')}
+                          />
+                        )}
+                        {getCommentsByPageType(userActivity?.comments || [], 'services').length > 0 && (
+                          <ActivityItem 
+                            type="service-comments" 
+                            icon="💬" 
+                            name="댓글" 
+                            items={getCommentsByPageType(userActivity.comments, 'services')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('service-comments')}
+                          />
+                        )}
+                        {userActivity?.comments.filter(c => c.subtype === 'service_inquiry').length > 0 && (
+                          <ActivityItem 
+                            type="service-inquiries" 
+                            icon="❓" 
+                            name="문의" 
+                            items={userActivity.comments.filter(c => c.subtype === 'service_inquiry')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('service-inquiries')}
+                          />
+                        )}
+                        {userActivity?.comments.filter(c => c.subtype === 'service_review').length > 0 && (
+                          <ActivityItem 
+                            type="service-reviews" 
+                            icon="⭐" 
+                            name="후기" 
+                            items={userActivity.comments.filter(c => c.subtype === 'service_review')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('service-reviews')}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* 전문가 꿀정보 활동 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      💡 전문가 꿀정보
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="tips-comments" 
-                        icon="💬" 
-                        name="댓글" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('tips-comments')}
-                      />
+                  {userActivity && (
+                    (userActivity.posts.tips?.length > 0 || getCommentsByPageType(userActivity.comments, 'tips').length > 0)
+                  ) && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        💡 전문가 꿀정보
+                      </h4>
+                      <div className="space-y-2">
+                        {userActivity?.posts.tips?.length > 0 && (
+                          <ActivityItem 
+                            type="tips-posts" 
+                            icon="📝" 
+                            name="글" 
+                            items={userActivity.posts.tips}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('tips-posts')}
+                          />
+                        )}
+                        {getCommentsByPageType(userActivity?.comments || [], 'tips').length > 0 && (
+                          <ActivityItem 
+                            type="tips-comments" 
+                            icon="💬" 
+                            name="댓글" 
+                            items={getCommentsByPageType(userActivity.comments, 'tips')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('tips-comments')}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </>
               )}
 
-              {activityTab === 'reaction' && (
+              {!isLoading && !error && activityTab === 'reaction' && (
                 <>
-                  {/* 게시판 반응 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      📝 게시판
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="board-likes" 
-                        icon="👍" 
-                        name="추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('board-likes')}
-                      />
-                      <ActivityItem 
-                        type="board-dislikes" 
-                        icon="👎" 
-                        name="비추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('board-dislikes')}
-                      />
-                      <ActivityItem 
-                        type="board-saves" 
-                        icon="📌" 
-                        name="저장" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('board-saves')}
-                      />
+                  {/* 추천 반응 */}
+                  {userActivity?.reactions.likes?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        👍 추천
+                      </h4>
+                      <div className="space-y-2">
+                        <ActivityItem 
+                          type="likes" 
+                          icon="👍" 
+                          name="추천" 
+                          items={userActivity.reactions.likes}
+                          onToggle={toggleActivityDetail}
+                          isExpanded={expandedActivities.has('likes')}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* 정보 반응 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      📋 정보
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="info-likes" 
-                        icon="👍" 
-                        name="추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('info-likes')}
-                      />
-                      <ActivityItem 
-                        type="info-dislikes" 
-                        icon="👎" 
-                        name="비추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('info-dislikes')}
-                      />
-                      <ActivityItem 
-                        type="info-saves" 
-                        icon="📌" 
-                        name="저장" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('info-saves')}
-                      />
+                  {/* 비추천 반응 */}
+                  {userActivity?.reactions.dislikes?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        👎 비추천
+                      </h4>
+                      <div className="space-y-2">
+                        <ActivityItem 
+                          type="dislikes" 
+                          icon="👎" 
+                          name="비추천" 
+                          items={userActivity.reactions.dislikes}
+                          onToggle={toggleActivityDetail}
+                          isExpanded={expandedActivities.has('dislikes')}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
-                  {/* 입주 업체 서비스 반응 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      🏢 입주 업체 서비스
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="service-likes" 
-                        icon="👍" 
-                        name="추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('service-likes')}
-                      />
-                      <ActivityItem 
-                        type="service-dislikes" 
-                        icon="👎" 
-                        name="비추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('service-dislikes')}
-                      />
-                      <ActivityItem 
-                        type="service-saves" 
-                        icon="📌" 
-                        name="저장" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('service-saves')}
-                      />
+                  {/* 저장 반응 */}
+                  {userActivity?.reactions.bookmarks?.length > 0 && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        📌 저장
+                      </h4>
+                      <div className="space-y-2">
+                        <ActivityItem 
+                          type="bookmarks" 
+                          icon="📌" 
+                          name="저장" 
+                          items={userActivity.reactions.bookmarks}
+                          onToggle={toggleActivityDetail}
+                          isExpanded={expandedActivities.has('bookmarks')}
+                        />
+                      </div>
                     </div>
-                  </div>
-
-                  {/* 전문가 꿀정보 반응 */}
-                  <div>
-                    <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                      💡 전문가 꿀정보
-                    </h4>
-                    <div className="space-y-2">
-                      <ActivityItem 
-                        type="tips-likes" 
-                        icon="👍" 
-                        name="추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('tips-likes')}
-                      />
-                      <ActivityItem 
-                        type="tips-dislikes" 
-                        icon="👎" 
-                        name="비추천" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('tips-dislikes')}
-                      />
-                      <ActivityItem 
-                        type="tips-saves" 
-                        icon="📌" 
-                        name="저장" 
-                        count={user ? 1 : 0} 
-                        onToggle={toggleActivityDetail}
-                        isExpanded={expandedActivities.has('tips-saves')}
-                      />
-                    </div>
-                  </div>
+                  )}
                 </>
               )}
             </div>

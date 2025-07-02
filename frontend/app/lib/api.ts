@@ -15,6 +15,7 @@ import type {
   PostFilters,
   ApiTestRequest,
   ApiTestResponse,
+  UserActivityResponse,
 } from "~/types";
 import { validateJWTFormat, decodeJWTPayload, isTokenExpired } from './jwt-utils';
 
@@ -412,10 +413,30 @@ class ApiClient {
     return result;
   }
 
+  // 사용자 활동 조회 API
+  async getUserActivity(): Promise<UserActivityResponse> {
+    console.log('ApiClient: getUserActivity called');
+    const result = await this.request<UserActivityResponse>('/api/users/me/activity', {
+      method: 'GET',
+    });
+    
+    if (!result.success) {
+      throw new Error(result.error || 'Failed to fetch user activity');
+    }
+    
+    console.log('ApiClient: getUserActivity result:', result.data);
+    return result.data!;
+  }
+
   logout(): void {
     console.log('ApiClient: Logout called');
     this.removeTokens();
     console.log('ApiClient: Tokens removed');
+  }
+
+  // 인증 상태 확인
+  isAuthenticated(): boolean {
+    return !!this.token && !this.isTokenExpired(this.token);
   }
 
   // 테스트를 위한 public 메서드들 (원래는 private이지만 테스트 접근을 위해 public으로 노출)

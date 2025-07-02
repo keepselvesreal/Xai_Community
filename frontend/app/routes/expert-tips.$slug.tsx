@@ -1,118 +1,93 @@
-import { useState, useEffect } from "react";
-import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { useLoaderData, Link } from "@remix-run/react";
-import AppLayout from "~/components/layout/AppLayout";
-import CommentSection from "~/components/comment/CommentSection";
-import { useAuth } from "~/contexts/AuthContext";
-import { useNotification } from "~/contexts/NotificationContext";
-import { apiClient } from "~/lib/api";
-import type { Post, Tip, Comment } from "~/types";
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, Link } from '@remix-run/react';
+import AppLayout from '~/components/layout/AppLayout';
+import CommentSection from '~/components/comment/CommentSection';
+import { useAuth } from '~/contexts/AuthContext';
+import { useNotification } from '~/contexts/NotificationContext';
+import { apiClient } from '~/lib/api';
+import type { Post, Tip, Comment } from '~/types';
 import { formatNumber } from "~/lib/utils";
 
-export const meta: MetaFunction = ({ data }: { data: any }) => {
-  const tip = data?.tip;
-  return [
-    { title: `${tip?.title || '전문가 꿀정보'} | XAI 아파트 커뮤니티` },
-    { name: "description", content: tip?.content?.substring(0, 150) || "전문가 꿀정보 상세 내용" },
-  ];
-};
-
-export const loader: LoaderFunction = async ({ params }) => {
-  const { slug } = params;
-  
-  if (!slug) {
-    throw new Response("Not Found", { status: 404 });
-  }
-  
-  // API에서 특정 팁 데이터 가져오기
-  try {
-    const response = await apiClient.getPosts({
-      service: 'residential_community',
-      metadata_type: 'expert_tips',
-      slug: slug,
-      page: 1,
-      size: 1
-    });
-
-    if (!response.success || !response.data?.items?.length) {
-      throw new Response("Not Found", { status: 404 });
-    }
-
-    const post = response.data.items[0];
-    
-    // Post를 Tip으로 변환
-    const convertPostToTip = (post: Post): Tip => {
-      // JSON content 파싱 시도
-      let parsedContent = null;
-      let introduction = '전문가';
-      let actualContent = post.content;
-      
-      try {
-        parsedContent = JSON.parse(post.content);
-        if (parsedContent && typeof parsedContent === 'object') {
-          introduction = parsedContent.introduction || '전문가';
-          actualContent = parsedContent.content || post.content;
-        }
-      } catch (error) {
-        // JSON 파싱 실패 시 기존 방식으로 fallback
-        introduction = post.metadata?.expert_title || '전문가';
-        actualContent = post.content;
-      }
-      
-      return {
-        id: parseInt(post.id),
-        title: post.title,
-        content: actualContent,
-        slug: post.slug,
-        expert_name: post.author?.display_name || post.metadata?.expert_name || '익명 전문가',
-        expert_title: introduction,
-        created_at: post.created_at,
-        category: post.metadata?.category || '생활',
-        tags: post.metadata?.tags || [],
-        views_count: post.stats?.view_count || 0,
-        likes_count: post.stats?.like_count || 0,
-        saves_count: post.stats?.bookmark_count || 0,
-        is_new: new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000
-      };
-    };
-
-    const tip = convertPostToTip(post);
-    return json({ tip });
-  } catch (error) {
-    console.error('Error fetching tip:', error);
-    throw new Response("Not Found", { status: 404 });
-  }
-};
-
-
 export default function ExpertTipDetail() {
-  const { tip } = useLoaderData<typeof loader>();
+  const { slug } = useParams();
+  const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { showError } = useNotification();
+  const [tip, setTip] = useState<Tip | null>(null);
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [likeCount, setLikeCount] = useState(tip.likes_count);
-  const [bookmarkCount, setBookmarkCount] = useState(tip.saves_count);
-  const [comments, setComments] = useState<Comment[]>([]);
-  
-  // 디버깅용 - comments 상태 변화 추적
-  useEffect(() => {
-    console.log('Comments 상태 변경됨:', { 
-      count: comments?.length || 0, 
-      type: typeof comments,
-      isArray: Array.isArray(comments),
-      comments: comments 
-    });
-  }, [comments]);
+  const [likeCount, setLikeCount] = useState(0);
+  const [bookmarkCount, setBookmarkCount] = useState(0);
 
-  const formatDateSimple = (dateString: string): string => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  // Post를 Tip으로 변환하는 함수
+  const convertPostToTip = (post: Post): Tip => {
+    // JSON content 파싱 시도
+    let parsedContent = null;
+    let introduction = '전문가';
+    let actualContent = post.content;
+    
+    try {
+      parsedContent = JSON.parse(post.content);
+      if (parsedContent && typeof parsedContent === 'object') {
+        introduction = parsedContent.introduction || '전문가';
+        actualContent = parsedContent.content || post.content;
+      }
+    } catch (error) {
+      // JSON 파싱 실패 시 기존 방식으로 fallback
+      introduction = post.metadata?.expert_title || '전문가';
+      actualContent = post.content;
+    }
+    
+    return {
+      id: parseInt(post.id),
+      title: post.title,
+      content: actualContent,
+      slug: post.slug || post.id, // slug가 없으면 id를 사용
+      expert_name: post.author?.display_name || post.metadata?.expert_name || '익명 전문가',
+      expert_title: introduction,
+      created_at: post.created_at,
+      category: post.metadata?.category || '생활',
+      tags: post.metadata?.tags || [],
+      views_count: post.stats?.view_count || 0,
+      likes_count: post.stats?.like_count || 0,
+      saves_count: post.stats?.bookmark_count || 0,
+      is_new: new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000
+    };
   };
+
+  const loadTip = async () => {
+    if (!slug) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await apiClient.getPost(slug);
+      if (response.success && response.data) {
+        // expert_tips 타입인지 확인
+        if (response.data.metadata?.type !== 'expert_tips') {
+          setIsNotFound(true);
+          showError('해당 전문가 꿀정보를 찾을 수 없습니다');
+          return;
+        }
+        
+        const convertedTip = convertPostToTip(response.data);
+        setTip(convertedTip);
+        setLikeCount(convertedTip.likes_count);
+        setBookmarkCount(convertedTip.saves_count);
+      } else {
+        setIsNotFound(true);
+        showError('전문가 꿀정보를 찾을 수 없습니다');
+      }
+    } catch (error) {
+      setIsNotFound(true);
+      showError('전문가 꿀정보를 불러오는 중 오류가 발생했습니다');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
 
   const handleLike = async () => {
     try {
@@ -151,69 +126,41 @@ export default function ExpertTipDetail() {
     }
   };
 
-  // 콘텐츠를 문단으로 분할
-  const contentParagraphs = tip.content.split('\n').filter(p => p.trim());
-
   const loadComments = async () => {
-    if (!tip.slug) return;
+    if (!slug) return;
     
     try {
-      console.log('댓글 로딩 시작 - slug:', tip.slug);
-      const response = await apiClient.getComments(tip.slug);
-      console.log('API 응답:', response);
-      
+      const response = await apiClient.getComments(slug);
       if (response.success && response.data) {
-        console.log('댓글 데이터:', response.data);
-        console.log('댓글 items:', response.data.items);
-        console.log('response.data 전체 구조:', JSON.stringify(response.data, null, 2));
+        console.log('원본 댓글 데이터:', response.data.comments);
         
-        // API 응답 구조 확인 후 적절한 경로로 댓글 추출
-        let comments = [];
-        if (response.data.items) {
-          comments = response.data.items;
-        } else if (response.data.comments) {
-          comments = response.data.comments;
-        } else if (Array.isArray(response.data)) {
-          comments = response.data;
-        }
-        
-        // 중첩된 댓글의 ID 필드 변환 (게시판 페이지와 동일한 로직)
-        const processCommentsRecursive = (comments: any[]): Comment[] => {
-          return comments.map(comment => {
-            const processedComment = {
-              ...comment,
-              id: comment.id || comment._id
-            };
-            
-            // 중첩된 답글도 재귀적으로 처리
-            if (processedComment.replies && Array.isArray(processedComment.replies)) {
-              processedComment.replies = processCommentsRecursive(processedComment.replies);
-            }
-            
-            return processedComment;
-          });
+        // 재귀적으로 모든 중첩된 답글의 id 필드 보장
+        const processCommentsRecursive = (comments: any[]): any[] => {
+          return comments.map(comment => ({
+            ...comment,
+            id: comment.id || comment._id, // id가 없으면 _id 사용
+            replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+          }));
         };
         
-        comments = processCommentsRecursive(comments);
+        const processedComments = processCommentsRecursive(response.data.comments || []);
         
-        console.log('추출된 댓글 배열:', comments);
-        console.log('첫 번째 댓글 구조:', comments[0]);
-        if (comments[0]) {
-          console.log('첫 번째 댓글 ID 필드들:', {
-            id: comments[0].id,
-            _id: comments[0]._id,
-            comment_id: comments[0].comment_id,
-            keys: Object.keys(comments[0])
-          });
-        }
-        setComments(comments);
-        console.log('setComments 호출 후 - comments 상태 업데이트됨');
-      } else {
-        console.log('API 응답 실패 또는 데이터 없음:', response);
+        console.log('처리된 댓글 데이터:', processedComments);
+        setComments(processedComments);
       }
     } catch (error) {
       console.error('댓글 로드 실패:', error);
     }
+  };
+
+  const formatDateSimple = (dateString: string): string => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   };
 
   const handleCommentAdded = () => {
@@ -221,8 +168,43 @@ export default function ExpertTipDetail() {
   };
 
   useEffect(() => {
+    loadTip();
     loadComments();
-  }, [tip.slug]);
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <AppLayout user={user} onLogout={logout}>
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (isNotFound || !tip) {
+    return (
+      <AppLayout user={user} onLogout={logout}>
+        <div className="text-center py-12">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            전문가 꿀정보를 찾을 수 없습니다
+          </h2>
+          <p className="text-gray-600 mb-6">
+            요청하신 전문가 꿀정보가 존재하지 않거나 삭제되었습니다.
+          </p>
+          <Link 
+            to="/tips"
+            className="inline-block px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
+          >
+            전문가 꿀정보 목록으로 돌아가기
+          </Link>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  // 콘텐츠를 문단으로 분할
+  const contentParagraphs = tip.content.split('\n').filter(p => p.trim());
 
   return (
     <AppLayout 
@@ -331,19 +313,8 @@ export default function ExpertTipDetail() {
       </div>
 
       {/* 댓글 섹션 */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">디버깅 정보</h3>
-        <div className="bg-yellow-50 p-4 rounded-lg mb-4 text-sm">
-          <p>댓글 개수: {comments?.length || 0}</p>
-          <p>댓글 데이터 존재: {comments && comments.length > 0 ? 'Yes' : 'No'}</p>
-          <p>Comments 타입: {typeof comments}</p>
-          <p>Comments 배열 여부: {Array.isArray(comments) ? 'Yes' : 'No'}</p>
-          <p>tip.slug: {tip.slug}</p>
-          <p>Comments 배열: {comments ? JSON.stringify(comments.map(c => ({ id: c.id, content: c.content.substring(0, 30) }))) : 'undefined'}</p>
-        </div>
-      </div>
       <CommentSection
-        postSlug={tip.slug!}
+        postSlug={slug!}
         comments={comments}
         onCommentAdded={handleCommentAdded}
       />

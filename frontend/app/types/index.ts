@@ -536,3 +536,49 @@ export interface FilterAndSortState<T> {
   sortBy: string;
   searchQuery: string;
 }
+
+// 사용자 활동 조회 API 타입 정의
+export interface ActivitySummary {
+  total_posts: number;
+  total_comments: number;
+  total_reactions: number;
+  most_active_page_type?: string;
+}
+
+export interface ActivityItem {
+  // 필수 필드
+  id: string;
+  created_at: string;
+  route_path: string;
+  
+  // 게시글 관련 optional 필드
+  title?: string;
+  slug?: string;
+  like_count?: number;
+  comment_count?: number;
+  
+  // 댓글 관련 optional 필드
+  content?: string;
+  subtype?: 'inquiry' | 'review';
+  
+  // 반응 관련 optional 필드
+  target_type?: string;
+  target_id?: string;
+  target_title?: string;
+}
+
+export interface UserActivityResponse {
+  posts: {
+    board: ActivityItem[];
+    info: ActivityItem[];
+    services: ActivityItem[];
+    tips: ActivityItem[];
+  };
+  comments: ActivityItem[];
+  reactions: {
+    likes: ActivityItem[];
+    bookmarks: ActivityItem[];
+    dislikes: ActivityItem[];
+  };
+  summary: ActivitySummary;
+}

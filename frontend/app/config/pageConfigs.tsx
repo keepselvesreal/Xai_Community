@@ -611,7 +611,7 @@ const convertPostToTip = (post: Post): Tip => {
     id: parseInt(post.id),
     title: post.title,
     content: actualContent,
-    slug: post.slug,
+    slug: post.slug || post.id, // slug가 없으면 id를 사용
     expert_name: post.author?.display_name || post.metadata?.expert_name || '익명 전문가',
     expert_title: introduction,
     created_at: post.created_at,
