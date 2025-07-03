@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useFilterAndSort } from './useFilterAndSort';
+import { useDebounce } from './useDebounce';
 import { apiClient } from '~/lib/api';
 import type { ListPageConfig, BaseListItem } from '~/types/listTypes';
 
@@ -13,6 +14,8 @@ export interface UseListDataResult<T extends BaseListItem> {
   currentFilter: string;
   sortBy: string;
   searchQuery: string;
+  isSearching: boolean;
+  hasSearched: boolean;
   
   // 액션
   handleCategoryFilter: (category: string) => void;
@@ -28,19 +31,22 @@ export function useListData<T extends BaseListItem>(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [rawData, setRawData] = useState<T[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [searchResults, setSearchResults] = useState<T[]>([]);
   
-  // 기존 useFilterAndSort 훅 활용
+  const debouncedSearchQuery = useDebounce(searchQuery, 300);
+  
+  // 기존 useFilterAndSort 훅 활용 (검색 기능은 제외)
   const {
-    sortedData,
+    sortedData: filteredAndSortedData,
     currentFilter,
     sortBy,
-    searchQuery,
     handleCategoryFilter,
     handleSort,
-    handleSearch,
-    handleSearchSubmit,
   } = useFilterAndSort({
-    initialData: rawData,
+    initialData: hasSearched ? searchResults : rawData,
     filterFn: config.filterFn,
     sortFn: config.sortFn
   });
@@ -94,20 +100,74 @@ export function useListData<T extends BaseListItem>(
       setLoading(false);
     }
   }, [config.apiEndpoint, config.apiFilters]);
+
+  // 검색 API 호출 함수
+  const searchData = useCallback(async (query: string) => {
+    if (!query || !query.trim()) {
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+
+    try {
+      setIsSearching(true);
+      setError(null);
+
+      const response = await apiClient.searchPosts({
+        query: query.trim(),
+        ...config.apiFilters
+      });
+
+      if (response.success && response.data) {
+        const items = config.transformData 
+          ? config.transformData(response.data.items)
+          : response.data.items as T[];
+        setSearchResults(items);
+        setHasSearched(true);
+      } else {
+        throw new Error(response.error || '검색에 실패했습니다');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '검색 중 오류가 발생했습니다');
+      setSearchResults([]);
+      setHasSearched(true);
+    } finally {
+      setIsSearching(false);
+    }
+  }, [config.apiFilters, config.transformData]);
+
+  // 디바운싱된 검색 실행
+  useEffect(() => {
+    searchData(debouncedSearchQuery);
+  }, [debouncedSearchQuery, searchData]);
   
   // 초기 데이터 로드
   useEffect(() => {
     fetchData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   
+  // 검색 핸들러
+  const handleSearch = useCallback((query: string) => {
+    setSearchQuery(query);
+  }, []);
+
+  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    // 검색은 이미 디바운싱으로 처리되므로 별도 작업 불필요
+  }, []);
+  
   // refetch 함수
   const refetch = useCallback(() => {
-    fetchData();
-  }, [fetchData]);
+    if (hasSearched) {
+      searchData(searchQuery);
+    } else {
+      fetchData();
+    }
+  }, [fetchData, searchData, hasSearched, searchQuery]);
   
   return {
     // 데이터
-    items: sortedData,
+    items: filteredAndSortedData,
     loading,
     error,
     
@@ -115,6 +175,8 @@ export function useListData<T extends BaseListItem>(
     currentFilter,
     sortBy,
     searchQuery,
+    isSearching,
+    hasSearched,
     
     // 액션
     handleCategoryFilter,

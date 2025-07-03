@@ -510,6 +510,26 @@ class ApiClient {
     return this.request<PaginatedResponse<Post>>(endpoint);
   }
 
+  async searchPosts(filters: PostFilters = {}): Promise<ApiResponse<PaginatedResponse<Post>>> {
+    const queryParams = new URLSearchParams();
+    
+    // 검색 쿼리 (백엔드에서 'q' 파라미터 기대)
+    if (filters.query) queryParams.append('q', filters.query);
+    
+    // 기타 필터 파라미터
+    if (filters.service) queryParams.append('service', filters.service);
+    if (filters.metadata_type) queryParams.append('metadata_type', filters.metadata_type);
+    if (filters.category) queryParams.append('category', filters.category);
+    if (filters.sortBy) queryParams.append('sortBy', filters.sortBy);
+    if (filters.page) queryParams.append('page', filters.page.toString());
+    if (filters.size) queryParams.append('size', filters.size.toString());
+
+    const query = queryParams.toString();
+    const endpoint = `/api/posts/search${query ? `?${query}` : ''}`;
+
+    return this.request<PaginatedResponse<Post>>(endpoint);
+  }
+
   async getPost(slug: string): Promise<ApiResponse<Post>> {
     return this.request<Post>(`/api/posts/${slug}`);
   }

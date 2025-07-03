@@ -266,6 +266,7 @@ export interface PostFilters {
   category?: string; // 카테고리 필터링 추가
   sortBy?: "created_at" | "views" | "likes";
   search?: string;
+  query?: string; // 검색 쿼리 (search의 alias)
   page?: number;
   size?: number;
 }

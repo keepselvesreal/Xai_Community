@@ -9,8 +9,10 @@ export { default as usePagination } from './usePagination';
 export { useFilterAndSort } from './useFilterAndSort';
 export { useReactions } from './useReactions';
 export { useListData } from './useListData';
+export { useSearch } from './useSearch';
 
 // 타입 export
 export type { UseFilterAndSortOptions } from './useFilterAndSort';
 export type { UseReactionsOptions } from './useReactions';
 export type { UseListDataResult } from './useListData';
+export type { UseSearchOptions, UseSearchResult } from './useSearch';

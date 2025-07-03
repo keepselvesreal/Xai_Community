@@ -23,6 +23,7 @@ export function ListPage<T extends BaseListItem>({
     currentFilter,
     sortBy,
     searchQuery,
+    isSearching,
     handleCategoryFilter,
     handleSort,
     handleSearch,
@@ -62,6 +63,7 @@ export function ListPage<T extends BaseListItem>({
         searchPlaceholder={config.searchPlaceholder}
         searchQuery={searchQuery}
         onSearch={handleSearch}
+        isSearching={isSearching}
       />
       
       {/* 필터 및 정렬 */}
