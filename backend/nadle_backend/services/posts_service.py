@@ -11,13 +11,15 @@ from nadle_backend.utils.permissions import check_post_permission
 class PostsService:
     """Service layer for post-related business logic."""
     
-    def __init__(self, post_repository: PostRepository = None):
+    def __init__(self, post_repository: PostRepository = None, comment_repository: CommentRepository = None):
         """Initialize posts service with dependencies.
         
         Args:
             post_repository: Post repository instance
+            comment_repository: Comment repository instance
         """
         self.post_repository = post_repository or PostRepository()
+        self.comment_repository = comment_repository or CommentRepository()
     
     async def create_post(self, post_data: PostCreate, current_user: User) -> Post:
         """Create a new post.
@@ -149,6 +151,27 @@ class PostsService:
                 "comment_count": post_data.get("comment_count", 0),
                 "bookmark_count": post_data.get("bookmark_count", 0)
             }
+            
+            # 🚀 moving services 타입의 경우 문의/후기 통계 추가
+            if metadata_type == "moving services":
+                try:
+                    comment_stats = await self.comment_repository.get_comment_stats_by_post(str(post_data["_id"]))
+                    post_dict["service_stats"] = {
+                        "views": post_data.get("view_count", 0),
+                        "bookmarks": post_data.get("bookmark_count", 0),
+                        "inquiries": comment_stats.get("service_inquiry", 0),
+                        "reviews": comment_stats.get("service_review", 0)
+                    }
+                    print(f"📊 Service stats for {post_data.get('title')}: {post_dict['service_stats']}")
+                except Exception as e:
+                    print(f"⚠️ Error getting comment stats: {e}")
+                    # 에러 발생 시 기본값 사용
+                    post_dict["service_stats"] = {
+                        "views": post_data.get("view_count", 0),
+                        "bookmarks": post_data.get("bookmark_count", 0),
+                        "inquiries": 0,
+                        "reviews": 0
+                    }
             
             # ✅ 이미 $lookup으로 조인된 작성자 정보 사용 (별도 쿼리 없음)
             if "author" in post_data and post_data["author"]:

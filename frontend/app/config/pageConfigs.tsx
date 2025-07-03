@@ -405,8 +405,22 @@ const transformPostsToServices = (posts: Post[]): Service[] => {
       if (service) {
         console.log(`✅ Service 변환 성공: ${service.name}`);
         
-        // 실시간 통계 적용 (API 응답의 stats 필드 활용)
-        if (post.stats) {
+        // 실시간 통계 적용 (API 응답의 service_stats 또는 stats 필드 활용)
+        if (post.service_stats) {
+          // 🚀 백엔드에서 제공하는 service_stats 사용 (문의/후기 구분됨)
+          service.serviceStats = {
+            views: post.service_stats.views || post.view_count || 0,
+            inquiries: post.service_stats.inquiries || 0,
+            reviews: post.service_stats.reviews || 0,
+            bookmarks: post.service_stats.bookmarks || post.bookmark_count || 0
+          };
+          
+          // 북마크 수도 동기화
+          service.bookmarks = post.service_stats.bookmarks || post.bookmark_count || 0;
+          
+          console.log(`📊 service_stats 필드 기반 통계 적용:`, service.serviceStats);
+        } else if (post.stats) {
+          // 기존 stats 필드 사용 (문의/후기 구분 안됨)
           service.serviceStats = {
             views: post.stats.view_count || post.view_count || 0,
             inquiries: post.stats.comment_count || post.comment_count || 0, // 문의는 댓글로 처리
