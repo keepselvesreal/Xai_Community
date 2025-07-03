@@ -6,6 +6,8 @@ import { useAuth } from "~/contexts/AuthContext";
 import { apiClient } from "~/lib/api";
 import { formatNumber } from "~/lib/utils";
 import type { UserActivityResponse, ActivityItem } from "~/types";
+import { UserInfoSkeleton } from "~/components/mypage/UserInfoSkeleton";
+import { ActivitySectionSkeleton } from "~/components/mypage/ActivitySectionSkeleton";
 
 export const meta: MetaFunction = () => {
   return [
@@ -329,14 +331,17 @@ export default function MyPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* 내 정보 카드 */}
-        <div className="card p-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-accent-primary to-accent-secondary p-6">
-            <h3 className="font-bold text-xl text-white drop-shadow-sm">
-              내 정보
-            </h3>
-          </div>
-          
-          <div className="p-8 space-y-8">
+        {isLoading ? (
+          <UserInfoSkeleton />
+        ) : (
+          <div className="card p-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-accent-primary to-accent-secondary p-6">
+              <h3 className="font-bold text-xl text-white drop-shadow-sm">
+                내 정보
+              </h3>
+            </div>
+            
+            <div className="p-8 space-y-8">
             <div className="flex justify-between items-start py-4">
               <div className="flex-1">
                 <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>아이디</div>
@@ -428,17 +433,21 @@ export default function MyPage() {
               </button>
             </div>
           </div>
-        </div>
+          </div>
+        )}
 
         {/* 내 활동 카드 */}
-        <div className="card p-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-accent-primary to-accent-secondary p-6">
-            <h3 className="font-bold text-xl text-white drop-shadow-sm">
-              내 활동
-            </h3>
-          </div>
+        {isLoading ? (
+          <ActivitySectionSkeleton />
+        ) : (
+          <div className="card p-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-accent-primary to-accent-secondary p-6">
+              <h3 className="font-bold text-xl text-white drop-shadow-sm">
+                내 활동
+              </h3>
+            </div>
 
-          <div className="p-8">
+            <div className="p-8">
 
             {/* 탭 네비게이션 */}
             <div className="flex gap-4 mb-8">
@@ -468,12 +477,6 @@ export default function MyPage() {
 
             {/* 활동 내용 */}
             <div className="space-y-6">
-              {isLoading && (
-                <div className="text-center py-8">
-                  <div className="text-accent-primary">로딩 중...</div>
-                </div>
-              )}
-
               {error && (
                 <div className="text-center py-8">
                   <div className="text-red-500">{error}</div>
@@ -701,7 +704,8 @@ export default function MyPage() {
               )}
             </div>
           </div>
-        </div>
+          </div>
+        )}
       </div>
     </AppLayout>
   );
