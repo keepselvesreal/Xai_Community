@@ -123,8 +123,13 @@ async def get_post(
     try:
         post = await posts_service.get_post(slug_or_id, current_user)
         
-        # Calculate real-time stats
-        real_stats = await posts_service._calculate_post_stats(str(post.id))
+        # ✅ Use denormalized stats from Post model (no real-time calculation)
+        real_stats = {
+            "view_count": post.view_count,
+            "like_count": post.like_count,
+            "dislike_count": post.dislike_count,
+            "comment_count": post.comment_count
+        }
         
         # Get user reaction if authenticated
         user_reaction = None
@@ -183,7 +188,7 @@ async def get_post(
             "like_count": real_stats["like_count"],
             "dislike_count": real_stats["dislike_count"],
             "comment_count": real_stats["comment_count"],
-            "bookmark_count": real_stats["bookmark_count"]
+            "bookmark_count": getattr(post, 'bookmark_count', 0)
         }
         
         if user_reaction:
@@ -391,15 +396,13 @@ async def get_post_stats(
         # Get post by slug or ID
         post = await posts_service.get_post(slug_or_id)
         
-        # Get post stats
-        stats = await posts_service._calculate_post_stats(str(post.id))
-        
+        # ✅ Use denormalized stats from Post model (no real-time calculation) 
         result = {
-            "view_count": stats["view_count"],
-            "like_count": stats["like_count"],
-            "dislike_count": stats["dislike_count"],
-            "comment_count": stats["comment_count"],
-            "bookmark_count": stats["bookmark_count"]
+            "view_count": post.view_count,
+            "like_count": post.like_count,
+            "dislike_count": post.dislike_count,
+            "comment_count": post.comment_count,
+            "bookmark_count": getattr(post, 'bookmark_count', 0)  # 북마크 수는 별도 계산 필요 시
         }
         
         # Add user reaction if authenticated

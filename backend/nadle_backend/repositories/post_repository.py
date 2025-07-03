@@ -407,3 +407,97 @@ class PostRepository:
             return count
         except Exception:
             return 0
+    
+    async def list_posts_optimized(
+        self, 
+        page: int = 1,
+        page_size: int = 20,
+        metadata_type: Optional[str] = None,
+        sort_by: str = "created_at"
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """MongoDB aggregation을 사용한 최적화된 게시글 조회.
+        
+        기존 list_posts + get_authors_by_ids + _calculate_post_stats를 
+        단일 aggregation 쿼리로 최적화.
+        
+        Args:
+            page: 페이지 번호 (1부터 시작)
+            page_size: 페이지당 항목 수
+            metadata_type: 메타데이터 타입 필터 (property-info, moving-service, expert-tip)
+            sort_by: 정렬 필드
+            
+        Returns:
+            Tuple of (게시글 리스트, 총 개수)
+        """
+        # 기본 매치 조건
+        match_stage = {"status": {"$ne": "deleted"}}
+        if metadata_type:
+            match_stage["metadata.type"] = metadata_type
+        
+        # 정렬 필드 설정 (내림차순)
+        sort_field = sort_by
+        sort_direction = -1  # 내림차순
+        
+        # Aggregation 파이프라인 구성
+        pipeline = [
+            # 1. 매치 조건으로 필터링
+            {"$match": match_stage},
+            
+            # 2. 작성자 정보 조인 ($lookup)
+            {"$lookup": {
+                "from": "users",  # users 컬렉션과 조인
+                "localField": "author_id", 
+                "foreignField": "_id",
+                "as": "author",
+                "pipeline": [
+                    # 작성자 정보에서 필요한 필드만 선택
+                    {"$project": {
+                        "email": 1, 
+                        "user_handle": 1, 
+                        "display_name": 1, 
+                        "created_at": 1, 
+                        "updated_at": 1
+                    }}
+                ]
+            }},
+            
+            # 3. 작성자 배열을 단일 객체로 변환
+            {"$unwind": {
+                "path": "$author", 
+                "preserveNullAndEmptyArrays": True  # 작성자 없어도 게시글 유지
+            }},
+            
+            # 4. 정렬
+            {"$sort": {sort_field: sort_direction}},
+            
+            # 5. 페이지네이션과 총 개수를 동시에 처리 ($facet)
+            {"$facet": {
+                "posts": [
+                    {"$skip": (page - 1) * page_size},
+                    {"$limit": page_size}
+                ],
+                "total": [
+                    {"$count": "count"}
+                ]
+            }}
+        ]
+        
+        try:
+            # Aggregation 실행
+            result = await Post.aggregate(pipeline).to_list()
+            
+            if not result:
+                return [], 0
+            
+            # 결과 추출
+            posts = result[0].get("posts", [])
+            total_result = result[0].get("total", [])
+            total = total_result[0]["count"] if total_result else 0
+            
+            return posts, total
+            
+        except Exception as e:
+            print(f"Error in list_posts_optimized: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return [], 0

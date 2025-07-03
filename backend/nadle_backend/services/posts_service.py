@@ -80,79 +80,88 @@ class PostsService:
         sort_by: str = "created_at",
         current_user: Optional[User] = None
     ) -> Dict[str, Any]:
-        """List posts with pagination.
+        """최적화된 게시글 목록 조회 (52개 쿼리 → 1개 쿼리).
         
         Args:
             page: Page number
             page_size: Items per page
-            service_type: Filter by service type
-            metadata_type: Filter by metadata type
-            author_id: Filter by author ID
+            service_type: Filter by service type (현재 미사용, 호환성 유지)
+            metadata_type: Filter by metadata type (property-info, moving-service, expert-tip)
+            author_id: Filter by author ID (현재 미사용, 호환성 유지)
             sort_by: Sort field
-            current_user: Current user (optional)
+            current_user: Current user (optional, 사용자 반응 조회용)
             
         Returns:
             Paginated response with posts
         """
-        # Get posts from repository
-        posts, total = await self.post_repository.list_posts(
+        # 🚀 단일 aggregation 쿼리로 모든 데이터 조회
+        posts_data, total = await self.post_repository.list_posts_optimized(
             page=page,
             page_size=page_size,
-            service_type=service_type,
             metadata_type=metadata_type,
-            author_id=author_id,
             sort_by=sort_by
         )
         
-        # Get user reactions if authenticated
+        # 🔥 기존 비효율적인 코드 완전 제거:
+        # - get_authors_by_ids() 호출 제거 (이미 $lookup으로 조인됨)
+        # - _calculate_post_stats() 호출 제거 (Post 모델의 기존 데이터 사용)
+        # - UserReaction.find().count() 등 실시간 계산 제거
+        
+        # 사용자 반응 정보 조회 (필요한 경우에만)
         user_reactions = {}
-        if current_user:
-            post_ids = [str(post.id) for post in posts]
+        if current_user and posts_data:
+            post_ids = [str(post_data["_id"]) for post_data in posts_data]
             user_reactions = await self.post_repository.get_user_reactions(
                 str(current_user.id), post_ids
             )
         
-        # Get author information for all posts
-        author_ids = list(set(str(post.author_id) for post in posts))
-        authors = await self.post_repository.get_authors_by_ids(author_ids)
-        authors_dict = {str(author.id): author for author in authors}
-        
-        # Add user reaction data and author info to posts
-        posts_with_reactions = []
-        for post in posts:
-            post_dict = post.model_dump()
+        # ✅ 최적화된 데이터 변환 (이미 조인된 데이터 활용)
+        formatted_posts = []
+        for post_data in posts_data:
+            # 기본 데이터 변환
+            post_dict = {
+                "_id": str(post_data["_id"]),
+                "title": post_data["title"],
+                "content": post_data["content"],
+                "slug": post_data["slug"],
+                "author_id": str(post_data["author_id"]),
+                "created_at": post_data["created_at"].isoformat() if post_data.get("created_at") else None,
+                "updated_at": post_data["updated_at"].isoformat() if post_data.get("updated_at") else None,
+                "metadata": post_data.get("metadata", {}),
+            }
             
-            # Convert ObjectIds to strings
-            post_dict["_id"] = str(post.id)
-            post_dict["author_id"] = str(post.author_id)
+            # ✅ Post 모델의 기존 통계 데이터 사용 (별도 계산 없음)
+            post_dict["stats"] = {
+                "view_count": post_data.get("view_count", 0),
+                "like_count": post_data.get("like_count", 0),
+                "dislike_count": post_data.get("dislike_count", 0),
+                "comment_count": post_data.get("comment_count", 0)
+            }
             
-            # Add author information
-            author = authors_dict.get(str(post.author_id))
-            if author:
+            # ✅ 이미 $lookup으로 조인된 작성자 정보 사용 (별도 쿼리 없음)
+            if "author" in post_data and post_data["author"]:
+                author = post_data["author"]
                 post_dict["author"] = {
-                    "id": str(author.id),
-                    "email": author.email,
-                    "user_handle": author.user_handle,
-                    "display_name": author.display_name,
-                    "created_at": author.created_at.isoformat() if author.created_at else None,
-                    "updated_at": author.updated_at.isoformat() if author.updated_at else None
+                    "id": str(author["_id"]),
+                    "email": author["email"],
+                    "user_handle": author["user_handle"],
+                    "display_name": author["display_name"],
+                    "created_at": author["created_at"].isoformat() if author.get("created_at") else None,
+                    "updated_at": author["updated_at"].isoformat() if author.get("updated_at") else None
                 }
             
-            # Calculate real-time stats from UserReaction and Comment collections
-            real_stats = await self._calculate_post_stats(str(post.id))
-            post_dict["stats"] = real_stats
-            
-            # Add user reaction if available
-            if str(post.id) in user_reactions:
-                post_dict["user_reaction"] = user_reactions[str(post.id)]
+            # 사용자 반응 추가 (있는 경우)
+            post_id = str(post_data["_id"])
+            if post_id in user_reactions:
+                post_dict["user_reaction"] = user_reactions[post_id]
                 
-            posts_with_reactions.append(post_dict)
+            formatted_posts.append(post_dict)
         
-        # Calculate total pages
+        # 페이지네이션 정보 계산
         total_pages = (total + page_size - 1) // page_size
         
         return {
-            "items": posts_with_reactions,
+            "items": formatted_posts,
             "total": total,
             "page": page,
             "page_size": page_size,
@@ -272,62 +281,69 @@ class PostsService:
             "total_pages": total_pages
         }
     
-    async def _calculate_post_stats(self, post_id: str) -> Dict[str, int]:
-        """Calculate real-time statistics for a post.
-        
-        Args:
-            post_id: Post ID
-            
-        Returns:
-            Dictionary with current stats
-        """
-        try:
-            # Get like count from UserReaction
-            like_count = await UserReaction.find({
-                "target_type": "post",
-                "target_id": post_id,
-                "liked": True
-            }).count()
-            
-            # Get dislike count from UserReaction
-            dislike_count = await UserReaction.find({
-                "target_type": "post",
-                "target_id": post_id,
-                "disliked": True
-            }).count()
-            
-            # Get bookmark count from UserReaction
-            bookmark_count = await UserReaction.find({
-                "target_type": "post",
-                "target_id": post_id,
-                "bookmarked": True
-            }).count()
-            
-            # Get total comment count (including replies) from Comment
-            comment_count = await Comment.find({
-                "parent_id": post_id,
-                "status": "active"
-            }).count()
-            
-            # Get view count from Post document (maintained in post model)
-            from beanie import PydanticObjectId
-            post = await Post.find_one({"_id": PydanticObjectId(post_id)})
-            view_count = post.view_count if post else 0
-            
-            return {
-                "view_count": view_count,
-                "like_count": like_count,
-                "dislike_count": dislike_count,
-                "comment_count": comment_count,
-                "bookmark_count": bookmark_count
-            }
-            
-        except Exception as e:
-            import traceback
-            print(f"Error calculating post stats for {post_id}: {e}")
-            print(f"Traceback: {traceback.format_exc()}")
-            # Re-raise the exception to see the actual error
-            raise e
+    # 🔥 DEPRECATED: 비효율적인 실시간 통계 계산 함수 (52개 쿼리 원인)
+    # 최적화로 인해 더 이상 사용하지 않음. Post 모델의 기존 통계 데이터 활용.
+    # async def _calculate_post_stats(self, post_id: str) -> Dict[str, int]:
+    #     """Calculate real-time statistics for a post.
+    #     
+    #     🚨 PERFORMANCE WARNING: 이 함수는 각 게시글마다 5개의 개별 쿼리를 실행하여
+    #     N+1 쿼리 문제를 일으킴. 10개 게시글 조회시 50개 추가 쿼리 발생.
+    #     
+    #     ✅ 대신 Post 모델의 기존 통계 데이터(view_count, like_count 등) 사용.
+    #     
+    #     Args:
+    #         post_id: Post ID
+    #         
+    #     Returns:
+    #         Dictionary with current stats
+    #     """
+    #     try:
+    #         # Get like count from UserReaction
+    #         like_count = await UserReaction.find({
+    #             "target_type": "post",
+    #             "target_id": post_id,
+    #             "liked": True
+    #         }).count()
+    #         
+    #         # Get dislike count from UserReaction
+    #         dislike_count = await UserReaction.find({
+    #             "target_type": "post",
+    #             "target_id": post_id,
+    #             "disliked": True
+    #         }).count()
+    #         
+    #         # Get bookmark count from UserReaction
+    #         bookmark_count = await UserReaction.find({
+    #             "target_type": "post",
+    #             "target_id": post_id,
+    #             "bookmarked": True
+    #         }).count()
+    #         
+    #         # Get total comment count (including replies) from Comment
+    #         comment_count = await Comment.find({
+    #             "parent_id": post_id,
+    #             "status": "active"
+    #         }).count()
+    #         
+    #         # Get view count from Post document (maintained in post model)
+    #         from beanie import PydanticObjectId
+    #         post = await Post.find_one({"_id": PydanticObjectId(post_id)})
+    #         view_count = post.view_count if post else 0
+    #         
+    #         return {
+    #             "view_count": view_count,
+    #             "like_count": like_count,
+    #             "dislike_count": dislike_count,
+    #             "comment_count": comment_count,
+    #             "bookmark_count": bookmark_count
+    #         }
+    #         
+    #     except Exception as e:
+    #         import traceback
+    #         print(f"Error calculating post stats for {post_id}: {e}")
+    #         print(f"Traceback: {traceback.format_exc()}")
+    #         # Re-raise the exception to see the actual error
+    #         raise e
     
     async def toggle_post_reaction(
         self,

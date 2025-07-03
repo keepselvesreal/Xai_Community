@@ -83,6 +83,31 @@ class IndexManager:
                 [("status", ASCENDING), ("published_at", DESCENDING)],
                 name="published_posts_idx",
                 partialFilterExpression={"status": "published"}
+            ),
+            
+            # 🚀 SSR 페이지 최적화를 위한 메타데이터 타입별 인덱스
+            # 정보/서비스/팁 페이지용 (metadata.type + status + created_at)
+            IndexModel(
+                [("metadata.type", ASCENDING), ("status", ASCENDING), ("created_at", DESCENDING)],
+                name="metadata_type_status_created_idx"
+            ),
+            
+            # 메타데이터 타입별 빠른 조회용 (metadata.type + created_at)
+            IndexModel(
+                [("metadata.type", ASCENDING), ("created_at", DESCENDING)],
+                name="metadata_type_created_idx"
+            ),
+            
+            # 메타데이터 타입별 view_count 정렬용 (인기순 정렬 지원)
+            IndexModel(
+                [("metadata.type", ASCENDING), ("status", ASCENDING), ("view_count", DESCENDING)],
+                name="metadata_type_status_views_idx"
+            ),
+            
+            # 메타데이터 타입별 like_count 정렬용 (추천순 정렬 지원)
+            IndexModel(
+                [("metadata.type", ASCENDING), ("status", ASCENDING), ("like_count", DESCENDING)],
+                name="metadata_type_status_likes_idx"
             )
         ]
     
