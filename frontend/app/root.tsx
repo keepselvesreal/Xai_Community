@@ -11,6 +11,7 @@ import "./tailwind.css";
 import { AuthProvider } from "~/contexts/AuthContext";
 import { NotificationProvider } from "~/contexts/NotificationContext";
 import { ThemeProvider } from "~/contexts/ThemeContext";
+import ErrorBoundary from "~/components/common/ErrorBoundary";
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://cdn.jsdelivr.net" },
@@ -50,12 +51,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
 export default function App() {
   return (
-    <ThemeProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <Outlet />
-        </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <ErrorBoundary>
+      <ThemeProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <NotificationProvider>
+              <Outlet />
+            </NotificationProvider>
+          </AuthProvider>
+        </ErrorBoundary>
+      </ThemeProvider>
+    </ErrorBoundary>
   );
 }

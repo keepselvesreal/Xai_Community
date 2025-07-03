@@ -140,9 +140,17 @@ export default function PostDetail() {
             ...prev,
             stats: {
               ...prev.stats,
-              like_count: response.data.like_count ?? prev.stats?.like_count ?? 0,
-              dislike_count: response.data.dislike_count ?? prev.stats?.dislike_count ?? 0,
-              bookmark_count: response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0,
+              // 추천/비추천은 서로 배타적으로 업데이트
+              like_count: (reactionType === 'like' || reactionType === 'dislike') ? 
+                (response.data.like_count ?? prev.stats?.like_count ?? 0) : 
+                (prev.stats?.like_count ?? 0),
+              dislike_count: (reactionType === 'like' || reactionType === 'dislike') ? 
+                (response.data.dislike_count ?? prev.stats?.dislike_count ?? 0) : 
+                (prev.stats?.dislike_count ?? 0),
+              // 저장 기능은 독립적으로 업데이트
+              bookmark_count: reactionType === 'bookmark' ? 
+                (response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0) : 
+                (prev.stats?.bookmark_count ?? 0),
               view_count: prev.stats?.view_count ?? 0,
               comment_count: prev.stats?.comment_count ?? 0,
             }
@@ -330,11 +338,11 @@ export default function PostDetail() {
         </Card>
 
         {/* 태그 */}
-        {post.tags && post.tags.length > 0 && (
+        {post.metadata?.tags && post.metadata.tags.length > 0 && (
           <Card>
             <Card.Content>
               <div className="flex flex-wrap gap-2">
-                {post.tags.map((tag, index) => (
+                {post.metadata.tags.map((tag, index) => (
                   <span
                     key={index}
                     className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"

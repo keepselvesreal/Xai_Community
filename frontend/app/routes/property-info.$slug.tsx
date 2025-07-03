@@ -111,19 +111,7 @@ export default function InfoDetail() {
   const { user, logout } = useAuth();
   const { showError, showSuccess } = useNotification();
   const navigate = useNavigate();
-  const [isLiked, setIsLiked] = useState(false);
-  const [isBookmarked, setIsBookmarked] = useState(false);
   const [comments, setComments] = useState<Comment[]>([]);
-  
-  // 디버깅용 - comments 상태 변화 추적
-  useEffect(() => {
-    console.log('Comments 상태 변경됨:', { 
-      count: comments?.length || 0, 
-      type: typeof comments,
-      isArray: Array.isArray(comments),
-      comments: comments 
-    });
-  }, [comments]);
 
   // 에러 상태 처리
   if (error || !infoItem) {
@@ -218,16 +206,61 @@ export default function InfoDetail() {
     loadComments();
   }, [infoItem?.slug]);
 
+  const handleReactionChange = async (reactionType: 'like' | 'dislike' | 'bookmark') => {
+    if (!user) {
+      showError('로그인이 필요합니다');
+      return;
+    }
+
+    if (!infoItem || !infoItem.slug) return;
+
+    try {
+      let response;
+      
+      // API v3 명세서에 따른 개별 엔드포인트 사용
+      switch (reactionType) {
+        case 'like':
+          response = await apiClient.likePost(infoItem.slug);
+          break;
+        case 'dislike':
+          response = await apiClient.dislikePost(infoItem.slug);
+          break;
+        case 'bookmark':
+          response = await apiClient.bookmarkPost(infoItem.slug);
+          break;
+        default:
+          throw new Error('Invalid reaction type');
+      }
+      
+      if (response.success) {
+        showSuccess(reactionType === 'like' ? '추천했습니다' : 
+                   reactionType === 'dislike' ? '비추천했습니다' : 
+                   '북마크에 추가했습니다');
+        
+        // 페이지 새로고침 대신 상태 업데이트
+        if (response.data && infoItem.stats) {
+          infoItem.stats.like_count = response.data.like_count ?? infoItem.stats.like_count;
+          infoItem.stats.dislike_count = response.data.dislike_count ?? infoItem.stats.dislike_count;
+          infoItem.stats.bookmark_count = response.data.bookmark_count ?? infoItem.stats.bookmark_count;
+        }
+      } else {
+        showError(response.error || '반응 처리에 실패했습니다');
+      }
+    } catch (error) {
+      showError('반응 처리 중 오류가 발생했습니다');
+    }
+  };
+
   const handleLike = () => {
-    // TODO: API 호출로 좋아요 처리
-    setIsLiked(!isLiked);
-    showSuccess(isLiked ? '좋아요를 취소했습니다.' : '좋아요를 눌렀습니다.');
+    handleReactionChange('like');
+  };
+
+  const handleDislike = () => {
+    handleReactionChange('dislike');
   };
 
   const handleBookmark = () => {
-    // TODO: API 호출로 북마크 처리
-    setIsBookmarked(!isBookmarked);
-    showSuccess(isBookmarked ? '북마크를 취소했습니다.' : '북마크에 추가했습니다.');
+    handleReactionChange('bookmark');
   };
 
   const handleShare = () => {
@@ -297,6 +330,9 @@ export default function InfoDetail() {
                 👍 {infoItem.stats?.like_count || 0}
               </span>
               <span className="flex items-center gap-1">
+                👎 {infoItem.stats?.dislike_count || 0}
+              </span>
+              <span className="flex items-center gap-1">
                 💬 {infoItem.stats?.comment_count || 0}
               </span>
               <span className="flex items-center gap-1">
@@ -345,26 +381,29 @@ export default function InfoDetail() {
         <section className="flex items-center justify-center gap-4 p-6 bg-var-section rounded-lg mb-8">
           <button
             onClick={handleLike}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              isLiked 
-                ? 'bg-red-500 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg font-medium transition-colors"
           >
-            <span>{isLiked ? '❤️' : '🤍'}</span>
-            <span>좋아요</span>
+            <span>👍</span>
+            <span>추천</span>
+            <span className="text-sm">({infoItem.stats?.like_count || 0})</span>
+          </button>
+          
+          <button
+            onClick={handleDislike}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg font-medium transition-colors"
+          >
+            <span>👎</span>
+            <span>비추천</span>
+            <span className="text-sm">({infoItem.stats?.dislike_count || 0})</span>
           </button>
           
           <button
             onClick={handleBookmark}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
-              isBookmarked 
-                ? 'bg-yellow-500 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-            }`}
+            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg font-medium transition-colors"
           >
-            <span>{isBookmarked ? '🔖' : '📑'}</span>
+            <span>🔖</span>
             <span>북마크</span>
+            <span className="text-sm">({infoItem.stats?.bookmark_count || 0})</span>
           </button>
           
           <button
@@ -377,17 +416,6 @@ export default function InfoDetail() {
         </section>
 
         {/* 댓글 섹션 */}
-        <div>
-          <h3 className="text-lg font-semibold mb-4">디버깅 정보</h3>
-          <div className="bg-yellow-50 p-4 rounded-lg mb-4 text-sm">
-            <p>댓글 개수: {comments?.length || 0}</p>
-            <p>댓글 데이터 존재: {comments && comments.length > 0 ? 'Yes' : 'No'}</p>
-            <p>Comments 타입: {typeof comments}</p>
-            <p>Comments 배열 여부: {Array.isArray(comments) ? 'Yes' : 'No'}</p>
-            <p>infoItem.slug: {infoItem.slug}</p>
-            <p>Comments 배열: {comments ? JSON.stringify(comments.map(c => ({ id: c.id, content: c.content.substring(0, 30) }))) : 'undefined'}</p>
-          </div>
-        </div>
         <CommentSection
           postSlug={infoItem.slug!}
           comments={comments}

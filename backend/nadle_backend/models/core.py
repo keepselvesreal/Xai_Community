@@ -149,6 +149,7 @@ class Post(Document, PostBase):
     like_count: int = 0
     dislike_count: int = 0
     comment_count: int = 0
+    bookmark_count: int = 0
     
     class Settings:
         name = settings.posts_collection
@@ -202,7 +203,8 @@ class Comment(Document, CommentBase):
         indexes = [
             [("parent_id", ASCENDING), ("created_at", ASCENDING)],
             [("author_id", ASCENDING), ("created_at", DESCENDING)],
-            [("parent_comment_id", ASCENDING)]
+            [("parent_comment_id", ASCENDING)],
+            [("parent_id", ASCENDING), ("metadata.subtype", ASCENDING), ("status", ASCENDING)]  # 통계 집계 최적화
         ]
     
     class Config:
@@ -348,7 +350,8 @@ class PostUpdate(BaseModel):
     """Model for updating post information."""
     title: Optional[str] = Field(None, min_length=1, max_length=200)
     content: Optional[str] = Field(None, min_length=1)
-    tags: Optional[List[str]] = None
+    service: Optional[ServiceType] = None
+    metadata: Optional[PostMetadata] = None
     status: Optional[PostStatus] = None
 
 

@@ -391,7 +391,7 @@ export interface ServiceReview {
 }
 
 export interface Tip {
-  id: number;
+  id: string | number;
   title: string;
   content: string;
   slug: string;
@@ -402,6 +402,8 @@ export interface Tip {
   tags: string[];
   views_count: number;
   likes_count: number;
+  dislikes_count: number;
+  comments_count: number;
   saves_count: number;
   is_new: boolean;
 }

@@ -1,11 +1,18 @@
 """Comment repository for data access layer."""
 
-from typing import List, Dict, Optional, Tuple, Any
+from typing import List, Dict, Optional, Tuple, Any, Literal
 from datetime import datetime
 from beanie import PydanticObjectId
 from nadle_backend.models.core import Comment, CommentCreate, CommentDetail, PaginationParams
 from nadle_backend.exceptions.comment import CommentNotFoundError, CommentDepthExceededError
 from nadle_backend.config import get_settings
+
+# 댓글 서브타입 상수 정의
+CommentSubtype = Literal["service_inquiry", "service_review"]
+COMMENT_SUBTYPES = {
+    "service_inquiry": "service_inquiry",
+    "service_review": "service_review"
+}
 
 
 class CommentRepository:
@@ -382,3 +389,88 @@ class CommentRepository:
             return count
         except Exception:
             return 0
+    
+    async def count_comments_by_subtype(self, post_id: str, subtype: CommentSubtype) -> int:
+        """특정 게시글의 subtype별 댓글 수 집계.
+        
+        Args:
+            post_id: 게시글 ID
+            subtype: 댓글 서브타입 (service_inquiry, service_review)
+            
+        Returns:
+            해당 subtype의 댓글 수
+        """
+        try:
+            # 인덱스 최적화된 쿼리 사용
+            query = {
+                "parent_id": post_id,
+                "metadata.subtype": subtype,
+                "status": "active"
+            }
+            
+            count = await Comment.find(query).count()
+            return count
+            
+        except Exception as e:
+            print(f"Error counting comments by subtype {subtype} for post {post_id}: {e}")
+            return 0
+
+    async def get_comment_stats_by_post(self, post_id: str) -> Dict[str, int]:
+        """게시글의 모든 댓글 통계를 한 번에 집계.
+        
+        MongoDB aggregation을 사용하여 효율적으로 모든 댓글 타입별 통계를 계산합니다.
+        
+        Args:
+            post_id: 게시글 ID
+            
+        Returns:
+            댓글 타입별 통계 딕셔너리:
+            - general: 일반 댓글 수 (subtype 없음)
+            - service_inquiry: 문의 댓글 수  
+            - service_review: 후기 댓글 수
+        """
+        # 기본 통계 구조 정의
+        default_stats = {
+            "general": 0,
+            "service_inquiry": 0,
+            "service_review": 0
+        }
+        
+        try:
+            # MongoDB aggregation 파이프라인 (인덱스 최적화)
+            pipeline = [
+                {
+                    "$match": {
+                        "parent_id": post_id,
+                        "status": "active"
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": "$metadata.subtype",
+                        "count": {"$sum": 1}
+                    }
+                }
+            ]
+            
+            result = await Comment.aggregate(pipeline).to_list()
+            
+            # 결과를 딕셔너리로 변환
+            stats = default_stats.copy()
+            
+            for item in result:
+                subtype = item["_id"]
+                count = item["count"]
+                
+                if subtype == "service_inquiry":
+                    stats["service_inquiry"] = count
+                elif subtype == "service_review":
+                    stats["service_review"] = count
+                elif subtype is None:
+                    stats["general"] = count
+                    
+            return stats
+            
+        except Exception as e:
+            print(f"Error getting comment stats for post {post_id}: {e}")
+            return default_stats

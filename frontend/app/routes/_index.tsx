@@ -1,4 +1,4 @@
-import Dashboard, { loader as dashboardLoader, meta as dashboardMeta } from "./dashboard";
+import Home, { loader as homeLoader, meta as homeMeta } from "./home";
 
-export { dashboardLoader as loader, dashboardMeta as meta };
-export default Dashboard;
+export { homeLoader as loader, homeMeta as meta };
+export default Home;

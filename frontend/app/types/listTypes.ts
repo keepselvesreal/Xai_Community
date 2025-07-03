@@ -88,6 +88,8 @@ export interface ListPageProps<T extends BaseListItem> {
   config: ListPageConfig<T>;
   user?: User;
   onLogout?: () => void;
+  initialData?: any; // SSR에서 미리 로드된 데이터
+  isServerRendered?: boolean; // SSR 여부 플래그
 }
 
 /**

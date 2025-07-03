@@ -2,6 +2,7 @@ import { useNavigate } from '@remix-run/react';
 import { useListData } from '~/hooks/useListData';
 import AppLayout from '~/components/layout/AppLayout';
 import LoadingSpinner from '~/components/common/LoadingSpinner';
+import { PostCardSkeleton } from '~/components/common/PostCardSkeleton';
 import EmptyState from '~/components/common/EmptyState';
 import { SearchAndFilters } from './SearchAndFilters';
 import { FilterAndSort } from './FilterAndSort';
@@ -13,7 +14,9 @@ import { createStandardNavigationHandler } from '~/utils/routingHelpers';
 export function ListPage<T extends BaseListItem>({ 
   config, 
   user, 
-  onLogout 
+  onLogout,
+  initialData,
+  isServerRendered 
 }: ListPageProps<T>) {
   const navigate = useNavigate();
   const {
@@ -29,7 +32,7 @@ export function ListPage<T extends BaseListItem>({
     handleSearch,
     handleSearchSubmit,
     refetch
-  } = useListData(config);
+  } = useListData(config, initialData, isServerRendered);
 
   // Handle item click navigation using type-safe routing
   const handleItemClick = (item: T) => {
@@ -76,11 +79,9 @@ export function ListPage<T extends BaseListItem>({
         onSort={handleSort}
       />
       
-      {/* 로딩 상태 */}
-      {loading && (
-        <div className="flex justify-center py-12">
-          <LoadingSpinner />
-        </div>
+      {/* 로딩 상태 - 스켈레톤 UI 사용 */}
+      {(loading || isSearching) && (
+        <PostCardSkeleton count={6} />
       )}
       
       {/* 에러 상태 */}
@@ -99,7 +100,7 @@ export function ListPage<T extends BaseListItem>({
       )}
       
       {/* 아이템 목록 */}
-      {!loading && !error && items.length > 0 && (
+      {!loading && !isSearching && !error && items.length > 0 && (
         <ItemList
           items={items}
           layout={config.cardLayout}
@@ -109,7 +110,7 @@ export function ListPage<T extends BaseListItem>({
       )}
       
       {/* 빈 상태 */}
-      {!loading && !error && items.length === 0 && (
+      {!loading && !isSearching && !error && items.length === 0 && (
         <EmptyState
           icon={config.emptyState?.icon || "💡"}
           title={config.emptyState?.title || "전문가 꿀정보가 없습니다"}

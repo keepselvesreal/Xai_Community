@@ -31,8 +31,23 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
       errorInfo
     });
 
-    // 에러 로깅
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // AuthContext 관련 에러인지 확인
+    const isAuthError = error.message.includes('useAuth must be used within an AuthProvider');
+    
+    if (isAuthError) {
+      console.warn('ErrorBoundary: AuthContext error caught during navigation');
+      console.error('Auth error details:', error);
+      console.error('Error info:', errorInfo);
+      
+      // 짧은 지연 후 자동 복구 시도 (뒤로가기 등의 일시적 문제 해결)
+      setTimeout(() => {
+        console.log('ErrorBoundary: Attempting auto-recovery from auth error');
+        this.resetError();
+      }, 100);
+    } else {
+      // 일반 에러 로깅
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
+    }
     
     if (this.props.onError) {
       this.props.onError(error, errorInfo);

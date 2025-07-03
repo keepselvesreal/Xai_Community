@@ -122,10 +122,10 @@ class PostRepository:
             
             # If title is updated, update slug as well
             if "title" in update_dict:
-                new_slug = self._generate_slug(update_dict["title"])
+                title_slug = self._generate_slug(update_dict["title"])
+                new_slug = f"{str(post.id)}-{title_slug}"
                 if new_slug != post.slug:
-                    unique_slug = await self._ensure_unique_slug(new_slug)
-                    update_dict["slug"] = unique_slug
+                    update_dict["slug"] = new_slug
             
             # Update post
             await post.update({"$set": update_dict})
@@ -190,7 +190,14 @@ class PostRepository:
             query["status"] = status
         if service_type:
             query["service"] = service_type
-        if metadata_type:
+        if metadata_type == "board":
+            # 게시판: metadata.type이 없거나 null이거나 "board"인 경우
+            query["$or"] = [
+                {"metadata.type": {"$exists": False}},
+                {"metadata.type": None},
+                {"metadata.type": "board"}
+            ]
+        elif metadata_type:
             query["metadata.type"] = metadata_type
         if author_id:
             query["author_id"] = author_id
@@ -210,6 +217,7 @@ class PostRepository:
         self,
         query: str,
         service_type: Optional[str] = None,
+        metadata_type: Optional[str] = None,
         sort_by: str = "created_at",
         page: int = 1,
         page_size: int = 20
@@ -239,6 +247,26 @@ class PostRepository:
         if service_type:
             search_filter["service"] = service_type
         
+        if metadata_type == "board":
+            # 게시판: metadata.type이 없거나 null이거나 "board"인 경우
+            # 기존 검색 조건($or)을 보존하고 새로운 조건 추가
+            existing_or = search_filter.get("$or", [])
+            search_filter = {
+                "status": {"$ne": "deleted"},
+                "$and": [
+                    {"$or": existing_or},  # 기존 제목/내용/태그 검색 조건
+                    {
+                        "$or": [
+                            {"metadata.type": {"$exists": False}},
+                            {"metadata.type": None},
+                            {"metadata.type": "board"}
+                        ]
+                    }
+                ]
+            }
+        elif metadata_type:
+            search_filter["metadata.type"] = metadata_type
+        
         # Count total
         total = await Post.find(search_filter).count()
         
@@ -264,6 +292,55 @@ class PostRepository:
             return True
         except Exception as e:
             print(f"Error incrementing view count for post {post_id}: {e}")
+            return False
+    
+    async def increment_bookmark_count(self, post_id: str) -> bool:
+        """Increment post bookmark count.
+        
+        Args:
+            post_id: Post ID
+            
+        Returns:
+            True if successful
+        """
+        try:
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update({"$inc": {"bookmark_count": 1}})
+            return True
+        except Exception as e:
+            print(f"Error incrementing bookmark count for post {post_id}: {e}")
+            return False
+    
+    async def decrement_bookmark_count(self, post_id: str) -> bool:
+        """Decrement post bookmark count.
+        
+        Args:
+            post_id: Post ID
+            
+        Returns:
+            True if successful
+        """
+        try:
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update({"$inc": {"bookmark_count": -1}})
+            return True
+        except Exception as e:
+            print(f"Error decrementing bookmark count for post {post_id}: {e}")
+            return False
+    
+    async def update_post_counts(self, post_id: str, update_fields: Dict[str, int]) -> bool:
+        """Update post count fields using increment operations.
+        
+        Args:
+            post_id: Post ID
+            update_fields: Dictionary of field names and increment values (can be negative)
+            
+        Returns:
+            True if successful
+        """
+        try:
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update({"$inc": update_fields})
+            return True
+        except Exception as e:
+            print(f"Error updating post counts for post {post_id}: {e}")
             return False
     
     async def get_user_reactions(self, user_id: str, post_ids: List[str]) -> Dict[str, str]:
@@ -423,7 +500,7 @@ class PostRepository:
         Args:
             page: 페이지 번호 (1부터 시작)
             page_size: 페이지당 항목 수
-            metadata_type: 메타데이터 타입 필터 (property-info, moving-service, expert-tip)
+            metadata_type: 메타데이터 타입 필터 (property_information, moving services, expert_tips, board)
             sort_by: 정렬 필드
             
         Returns:
@@ -431,8 +508,18 @@ class PostRepository:
         """
         # 기본 매치 조건
         match_stage = {"status": {"$ne": "deleted"}}
-        if metadata_type:
+        if metadata_type == "board":
+            # 게시판: metadata.type이 없거나 null이거나 "board"인 경우
+            match_stage["$or"] = [
+                {"metadata.type": {"$exists": False}},
+                {"metadata.type": None},
+                {"metadata.type": "board"}
+            ]
+        elif metadata_type:
             match_stage["metadata.type"] = metadata_type
+            
+        print(f"🔍 Repository match_stage: {match_stage}")
+        print(f"📊 Searching for metadata_type: '{metadata_type}'")
         
         # 정렬 필드 설정 (내림차순)
         sort_field = sort_by
@@ -443,31 +530,7 @@ class PostRepository:
             # 1. 매치 조건으로 필터링
             {"$match": match_stage},
             
-            # 2. 작성자 정보 조인 ($lookup)
-            {"$lookup": {
-                "from": "users",  # users 컬렉션과 조인
-                "localField": "author_id", 
-                "foreignField": "_id",
-                "as": "author",
-                "pipeline": [
-                    # 작성자 정보에서 필요한 필드만 선택
-                    {"$project": {
-                        "email": 1, 
-                        "user_handle": 1, 
-                        "display_name": 1, 
-                        "created_at": 1, 
-                        "updated_at": 1
-                    }}
-                ]
-            }},
-            
-            # 3. 작성자 배열을 단일 객체로 변환
-            {"$unwind": {
-                "path": "$author", 
-                "preserveNullAndEmptyArrays": True  # 작성자 없어도 게시글 유지
-            }},
-            
-            # 4. 정렬
+            # 2. 정렬 (작성자 정보는 나중에 별도로 조회)
             {"$sort": {sort_field: sort_direction}},
             
             # 5. 페이지네이션과 총 개수를 동시에 처리 ($facet)
@@ -483,6 +546,9 @@ class PostRepository:
         ]
         
         try:
+            # 디버깅을 위한 매치 스테이지 로깅
+            print(f"🔍 Aggregation match_stage: {match_stage}")
+            
             # Aggregation 실행
             result = await Post.aggregate(pipeline).to_list()
             
@@ -494,6 +560,10 @@ class PostRepository:
             total_result = result[0].get("total", [])
             total = total_result[0]["count"] if total_result else 0
             
+            print(f"✅ Repository query result - total: {total}, posts: {len(posts)}")
+            if posts:
+                print(f"📝 First post sample: {posts[0].get('title', 'No title')}")
+            
             return posts, total
             
         except Exception as e:
@@ -501,3 +571,51 @@ class PostRepository:
             import traceback
             print(f"Traceback: {traceback.format_exc()}")
             return [], 0
+    
+    async def update_post_counts(self, post_id: str, count_updates: Dict[str, int]) -> bool:
+        """Post 모델의 카운트 필드들을 업데이트.
+        
+        Args:
+            post_id: 업데이트할 게시글 ID
+            count_updates: 업데이트할 카운트 딕셔너리
+                예: {"like_count": 1, "dislike_count": -1, "bookmark_count": 1}
+                
+        Returns:
+            업데이트 성공 여부
+        """
+        try:
+            from beanie import PydanticObjectId
+            
+            # 증감 연산자 구성
+            inc_updates = {}
+            for field, value in count_updates.items():
+                if value != 0:  # 0이 아닌 경우만 업데이트
+                    inc_updates[field] = value
+            
+            if not inc_updates:
+                return True  # 업데이트할 내용이 없으면 성공으로 간주
+            
+            # MongoDB $inc 연산자를 사용해 카운트 업데이트
+            result = await Post.get_motor_collection().update_one(
+                {"_id": PydanticObjectId(post_id)},
+                {"$inc": inc_updates}
+            )
+            
+            # 카운트가 음수가 되지 않도록 보장
+            # 각 필드가 0보다 작으면 0으로 설정
+            for field in inc_updates.keys():
+                await Post.get_motor_collection().update_one(
+                    {
+                        "_id": PydanticObjectId(post_id),
+                        field: {"$lt": 0}
+                    },
+                    {"$set": {field: 0}}
+                )
+            
+            return result.modified_count > 0
+            
+        except Exception as e:
+            print(f"Error updating post counts for {post_id}: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return False

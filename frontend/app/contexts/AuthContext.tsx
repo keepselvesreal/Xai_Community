@@ -14,23 +14,27 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false); // 비차단형: 기본값을 false로
   const [renderKey, setRenderKey] = useState(0); // 강제 리렌더링을 위한 키
 
-  // 초기 인증 상태 확인
+  // 비차단형 인증 상태 확인 - UI를 차단하지 않고 백그라운드에서 처리
   useEffect(() => {
     const initializeAuth = async () => {
-      console.log('AuthContext: Initializing auth...');
+      console.log('AuthContext: Initializing auth (non-blocking)...');
+      
       // 직접 localStorage 사용하여 JSON.parse 회피
       const savedToken = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) : null;
       const savedRefreshToken = typeof window !== 'undefined' ? localStorage.getItem('refreshToken') : null;
       console.log('AuthContext: Saved tokens:', savedToken ? 'access found' : 'access not found', savedRefreshToken ? 'refresh found' : 'refresh not found');
       
+      // 토큰이 있으면 바로 상태에 설정 (UI 즉시 업데이트)
       if (savedToken) {
         setToken(savedToken);
         setRefreshToken(savedRefreshToken);
+        
+        // 백그라운드에서 사용자 정보 검증
         try {
-          console.log('AuthContext: Fetching current user...');
+          console.log('AuthContext: Fetching current user in background...');
           const response = await apiClient.getCurrentUser();
           console.log('AuthContext: getCurrentUser response:', response);
           
@@ -44,7 +48,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(userData);
           } else {
             console.log('AuthContext: Failed to get user - response not successful:', response);
-            // 토큰이 유효하지 않은 경우 - 직접 상태 정리
+            // 토큰이 유효하지 않은 경우 - 상태 정리
             setUser(null);
             setToken(null);
             setRefreshToken(null);
@@ -56,7 +60,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         } catch (error) {
           console.error("AuthContext: Failed to get current user - exception caught:", error);
-          // 예외 발생 시 - 직접 상태 정리
+          // 예외 발생 시 - 상태 정리
           setUser(null);
           setToken(null);
           setRefreshToken(null);
@@ -68,11 +72,26 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         }
       }
       
-      setIsLoading(false);
-      console.log('AuthContext: Initialization complete');
+      console.log('AuthContext: Non-blocking initialization complete');
     };
 
     initializeAuth();
+  }, []);
+
+  // 브라우저 네비게이션 이벤트 처리 (뒤로가기 등)
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      console.log('AuthContext: PopState event detected, ensuring context stability');
+      // 뒤로가기 등의 네비게이션 시 강제 리렌더링으로 context 안정성 확보
+      setRenderKey(prev => prev + 1);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', handlePopState);
+      return () => {
+        window.removeEventListener('popstate', handlePopState);
+      };
+    }
   }, []);
 
   // 토큰 만료 이벤트 리스너
@@ -233,6 +252,25 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
+    // 에러 발생 전에 디버깅 정보 출력
+    console.error('useAuth: AuthContext is undefined');
+    console.error('useAuth: Current location:', typeof window !== 'undefined' ? window.location.href : 'server');
+    console.error('useAuth: Stack trace:', new Error().stack);
+    
+    // 브라우저 환경에서 뒤로가기 등으로 인한 일시적 오류인 경우 fallback 제공
+    if (typeof window !== 'undefined') {
+      console.warn('useAuth: Providing fallback context due to navigation issue');
+      return {
+        user: null,
+        token: null,
+        login: async () => { throw new Error('Auth not available'); },
+        register: async () => { throw new Error('Auth not available'); },
+        logout: () => { console.warn('Logout called but auth not available'); },
+        isLoading: false,
+        isAuthenticated: false,
+      };
+    }
+    
     throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;

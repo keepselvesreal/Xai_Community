@@ -82,7 +82,7 @@ const PostCardRenderer = ({ post }: { post: Post }) => {
           {/* 우측: 작성자, 시간, 통계 */}
           <div className="flex items-center gap-2">
             <span className="text-var-secondary">
-              {post.author?.display_name || post.author?.user_handle || '익명'}
+              {post.author?.display_name || post.author?.user_handle || post.author?.name || '익명'}
             </span>
             <span>·</span>
             <span>{formatRelativeTime(post.created_at)}</span>
@@ -169,7 +169,6 @@ export const boardConfig: ListPageConfig<Post> = {
   // API 설정
   apiEndpoint: '/api/posts',
   apiFilters: {
-    service: 'residential_community',
     metadata_type: 'board',
     sortBy: 'created_at'
   },
@@ -244,7 +243,7 @@ const ServiceCardRenderer = ({ service }: { service: Service }) => {
 
       {/* 서비스 목록 */}
       <div className="space-y-2 mb-4">
-        {service.services.map((item, idx: number) => (
+        {service.services && service.services.length > 0 ? service.services.map((item, idx: number) => (
           <div key={idx} className="flex justify-between items-center">
             <span className="text-gray-700 text-sm">{item.name}</span>
             <div className="flex items-center gap-2">
@@ -256,35 +255,76 @@ const ServiceCardRenderer = ({ service }: { service: Service }) => {
               </span>
             </div>
           </div>
-        ))}
+        )) : (
+          <div className="text-gray-500 text-sm">서비스 정보가 없습니다</div>
+        )}
       </div>
 
       {/* 연락처 */}
-      <div className="flex items-center gap-4 mb-3 text-sm text-gray-600">
-        <div className="flex items-center gap-1">
-          <span className="text-pink-500">📞</span>
-          <span>{service.contact.phone}</span>
+      {service.contact && (
+        <div className="flex items-center gap-4 mb-3 text-sm text-gray-600">
+          {service.contact.phone && (
+            <div className="flex items-center gap-1">
+              <span className="text-pink-500">📞</span>
+              <span>{service.contact.phone}</span>
+            </div>
+          )}
+          {service.contact.hours && (
+            <div className="flex items-center gap-1">
+              <span className="text-orange-500">⏰</span>
+              <span>{service.contact.hours}</span>
+            </div>
+          )}
         </div>
-        <div className="flex items-center gap-1">
-          <span className="text-orange-500">⏰</span>
-          <span>{service.contact.hours}</span>
-        </div>
-      </div>
+      )}
 
       {/* 사용자 반응 표시 */}
       <div className="flex items-center justify-between text-sm text-gray-500 mb-3">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            👁️ {service.serviceStats?.views || service.stats?.view_count || 0}
+          <span className="flex items-center gap-1" title={`service.serviceStats?.views: ${service.serviceStats?.views}, service.stats?.view_count: ${service.stats?.view_count}`}>
+            👁️ {(() => {
+              const views = service.serviceStats?.views || service.stats?.view_count || 0;
+              console.log(`🔍 ${service.name} 조회수:`, {
+                serviceStats_views: service.serviceStats?.views,
+                stats_view_count: service.stats?.view_count,
+                final_views: views
+              });
+              return views;
+            })()}
           </span>
-          <span className="flex items-center gap-1">
-            관심 {service.bookmarks || service.stats?.bookmark_count || 0}
+          <span className="flex items-center gap-1" title={`service.bookmarks: ${service.bookmarks}, service.serviceStats?.bookmarks: ${service.serviceStats?.bookmarks}, service.stats?.bookmark_count: ${service.stats?.bookmark_count}`}>
+            관심 {(() => {
+              const bookmarks = service.bookmarks || service.serviceStats?.bookmarks || service.stats?.bookmark_count || 0;
+              console.log(`🔍 ${service.name} 북마크:`, {
+                service_bookmarks: service.bookmarks,
+                serviceStats_bookmarks: service.serviceStats?.bookmarks,
+                stats_bookmark_count: service.stats?.bookmark_count,
+                final_bookmarks: bookmarks
+              });
+              return bookmarks;
+            })()}
           </span>
-          <span className="flex items-center gap-1">
-            문의 {service.serviceStats?.inquiries || 0}
+          <span className="flex items-center gap-1" title={`service.serviceStats?.inquiries: ${service.serviceStats?.inquiries}`}>
+            문의 {(() => {
+              const inquiries = service.serviceStats?.inquiries || service.stats?.comment_count || 0;
+              console.log(`🔍 ${service.name} 문의:`, {
+                serviceStats_inquiries: service.serviceStats?.inquiries,
+                stats_comment_count: service.stats?.comment_count,
+                final_inquiries: inquiries
+              });
+              return inquiries;
+            })()}
           </span>
-          <span className="flex items-center gap-1">
-            후기 {service.serviceStats?.reviews || service.stats?.comment_count || 0}
+          <span className="flex items-center gap-1" title={`service.serviceStats?.reviews: ${service.serviceStats?.reviews}, service.stats?.comment_count: ${service.stats?.comment_count}`}>
+            후기 {(() => {
+              const reviews = service.serviceStats?.reviews || service.stats?.comment_count || 0;
+              console.log(`🔍 ${service.name} 후기:`, {
+                serviceStats_reviews: service.serviceStats?.reviews,
+                stats_comment_count: service.stats?.comment_count,
+                final_reviews: reviews
+              });
+              return reviews;
+            })()}
           </span>
         </div>
       </div>
@@ -340,7 +380,7 @@ const servicesSortFunction = (a: Service, b: Service, sortBy: string): number =>
   }
 };
 
-// 서비스 데이터 변환 함수
+// 서비스 데이터 변환 함수 (실시간 통계 반영)
 const transformPostsToServices = (posts: Post[]): Service[] => {
   console.log('🔍 API에서 받은 posts 데이터:', posts);
   console.log('📊 posts 개수:', posts?.length || 0);
@@ -352,7 +392,51 @@ const transformPostsToServices = (posts: Post[]): Service[] => {
   }
 
   const services = posts
-    .map(convertPostToService)
+    .map((post, index) => {
+      console.log(`🔄 Post ${index + 1} 변환 시작:`, {
+        title: post.title,
+        view_count: post.view_count,
+        comment_count: post.comment_count,
+        bookmark_count: post.bookmark_count,
+        stats: post.stats
+      });
+      
+      const service = convertPostToService(post);
+      if (service) {
+        console.log(`✅ Service 변환 성공: ${service.name}`);
+        
+        // 실시간 통계 적용 (API 응답의 stats 필드 활용)
+        if (post.stats) {
+          service.serviceStats = {
+            views: post.stats.view_count || post.view_count || 0,
+            inquiries: post.stats.comment_count || post.comment_count || 0, // 문의는 댓글로 처리
+            reviews: post.stats.comment_count || post.comment_count || 0,   // 후기도 댓글로 처리
+            bookmarks: post.stats.bookmark_count || post.bookmark_count || 0
+          };
+          
+          // 북마크 수도 동기화
+          service.bookmarks = post.stats.bookmark_count || post.bookmark_count || 0;
+          
+          console.log(`📊 stats 필드 기반 통계 적용:`, service.serviceStats);
+        } else {
+          // stats가 없으면 기본 필드 사용
+          service.serviceStats = {
+            views: post.view_count || 0,
+            inquiries: post.comment_count || 0,
+            reviews: post.comment_count || 0,
+            bookmarks: post.bookmark_count || 0
+          };
+          service.bookmarks = post.bookmark_count || 0;
+          console.log(`📊 기본 필드 기반 통계 적용:`, service.serviceStats);
+        }
+        
+        console.log(`🎯 최종 service.serviceStats:`, service.serviceStats);
+        console.log(`🎯 최종 service.bookmarks:`, service.bookmarks);
+      } else {
+        console.log(`❌ Service 변환 실패 for post: ${post.title}`);
+      }
+      return service;
+    })
     .filter((service): service is Service => service !== null);
 
   console.log('✅ 변환된 서비스 개수:', services.length);
@@ -374,13 +458,13 @@ export const servicesConfig: ListPageConfig<Service> = {
   writeButtonLink: '/services/write',
   searchPlaceholder: '서비스 검색...',
   
-  // API 설정
+  // API 설정 - 기본 posts API 사용하되 확장 통계 반영
   apiEndpoint: '/api/posts',
   apiFilters: {
-    service: 'residential_community',
     metadata_type: 'moving services',
     page: 1,
-    size: 50
+    size: 50,
+    sortBy: 'created_at'
   },
   
   // UI 설정
@@ -400,6 +484,14 @@ export const servicesConfig: ListPageConfig<Service> = {
   ],
   
   cardLayout: 'grid',
+  
+  // 빈 상태 설정
+  emptyState: {
+    icon: '⏳',
+    title: '서비스 정보를 불러오는 중입니다',
+    description: '입주 업체 서비스 데이터를 준비하고 있습니다.\n잠시만 기다려주시면 곧 표시됩니다.',
+    actionLabel: ''
+  },
   
   // 데이터 변환 함수
   transformData: transformPostsToServices,
@@ -493,8 +585,12 @@ const TipCardRenderer = ({ tip }: { tip: Tip }) => {
             <span>{formatNumber(tip.likes_count || 0)}</span>
           </span>
           <span className="flex items-center gap-1">
+            <span>👎</span>
+            <span>{formatNumber(tip.dislikes_count || 0)}</span>
+          </span>
+          <span className="flex items-center gap-1">
             <span>💬</span>
-            <span>{formatNumber(Math.floor((tip.views_count || 0) * 0.1))}</span>
+            <span>{formatNumber(tip.comments_count || 0)}</span>
           </span>
           <span className="flex items-center gap-1">
             <span>🔖</span>
@@ -608,7 +704,7 @@ const convertPostToTip = (post: Post): Tip => {
   }
   
   const tip = {
-    id: parseInt(post.id),
+    id: post.id || `tip-${Date.now()}-${Math.random()}`, // 문자열 그대로 사용
     title: post.title,
     content: actualContent,
     slug: post.slug || post.id, // slug가 없으면 id를 사용
@@ -619,6 +715,8 @@ const convertPostToTip = (post: Post): Tip => {
     tags: post.metadata?.tags || [],
     views_count: post.stats?.view_count || 0,
     likes_count: post.stats?.like_count || 0,
+    dislikes_count: post.stats?.dislike_count || 0,
+    comments_count: post.stats?.comment_count || 0,
     saves_count: post.stats?.bookmark_count || 0,
     is_new: new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000
   };
@@ -661,6 +759,7 @@ const transformPostsToTips = (posts: Post[]): Tip[] => {
 
 // 정보 카드 렌더러
 const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
+  const navigate = useNavigate();
   
   const getContentTypeLabel = (contentType: ContentType) => {
     switch (contentType) {
@@ -711,16 +810,23 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
 
   return (
     <div 
-      className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow h-full"
+      className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow h-full cursor-pointer"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        navigate(`/property-info/${info.slug}`);
+      }}
     >
       {/* 상단: 콘텐츠 타입 배지 */}
       <div className="flex items-center gap-2 mb-3">
         <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getContentTypeColor(info.content_type)}`}>
           {getContentTypeLabel(info.content_type)}
         </span>
-        <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-          {getCategoryLabel(info.metadata.category)}
-        </span>
+        {info.metadata?.category && (
+          <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+            {getCategoryLabel(info.metadata.category)}
+          </span>
+        )}
         {isNew && (
           <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
             NEW
@@ -734,7 +840,7 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
       </h3>
 
       {/* 데이터 소스 정보 (있는 경우) */}
-      {info.metadata.data_source && (
+      {info.metadata?.data_source && (
         <div className="mb-3">
           <span className="text-xs text-var-muted bg-gray-100 px-2 py-1 rounded">
             📊 {info.metadata.data_source}
@@ -743,14 +849,14 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
       )}
 
       {/* 요약 (있는 경우) */}
-      {info.metadata.summary && (
+      {info.metadata?.summary && (
         <p className="text-var-secondary text-sm mb-4 line-clamp-2">
           {info.metadata.summary}
         </p>
       )}
 
       {/* 태그 */}
-      {info.metadata.tags && info.metadata.tags.length > 0 && (
+      {info.metadata?.tags && info.metadata.tags.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
           {info.metadata.tags.slice(0, 3).map((tag: string, index: number) => (
             <span key={index} className="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
@@ -778,6 +884,9 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
             👍 {formatNumber(info.stats?.like_count || 0)}
           </span>
           <span className="flex items-center gap-1">
+            👎 {formatNumber(info.stats?.dislike_count || 0)}
+          </span>
+          <span className="flex items-center gap-1">
             💬 {formatNumber(info.stats?.comment_count || 0)}
           </span>
           <span className="flex items-center gap-1">
@@ -791,28 +900,14 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
 
 // Post를 InfoItem으로 변환하는 함수
 const transformPostsToInfoItems = (posts: Post[]): InfoItem[] => {
-  console.log('🔍 API에서 받은 posts 데이터:', posts);
-  console.log('📊 posts 개수:', posts?.length || 0);
-  
   if (!posts || posts.length === 0) {
-    console.warn('⚠️ API에서 받은 데이터가 비어있습니다!');
-    console.warn('💡 게시글 작성 시 type을 "property_information"으로 설정했는지 확인하세요.');
     return [];
   }
 
-  // property_information 타입의 포스트만 필터링하고 변환
+  // 백엔드에서 이미 필터링된 데이터이므로 모든 posts를 변환
   const infoItems = posts
-    .filter(post => post.metadata?.type === 'property_information')
     .map(convertPostToInfoItem)
     .filter((item): item is InfoItem => item !== null);
-
-  console.log('✅ 변환된 정보 아이템 개수:', infoItems.length);
-  
-  if (infoItems.length === 0) {
-    console.warn('⚠️ posts가 있지만 변환 가능한 정보 아이템이 없습니다!');
-    console.warn('💡 metadata.type이 "property_information"인지 확인하세요.');
-    return [];
-  }
 
   return infoItems;
 };
@@ -827,7 +922,6 @@ export const infoConfig: ListPageConfig<InfoItem> = {
   // API 설정
   apiEndpoint: '/api/posts',
   apiFilters: {
-    service: 'residential_community',
     metadata_type: 'property_information',
     page: 1,
     size: 50
@@ -854,9 +948,9 @@ export const infoConfig: ListPageConfig<InfoItem> = {
   
   // 빈 상태 설정
   emptyState: {
-    icon: 'ℹ️',
-    title: '등록된 정보가 없습니다',
-    description: '아직 등록된 부동산 정보가 없습니다. 곧 다양한 정보를 제공할 예정입니다.',
+    icon: '⏳',
+    title: '정보를 불러오는 중입니다',
+    description: '서버에서 데이터를 준비하고 있습니다. 잠시만 기다려주세요.\n데이터 로딩이 완료되면 자동으로 표시됩니다.',
     actionLabel: ''  // 관리자만 입력 가능하므로 빈 값
   },
   
@@ -879,7 +973,6 @@ export const tipsConfig: ListPageConfig<Tip> = {
   // API 설정
   apiEndpoint: '/api/posts',
   apiFilters: {
-    service: 'residential_community',
     metadata_type: 'expert_tips',
     page: 1,
     size: 50
@@ -905,6 +998,14 @@ export const tipsConfig: ListPageConfig<Tip> = {
   ],
   
   cardLayout: 'grid',
+  
+  // 빈 상태 설정
+  emptyState: {
+    icon: '⏳',
+    title: '전문가 꿀정보를 불러오는 중입니다',
+    description: '전문가들의 검증된 생활 팁을 준비하고 있습니다.\n잠시만 기다려주시면 곧 표시됩니다.',
+    actionLabel: ''
+  },
   
   // 데이터 변환 함수
   transformData: transformPostsToTips,

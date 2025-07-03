@@ -11,7 +11,7 @@ This is a full-stack web application with FastAPI backend and HTML-based fronten
 ```
 v5/
 ├── backend/               # FastAPI backend application
-├── frontend/              # Remix React app (development/testing tool)
+├── frontend/              # Remix React app (main production UI)
 ├── frontend-prototypes/   # HTML UI for API integration
 │   └── UI.html           # Complete dashboard interface with API testing
 ├── docs/                  # Documentation files
@@ -31,11 +31,11 @@ v5/
 
 ### Frontend Strategy
 
-- **Primary UI**: `frontend-prototypes/UI.html` - Single-page dashboard application for production use
-- **API Development Support**: `frontend/` (Remix React) - Available for API development assistance when needed
-- **API Integration**: HTML UI will be integrated with FastAPI backend endpoints
-- **Testing Interface**: Built-in API testing functionality in HTML dashboard
-- **Frontend Folder**: @frontend/ for project frontend files
+- **Primary UI**: `@frontend/` (Remix React) - Main production UI application currently in development
+- **API Development Tool**: `frontend-prototypes/UI.html` - HTML dashboard for API testing and development
+- **Frontend Architecture**: Full-featured Remix React application with TypeScript, Tailwind CSS, and comprehensive testing
+- **Development Status**: Active UI development for production service using @frontend/ workspace
+- **API Integration**: Frontend integrates with FastAPI backend through comprehensive API layer
 
 ### Current Implementation Status
 
@@ -46,7 +46,7 @@ v5/
 - ✅ **File Management**: Complete file upload/processing system with validation
 - ✅ **Rich Text Editor**: TDD-based editor with content processing pipeline
 - ✅ **HTML UI**: Complete dashboard interface with API testing capabilities
-- ✅ **Remix Frontend**: Available for API development support when needed
+- ✅ **Remix Frontend**: Main production UI with comprehensive component library and routing system
 
 ## Custom rules
 ### Communication 
@@ -64,3 +64,6 @@ v5/
 - 폴더나 파일을 만들 때는 기존 프로젝트 구조의 체계를 반영한다.
 - 타입 검사를 활용하여 런타임 이전에 감지 가능한 오류를 사전에 방지한다.
 - 오류 발생 가능성이 있는 부분에는 디버깅을 위한 코드 또는 로깅을 적절히 삽입한다.
+
+### Frontend Workspace
+- 현재 작업하는 UI 프로젝트 폴더는 @frontend/

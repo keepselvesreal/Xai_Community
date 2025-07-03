@@ -47,25 +47,42 @@ export default function ServiceDetail() {
     setIsLoading(true);
     
     try {
-      // 게시판과 동일하게 slug로 API 호출
+      // 기존 안정적인 API 사용
       const response = await apiClient.getPost(slug);
       console.log('📡 API response:', response);
       
       if (response.success && response.data) {
         console.log('📦 Raw post data:', response.data);
+        console.log('📦 Raw post data keys:', Object.keys(response.data));
+        console.log('📦 Raw post data structure:', {
+          hasData: 'data' in response.data,
+          hasContent: 'content' in response.data,
+          hasMetadata: 'metadata' in response.data,
+          dataKeys: Object.keys(response.data)
+        });
         
         // Post 데이터를 Service로 변환
         const serviceData = convertPostToService(response.data);
         if (serviceData) {
-          console.log('✅ Service conversion successful:', serviceData.name);
           setService(serviceData);
+          
+          // 사용자의 북마크 상태 설정
+          if (response.data.user_reaction) {
+            setIsLiked(response.data.user_reaction.bookmarked || false);
+          }
         } else {
           console.error('❌ Service conversion failed');
+          console.log('❌ Failed post data structure:', {
+            hasContent: !!response.data.content,
+            hasMetadata: !!response.data.metadata,
+            metadataType: response.data.metadata?.type,
+            contentPreview: response.data.content?.substring(0, 100)
+          });
           setIsNotFound(true);
           showError('서비스 데이터 변환에 실패했습니다');
         }
       } else {
-        console.error('❌ API call failed');
+        console.error('❌ API call failed', response);
         setIsNotFound(true);
         showError('서비스를 찾을 수 없습니다');
       }
@@ -255,8 +272,50 @@ export default function ServiceDetail() {
     window.open(`tel:${service.contact.phone}`);
   };
 
-  const handleLike = () => {
-    setIsLiked(!isLiked);
+  const handleLike = async () => {
+    if (!service) return;
+    
+    try {
+      const response = await apiClient.bookmarkPost(service.slug || service.postId || '');
+      
+      if (response.success) {
+        // 북마크 상태 업데이트
+        setIsLiked(!isLiked);
+        
+        // 여러 방법으로 bookmark_count 접근 시도
+        const bookmarkCount = response.data?.bookmark_count ?? 
+                              response.data?.data?.bookmark_count ??
+                              response.bookmark_count ??
+                              (response.data?.action === 'unbookmarked' ? 0 : 
+                               response.data?.action === 'bookmarked' ? 1 : undefined);
+        
+        // 서비스 데이터 업데이트
+        setService(prev => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            bookmarks: bookmarkCount !== undefined ? bookmarkCount : prev.bookmarks,
+            stats: {
+              ...prev.stats,
+              bookmark_count: bookmarkCount !== undefined ? bookmarkCount : prev.stats?.bookmark_count || 0
+            },
+            serviceStats: {
+              ...prev.serviceStats,
+              bookmarks: bookmarkCount !== undefined ? bookmarkCount : prev.serviceStats?.bookmarks || 0
+            }
+          };
+        });
+        
+        const action = response.action || (isLiked ? '해제' : '추가');
+        showSuccess(`관심 목록에서 ${action}되었습니다`);
+      } else {
+        console.error('❌ 북마크 API 실패:', response);
+        showError('관심 설정에 실패했습니다');
+      }
+    } catch (error) {
+      console.error('🚨 북마크 처리 오류:', error);
+      showError('관심 설정 중 오류가 발생했습니다');
+    }
   };
 
   const handleReviewSubmit = async () => {
@@ -270,6 +329,19 @@ export default function ServiceDetail() {
           showSuccess('후기가 등록되었습니다!');
           setReviewText('');
           setSelectedRating(0);
+          
+          // 🚀 실시간 후기 통계 반영
+          setService(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              serviceStats: {
+                ...prev.serviceStats,
+                reviews: (prev.serviceStats?.reviews || 0) + 1
+              }
+            };
+          });
+          
           // 댓글 새로고침하여 새로운 후기 표시
           await loadComments();
         } else {
@@ -626,6 +698,19 @@ export default function ServiceDetail() {
           setInquiryContact('');
           setIsInquiryPublic(true);
           setShowInquiryForm(false);
+          
+          // 🚀 실시간 문의 통계 반영
+          setService(prev => {
+            if (!prev) return null;
+            return {
+              ...prev,
+              serviceStats: {
+                ...prev.serviceStats,
+                inquiries: (prev.serviceStats?.inquiries || 0) + 1
+              }
+            };
+          });
+          
           // 댓글 새로고침하여 새로운 문의 표시
           await loadComments();
         } else {
@@ -688,6 +773,29 @@ export default function ServiceDetail() {
                 <span className="text-green-700">{service.rating}</span>
               </div>
             </div>
+            
+            {/* 확장 통계 표시 */}
+            {service.serviceStats && (
+              <div className="flex items-center justify-center gap-6 mb-4">
+                <div className="flex items-center gap-1 text-green-700">
+                  <span className="text-sm">👁️ 조회</span>
+                  <span className="font-medium">{service.serviceStats.views}</span>
+                </div>
+                <div className="flex items-center gap-1 text-green-700">
+                  <span className="text-sm">❤️ 관심</span>
+                  <span className="font-medium">{service.serviceStats?.bookmarks || service.bookmarks || 0}</span>
+                </div>
+                <div className="flex items-center gap-1 text-green-700">
+                  <span className="text-sm">💬 문의</span>
+                  <span className="font-medium">{service.serviceStats.inquiries}</span>
+                </div>
+                <div className="flex items-center gap-1 text-green-700">
+                  <span className="text-sm">⭐ 후기</span>
+                  <span className="font-medium">{service.serviceStats.reviews}</span>
+                </div>
+              </div>
+            )}
+            
             <p className="text-green-700 max-w-2xl mx-auto">{service.description}</p>
           </div>
         </div>

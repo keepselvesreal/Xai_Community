@@ -249,12 +249,12 @@ class ApiClient {
       const refreshSuccess = await this.refreshAccessToken();
       if (!refreshSuccess) {
         console.log('ApiClient: Token refresh failed before request');
-        this.notifyTokenExpired();
-        return {
-          success: false,
-          error: 'Authorization header is required',
-          timestamp: new Date().toISOString(),
-        };
+        // SSR 환경이거나 공개 API인 경우 토큰 없이 계속 진행
+        if (typeof window === 'undefined') {
+          console.log('ApiClient: SSR environment - proceeding without token');
+        } else {
+          this.notifyTokenExpired();
+        }
       }
     }
     
@@ -494,6 +494,8 @@ class ApiClient {
 
   // 게시글 관련 API
   async getPosts(filters: PostFilters = {}): Promise<ApiResponse<PaginatedResponse<Post>>> {
+    console.log('🚀 getPosts 호출 - filters:', filters);
+    
     const queryParams = new URLSearchParams();
     
     if (filters.type) queryParams.append('type', filters.type);
@@ -506,6 +508,8 @@ class ApiClient {
 
     const query = queryParams.toString();
     const endpoint = `/api/posts/${query ? `?${query}` : ''}`;
+    
+    console.log('📡 API 요청 - endpoint:', endpoint);
 
     return this.request<PaginatedResponse<Post>>(endpoint);
   }
@@ -535,6 +539,7 @@ class ApiClient {
   }
 
   async createPost(postData: CreatePostRequest): Promise<ApiResponse<Post>> {
+    console.log('🚀 createPost 호출 - 전송할 데이터:', JSON.stringify(postData, null, 2));
     return this.request<Post>('/api/posts', {
       method: 'POST',
       body: JSON.stringify(postData),
@@ -542,6 +547,7 @@ class ApiClient {
   }
 
   async updatePost(slug: string, postData: Partial<CreatePostRequest>): Promise<ApiResponse<Post>> {
+    console.log('🚀 updatePost 호출 - 전송할 데이터:', JSON.stringify(postData, null, 2));
     return this.request<Post>(`/api/posts/${slug}`, {
       method: 'PUT',
       body: JSON.stringify(postData),
@@ -661,6 +667,25 @@ class ApiClient {
     return this.request<any>(`/api/posts/${slug}/bookmark`, {
       method: 'POST',
     });
+  }
+
+  // 🆕 서비스 게시글 확장 통계 조회
+  async getServicePostWithExtendedStats(slug: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/posts/services/${slug}`);
+  }
+
+  // 🆕 서비스 게시글 목록 확장 통계 조회
+  async getServicePostsWithExtendedStats(
+    page: number = 1, 
+    size: number = 20, 
+    sortBy: string = "created_at"
+  ): Promise<ApiResponse<any>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString(),
+      sort_by: sortBy
+    });
+    return this.request<any>(`/api/posts/services?${params.toString()}`);
   }
 
   // 🆕 서비스 문의/후기 API

@@ -84,6 +84,8 @@ export interface ServiceStats {
   inquiries: number;
   /** 후기수 */
   reviews: number;
+  /** 북마크수 */
+  bookmarks: number;
 }
 
 // 확장된 연락처 정보
@@ -112,27 +114,66 @@ export interface ServiceReview {
 
 // 입력 검증 함수
 function validateServicePost(data: any): data is ServicePost {
-  if (!data || typeof data !== 'object') return false;
+  console.log('🔍 Validating ServicePost data:', data);
   
-  // company 검증
-  if (!data.company || typeof data.company !== 'object') return false;
-  if (typeof data.company.name !== 'string' || !data.company.name.trim()) return false;
-  if (typeof data.company.contact !== 'string' || !data.company.contact.trim()) return false;
-  if (typeof data.company.availableHours !== 'string' || !data.company.availableHours.trim()) return false;
-  if (typeof data.company.description !== 'string') return false;
-  
-  // services 배열 검증
-  if (!Array.isArray(data.services) || data.services.length === 0) return false;
-  
-  for (const service of data.services) {
-    if (!service || typeof service !== 'object') return false;
-    if (typeof service.name !== 'string' || !service.name.trim()) return false;
-    if (typeof service.price !== 'number' || service.price < 0) return false;
-    if (service.specialPrice !== undefined && 
-        (typeof service.specialPrice !== 'number' || service.specialPrice < 0)) return false;
-    if (service.description !== undefined && typeof service.description !== 'string') return false;
+  if (!data || typeof data !== 'object') {
+    console.error('❌ Data is not an object:', data);
+    return false;
   }
   
+  // company 검증
+  if (!data.company || typeof data.company !== 'object') {
+    console.error('❌ Company is missing or not an object:', data.company);
+    return false;
+  }
+  if (typeof data.company.name !== 'string' || !data.company.name.trim()) {
+    console.error('❌ Company name is invalid:', data.company.name);
+    return false;
+  }
+  if (typeof data.company.contact !== 'string' || !data.company.contact.trim()) {
+    console.error('❌ Company contact is invalid:', data.company.contact);
+    return false;
+  }
+  if (typeof data.company.availableHours !== 'string' || !data.company.availableHours.trim()) {
+    console.error('❌ Company availableHours is invalid:', data.company.availableHours);
+    return false;
+  }
+  if (typeof data.company.description !== 'string') {
+    console.error('❌ Company description is invalid:', data.company.description);
+    return false;
+  }
+  
+  // services 배열 검증
+  if (!Array.isArray(data.services) || data.services.length === 0) {
+    console.error('❌ Services is not a valid array:', data.services);
+    return false;
+  }
+  
+  for (const service of data.services) {
+    if (!service || typeof service !== 'object') {
+      console.error('❌ Service item is not an object:', service);
+      return false;
+    }
+    if (typeof service.name !== 'string' || !service.name.trim()) {
+      console.error('❌ Service name is invalid:', service.name);
+      return false;
+    }
+    if (typeof service.price !== 'number' || service.price < 0) {
+      console.error('❌ Service price is invalid:', service.price);
+      return false;
+    }
+    if (service.specialPrice !== undefined && 
+        (typeof service.specialPrice !== 'number' || service.specialPrice < 0)) {
+      console.error('❌ Service specialPrice is invalid:', service.specialPrice);
+      return false;
+    }
+    if (service.description !== undefined && typeof service.description !== 'string') {
+      console.error('❌ Service description is invalid:', service.description);
+      return false;
+    }
+  }
+  
+  console.log('✅ ServicePost validation passed');
   return true;
 }
 
@@ -144,15 +185,21 @@ function validateServicePost(data: any): data is ServicePost {
  */
 export function parseServicePost(content: string): ServicePost {
   try {
+    console.log('📝 Parsing content:', content);
     const parsed = JSON.parse(content);
+    console.log('🔍 Parsed JSON:', parsed);
     
     if (!validateServicePost(parsed)) {
+      console.error('❌ ServicePost validation failed for:', parsed);
       throw new Error('Invalid ServicePost data structure');
     }
     
+    console.log('✅ ServicePost validation successful');
     return parsed;
   } catch (error) {
+    console.error('🚨 parseServicePost error:', error);
     if (error instanceof SyntaxError) {
+      console.error('📝 Content that failed to parse:', content);
       throw new Error('Invalid ServicePost JSON format');
     }
     throw error;
@@ -362,6 +409,8 @@ export function getSpecialPriceCount(servicePost: ServicePost): number {
 export function convertPostToService(post: any): Service | null {
   try {
     console.log('Converting post to service:', post);
+    console.log('Post content:', post.content);
+    console.log('Post metadata:', post.metadata);
     
     // metadata.type이 "moving services"인지 확인
     if (post.metadata?.type !== 'moving services') {
@@ -370,11 +419,35 @@ export function convertPostToService(post: any): Service | null {
     }
     
     // Post의 content를 ServicePost로 파싱
-    const serviceData = parseServicePost(post.content);
+    console.log('Attempting to parse service post content...');
+    let serviceData: ServicePost;
+    
+    try {
+      serviceData = parseServicePost(post.content);
+      console.log('Parsed service data:', serviceData);
+    } catch (parseError) {
+      console.error('Failed to parse service content, using fallback:', parseError);
+      
+      // Fallback: 기본 구조로 서비스 데이터 생성
+      serviceData = {
+        company: {
+          name: post.title || '서비스 업체',
+          contact: '연락처 미제공',
+          availableHours: '09:00-18:00',
+          description: post.content || '서비스 설명 없음'
+        },
+        services: [{
+          name: '기본 서비스',
+          price: 0,
+          description: '서비스 정보가 올바르지 않습니다'
+        }]
+      };
+    }
+    
     const category = (post.metadata?.category as ServiceCategory) || '이사';
     
     // ID 처리 - MongoDB _id나 id 필드 사용
-    const serviceId = post._id || post.id || '';
+    const serviceId = post._id || post.id || `service-${Date.now()}-${Math.random()}`;
     
     return {
       // ServicePost 필드들
@@ -382,7 +455,7 @@ export function convertPostToService(post: any): Service | null {
       services: serviceData.services,
       
       // 추가 UI 필드들
-      id: serviceId,
+      id: String(serviceId), // 문자열로 확실히 변환
       title: serviceData.company.name, // BaseListItem 호환성을 위한 title 필드
       name: serviceData.company.name,
       slug: post.slug, // 게시판과 동일한 슬러그 사용
@@ -394,12 +467,16 @@ export function convertPostToService(post: any): Service | null {
         like_count: post.like_count || 0,
         dislike_count: post.dislike_count || 0,
         comment_count: post.comment_count || 0,
-        bookmark_count: post.bookmark_count || 0
+        bookmark_count: post.bookmark_count || 0,
+        // 확장 통계 추가
+        inquiry_count: post.extended_stats?.inquiry_count || 0,
+        review_count: post.extended_stats?.review_count || 0
       },
       serviceStats: {
         views: post.view_count || 0,
-        inquiries: 0, // 실제 문의 데이터가 없으므로 0으로 설정
-        reviews: post.comment_count || 0
+        inquiries: post.extended_stats?.inquiry_count || 0, // 확장 통계 사용
+        reviews: post.extended_stats?.review_count || 0,    // 확장 통계 사용
+        bookmarks: post.bookmark_count || 0  // 북마크 수 추가
       },
       // 실제 반응 데이터 매핑
       likes: post.like_count || 0,

@@ -12,15 +12,19 @@ export default function ExpertTipDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { showError } = useNotification();
+  const { showError, showSuccess } = useNotification();
   const [tip, setTip] = useState<Tip | null>(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [isDisliked, setIsDisliked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [likeCount, setLikeCount] = useState(0);
+  const [dislikeCount, setDislikeCount] = useState(0);
   const [bookmarkCount, setBookmarkCount] = useState(0);
+  const [commentCount, setCommentCount] = useState(0);
 
   // Post를 Tip으로 변환하는 함수
   const convertPostToTip = (post: Post): Tip => {
@@ -53,6 +57,8 @@ export default function ExpertTipDetail() {
       tags: post.metadata?.tags || [],
       views_count: post.stats?.view_count || 0,
       likes_count: post.stats?.like_count || 0,
+      dislikes_count: post.stats?.dislike_count || 0,
+      comments_count: post.stats?.comment_count || 0,
       saves_count: post.stats?.bookmark_count || 0,
       is_new: new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000
     };
@@ -72,10 +78,15 @@ export default function ExpertTipDetail() {
           return;
         }
         
+        // 원본 post 데이터 저장 (권한 체크용)
+        setPost(response.data);
+        
         const convertedTip = convertPostToTip(response.data);
         setTip(convertedTip);
         setLikeCount(convertedTip.likes_count);
+        setDislikeCount(response.data.stats?.dislike_count || 0);
         setBookmarkCount(convertedTip.saves_count);
+        setCommentCount(response.data.stats?.comment_count || 0);
       } else {
         setIsNotFound(true);
         showError('전문가 꿀정보를 찾을 수 없습니다');
@@ -90,22 +101,79 @@ export default function ExpertTipDetail() {
   
 
   const handleLike = async () => {
+    if (!user) {
+      showError('로그인이 필요합니다');
+      return;
+    }
+
+    if (!tip || !slug) return;
+
     try {
-      // TODO: API 호출로 좋아요 처리
-      setIsLiked(!isLiked);
-      setLikeCount(prev => isLiked ? prev - 1 : prev + 1);
+      const response = await apiClient.likePost(slug);
+      
+      if (response.success) {
+        if (response.data) {
+          // 추천/비추천은 서로 배타적으로 업데이트
+          setLikeCount(response.data.like_count || 0);
+          setDislikeCount(response.data.dislike_count || 0);
+          // 저장 기능은 독립적이므로 업데이트하지 않음
+        }
+      } else {
+        showError(response.error || '추천 처리에 실패했습니다');
+      }
     } catch (error) {
-      console.error('좋아요 처리 오류:', error);
+      showError('추천 처리 중 오류가 발생했습니다');
+    }
+  };
+
+  const handleDislike = async () => {
+    if (!user) {
+      showError('로그인이 필요합니다');
+      return;
+    }
+
+    if (!tip || !slug) return;
+
+    try {
+      const response = await apiClient.dislikePost(slug);
+      
+      if (response.success) {
+        if (response.data) {
+          // 추천/비추천은 서로 배타적으로 업데이트
+          setLikeCount(response.data.like_count || 0);
+          setDislikeCount(response.data.dislike_count || 0);
+          // 저장 기능은 독립적이므로 업데이트하지 않음
+        }
+      } else {
+        showError(response.error || '비추천 처리에 실패했습니다');
+      }
+    } catch (error) {
+      showError('비추천 처리 중 오류가 발생했습니다');
     }
   };
 
   const handleBookmark = async () => {
+    if (!user) {
+      showError('로그인이 필요합니다');
+      return;
+    }
+
+    if (!tip || !slug) return;
+
     try {
-      // TODO: API 호출로 북마크 처리
-      setIsBookmarked(!isBookmarked);
-      setBookmarkCount(prev => isBookmarked ? prev - 1 : prev + 1);
+      const response = await apiClient.bookmarkPost(slug);
+      
+      if (response.success) {
+        if (response.data) {
+          // 저장 기능은 추천/비추천과 독립적이므로 북마크 수만 업데이트
+          setBookmarkCount(response.data.bookmark_count || 0);
+          // 추천/비추천 수는 변경하지 않음
+        }
+      } else {
+        showError(response.error || '저장 처리에 실패했습니다');
+      }
     } catch (error) {
-      console.error('북마크 처리 오류:', error);
+      showError('저장 처리 중 오류가 발생했습니다');
     }
   };
 
@@ -147,6 +215,16 @@ export default function ExpertTipDetail() {
         
         console.log('처리된 댓글 데이터:', processedComments);
         setComments(processedComments);
+        
+        // 댓글 수 업데이트 (중첩된 답글 포함 총 개수 계산)
+        const countAllComments = (comments: any[]): number => {
+          return comments.reduce((total, comment) => {
+            return total + 1 + (comment.replies ? countAllComments(comment.replies) : 0);
+          }, 0);
+        };
+        
+        const totalCommentCount = countAllComments(processedComments);
+        setCommentCount(totalCommentCount);
       }
     } catch (error) {
       console.error('댓글 로드 실패:', error);
@@ -165,6 +243,60 @@ export default function ExpertTipDetail() {
 
   const handleCommentAdded = () => {
     loadComments();
+  };
+
+  // 작성자 권한 체크 함수
+  const isAuthor = () => {
+    if (!user || !tip) return false;
+    
+    // User ID로 비교 (문자열 변환)
+    const userId = String(user.id);
+    
+    // tip에서 변환된 데이터는 author_id가 없을 수 있으므로 원본 post 데이터 사용 필요
+    // loadTip에서 받은 response.data의 author_id를 사용
+    if (post && post.author_id) {
+      const authorId = String(post.author_id);
+      if (userId === authorId) {
+        return true;
+      }
+    }
+    
+    // author 객체가 있으면 ID 비교
+    if (post && post.author && String(user.id) === String(post.author.id)) {
+      return true;
+    }
+    
+    // 추가적인 비교: email 또는 user_handle
+    if (post && post.author) {
+      if (user.email && user.email === post.author.email) {
+        return true;
+      }
+      if (user.user_handle && user.user_handle === post.author.user_handle) {
+        return true;
+      }
+    }
+    
+    return false;
+  };
+
+  const handleEditTip = () => {
+    navigate(`/expert-tip/${slug}/edit`);
+  };
+
+  const handleDeleteTip = async () => {
+    if (!confirm('정말로 삭제하시겠습니까?')) return;
+    
+    try {
+      const response = await apiClient.deletePost(slug!);
+      if (response.success) {
+        showSuccess('전문가 꿀정보가 삭제되었습니다');
+        navigate('/tips');
+      } else {
+        showError(response.error || '게시글 삭제에 실패했습니다');
+      }
+    } catch (error) {
+      showError('게시글 삭제 중 오류가 발생했습니다');
+    }
   };
 
   useEffect(() => {
@@ -245,18 +377,21 @@ export default function ExpertTipDetail() {
               onClick={handleLike}
               className="flex items-center gap-1 hover:text-white transition-colors"
             >
-              <span className={`text-lg ${isLiked ? '❤️' : '🤍'}`}>
-                {isLiked ? '❤️' : '🤍'}
-              </span>
+              <span className="text-lg">👍</span>
               <span className="text-sm">추천 {formatNumber(likeCount)}</span>
+            </button>
+            <button
+              onClick={handleDislike}
+              className="flex items-center gap-1 hover:text-white transition-colors"
+            >
+              <span className="text-lg">👎</span>
+              <span className="text-sm">비추천 {formatNumber(dislikeCount)}</span>
             </button>
             <button
               onClick={handleBookmark}
               className="flex items-center gap-1 hover:text-white transition-colors"
             >
-              <span className={`text-lg ${isBookmarked ? '🔖' : '📝'}`}>
-                {isBookmarked ? '🔖' : '📝'}
-              </span>
+              <span className="text-lg">🔖</span>
               <span className="text-sm">저장 {formatNumber(bookmarkCount)}</span>
             </button>
             <button
@@ -268,6 +403,26 @@ export default function ExpertTipDetail() {
             </button>
           </div>
         </div>
+        
+        {/* 수정/삭제 버튼 (작성자만 보이도록) */}
+        {isAuthor() && (
+          <div className="flex items-center justify-center gap-3 mt-4 pt-4 border-t border-white/20">
+            <button
+              onClick={handleEditTip}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 text-white rounded-lg hover:bg-white/30 transition-colors"
+            >
+              <span>✏️</span>
+              <span>수정</span>
+            </button>
+            <button
+              onClick={handleDeleteTip}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500/20 text-white rounded-lg hover:bg-red-500/30 transition-colors"
+            >
+              <span>🗑️</span>
+              <span>삭제</span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 글 내용 */}
@@ -281,6 +436,14 @@ export default function ExpertTipDetail() {
           <div className="text-center">
             <div className="text-3xl font-bold text-green-600 mb-1">{formatNumber(likeCount)}</div>
             <div className="text-sm text-var-muted">추천</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-red-600 mb-1">{formatNumber(dislikeCount)}</div>
+            <div className="text-sm text-var-muted">비추천</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-600 mb-1">{formatNumber(commentCount)}</div>
+            <div className="text-sm text-var-muted">댓글</div>
           </div>
           <div className="text-center">
             <div className="text-3xl font-bold text-green-600 mb-1">{formatNumber(bookmarkCount)}</div>

@@ -62,6 +62,7 @@ class TestPostsServiceOptimized:
                 "like_count": 50,
                 "dislike_count": 5,
                 "comment_count": 10,
+                "bookmark_count": 25,
                 # 🎯 이미 조인된 작성자 정보 (별도 쿼리 불필요)
                 "author": {
                     "_id": "507f1f77bcf86cd799439011",
@@ -85,6 +86,7 @@ class TestPostsServiceOptimized:
                 "like_count": 80,
                 "dislike_count": 3,
                 "comment_count": 15,
+                "bookmark_count": 40,
                 "author": {
                     "_id": "507f1f77bcf86cd799439012",
                     "email": "author2@example.com",
@@ -122,11 +124,13 @@ class TestPostsServiceOptimized:
         assert first_post["stats"]["like_count"] == 50
         assert first_post["stats"]["dislike_count"] == 5
         assert first_post["stats"]["comment_count"] == 10
+        assert first_post["stats"]["bookmark_count"] == 25
         
         # 두 번째 게시글 통계 확인
         second_post = result["items"][1]
         assert second_post["stats"]["view_count"] == 200
         assert second_post["stats"]["like_count"] == 80
+        assert second_post["stats"]["bookmark_count"] == 40
         assert second_post["stats"]["dislike_count"] == 3
         assert second_post["stats"]["comment_count"] == 15
         
@@ -188,20 +192,20 @@ class TestPostsServiceOptimized:
         mock_post_repository.list_posts_optimized.return_value = (sample_posts_with_stats, 2)
         
         # When: list_posts 호출
-        with patch.object(posts_service, '_calculate_post_stats') as mock_calc_stats:
-            result = await posts_service.list_posts(
-                metadata_type="property-info", 
-                page=1,
-                page_size=10
-            )
+        result = await posts_service.list_posts(
+            metadata_type="property-info", 
+            page=1,
+            page_size=10
+        )
         
-        # Then: _calculate_post_stats 함수가 호출되지 않음
-        mock_calc_stats.assert_not_called()
-        
-        # 결과 검증
+        # Then: 결과 검증 - _calculate_post_stats 함수가 제거되었으므로 직접 데이터 검증
         assert len(result["items"]) == 2
         assert result["items"][0]["stats"]["view_count"] == 100
         assert result["items"][1]["stats"]["view_count"] == 200
+        
+        # 북마크 수가 포함되어야 함
+        assert "bookmark_count" in result["items"][0]["stats"]
+        assert "bookmark_count" in result["items"][1]["stats"]
     
     @pytest.mark.asyncio
     async def test_list_posts_response_structure(self, posts_service, mock_post_repository, sample_posts_with_stats):

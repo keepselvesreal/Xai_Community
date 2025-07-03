@@ -167,12 +167,65 @@ export default function MyPage() {
         case 'info':
           return comment.route_path.startsWith('/property-info/') && !comment.subtype;
         case 'services':
-          return comment.route_path.startsWith('/moving-services-post/') && !comment.subtype;
+          return (comment.route_path.startsWith('/moving-services-post/') || 
+                  comment.route_path.startsWith('/services/')) && !comment.subtype;
         case 'tips':
-          return comment.route_path.startsWith('/expert-tips/') && !comment.subtype;
+          return (comment.route_path.startsWith('/expert-tips/') || 
+                  comment.route_path.startsWith('/expert-tip/') ||
+                  comment.route_path.startsWith('/tips/')) && !comment.subtype;
         default:
           return false;
       }
+    });
+  };
+
+  // 반응을 페이지 타입별로 분류하는 헬퍼 함수
+  const getReactionsByPageType = (reactions: ActivityItem[], pageType: string): ActivityItem[] => {
+    if (!reactions || !userActivity) return [];
+    
+    // 모든 페이지의 게시물 ID들을 수집
+    const allPosts = [
+      ...(userActivity.posts.board || []),
+      ...(userActivity.posts.info || []),
+      ...(userActivity.posts.services || []),
+      ...(userActivity.posts.tips || [])
+    ];
+    
+    // 해당 페이지 타입의 게시물 ID들만 추출
+    const pageTypePosts = userActivity.posts[pageType] || [];
+    const pageTypePostIds = new Set(pageTypePosts.map(post => post.id));
+    
+    // 반응 분류
+    return reactions.filter(reaction => {
+      if (!reaction.target_id) return false;
+      
+      if (reaction.target_type === 'post') {
+        // 게시글에 대한 반응: target_id가 해당 페이지 타입의 게시글 ID와 일치하는지 확인
+        return pageTypePostIds.has(reaction.target_id);
+      } else if (reaction.target_type === 'comment') {
+        // 댓글에 대한 반응: 댓글이 속한 게시글을 찾아야 함
+        // 일단 route_path로 대략적으로 판단 (임시)
+        if (reaction.route_path) {
+          switch (pageType) {
+            case 'board':
+              return reaction.route_path.startsWith('/board-post/');
+            case 'info':
+              return reaction.route_path.startsWith('/property-info/');
+            case 'services':
+              return reaction.route_path.startsWith('/moving-services-post/') || 
+                     reaction.route_path.startsWith('/services/');
+            case 'tips':
+              return reaction.route_path.startsWith('/expert-tips/') || 
+                     reaction.route_path.startsWith('/expert-tip/') ||
+                     reaction.route_path.startsWith('/tips/');
+            default:
+              return false;
+          }
+        }
+        return false;
+      }
+      
+      return false;
     });
   };
 
@@ -187,6 +240,8 @@ export default function MyPage() {
 
     try {
       const activity = await apiClient.getUserActivity(1, 10); // 페이지네이션 파라미터 추가
+      
+      
       setUserActivity(activity);
       // 새로운 API 구조에서는 pagination 정보에서 총 개수만 사용
       if (activity.pagination) {
@@ -644,59 +699,182 @@ export default function MyPage() {
 
               {!isLoading && !error && activityTab === 'reaction' && (
                 <>
-                  {/* 추천 반응 */}
-                  {userActivity?.reactions.likes?.length > 0 && (
+                  {/* 게시판 반응 */}
+                  {userActivity && (
+                    getReactionsByPageType(userActivity.reactions.likes || [], 'board').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.dislikes || [], 'board').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.bookmarks || [], 'board').length > 0
+                  ) && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                        👍 추천
+                        📝 게시판
                       </h4>
                       <div className="space-y-2">
-                        <ActivityItem 
-                          type="likes" 
-                          icon="👍" 
-                          name="추천" 
-                          items={userActivity.reactions.likes}
-                          onToggle={toggleActivityDetail}
-                          isExpanded={expandedActivities.has('likes')}
-                        />
+                        {getReactionsByPageType(userActivity?.reactions.likes || [], 'board').length > 0 && (
+                          <ActivityItem 
+                            type="board-likes" 
+                            icon="👍" 
+                            name="추천" 
+                            items={getReactionsByPageType(userActivity.reactions.likes, 'board')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('board-likes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.dislikes || [], 'board').length > 0 && (
+                          <ActivityItem 
+                            type="board-dislikes" 
+                            icon="👎" 
+                            name="비추천" 
+                            items={getReactionsByPageType(userActivity.reactions.dislikes, 'board')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('board-dislikes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.bookmarks || [], 'board').length > 0 && (
+                          <ActivityItem 
+                            type="board-bookmarks" 
+                            icon="📌" 
+                            name="저장" 
+                            items={getReactionsByPageType(userActivity.reactions.bookmarks, 'board')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('board-bookmarks')}
+                          />
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* 비추천 반응 */}
-                  {userActivity?.reactions.dislikes?.length > 0 && (
+                  {/* 정보 반응 */}
+                  {userActivity && (
+                    getReactionsByPageType(userActivity.reactions.likes || [], 'info').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.dislikes || [], 'info').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.bookmarks || [], 'info').length > 0
+                  ) && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                        👎 비추천
+                        📋 정보
                       </h4>
                       <div className="space-y-2">
-                        <ActivityItem 
-                          type="dislikes" 
-                          icon="👎" 
-                          name="비추천" 
-                          items={userActivity.reactions.dislikes}
-                          onToggle={toggleActivityDetail}
-                          isExpanded={expandedActivities.has('dislikes')}
-                        />
+                        {getReactionsByPageType(userActivity?.reactions.likes || [], 'info').length > 0 && (
+                          <ActivityItem 
+                            type="info-likes" 
+                            icon="👍" 
+                            name="추천" 
+                            items={getReactionsByPageType(userActivity.reactions.likes, 'info')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('info-likes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.dislikes || [], 'info').length > 0 && (
+                          <ActivityItem 
+                            type="info-dislikes" 
+                            icon="👎" 
+                            name="비추천" 
+                            items={getReactionsByPageType(userActivity.reactions.dislikes, 'info')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('info-dislikes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.bookmarks || [], 'info').length > 0 && (
+                          <ActivityItem 
+                            type="info-bookmarks" 
+                            icon="📌" 
+                            name="저장" 
+                            items={getReactionsByPageType(userActivity.reactions.bookmarks, 'info')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('info-bookmarks')}
+                          />
+                        )}
                       </div>
                     </div>
                   )}
 
-                  {/* 저장 반응 */}
-                  {userActivity?.reactions.bookmarks?.length > 0 && (
+                  {/* 입주 업체 서비스 반응 */}
+                  {userActivity && (
+                    getReactionsByPageType(userActivity.reactions.likes || [], 'services').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.dislikes || [], 'services').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.bookmarks || [], 'services').length > 0
+                  ) && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
-                        📌 저장
+                        🏢 입주 업체 서비스
                       </h4>
                       <div className="space-y-2">
-                        <ActivityItem 
-                          type="bookmarks" 
-                          icon="📌" 
-                          name="저장" 
-                          items={userActivity.reactions.bookmarks}
-                          onToggle={toggleActivityDetail}
-                          isExpanded={expandedActivities.has('bookmarks')}
-                        />
+                        {getReactionsByPageType(userActivity?.reactions.likes || [], 'services').length > 0 && (
+                          <ActivityItem 
+                            type="services-likes" 
+                            icon="👍" 
+                            name="추천" 
+                            items={getReactionsByPageType(userActivity.reactions.likes, 'services')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('services-likes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.dislikes || [], 'services').length > 0 && (
+                          <ActivityItem 
+                            type="services-dislikes" 
+                            icon="👎" 
+                            name="비추천" 
+                            items={getReactionsByPageType(userActivity.reactions.dislikes, 'services')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('services-dislikes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.bookmarks || [], 'services').length > 0 && (
+                          <ActivityItem 
+                            type="services-bookmarks" 
+                            icon="📌" 
+                            name="저장" 
+                            items={getReactionsByPageType(userActivity.reactions.bookmarks, 'services')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('services-bookmarks')}
+                          />
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 전문가 꿀정보 반응 */}
+                  {userActivity && (
+                    getReactionsByPageType(userActivity.reactions.likes || [], 'tips').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.dislikes || [], 'tips').length > 0 ||
+                    getReactionsByPageType(userActivity.reactions.bookmarks || [], 'tips').length > 0
+                  ) && (
+                    <div>
+                      <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
+                        💡 전문가 꿀정보
+                      </h4>
+                      <div className="space-y-2">
+                        {getReactionsByPageType(userActivity?.reactions.likes || [], 'tips').length > 0 && (
+                          <ActivityItem 
+                            type="tips-likes" 
+                            icon="👍" 
+                            name="추천" 
+                            items={getReactionsByPageType(userActivity.reactions.likes, 'tips')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('tips-likes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.dislikes || [], 'tips').length > 0 && (
+                          <ActivityItem 
+                            type="tips-dislikes" 
+                            icon="👎" 
+                            name="비추천" 
+                            items={getReactionsByPageType(userActivity.reactions.dislikes, 'tips')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('tips-dislikes')}
+                          />
+                        )}
+                        {getReactionsByPageType(userActivity?.reactions.bookmarks || [], 'tips').length > 0 && (
+                          <ActivityItem 
+                            type="tips-bookmarks" 
+                            icon="📌" 
+                            name="저장" 
+                            items={getReactionsByPageType(userActivity.reactions.bookmarks, 'tips')}
+                            onToggle={toggleActivityDetail}
+                            isExpanded={expandedActivities.has('tips-bookmarks')}
+                          />
+                        )}
                       </div>
                     </div>
                   )}

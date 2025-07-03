@@ -31,6 +31,7 @@ async def health_check():
 async def search_posts(
     q: str = Query(..., description="Search query"),
     service_type: Optional[str] = Query(None, description="Filter by service type"),
+    metadata_type: Optional[str] = Query(None, description="Filter by metadata type"),
     sort_by: str = Query("created_at", description="Sort field"),
     page: int = Query(1, ge=1, description="Page number"),
     page_size: int = Query(20, ge=1, le=100, description="Items per page"),
@@ -42,6 +43,7 @@ async def search_posts(
         result = await posts_service.search_posts(
             query=q,
             service_type=service_type,
+            metadata_type=metadata_type,
             sort_by=sort_by,
             page=page,
             page_size=page_size,
@@ -122,13 +124,26 @@ async def get_post(
     """Get post by slug or ID."""
     try:
         post = await posts_service.get_post(slug_or_id, current_user)
+        print(f"🔍 백엔드 게시글 조회 - slug: {slug_or_id}")
+        if post.metadata:
+            print(f"📝 메타데이터: {post.metadata.model_dump()}")
+            if hasattr(post.metadata, 'tags') and post.metadata.tags:
+                print(f"🏷️ 조회된 태그: {post.metadata.tags}")
+        else:
+            print("📝 메타데이터 없음")
+        
+        # 🔍 서비스 포스트인 경우 확장 통계 포함
+        if post.metadata and post.metadata.type == "moving services":
+            print("📊 서비스 포스트 - 확장 통계 포함")
+            return await posts_service.get_service_post_with_extended_stats(slug_or_id, current_user)
         
         # ✅ Use denormalized stats from Post model (no real-time calculation)
         real_stats = {
             "view_count": post.view_count,
             "like_count": post.like_count,
             "dislike_count": post.dislike_count,
-            "comment_count": post.comment_count
+            "comment_count": post.comment_count,
+            "bookmark_count": post.bookmark_count
         }
         
         # Get user reaction if authenticated
@@ -188,7 +203,7 @@ async def get_post(
             "like_count": real_stats["like_count"],
             "dislike_count": real_stats["dislike_count"],
             "comment_count": real_stats["comment_count"],
-            "bookmark_count": getattr(post, 'bookmark_count', 0)
+            "bookmark_count": post.bookmark_count
         }
         
         if user_reaction:
@@ -215,6 +230,11 @@ async def create_post(
 ):
     """Create a new post."""
     try:
+        print(f"🚀 백엔드 게시글 생성 요청 - 받은 데이터: {post_data.model_dump()}")
+        if post_data.metadata:
+            print(f"📝 메타데이터: {post_data.metadata.model_dump()}")
+            if hasattr(post_data.metadata, 'tags') and post_data.metadata.tags:
+                print(f"🏷️ 태그: {post_data.metadata.tags}")
         post = await posts_service.create_post(post_data, current_user)
         # Convert Post document to PostResponse with proper field mapping
         return PostResponse(
@@ -246,6 +266,11 @@ async def update_post(
 ):
     """Update post by slug."""
     try:
+        print(f"🚀 백엔드 게시글 수정 요청 - 받은 데이터: {update_data.model_dump()}")
+        if update_data.metadata:
+            print(f"📝 메타데이터: {update_data.metadata.model_dump()}")
+            if hasattr(update_data.metadata, 'tags') and update_data.metadata.tags:
+                print(f"🏷️ 태그: {update_data.metadata.tags}")
         post = await posts_service.update_post(slug, update_data, current_user)
         # Convert Post document to PostResponse with proper field mapping
         return PostResponse(
@@ -402,7 +427,7 @@ async def get_post_stats(
             "like_count": post.like_count,
             "dislike_count": post.dislike_count,
             "comment_count": post.comment_count,
-            "bookmark_count": getattr(post, 'bookmark_count', 0)  # 북마크 수는 별도 계산 필요 시
+            "bookmark_count": post.bookmark_count
         }
         
         # Add user reaction if authenticated
