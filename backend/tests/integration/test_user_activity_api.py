@@ -67,7 +67,9 @@ def sample_activity_data():
                     "title": "게시판 게시글",
                     "slug": "board-post-slug",
                     "created_at": "2024-01-01T10:00:00Z",
+                    "view_count": 10,
                     "like_count": 5,
+                    "dislike_count": 0,
                     "comment_count": 3,
                     "route_path": "/board-post/board-post-slug"
                 }
@@ -78,7 +80,9 @@ def sample_activity_data():
                     "title": "입주 정보 게시글",
                     "slug": "info-post-slug",
                     "created_at": "2024-01-01T11:00:00Z",
+                    "view_count": 8,
                     "like_count": 2,
+                    "dislike_count": 0,
                     "comment_count": 1,
                     "route_path": "/property-info/info-post-slug"
                 }
@@ -89,7 +93,9 @@ def sample_activity_data():
                     "title": "이사 서비스 게시글",
                     "slug": "services-post-slug",
                     "created_at": "2024-01-01T12:00:00Z",
+                    "view_count": 6,
                     "like_count": 1,
+                    "dislike_count": 0,
                     "comment_count": 2,
                     "route_path": "/moving-services-post/services-post-slug"
                 }
@@ -100,7 +106,9 @@ def sample_activity_data():
                     "title": "전문가 꿀팁",
                     "slug": "tips-post-slug",
                     "created_at": "2024-01-01T13:00:00Z",
+                    "view_count": 15,
                     "like_count": 8,
+                    "dislike_count": 1,
                     "comment_count": 5,
                     "route_path": "/expert-tips/tips-post-slug"
                 }
@@ -180,12 +188,24 @@ class TestUserActivityAPI:
     ):
         """Test successful retrieval of user activity."""
         # Arrange
-        mock_user_activity_service.get_user_activity_summary.return_value = sample_activity_data
+        # 새로운 API 구조에 맞게 pagination 정보 추가
+        updated_sample_data = {
+            **sample_activity_data,
+            "pagination": {
+                "posts": {"total_count": 4, "page": 1, "limit": 10, "has_more": False},
+                "comments": {"total_count": 3, "page": 1, "limit": 10, "has_more": False},
+                "reactions": {"total_count": 3, "page": 1, "limit": 10, "has_more": False}
+            }
+        }
+        mock_user_activity_service.get_user_activity_summary.return_value = updated_sample_data
         
         # Act
         response = client.get("/users/me/activity")
         
         # Assert
+        if response.status_code != 200:
+            print(f"Response status: {response.status_code}")
+            print(f"Response text: {response.text}")
         assert response.status_code == 200
         data = response.json()
         
@@ -193,7 +213,7 @@ class TestUserActivityAPI:
         assert "posts" in data
         assert "comments" in data
         assert "reactions" in data
-        assert "summary" in data
+        assert "pagination" in data
         
         # Verify post data grouped by page type
         assert "board" in data["posts"]
@@ -254,14 +274,15 @@ class TestUserActivityAPI:
         assert bookmark["route_path"] == "/property-info/info-post-slug"
         assert bookmark["target_title"] == "입주 정보 게시글"
         
-        # Verify summary data
-        assert data["summary"]["total_posts"] == 4
-        assert data["summary"]["total_comments"] == 3
-        assert data["summary"]["total_reactions"] == 3
-        assert data["summary"]["most_active_page_type"] == "board"
+        # Verify pagination data
+        assert data["pagination"]["posts"]["total_count"] == 4
+        assert data["pagination"]["comments"]["total_count"] == 3
+        assert data["pagination"]["reactions"]["total_count"] == 3
         
-        # Verify service was called with correct user ID
-        mock_user_activity_service.get_user_activity_summary.assert_called_once_with("507f1f77bcf86cd799439011")
+        # Verify service was called with correct user ID and pagination parameters
+        mock_user_activity_service.get_user_activity_summary.assert_called_once_with(
+            user_id="507f1f77bcf86cd799439011", page=1, limit=10
+        )
 
     def test_get_user_activity_empty_data(
         self, client, mock_user_activity_service
@@ -272,11 +293,10 @@ class TestUserActivityAPI:
             "posts": {"board": [], "info": [], "services": [], "tips": []},
             "comments": [],
             "reactions": {"likes": [], "bookmarks": [], "dislikes": []},
-            "summary": {
-                "total_posts": 0,
-                "total_comments": 0,
-                "total_reactions": 0,
-                "most_active_page_type": None
+            "pagination": {
+                "posts": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
+                "comments": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
+                "reactions": {"total_count": 0, "page": 1, "limit": 10, "has_more": False}
             }
         }
         mock_user_activity_service.get_user_activity_summary.return_value = empty_data
@@ -296,9 +316,9 @@ class TestUserActivityAPI:
         assert data["reactions"]["likes"] == []
         assert data["reactions"]["bookmarks"] == []
         assert data["reactions"]["dislikes"] == []
-        assert data["summary"]["total_posts"] == 0
-        assert data["summary"]["total_comments"] == 0
-        assert data["summary"]["total_reactions"] == 0
+        assert data["pagination"]["posts"]["total_count"] == 0
+        assert data["pagination"]["comments"]["total_count"] == 0
+        assert data["pagination"]["reactions"]["total_count"] == 0
 
     def test_get_user_activity_unauthorized(self, mock_user_activity_service):
         """Test user activity endpoint without authentication."""
@@ -333,7 +353,16 @@ class TestUserActivityAPI:
     ):
         """Test that response matches expected format for frontend consumption."""
         # Arrange
-        mock_user_activity_service.get_user_activity_summary.return_value = sample_activity_data
+        # 새로운 API 구조에 맞게 pagination 정보 추가
+        updated_sample_data = {
+            **sample_activity_data,
+            "pagination": {
+                "posts": {"total_count": 4, "page": 1, "limit": 10, "has_more": False},
+                "comments": {"total_count": 3, "page": 1, "limit": 10, "has_more": False},
+                "reactions": {"total_count": 3, "page": 1, "limit": 10, "has_more": False}
+            }
+        }
+        mock_user_activity_service.get_user_activity_summary.return_value = updated_sample_data
         
         # Act
         response = client.get("/users/me/activity")
@@ -370,19 +399,151 @@ class TestUserActivityAPI:
                 assert "created_at" in reaction
                 assert "target_title" in reaction
 
-    def test_get_user_activity_pagination_support(
-        self, client, mock_user_activity_service, sample_activity_data
+    def test_get_user_activity_with_pagination_params(
+        self, client, mock_user_activity_service
     ):
         """Test user activity endpoint with pagination parameters."""
-        # Arrange
-        mock_user_activity_service.get_user_activity_summary.return_value = sample_activity_data
+        # Arrange - 페이지네이션 적용된 데이터
+        paginated_data = {
+            "posts": {
+                "board": [
+                    {
+                        "id": "507f1f77bcf86cd799439012",
+                        "title": "게시판 게시글",
+                        "slug": "board-post-slug",
+                        "created_at": "2024-01-01T10:00:00Z",
+                        "view_count": 10,
+                        "like_count": 5,
+                        "dislike_count": 0,
+                        "comment_count": 3,
+                        "route_path": "/board-post/board-post-slug"
+                    }
+                ],
+                "info": [],
+                "services": [],
+                "tips": []
+            },
+            "comments": [
+                {
+                    "id": "507f1f77bcf86cd799439020",
+                    "content": "일반 댓글입니다",
+                    "parent_id": "507f1f77bcf86cd799439012",
+                    "created_at": "2024-01-01T14:00:00Z",
+                    "route_path": "/board-post/board-post-slug",
+                    "subtype": None,
+                    "post_title": "게시판 게시글"
+                }
+            ],
+            "reactions": {
+                "likes": [
+                    {
+                        "id": "507f1f77bcf86cd799439030",
+                        "target_type": "post",
+                        "target_id": "507f1f77bcf86cd799439012",
+                        "created_at": "2024-01-01T17:00:00Z",
+                        "route_path": "/board-post/board-post-slug",
+                        "target_title": "게시판 게시글",
+                        "title": "게시판 게시글"
+                    }
+                ],
+                "bookmarks": [],
+                "dislikes": []
+            },
+            "pagination": {
+                "posts": {
+                    "total_count": 15,
+                    "page": 1,
+                    "limit": 10,
+                    "has_more": True
+                },
+                "comments": {
+                    "total_count": 8,
+                    "page": 1, 
+                    "limit": 10,
+                    "has_more": False
+                },
+                "reactions": {
+                    "total_count": 5,
+                    "page": 1,
+                    "limit": 10,
+                    "has_more": False
+                }
+            }
+        }
+        mock_user_activity_service.get_user_activity_summary.return_value = paginated_data
         
         # Act
-        response = client.get("/users/me/activity?page=1&page_size=10")
+        response = client.get("/users/me/activity?page=1&limit=10")
         
         # Assert
         assert response.status_code == 200
+        data = response.json()
         
-        # Verify service was called with pagination parameters if supported
-        # Note: The current implementation might not support pagination yet
-        # This test ensures the endpoint accepts pagination parameters without error
+        # 페이지네이션 정보 확인
+        assert "pagination" in data
+        assert data["pagination"]["posts"]["total_count"] == 15
+        assert data["pagination"]["posts"]["page"] == 1
+        assert data["pagination"]["posts"]["limit"] == 10
+        assert data["pagination"]["posts"]["has_more"] == True
+        
+        # 서비스가 페이지네이션 파라미터와 함께 호출되었는지 확인
+        mock_user_activity_service.get_user_activity_summary.assert_called_once()
+
+    def test_get_user_activity_pagination_defaults(
+        self, client, mock_user_activity_service
+    ):
+        """Test user activity endpoint with default pagination."""
+        # Arrange
+        default_paginated_data = {
+            "posts": {"board": [], "info": [], "services": [], "tips": []},
+            "comments": [],
+            "reactions": {"likes": [], "bookmarks": [], "dislikes": []},
+            "pagination": {
+                "posts": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
+                "comments": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
+                "reactions": {"total_count": 0, "page": 1, "limit": 10, "has_more": False}
+            }
+        }
+        mock_user_activity_service.get_user_activity_summary.return_value = default_paginated_data
+        
+        # Act - 페이지네이션 파라미터 없이 호출
+        response = client.get("/users/me/activity")
+        
+        # Assert
+        assert response.status_code == 200
+        data = response.json()
+        
+        # 기본 페이지네이션 값 확인
+        assert data["pagination"]["posts"]["page"] == 1
+        assert data["pagination"]["posts"]["limit"] == 10
+        
+    def test_get_user_activity_pagination_invalid_params(
+        self, client, mock_user_activity_service
+    ):
+        """Test user activity endpoint with invalid pagination parameters."""
+        # Arrange
+        mock_user_activity_service.get_user_activity_summary.return_value = {
+            "posts": {"board": [], "info": [], "services": [], "tips": []},
+            "comments": [],
+            "reactions": {"likes": [], "bookmarks": [], "dislikes": []},
+            "pagination": {
+                "posts": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
+                "comments": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
+                "reactions": {"total_count": 0, "page": 1, "limit": 10, "has_more": False}
+            }
+        }
+        
+        # Act - 유효하지 않은 파라미터들
+        invalid_params = [
+            "?page=0&limit=10",  # page는 1부터 시작
+            "?page=1&limit=0",   # limit은 1 이상
+            "?page=-1&limit=10", # 음수 page
+            "?page=1&limit=-1",  # 음수 limit
+            "?page=abc&limit=10", # 문자열 page
+            "?page=1&limit=xyz"   # 문자열 limit
+        ]
+        
+        for params in invalid_params:
+            response = client.get(f"/users/me/activity{params}")
+            # 유효하지 않은 파라미터는 기본값으로 처리되거나 400 에러 반환
+            assert response.status_code in [200, 400, 422]

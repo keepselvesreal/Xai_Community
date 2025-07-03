@@ -400,3 +400,89 @@ class TestUserActivityService:
         # Act & Assert
         with pytest.raises(Exception, match="Database error"):
             await user_activity_service._get_user_posts_by_page_type(sample_user.id)
+
+    async def test_get_user_activity_summary_with_pagination(
+        self, user_activity_service, mock_post_repository, mock_comment_repository, 
+        mock_user_reaction_repository, sample_user, sample_posts, sample_comments, sample_reactions
+    ):
+        """Test user activity summary with pagination parameters."""
+        # Arrange
+        mock_post_repository.find_by_author_paginated.return_value = sample_posts[:2]  # 2개만 반환
+        mock_post_repository.count_by_author.return_value = 4  # 총 4개
+        mock_comment_repository.find_by_author_paginated.return_value = sample_comments[:1]  # 1개만 반환
+        mock_comment_repository.count_by_author.return_value = 3  # 총 3개
+        mock_user_reaction_repository.find_by_user_paginated.return_value = sample_reactions[:2]  # 2개만 반환
+        mock_user_reaction_repository.count_by_user.return_value = 3  # 총 3개
+        
+        # Act
+        result = await user_activity_service.get_user_activity_summary_paginated(
+            user_id=sample_user.id,
+            page=1,
+            limit=10
+        )
+        
+        # Assert
+        assert result is not None
+        assert "posts" in result
+        assert "comments" in result  
+        assert "reactions" in result
+        assert "pagination" in result
+        
+        # 페이지네이션 정보 확인
+        assert result["pagination"]["posts"]["total_count"] == 4
+        assert result["pagination"]["posts"]["page"] == 1
+        assert result["pagination"]["posts"]["limit"] == 10
+        assert result["pagination"]["posts"]["has_more"] == False  # 4개 중 10개 요청이므로 더이상 없음
+        
+        assert result["pagination"]["comments"]["total_count"] == 3
+        assert result["pagination"]["comments"]["page"] == 1
+        assert result["pagination"]["comments"]["limit"] == 10
+        assert result["pagination"]["comments"]["has_more"] == False
+        
+        assert result["pagination"]["reactions"]["total_count"] == 3
+        assert result["pagination"]["reactions"]["page"] == 1
+        assert result["pagination"]["reactions"]["limit"] == 10
+        assert result["pagination"]["reactions"]["has_more"] == False
+        
+        # Repository 메서드가 올바른 파라미터로 호출되었는지 확인
+        mock_post_repository.find_by_author_paginated.assert_called_once_with(sample_user.id, 10, 0)
+        mock_post_repository.count_by_author.assert_called_once_with(sample_user.id)
+        mock_comment_repository.find_by_author_paginated.assert_called_once_with(sample_user.id, 10, 0)
+        mock_comment_repository.count_by_author.assert_called_once_with(sample_user.id)
+        mock_user_reaction_repository.find_by_user_paginated.assert_called_once_with(sample_user.id, 10, 0)
+        mock_user_reaction_repository.count_by_user.assert_called_once_with(sample_user.id)
+
+    async def test_pagination_has_more_calculation(
+        self, user_activity_service, mock_post_repository, mock_comment_repository, 
+        mock_user_reaction_repository, sample_user
+    ):
+        """Test has_more calculation for pagination."""
+        # Arrange - 많은 데이터가 있는 상황
+        mock_post_repository.find_by_author_paginated.return_value = []
+        mock_post_repository.count_by_author.return_value = 25  # 총 25개
+        mock_comment_repository.find_by_author_paginated.return_value = []
+        mock_comment_repository.count_by_author.return_value = 15  # 총 15개
+        mock_user_reaction_repository.find_by_user_paginated.return_value = []
+        mock_user_reaction_repository.count_by_user.return_value = 8   # 총 8개
+        
+        # Act - page=2, limit=10으로 요청
+        result = await user_activity_service.get_user_activity_summary_paginated(
+            user_id=sample_user.id,
+            page=2,
+            limit=10
+        )
+        
+        # Assert
+        # Posts: 25개 총, 2페이지(11-20), 더 있음
+        assert result["pagination"]["posts"]["has_more"] == True  # 25 > 20이므로 더 있음
+        
+        # Comments: 15개 총, 2페이지(11-15), 더 없음  
+        assert result["pagination"]["comments"]["has_more"] == False  # 15 <= 20이므로 더 없음
+        
+        # Reactions: 8개 총, 2페이지 요청했지만 이미 1페이지에서 모두 끝남
+        assert result["pagination"]["reactions"]["has_more"] == False  # 8 <= 20이므로 더 없음
+        
+        # Repository가 올바른 skip 값으로 호출되었는지 확인
+        mock_post_repository.find_by_author_paginated.assert_called_once_with(sample_user.id, 10, 10)
+        mock_comment_repository.find_by_author_paginated.assert_called_once_with(sample_user.id, 10, 10)
+        mock_user_reaction_repository.find_by_user_paginated.assert_called_once_with(sample_user.id, 10, 10)

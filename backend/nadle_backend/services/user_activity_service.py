@@ -71,47 +71,74 @@ class UserActivityService:
         """Normalize post type to match expected page types."""
         return normalize_post_type(post_type)
     
-    async def get_user_activity_summary(self, user_id: str) -> Dict[str, Any]:
-        """Get comprehensive user activity summary.
+    async def get_user_activity_summary(self, user_id: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
+        """Get comprehensive user activity summary with pagination.
         
         Args:
             user_id: User ID
+            page: Page number (default: 1)
+            limit: Items per page (default: 10)
             
         Returns:
-            Dictionary containing user's activity data grouped by type
+            Dictionary containing user's activity data grouped by type with pagination info
         """
-        # Get all user activity data in parallel
-        posts_by_type = await self._get_user_posts_by_page_type(user_id)
-        comments_with_subtype = await self._get_user_comments_with_subtype(user_id)
-        reactions_grouped = await self._get_user_reactions_grouped(user_id)
+        # Calculate skip value for pagination
+        skip = (page - 1) * limit
         
-        # Calculate summary statistics
-        total_posts = sum(len(posts) for posts in posts_by_type.values())
-        total_comments = len(comments_with_subtype)
-        total_reactions = sum(len(reactions) for reactions in reactions_grouped.values())
+        # Get paginated user activity data and counts in parallel
+        posts_by_type = await self._get_user_posts_by_page_type_paginated(user_id, limit, skip)
+        comments_with_subtype = await self._get_user_comments_with_subtype_paginated(user_id, limit, skip)
+        reactions_grouped = await self._get_user_reactions_grouped_paginated(user_id, limit, skip)
         
-        # Find most active page type
-        most_active_page_type = None
-        if posts_by_type:
-            most_active_page_type = max(
-                posts_by_type.keys(), 
-                key=lambda k: len(posts_by_type[k])
-            ) if any(posts_by_type.values()) else None
+        # Get total counts for pagination
+        total_posts_count = await self.post_repository.count_by_author(user_id)
+        total_comments_count = await self.comment_repository.count_by_author(user_id)
+        total_reactions_count = await self.user_reaction_repository.count_by_user(user_id)
+        
+        # Calculate pagination info
+        pagination_info = {
+            "posts": {
+                "total_count": total_posts_count,
+                "page": page,
+                "limit": limit,
+                "has_more": skip + limit < total_posts_count
+            },
+            "comments": {
+                "total_count": total_comments_count,
+                "page": page,
+                "limit": limit,
+                "has_more": skip + limit < total_comments_count
+            },
+            "reactions": {
+                "total_count": total_reactions_count,
+                "page": page,
+                "limit": limit,
+                "has_more": skip + limit < total_reactions_count
+            }
+        }
         
         return {
             "posts": posts_by_type,
             "comments": comments_with_subtype,
             "reactions": reactions_grouped,
-            "summary": {
-                "total_posts": total_posts,
-                "total_comments": total_comments,
-                "total_reactions": total_reactions,
-                "most_active_page_type": most_active_page_type
-            }
+            "pagination": pagination_info
         }
     
+    async def get_user_activity_summary_paginated(self, user_id: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
+        """Get comprehensive user activity summary with pagination (alias for backward compatibility).
+        
+        Args:
+            user_id: User ID
+            page: Page number (default: 1)
+            limit: Items per page (default: 10)
+            
+        Returns:
+            Dictionary containing user's activity data grouped by type with pagination info
+        """
+        return await self.get_user_activity_summary(user_id, page, limit)
+    
     async def _get_user_posts_by_page_type(self, user_id: str) -> Dict[str, List[Dict[str, Any]]]:
-        """Get user posts grouped by page type.
+        """Get user posts grouped by page type (backward compatibility - uses pagination with high limit).
         
         Args:
             user_id: User ID
@@ -119,8 +146,21 @@ class UserActivityService:
         Returns:
             Dictionary with page types as keys and post lists as values
         """
-        # Get all user posts
-        posts = await self.post_repository.find_by_author(user_id)
+        return await self._get_user_posts_by_page_type_paginated(user_id, limit=1000, skip=0)
+    
+    async def _get_user_posts_by_page_type_paginated(self, user_id: str, limit: int = 10, skip: int = 0) -> Dict[str, List[Dict[str, Any]]]:
+        """Get user posts grouped by page type with pagination.
+        
+        Args:
+            user_id: User ID
+            limit: Maximum number of posts to return
+            skip: Number of posts to skip
+            
+        Returns:
+            Dictionary with page types as keys and post lists as values
+        """
+        # Get paginated user posts
+        posts = await self.post_repository.find_by_author_paginated(user_id, limit, skip)
         
         # Initialize result with all page types
         result = {
@@ -145,18 +185,16 @@ class UserActivityService:
             # Generate route path using original type for routing
             route_path = self._generate_route_path(original_type or "board", post.slug)
             
-            # Calculate real-time stats (same as PostsService)
-            real_stats = await self._calculate_post_stats(str(post.id))
-            
+            # Use model fields directly instead of real-time calculation
             post_data = {
                 "id": str(post.id),
                 "title": post.title,
                 "slug": post.slug,
                 "created_at": post.created_at.isoformat(),
-                "view_count": real_stats["view_count"],
-                "like_count": real_stats["like_count"],
-                "dislike_count": real_stats["dislike_count"],
-                "comment_count": real_stats["comment_count"],
+                "view_count": post.view_count,      # Direct from model
+                "like_count": post.like_count,      # Direct from model
+                "dislike_count": post.dislike_count, # Direct from model
+                "comment_count": post.comment_count, # Direct from model
                 "route_path": route_path
             }
             
@@ -166,7 +204,7 @@ class UserActivityService:
         return result
     
     async def _get_user_comments_with_subtype(self, user_id: str) -> List[Dict[str, Any]]:
-        """Get user comments with subtype information.
+        """Get user comments with subtype information (backward compatibility - uses pagination with high limit).
         
         Args:
             user_id: User ID
@@ -174,8 +212,21 @@ class UserActivityService:
         Returns:
             List of comment data with subtype and routing information
         """
-        # Get all user comments
-        comments = await self.comment_repository.find_by_author(user_id)
+        return await self._get_user_comments_with_subtype_paginated(user_id, limit=1000, skip=0)
+    
+    async def _get_user_comments_with_subtype_paginated(self, user_id: str, limit: int = 10, skip: int = 0) -> List[Dict[str, Any]]:
+        """Get user comments with subtype information with pagination.
+        
+        Args:
+            user_id: User ID
+            limit: Maximum number of comments to return
+            skip: Number of comments to skip
+            
+        Returns:
+            List of comment data with subtype and routing information
+        """
+        # Get paginated user comments
+        comments = await self.comment_repository.find_by_author_paginated(user_id, limit, skip)
         
         result = []
         for comment in comments:
@@ -184,24 +235,6 @@ class UserActivityService:
             subtype = comment.metadata.get("subtype")
             post_title = comment.metadata.get("post_title", "게시글 정보 없음")
             
-            # Get post statistics for the comment
-            post_view_count = 0
-            post_like_count = 0
-            post_dislike_count = 0
-            post_comment_count = 0
-            
-            if comment.parent_id:
-                try:
-                    # Calculate real-time stats for the post
-                    real_stats = await self._calculate_post_stats(comment.parent_id)
-                    post_view_count = real_stats["view_count"]
-                    post_like_count = real_stats["like_count"]
-                    post_dislike_count = real_stats["dislike_count"]
-                    post_comment_count = real_stats["comment_count"]
-                except Exception:
-                    # If post is not found, use default values
-                    pass
-            
             comment_data = {
                 "id": str(comment.id),
                 "content": comment.content,
@@ -209,11 +242,7 @@ class UserActivityService:
                 "created_at": comment.created_at.isoformat(),
                 "route_path": route_path,
                 "subtype": subtype,
-                "post_title": post_title,
-                "view_count": post_view_count,
-                "like_count": post_like_count,
-                "dislike_count": post_dislike_count,
-                "comment_count": post_comment_count
+                "post_title": post_title
             }
             
             result.append(comment_data)
@@ -221,7 +250,7 @@ class UserActivityService:
         return result
     
     async def _get_user_reactions_grouped(self, user_id: str) -> Dict[str, List[Dict[str, Any]]]:
-        """Get user reactions grouped by reaction type.
+        """Get user reactions grouped by reaction type (backward compatibility - uses pagination with high limit).
         
         Args:
             user_id: User ID
@@ -229,8 +258,21 @@ class UserActivityService:
         Returns:
             Dictionary with reaction types as keys and reaction lists as values
         """
-        # Get all user reactions
-        reactions = await self.user_reaction_repository.find_by_user(user_id)
+        return await self._get_user_reactions_grouped_paginated(user_id, limit=1000, skip=0)
+    
+    async def _get_user_reactions_grouped_paginated(self, user_id: str, limit: int = 10, skip: int = 0) -> Dict[str, List[Dict[str, Any]]]:
+        """Get user reactions grouped by reaction type with pagination.
+        
+        Args:
+            user_id: User ID
+            limit: Maximum number of reactions to return
+            skip: Number of reactions to skip
+            
+        Returns:
+            Dictionary with reaction types as keys and reaction lists as values
+        """
+        # Get paginated user reactions
+        reactions = await self.user_reaction_repository.find_by_user_paginated(user_id, limit, skip)
         
         # Initialize result
         result = {
@@ -247,10 +289,6 @@ class UserActivityService:
             
             # Get post information for reactions (only for post reactions)
             post_title = target_title
-            post_view_count = 0
-            post_like_count = 0
-            post_dislike_count = 0
-            post_comment_count = 0
             
             if reaction.target_type == "post" and reaction.target_id:
                 try:
@@ -259,12 +297,6 @@ class UserActivityService:
                     if post.status == "deleted":
                         continue
                     post_title = post.title
-                    # Calculate real-time stats for the post
-                    real_stats = await self._calculate_post_stats(reaction.target_id)
-                    post_view_count = real_stats["view_count"]
-                    post_like_count = real_stats["like_count"]
-                    post_dislike_count = real_stats["dislike_count"]
-                    post_comment_count = real_stats["comment_count"]
                 except Exception:
                     # If post is not found or deleted, skip this reaction
                     continue
@@ -276,11 +308,7 @@ class UserActivityService:
                 "created_at": reaction.created_at.isoformat(),
                 "route_path": route_path,
                 "target_title": post_title,
-                "title": post_title,  # 프론트엔드에서 사용할 제목
-                "view_count": post_view_count,
-                "like_count": post_like_count,
-                "dislike_count": post_dislike_count,
-                "comment_count": post_comment_count
+                "title": post_title  # 프론트엔드에서 사용할 제목
             }
             
             # Add to appropriate category (각 반응은 독립적이므로 elif 대신 if 사용)
@@ -316,61 +344,3 @@ class UserActivityService:
         
         return route_mapping.get(page_type, f"/post/{slug}")
     
-    async def _calculate_post_stats(self, post_id: str) -> Dict[str, int]:
-        """Calculate real-time statistics for a post (same as PostsService).
-        
-        Args:
-            post_id: Post ID
-            
-        Returns:
-            Dictionary with current stats
-        """
-        try:
-            # Get like count from UserReaction
-            like_count = await UserReaction.find({
-                "target_type": "post",
-                "target_id": post_id,
-                "liked": True
-            }).count()
-            
-            # Get dislike count from UserReaction
-            dislike_count = await UserReaction.find({
-                "target_type": "post",
-                "target_id": post_id,
-                "disliked": True
-            }).count()
-            
-            # Get bookmark count from UserReaction
-            bookmark_count = await UserReaction.find({
-                "target_type": "post",
-                "target_id": post_id,
-                "bookmarked": True
-            }).count()
-            
-            # Get total comment count (including replies) from Comment
-            comment_count = await Comment.find({
-                "parent_id": post_id,
-                "status": "active"
-            }).count()
-            
-            # Get view count from Post document (maintained in post model)
-            post = await Post.find_one({"_id": PydanticObjectId(post_id)})
-            view_count = post.view_count if post else 0
-            
-            return {
-                "view_count": view_count,
-                "like_count": like_count,
-                "dislike_count": dislike_count,
-                "comment_count": comment_count,
-                "bookmark_count": bookmark_count
-            }
-            
-        except Exception as e:
-            logger.error(f"Error calculating post stats for {post_id}: {e}")
-            return {
-                "view_count": 0,
-                "like_count": 0,
-                "dislike_count": 0,
-                "comment_count": 0,
-                "bookmark_count": 0
-            }

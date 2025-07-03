@@ -369,3 +369,41 @@ class PostRepository:
             return posts
         except Exception:
             return []
+    
+    async def find_by_author_paginated(self, author_id: str, limit: int = 10, skip: int = 0) -> List[Post]:
+        """Find posts by author ID with pagination.
+        
+        Args:
+            author_id: Author ID
+            limit: Maximum number of posts to return (default: 10)
+            skip: Number of posts to skip (default: 0)
+            
+        Returns:
+            List of posts by the author with pagination (excluding deleted posts)
+        """
+        try:
+            posts = await Post.find({
+                "author_id": author_id,
+                "status": {"$ne": "deleted"}
+            }).sort("-created_at").skip(skip).limit(limit).to_list()
+            return posts
+        except Exception:
+            return []
+    
+    async def count_by_author(self, author_id: str) -> int:
+        """Count total posts by author ID.
+        
+        Args:
+            author_id: Author ID
+            
+        Returns:
+            Total number of posts by the author (excluding deleted posts)
+        """
+        try:
+            count = await Post.find({
+                "author_id": author_id,
+                "status": {"$ne": "deleted"}
+            }).count()
+            return count
+        except Exception:
+            return 0

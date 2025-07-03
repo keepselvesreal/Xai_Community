@@ -414,9 +414,14 @@ class ApiClient {
   }
 
   // 사용자 활동 조회 API
-  async getUserActivity(): Promise<UserActivityResponse> {
-    console.log('ApiClient: getUserActivity called');
-    const result = await this.request<UserActivityResponse>('/api/users/me/activity', {
+  async getUserActivity(page: number = 1, limit: number = 10): Promise<UserActivityResponse> {
+    console.log('ApiClient: getUserActivity called with page:', page, 'limit:', limit);
+    
+    const queryParams = new URLSearchParams();
+    queryParams.append('page', page.toString());
+    queryParams.append('limit', limit.toString());
+    
+    const result = await this.request<UserActivityResponse>(`/api/users/me/activity?${queryParams.toString()}`, {
       method: 'GET',
     });
     

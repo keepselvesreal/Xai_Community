@@ -337,7 +337,48 @@ class CommentRepository:
             List of comments by the author
         """
         try:
-            comments = await Comment.find({"author_id": author_id}).sort("-created_at").to_list()
+            comments = await Comment.find({
+                "author_id": author_id,
+                "status": {"$ne": "deleted"}
+            }).sort("-created_at").to_list()
             return comments
         except Exception:
             return []
+    
+    async def find_by_author_paginated(self, author_id: str, limit: int = 10, skip: int = 0) -> List[Comment]:
+        """Find comments by author ID with pagination.
+        
+        Args:
+            author_id: Author ID
+            limit: Maximum number of comments to return (default: 10)
+            skip: Number of comments to skip (default: 0)
+            
+        Returns:
+            List of comments by the author with pagination (excluding deleted comments)
+        """
+        try:
+            comments = await Comment.find({
+                "author_id": author_id,
+                "status": {"$ne": "deleted"}
+            }).sort("-created_at").skip(skip).limit(limit).to_list()
+            return comments
+        except Exception:
+            return []
+    
+    async def count_by_author(self, author_id: str) -> int:
+        """Count total comments by author ID.
+        
+        Args:
+            author_id: Author ID
+            
+        Returns:
+            Total number of comments by the author (excluding deleted comments)
+        """
+        try:
+            count = await Comment.find({
+                "author_id": author_id,
+                "status": {"$ne": "deleted"}
+            }).count()
+            return count
+        except Exception:
+            return 0

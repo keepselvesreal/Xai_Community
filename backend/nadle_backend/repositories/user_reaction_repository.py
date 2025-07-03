@@ -24,6 +24,38 @@ class UserReactionRepository:
         except Exception:
             return []
     
+    async def find_by_user_paginated(self, user_id: str, limit: int = 10, skip: int = 0) -> List[UserReaction]:
+        """Find reactions by user ID with pagination.
+        
+        Args:
+            user_id: User ID
+            limit: Maximum number of reactions to return (default: 10)
+            skip: Number of reactions to skip (default: 0)
+            
+        Returns:
+            List of user reactions with pagination
+        """
+        try:
+            reactions = await UserReaction.find({"user_id": user_id}).sort("-created_at").skip(skip).limit(limit).to_list()
+            return reactions
+        except Exception:
+            return []
+    
+    async def count_by_user(self, user_id: str) -> int:
+        """Count total reactions by user ID.
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            Total number of reactions by the user
+        """
+        try:
+            count = await UserReaction.find({"user_id": user_id}).count()
+            return count
+        except Exception:
+            return 0
+    
     async def find_by_target(self, target_type: str, target_id: str) -> List[UserReaction]:
         """Find all reactions for a specific target.
         

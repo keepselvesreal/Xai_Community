@@ -12,12 +12,12 @@ from pydantic import BaseModel
 
 
 # Response models
-class ActivitySummary(BaseModel):
-    """Activity summary model."""
-    total_posts: int
-    total_comments: int
-    total_reactions: int
-    most_active_page_type: str | None = None
+class PaginationInfo(BaseModel):
+    """Pagination information model."""
+    total_count: int
+    page: int
+    limit: int
+    has_more: bool
 
 
 class ActivityItem(BaseModel):
@@ -43,7 +43,7 @@ class UserActivityResponse(BaseModel):
     posts: Dict[str, list[ActivityItem]]
     comments: list[ActivityItem]
     reactions: Dict[str, list[ActivityItem]]
-    summary: ActivitySummary
+    pagination: Dict[str, PaginationInfo]
 
 
 router = APIRouter()
@@ -64,22 +64,38 @@ def get_user_activity_service() -> UserActivityService:
 
 @router.get("/me/activity", response_model=UserActivityResponse)
 async def get_user_activity(
+    page: int = 1,
+    limit: int = 10,
     current_user: User = Depends(get_current_user),
     user_activity_service: UserActivityService = Depends(get_user_activity_service)
 ) -> UserActivityResponse:
-    """Get current user's activity summary.
+    """Get current user's activity summary with pagination.
+    
+    Args:
+        page: Page number (default: 1)
+        limit: Items per page (default: 10, max: 50)
     
     Returns comprehensive activity data including:
     - Posts grouped by page type (board, info, services, tips)
     - Comments with subtype information (inquiry/review for services)
     - Reactions grouped by type (likes, bookmarks, dislikes)
-    - Summary statistics
+    - Pagination information for each data type
     
     All items include routing information for frontend navigation.
     """
     try:
-        # Get activity data from service
-        activity_data = await user_activity_service.get_user_activity_summary(str(current_user.id))
+        # Validate pagination parameters
+        if page < 1:
+            page = 1
+        if limit < 1 or limit > 50:
+            limit = 10
+        
+        # Get activity data from service with pagination
+        activity_data = await user_activity_service.get_user_activity_summary(
+            user_id=str(current_user.id),
+            page=page,
+            limit=limit
+        )
         
         # Convert posts to ActivityItem format
         posts_formatted = {}
@@ -107,11 +123,7 @@ async def get_user_activity(
                 created_at=comment["created_at"],
                 route_path=comment["route_path"],
                 subtype=comment["subtype"],
-                title=comment.get("post_title"),  # 댓글의 경우 해당 게시글 제목 표시
-                view_count=comment.get("view_count"),
-                like_count=comment.get("like_count"),
-                dislike_count=comment.get("dislike_count"),
-                comment_count=comment.get("comment_count")
+                title=comment.get("post_title")  # 댓글의 경우 해당 게시글 제목 표시
             )
             for comment in activity_data["comments"]
         ]
@@ -127,28 +139,26 @@ async def get_user_activity(
                     target_title=reaction["target_title"],
                     title=reaction.get("title"),  # 반응한 게시글 제목
                     created_at=reaction["created_at"],
-                    route_path=reaction["route_path"],
-                    view_count=reaction.get("view_count"),
-                    like_count=reaction.get("like_count"),
-                    dislike_count=reaction.get("dislike_count"),
-                    comment_count=reaction.get("comment_count")
+                    route_path=reaction["route_path"]
                 )
                 for reaction in reactions
             ]
         
-        # Convert summary
-        summary = ActivitySummary(
-            total_posts=activity_data["summary"]["total_posts"],
-            total_comments=activity_data["summary"]["total_comments"],
-            total_reactions=activity_data["summary"]["total_reactions"],
-            most_active_page_type=activity_data["summary"]["most_active_page_type"]
-        )
+        # Convert pagination info
+        pagination_formatted = {}
+        for data_type, pagination_data in activity_data["pagination"].items():
+            pagination_formatted[data_type] = PaginationInfo(
+                total_count=pagination_data["total_count"],
+                page=pagination_data["page"],
+                limit=pagination_data["limit"],
+                has_more=pagination_data["has_more"]
+            )
         
         return UserActivityResponse(
             posts=posts_formatted,
             comments=comments_formatted,
             reactions=reactions_formatted,
-            summary=summary
+            pagination=pagination_formatted
         )
         
     except Exception as e:

@@ -17,14 +17,7 @@ export const meta: MetaFunction = () => {
 export const loader: LoaderFunction = async ({ request }) => {
   // 서버 사이드에서는 기본값만 반환, 실제 데이터는 클라이언트에서 로드
   return json({
-    userActivity: null,
-    userStats: {
-      postsCount: 0,
-      commentsCount: 0,
-      likesReceived: 0,
-      joinDate: "2023-09-15",
-      consecutiveDays: 0
-    }
+    userActivity: null
   });
 };
 
@@ -151,7 +144,11 @@ export default function MyPage() {
   const [activityTab, setActivityTab] = useState<'write' | 'reaction'>('write');
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
   const [userActivity, setUserActivity] = useState<UserActivityResponse | null>(null);
-  const [userStats, setUserStats] = useState(loaderData.userStats);
+  const [userStats, setUserStats] = useState({
+    postsCount: 0,
+    commentsCount: 0,
+    likesReceived: 0
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -187,15 +184,16 @@ export default function MyPage() {
     setError(null);
 
     try {
-      const activity = await apiClient.getUserActivity();
+      const activity = await apiClient.getUserActivity(1, 10); // 페이지네이션 파라미터 추가
       setUserActivity(activity);
-      setUserStats({
-        postsCount: activity.summary.total_posts,
-        commentsCount: activity.summary.total_comments,
-        likesReceived: activity.summary.total_reactions,
-        joinDate: loaderData.userStats.joinDate,
-        consecutiveDays: loaderData.userStats.consecutiveDays
-      });
+      // 새로운 API 구조에서는 pagination 정보에서 총 개수만 사용
+      if (activity.pagination) {
+        setUserStats({
+          postsCount: activity.pagination.posts.total_count,
+          commentsCount: activity.pagination.comments.total_count,
+          likesReceived: activity.pagination.reactions.total_count
+        });
+      }
     } catch (err) {
       console.error('Failed to load user activity:', err);
       setError('활동 기록을 불러오는데 실패했습니다.');
@@ -441,27 +439,6 @@ export default function MyPage() {
           </div>
 
           <div className="p-8">
-            {/* 요약 정보 */}
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="text-center p-6 bg-var-section rounded-xl border border-var-light">
-                <div className="text-3xl font-bold mb-2" style={{color: 'var(--accent-primary)'}}>{user ? userStats.postsCount : '0'}</div>
-                <div className="text-sm font-medium" style={{color: 'var(--text-muted)'}}>총 작성 글</div>
-              </div>
-              <div className="text-center p-6 bg-var-section rounded-xl border border-var-light">
-                <div className="text-3xl font-bold mb-2" style={{color: 'var(--accent-primary)'}}>{user ? userStats.commentsCount : '0'}</div>
-                <div className="text-sm font-medium" style={{color: 'var(--text-muted)'}}>총 반응</div>
-              </div>
-              <div className="text-center p-6 bg-var-section rounded-xl border border-var-light">
-                <div className="text-3xl font-bold mb-2" style={{color: 'var(--accent-primary)'}}>{user ? userStats.likesReceived : '0'}</div>
-                <div className="text-sm font-medium" style={{color: 'var(--text-muted)'}}>받은 추천</div>
-              </div>
-              <div className="text-center p-6 bg-var-section rounded-xl border border-var-light">
-                <div className="text-3xl font-bold mb-2" style={{color: 'var(--accent-primary)'}}>
-                  {user ? `${userStats.consecutiveDays}일` : '0일'}
-                </div>
-                <div className="text-sm font-medium" style={{color: 'var(--text-muted)'}}>연속 활동</div>
-              </div>
-            </div>
 
             {/* 탭 네비게이션 */}
             <div className="flex gap-4 mb-8">
