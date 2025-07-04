@@ -21,8 +21,11 @@ async def lifespan(app: FastAPI):
         from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
         
         await database.connect()
-        await database.init_beanie_models([User, Post, Comment, PostStats, UserReaction, Stats, FileRecord])
-        logger.info("Database connected successfully!")
+        # 모든 Document 모델 초기화
+        document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord]
+        logger.info(f"Initializing Beanie with models: {[model.__name__ for model in document_models]}")
+        await database.init_beanie_models(document_models)
+        logger.info("Database connected and Beanie initialized successfully!")
     except Exception as e:
         logger.error(f"Database connection failed: {e}")
         # 데이터베이스 없이도 서버는 시작되도록 함

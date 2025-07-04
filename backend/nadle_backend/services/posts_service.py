@@ -176,17 +176,24 @@ class PostsService:
             # ✅ 이미 $lookup으로 조인된 작성자 정보 사용 (별도 쿼리 없음)
             if "author" in post_data and post_data["author"]:
                 author = post_data["author"]
+                # 작성자 정보에서 표시명을 우선순위에 따라 결정
+                display_name = author.get("display_name") or author.get("name") or author.get("user_handle") or "익명 사용자"
+                user_handle = author.get("user_handle") or "익명"
+                name = author.get("name") or "익명"
+                
                 post_dict["author"] = {
                     "id": str(author["_id"]),
                     "email": author.get("email", ""),
-                    "user_handle": author.get("user_handle", "익명"),
-                    "display_name": author.get("display_name", ""),
-                    "name": author.get("name", ""),
+                    "user_handle": user_handle,
+                    "display_name": display_name,
+                    "name": name,
                     "created_at": author["created_at"].isoformat() if author.get("created_at") else None,
                     "updated_at": author["updated_at"].isoformat() if author.get("updated_at") else None
                 }
+                print(f"✅ 작성자 정보 설정됨: {display_name} ({user_handle})")
             else:
                 # 작성자 정보가 없는 경우 기본 정보 제공
+                print(f"⚠️ 작성자 정보 없음 - author_id: {post_data.get('author_id')}")
                 post_dict["author"] = {
                     "id": str(post_data.get("author_id", "")),
                     "email": "",

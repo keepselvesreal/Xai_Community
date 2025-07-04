@@ -530,10 +530,33 @@ class PostRepository:
             # 1. 매치 조건으로 필터링
             {"$match": match_stage},
             
-            # 2. 정렬 (작성자 정보는 나중에 별도로 조회)
+            # 2. 정렬
             {"$sort": {sort_field: sort_direction}},
             
-            # 5. 페이지네이션과 총 개수를 동시에 처리 ($facet)
+            # 3. 작성자 정보 조회 (User 컬렉션과 조인)
+            # author_id는 문자열이므로 ObjectId로 변환하여 조인
+            {"$lookup": {
+                "from": "users",
+                "let": {"author_id": {"$toObjectId": "$author_id"}},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$author_id"]}}}
+                ],
+                "as": "author_info"
+            }},
+            
+            # 4. 작성자 정보 처리 (배열을 객체로 변환)
+            {"$addFields": {
+                "author": {"$arrayElemAt": ["$author_info", 0]}
+            }},
+            
+            # 5. 불필요한 필드 제거
+            {"$project": {
+                "author_info": 0,
+                "author.password": 0,
+                "author.email": 0
+            }},
+            
+            # 6. 페이지네이션과 총 개수를 동시에 처리 ($facet)
             {"$facet": {
                 "posts": [
                     {"$skip": (page - 1) * page_size},
