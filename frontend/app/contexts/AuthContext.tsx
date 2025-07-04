@@ -1,7 +1,11 @@
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import apiClient from "~/lib/api";
 import { getLocalStorage, setLocalStorage, removeLocalStorage } from "~/lib/utils";
-import { STORAGE_KEYS } from "~/lib/constants";
+import { 
+  STORAGE_KEYS, 
+  SESSION_EXPIRY_REASONS, 
+  SESSION_MESSAGES 
+} from "~/lib/constants";
 import type { AuthContextType, User, LoginRequest, RegisterRequest } from "~/types";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -16,6 +20,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [refreshToken, setRefreshToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false); // 비차단형: 기본값을 false로
   const [renderKey, setRenderKey] = useState(0); // 강제 리렌더링을 위한 키
+  const [showSessionWarning, setShowSessionWarning] = useState(false); // 세션 경고 표시
+  const [sessionExpiryReason, setSessionExpiryReason] = useState<string | null>(null); // 만료 사유
 
   // 비차단형 인증 상태 확인 - UI를 차단하지 않고 백그라운드에서 처리
   useEffect(() => {
@@ -94,38 +100,35 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  // 토큰 만료 이벤트 리스너
+  // 세션 및 토큰 관련 이벤트 리스너
   useEffect(() => {
     const handleTokenExpired = () => {
       console.log('AuthContext: Token expired event received, logging out...');
-      // 상태 즉시 업데이트
-      setUser(null);
-      setToken(null);
-      setRefreshToken(null);
-      setIsLoading(false);
-      setRenderKey(prev => prev + 1);
-      
-      // localStorage 정리
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-        localStorage.removeItem('refreshToken');
-      }
-      
-      // API 클라이언트 로그아웃
-      apiClient.logout();
-      
-      // 홈페이지로 리디렉션
-      if (typeof window !== 'undefined') {
-        setTimeout(() => {
-          window.location.href = '/';
-        }, 100);
-      }
+      setSessionExpiryReason(SESSION_EXPIRY_REASONS.TOKEN_INVALID);
+      performLogout();
+    };
+
+    const handleSessionExpired = (event: CustomEvent) => {
+      const reason = event.detail?.reason || SESSION_EXPIRY_REASONS.TOKEN_INVALID;
+      console.log('AuthContext: Session expired event received, reason:', reason);
+      setSessionExpiryReason(reason);
+      performLogout();
+    };
+
+    const handleSessionWarning = () => {
+      console.log('AuthContext: Session warning event received');
+      setShowSessionWarning(true);
     };
 
     if (typeof window !== 'undefined') {
       window.addEventListener('tokenExpired', handleTokenExpired);
+      window.addEventListener('sessionExpired', handleSessionExpired as EventListener);
+      window.addEventListener('sessionWarning', handleSessionWarning);
+      
       return () => {
         window.removeEventListener('tokenExpired', handleTokenExpired);
+        window.removeEventListener('sessionExpired', handleSessionExpired as EventListener);
+        window.removeEventListener('sessionWarning', handleSessionWarning);
       };
     }
   }, []);
@@ -198,10 +201,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, []);
 
-  const logout = useCallback(() => {
-    console.log('AuthContext: Logging out...');
-    console.log('AuthContext: Current user before logout:', user);
-    console.log('AuthContext: Current token before logout:', token);
+  const performLogout = useCallback(() => {
+    console.log('AuthContext: Performing logout...');
+    
+    // 세션 만료 사유를 로그아웃 전에 localStorage에 저장 (알림용)
+    if (typeof window !== 'undefined' && sessionExpiryReason) {
+      localStorage.setItem('logoutReason', sessionExpiryReason);
+    }
     
     // 상태 즉시 업데이트
     setUser(null);
@@ -210,11 +216,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setIsLoading(false);
     setRenderKey(prev => prev + 1); // 강제 리렌더링
     
-    // localStorage 정리
+    // localStorage 정리 (로그아웃 사유는 제외)
     if (typeof window !== 'undefined') {
       localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-      localStorage.removeItem('refreshToken');
-      console.log('AuthContext: Tokens removed from localStorage');
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.LOGIN_TIME);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_COUNT);
+      console.log('AuthContext: All tokens and session data removed from localStorage');
     }
     
     // API 클라이언트 로그아웃
@@ -228,7 +236,41 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         window.location.href = '/';
       }, 100); // 상태 업데이트가 완료된 후 리디렉션
     }
-  }, [user, token]);
+  }, [sessionExpiryReason]);
+
+  const logout = useCallback(() => {
+    console.log('AuthContext: Manual logout requested');
+    setSessionExpiryReason(SESSION_EXPIRY_REASONS.MANUAL_LOGOUT);
+    performLogout();
+  }, [performLogout]);
+
+  // 세션 관련 기능들
+  const extendSession = useCallback(() => {
+    console.log('AuthContext: Extending session requested');
+    setShowSessionWarning(false);
+    return apiClient.extendSession();
+  }, []);
+
+  const getSessionInfo = useCallback(() => {
+    return apiClient.getSessionInfo();
+  }, []);
+
+  const dismissSessionWarning = useCallback(() => {
+    setShowSessionWarning(false);
+  }, []);
+
+  const getSessionExpiryMessage = useCallback(() => {
+    switch (sessionExpiryReason) {
+      case SESSION_EXPIRY_REASONS.TIME_LIMIT:
+        return SESSION_MESSAGES.EXPIRED_TIME_LIMIT;
+      case SESSION_EXPIRY_REASONS.REFRESH_LIMIT:
+        return SESSION_MESSAGES.EXPIRED_REFRESH_LIMIT;
+      case SESSION_EXPIRY_REASONS.TOKEN_INVALID:
+        return SESSION_MESSAGES.EXPIRED_TOKEN_INVALID;
+      default:
+        return SESSION_MESSAGES.EXPIRED_TOKEN_INVALID;
+    }
+  }, [sessionExpiryReason]);
 
   const value: AuthContextType = {
     user,
@@ -238,6 +280,13 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logout,
     isLoading,
     isAuthenticated: !!user && !!token,
+    // 세션 관리 기능들
+    showSessionWarning,
+    sessionExpiryReason,
+    extendSession,
+    getSessionInfo,
+    dismissSessionWarning,
+    getSessionExpiryMessage,
   };
   
   console.log('AuthContext: Current state - user:', !!user, 'token:', !!token, 'isAuthenticated:', !!user && !!token, 'renderKey:', renderKey);

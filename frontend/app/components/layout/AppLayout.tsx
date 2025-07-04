@@ -1,6 +1,9 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
 import { useTheme } from "~/contexts/ThemeContext";
+import { useAuth } from "~/contexts/AuthContext";
+import SessionWarningModal from "~/components/common/SessionWarningModal";
+import SessionDebugInfo from "~/components/common/SessionDebugInfo";
 import type { User } from "~/types";
 
 interface AppLayoutProps {
@@ -20,6 +23,7 @@ const AppLayout = ({
 }: AppLayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
+  const { showSessionWarning, dismissSessionWarning } = useAuth();
 
   return (
     <div className="min-h-screen bg-var-primary flex">
@@ -59,6 +63,15 @@ const AppLayout = ({
           {children}
         </main>
       </div>
+
+      {/* 세션 경고 모달 */}
+      <SessionWarningModal 
+        isOpen={showSessionWarning}
+        onClose={dismissSessionWarning}
+      />
+
+      {/* 개발 모드에서만 표시되는 세션 디버그 정보 */}
+      <SessionDebugInfo />
     </div>
   );
 };

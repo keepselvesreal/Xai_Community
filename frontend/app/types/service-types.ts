@@ -4,7 +4,7 @@
  * 구조화된 서비스-가격 데이터를 위한 타입 정의 및 유틸리티 함수
  */
 
-import type { MockService, ServiceItem } from './index';
+import type { ServiceItem, ServiceStats } from './index';
 import type { BaseListItem, ItemStats } from './listTypes';
 
 // 업체 정보 타입
@@ -23,10 +23,10 @@ export interface CompanyInfo {
 export interface ServiceItemWithPrice {
   /** 서비스명 */
   name: string;
-  /** 기본 가격 (원) */
-  price: number;
-  /** 특가 (원, 선택사항) */
-  specialPrice?: number;
+  /** 기본 가격 (문자열로 저장하여 정밀도 보장) */
+  price: string;
+  /** 특가 (문자열로 저장하여 정밀도 보장, 선택사항) */
+  specialPrice?: string;
   /** 서비스 설명 (선택사항) */
   description?: string;
 }
@@ -86,17 +86,7 @@ export interface Service extends ServicePost, BaseListItem {
   created_by?: string;
 }
 
-// 서비스 통계 타입
-export interface ServiceStats {
-  /** 조회수 */
-  views: number;
-  /** 문의수 */
-  inquiries: number;
-  /** 후기수 */
-  reviews: number;
-  /** 북마크수 */
-  bookmarks: number;
-}
+// ServiceStats는 index.ts에서 import됨 (중복 제거)
 
 // 확장된 연락처 정보
 export interface ServiceContactInfo {
@@ -168,13 +158,14 @@ function validateServicePost(data: any): data is ServicePost {
       console.error('❌ Service name is invalid:', service.name);
       return false;
     }
-    if (typeof service.price !== 'number' || service.price < 0) {
-      console.error('❌ Service price is invalid:', service.price);
+    // 가격이 유효한 숫자 문자열인지 확인
+    if (typeof service.price !== 'string' || !/^\d+$/.test(service.price)) {
+      console.error('❌ Service price is invalid (should be numeric string):', service.price);
       return false;
     }
     if (service.specialPrice !== undefined && 
-        (typeof service.specialPrice !== 'number' || service.specialPrice < 0)) {
-      console.error('❌ Service specialPrice is invalid:', service.specialPrice);
+        (typeof service.specialPrice !== 'string' || !/^\d+$/.test(service.specialPrice))) {
+      console.error('❌ Service specialPrice is invalid (should be numeric string):', service.specialPrice);
       return false;
     }
     if (service.description !== undefined && typeof service.description !== 'string') {
@@ -198,6 +189,15 @@ export function parseServicePost(content: string): ServicePost {
     console.log('📝 Parsing content:', content);
     const parsed = JSON.parse(content);
     console.log('🔍 Parsed JSON:', parsed);
+    
+    // 가격을 문자열로 정규화하여 정밀도 보장
+    if (parsed.services && Array.isArray(parsed.services)) {
+      parsed.services = parsed.services.map((service: any) => ({
+        ...service,
+        price: String(service.price || '0'), // 문자열로 보장하여 정밀도 보장
+        specialPrice: service.specialPrice ? String(service.specialPrice) : undefined
+      }));
+    }
     
     if (!validateServicePost(parsed)) {
       console.error('❌ ServicePost validation failed for:', parsed);
@@ -227,15 +227,26 @@ export function serializeServicePost(servicePost: ServicePost): string {
     throw new Error('Invalid ServicePost data structure');
   }
   
-  return JSON.stringify(servicePost, null, 2);
+  // 가격을 문자열로 유지하여 정밀도 보장
+  const safeServicePost = {
+    ...servicePost,
+    services: servicePost.services.map(service => ({
+      ...service,
+      price: String(service.price), // 문자열로 보장하여 정밀도 보장
+      specialPrice: service.specialPrice ? String(service.specialPrice) : undefined
+    }))
+  };
+  
+  return JSON.stringify(safeServicePost, null, 2);
 }
 
 /**
+ * @deprecated - MockService는 더 이상 사용되지 않음. 실제 Service 타입을 사용하세요.
  * MockService를 ServicePost로 변환
  * @param mockService MockService 객체
  * @returns ServicePost 객체
  */
-export function convertMockServiceToServicePost(mockService: MockService): ServicePost {
+export function convertMockServiceToServicePost(mockService: any): ServicePost {
   return {
     company: {
       name: mockService.name,
@@ -243,17 +254,18 @@ export function convertMockServiceToServicePost(mockService: MockService): Servi
       availableHours: mockService.contact.hours,
       description: mockService.description
     },
-    services: mockService.services.map(service => ({
+    services: mockService.services.map((service: any) => ({
       name: service.name,
-      price: parseInt(service.price.replace(/[^\d]/g, '')) || 0,
+      price: service.price.replace(/[^\d]/g, '') || '0', // 숫자만 추출하여 문자열로 저장
       specialPrice: service.originalPrice ? 
-        parseInt(service.originalPrice.replace(/[^\d]/g, '')) : undefined,
+        service.originalPrice.replace(/[^\d]/g, '') : undefined, // 숫자만 추출하여 문자열로 저장
       description: service.description
     }))
   };
 }
 
 /**
+ * @deprecated - MockService는 더 이상 사용되지 않음. 실제 Service 타입을 사용하세요.
  * ServicePost를 MockService 호환 형식으로 변환
  * @param servicePost ServicePost 객체
  * @param id 서비스 ID
@@ -264,7 +276,7 @@ export function convertServicePostToMockService(
   servicePost: ServicePost, 
   id: number, 
   category: ServiceCategory
-): MockService {
+): any {
   return {
     id,
     name: servicePost.company.name,
@@ -273,8 +285,8 @@ export function convertServicePostToMockService(
     description: servicePost.company.description,
     services: servicePost.services.map(service => ({
       name: service.name,
-      price: `${service.price.toLocaleString()}원`,
-      originalPrice: service.specialPrice ? `${service.specialPrice.toLocaleString()}원` : undefined,
+      price: `${formatPrice(service.price)}원`, // formatPrice 함수 사용
+      originalPrice: service.specialPrice ? `${formatPrice(service.specialPrice)}원` : undefined,
       description: service.description || ''
     })),
     stats: {
@@ -357,9 +369,9 @@ export function convertFormDataToServicePost(
       .filter(s => s.serviceName.trim() && s.price.trim())
       .map(service => ({
         name: service.serviceName.trim(),
-        price: parseInt(service.price) || 0,
+        price: service.price.trim() || '0', // 문자열로 유지하여 정밀도 보장
         specialPrice: service.hasSpecialPrice && service.specialPrice ? 
-          parseInt(service.specialPrice) : undefined,
+          service.specialPrice.trim() : undefined, // 문자열로 유지하여 정밀도 보장
         description: undefined // 폼에서는 서비스별 설명이 없음
       }))
   };
@@ -383,8 +395,8 @@ export function getMinPrice(servicePost: ServicePost): number {
   if (servicePost.services.length === 0) return 0;
   
   const prices = servicePost.services.flatMap(service => [
-    service.price,
-    service.specialPrice || service.price
+    parseInt(service.price) || 0,
+    service.specialPrice ? parseInt(service.specialPrice) || 0 : parseInt(service.price) || 0
   ]);
   
   return Math.min(...prices);
@@ -398,7 +410,7 @@ export function getMinPrice(servicePost: ServicePost): number {
 export function getMaxPrice(servicePost: ServicePost): number {
   if (servicePost.services.length === 0) return 0;
   
-  const prices = servicePost.services.map(service => service.price);
+  const prices = servicePost.services.map(service => parseInt(service.price) || 0);
   return Math.max(...prices);
 }
 
@@ -412,6 +424,27 @@ export function getSpecialPriceCount(servicePost: ServicePost): number {
 }
 
 /**
+ * 가격 문자열을 표시용으로 포맷팅 (첫 단위 콤마 추가)
+ * @param priceString 가격 문자열
+ * @returns 포맷팅된 가격 문자열
+ */
+export function formatPrice(priceString: string): string {
+  if (!priceString || priceString === '') return '0';
+  // 숫자만 추출하여 첫 단위 콤마 추가
+  const numericValue = parseInt(priceString) || 0;
+  return numericValue.toLocaleString();
+}
+
+/**
+ * 포맷팅된 가격에서 숫자만 추출
+ * @param formattedPrice 포맷팅된 가격 문자열
+ * @returns 순수 숫자 문자열
+ */
+export function parseFormattedPrice(formattedPrice: string): string {
+  return formattedPrice.replace(/[^\d]/g, '');
+}
+
+/**
  * Post를 Service로 직접 변환 (단순화된 변환)
  * @param post Post 객체
  * @returns Service 객체 또는 null (파싱 실패 시)
@@ -421,6 +454,15 @@ export function convertPostToService(post: any): Service | null {
     console.log('Converting post to service:', post);
     console.log('Post content:', post.content);
     console.log('Post metadata:', post.metadata);
+    
+    // 🚨 확장 통계 데이터 상세 디버깅
+    console.log('📊 Extended stats conversion debug:', {
+      extended_stats: post.extended_stats,
+      stats: post.stats,
+      view_count: post.view_count,
+      comment_count: post.comment_count,
+      bookmark_count: post.bookmark_count
+    });
     
     // metadata.type이 "moving services"인지 확인
     if (post.metadata?.type !== 'moving services') {
@@ -448,7 +490,7 @@ export function convertPostToService(post: any): Service | null {
         },
         services: [{
           name: '기본 서비스',
-          price: 0,
+          price: '0', // 문자열로 처리
           description: '서비스 정보가 올바르지 않습니다'
         }]
       };
@@ -493,13 +535,13 @@ export function convertPostToService(post: any): Service | null {
         comment_count: post.comment_count || 0,
         bookmark_count: post.bookmark_count || 0,
         // 확장 통계 추가
-        inquiry_count: post.extended_stats?.inquiry_count || 0,
-        review_count: post.extended_stats?.review_count || 0
+        inquiry_count: post.extended_stats?.inquiry_count || post.stats?.inquiry_count || 0,
+        review_count: post.extended_stats?.review_count || post.stats?.review_count || 0
       },
       serviceStats: {
         views: post.view_count || 0,
-        inquiries: post.extended_stats?.inquiry_count || 0, // 확장 통계 사용
-        reviews: post.extended_stats?.review_count || 0,    // 확장 통계 사용
+        inquiries: post.extended_stats?.inquiry_count || post.stats?.inquiry_count || 0, // 확장 통계 사용 (백업 경로 추가)
+        reviews: post.extended_stats?.review_count || post.stats?.review_count || 0,    // 확장 통계 사용 (백업 경로 추가)
         bookmarks: post.bookmark_count || 0  // 북마크 수 추가
       },
       // 실제 반응 데이터 매핑

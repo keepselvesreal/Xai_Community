@@ -173,6 +173,19 @@ def create_app() -> FastAPI:
         except Exception as e:
             return {"error": str(e)}
     
+    @app.get("/debug/posts")
+    async def debug_posts():
+        """임시 디버그용 - 모든 게시글 목록 확인"""
+        try:
+            from nadle_backend.models.core import Post
+            posts = await Post.find_all().to_list()
+            return {
+                "total": len(posts),
+                "posts": [{"title": post.title, "slug": post.slug, "service": post.service, "metadata": post.metadata.__dict__ if hasattr(post.metadata, '__dict__') else post.metadata} for post in posts[:10]]
+            }
+        except Exception as e:
+            return {"error": str(e)}
+    
     return app
 
 

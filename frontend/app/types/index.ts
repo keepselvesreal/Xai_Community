@@ -204,6 +204,17 @@ export interface FormState {
   touched: Record<string, boolean>;
 }
 
+// 세션 정보 타입
+export interface SessionInfo {
+  loginTime: Date | null;
+  refreshCount: number;
+  maxRefreshCount: number;
+  isExpired: boolean;
+  showWarning: boolean;
+  timeRemaining: number; // 시간 단위
+  maxSessionHours: number;
+}
+
 // 인증 컨텍스트 타입
 export interface AuthContextType {
   user: User | null;
@@ -213,6 +224,13 @@ export interface AuthContextType {
   logout: () => void;
   isLoading: boolean;
   isAuthenticated: boolean;
+  // 세션 관리 기능들
+  showSessionWarning: boolean;
+  sessionExpiryReason: string | null;
+  extendSession: () => boolean;
+  getSessionInfo: () => SessionInfo;
+  dismissSessionWarning: () => void;
+  getSessionExpiryMessage: () => string;
 }
 
 // API 테스트 관련 타입
@@ -319,56 +337,15 @@ export interface PostDetailLoaderData {
   userReactions: Reaction[];
 }
 
-// Mock 데이터용 추가 인터페이스 정의
-export interface MockPost {
-  id: number;
-  title: string;
-  author: string;
-  time: string;
-  timeValue: number;
-  tag: string;
-  tagText: string;
-  views: number;
-  likes: number;
-  dislikes: number;
-  comments: number;
-  isNew: boolean;
-  content: string;
-}
-
-export interface MockInfoItem {
-  id: number;
-  title: string;
-  author: string;
-  time: string;
-  timeValue: number;
-  tag: string;
-  tagText: string;
-  views: number;
-  likes: number;
-  dislikes: number;
-  comments: number;
-  isNew: boolean;
-  content: string;
-}
-
-export interface MockService {
-  id: number;
-  name: string;
-  category: string;
-  rating: number;
-  description: string;
-  services: ServiceItem[];
-  stats: ServiceStats;
-  verified: boolean;
-  contact: ContactInfo;
-  reviews: ServiceReview[];
-}
+// @deprecated - 이 Mock 인터페이스들은 실제 API 타입들로 대체되어 더 이상 사용되지 않음
+// 현재 사용 중인 타입들: Post, InfoItem, Service
+// Legacy compatibility를 위해 유지하되, 새로운 코드에서는 사용하지 말 것
 
 export interface ServiceStats {
   views: number;
   inquiries: number;
   reviews: number;
+  bookmarks: number;
 }
 
 export interface ServiceItem {

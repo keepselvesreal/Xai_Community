@@ -86,11 +86,11 @@ export default function ServicesWrite() {
             description: serviceData.company.description
           });
           
-          // 서비스 목록 설정
+          // 서비스 목록 설정 (문자열 기반 가격 처리)
           const mappedServices = serviceData.services.map(service => ({
             serviceName: service.name,
-            price: service.price.toString(),
-            specialPrice: service.specialPrice ? service.specialPrice.toString() : "",
+            price: service.price, // 이미 문자열이므로 그대로 사용
+            specialPrice: service.specialPrice || "",
             hasSpecialPrice: !!service.specialPrice
           }));
           
@@ -106,7 +106,10 @@ export default function ServicesWrite() {
               availableHours: serviceData.company.availableHours,
               description: serviceData.company.description
             },
-            services: mappedServices
+            services: mappedServices,
+            // 🔍 숫자 정밀도 디버깅
+            originalPrices: serviceData.services.map(s => ({ name: s.name, price: s.price, type: typeof s.price })),
+            mappedPrices: mappedServices.map(s => ({ name: s.serviceName, price: s.price, type: typeof s.price }))
           });
           
         } catch (parseError) {
@@ -145,9 +148,18 @@ export default function ServicesWrite() {
   };
 
   const handleServiceChange = (index: number, field: string, value: string) => {
-    setServices(prev => prev.map((service, i) => 
-      i === index ? { ...service, [field]: value } : service
-    ));
+    // 가격 필드는 숫자만 허용
+    if (field === 'price' || field === 'specialPrice') {
+      // 숫자만 남기고 문자열로 저장 (정밀도 보장)
+      const cleanedValue = value.replace(/[^\d]/g, '');
+      setServices(prev => prev.map((service, i) => 
+        i === index ? { ...service, [field]: cleanedValue } : service
+      ));
+    } else {
+      setServices(prev => prev.map((service, i) => 
+        i === index ? { ...service, [field]: value } : service
+      ));
+    }
   };
 
   const handleSpecialPriceToggle = (index: number, checked: boolean) => {
@@ -219,9 +231,9 @@ export default function ServicesWrite() {
           .filter(s => s.serviceName.trim() && s.price.trim())
           .map(service => ({
             name: service.serviceName.trim(),
-            price: parseInt(service.price) || 0,
+            price: service.price.trim() || '0', // 문자열로 유지하여 정밀도 보장
             specialPrice: service.hasSpecialPrice && service.specialPrice ? 
-              parseInt(service.specialPrice) : undefined,
+              service.specialPrice.trim() : undefined, // 문자열로 유지하여 정밀도 보장
             description: undefined // 현재 폼에는 서비스별 설명 없음
           }))
       };
@@ -484,7 +496,7 @@ export default function ServicesWrite() {
                               value={service.price}
                               onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
                               placeholder={service.hasSpecialPrice ? "기존 가격" : "가격을 입력하세요"}
-                              className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm"
+                              className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                               min="0"
                             />
                             <label className="flex items-center gap-1 text-xs text-var-primary">
@@ -505,7 +517,7 @@ export default function ServicesWrite() {
                                 value={service.specialPrice}
                                 onChange={(e) => handleServiceChange(index, 'specialPrice', e.target.value)}
                                 placeholder="특가 가격"
-                                className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm"
+                                className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 min="0"
                               />
                               <div className="w-10"></div>

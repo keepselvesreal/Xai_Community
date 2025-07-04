@@ -183,6 +183,14 @@ export const boardConfig: ListPageConfig<Post> = {
   
   cardLayout: 'list',
   
+  // 빈 상태 설정
+  emptyState: {
+    icon: '📝',
+    title: '게시글이 없습니다',
+    description: '아직 작성된 게시글이 없어요.\n첫 번째 게시글을 작성해보세요!',
+    actionLabel: '글쓰기'
+  },
+  
   // 렌더링 함수
   renderCard: (post) => <PostCardRenderer post={post} />,
   filterFn: boardFilterFunction,
@@ -493,10 +501,10 @@ export const servicesConfig: ListPageConfig<Service> = {
   
   // 빈 상태 설정
   emptyState: {
-    icon: '⏳',
-    title: '서비스 정보를 불러오는 중입니다',
-    description: '입주 업체 서비스 데이터를 준비하고 있습니다.\n잠시만 기다려주시면 곧 표시됩니다.',
-    actionLabel: ''
+    icon: '🏢',
+    title: '등록된 서비스가 없습니다',
+    description: '아직 등록된 입주 업체 서비스가 없어요.\n첫 번째 업체를 등록해보세요!',
+    actionLabel: '업체 등록하기'
   },
   
   // 데이터 변환 함수
@@ -954,9 +962,9 @@ export const infoConfig: ListPageConfig<InfoItem> = {
   
   // 빈 상태 설정
   emptyState: {
-    icon: '⏳',
-    title: '정보를 불러오는 중입니다',
-    description: '서버에서 데이터를 준비하고 있습니다. 잠시만 기다려주세요.\n데이터 로딩이 완료되면 자동으로 표시됩니다.',
+    icon: '📋',
+    title: '등록된 정보가 없습니다',
+    description: '아직 등록된 부동산 정보가 없어요.\n곧 유용한 정보들을 제공해드릴게요!',
     actionLabel: ''  // 관리자만 입력 가능하므로 빈 값
   },
   
@@ -1007,10 +1015,10 @@ export const tipsConfig: ListPageConfig<Tip> = {
   
   // 빈 상태 설정
   emptyState: {
-    icon: '⏳',
-    title: '전문가 꿀정보를 불러오는 중입니다',
-    description: '전문가들의 검증된 생활 팁을 준비하고 있습니다.\n잠시만 기다려주시면 곧 표시됩니다.',
-    actionLabel: ''
+    icon: '💡',
+    title: '등록된 전문가 꿀정보가 없습니다',
+    description: '아직 등록된 전문가 꿀정보가 없어요.\n첫 번째 전문가가 되어보세요!',
+    actionLabel: '전문가 팁 작성하기'
   },
   
   // 데이터 변환 함수

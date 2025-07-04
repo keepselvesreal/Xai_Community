@@ -23,6 +23,8 @@ export interface ItemStats {
   dislike_count?: number; // 싫어요
   comment_count?: number; // 댓글수
   bookmark_count?: number; // 북마크수
+  inquiry_count?: number; // 문의수 (서비스용)
+  review_count?: number;  // 후기수 (서비스용)
 }
 
 /**

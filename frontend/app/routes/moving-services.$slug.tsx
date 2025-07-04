@@ -40,6 +40,24 @@ export default function ServiceDetail() {
   const [editingComment, setEditingComment] = useState<string | null>(null);
   const [editContentMap, setEditContentMap] = useState<{[key: string]: string}>({});
 
+  // 🔄 서버에서 최신 통계 데이터 재로드 함수 (재사용 가능)
+  const refreshServiceStats = async (): Promise<void> => {
+    if (!slug) return;
+    
+    try {
+      const response = await apiClient.getPost(slug);
+      if (response.success && response.data) {
+        const updatedService = convertPostToService(response.data);
+        if (updatedService) {
+          setService(updatedService);
+          console.log('🔄 Service stats refreshed from server:', updatedService.serviceStats);
+        }
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to refresh service stats:', error);
+    }
+  };
+
   const loadService = async () => {
     if (!slug) return;
     
@@ -58,7 +76,18 @@ export default function ServiceDetail() {
           hasData: 'data' in response.data,
           hasContent: 'content' in response.data,
           hasMetadata: 'metadata' in response.data,
+          hasExtendedStats: 'extended_stats' in response.data,
+          hasStats: 'stats' in response.data,
           dataKeys: Object.keys(response.data)
+        });
+        
+        // 🚨 확장 통계 데이터 상세 디버깅
+        console.log('📊 Extended stats debug:', {
+          extended_stats: response.data.extended_stats,
+          stats: response.data.stats,
+          view_count: response.data.view_count,
+          comment_count: response.data.comment_count,
+          bookmark_count: response.data.bookmark_count
         });
         
         // Post 데이터를 Service로 변환
@@ -348,12 +377,22 @@ export default function ServiceDetail() {
               serviceStats: {
                 ...prev.serviceStats,
                 reviews: (prev.serviceStats?.reviews || 0) + 1
+              },
+              // stats 객체도 함께 업데이트
+              stats: {
+                ...prev.stats,
+                review_count: (prev.stats?.review_count || 0) + 1
               }
             };
           });
           
           // 댓글 새로고침하여 새로운 후기 표시
           await loadComments();
+          
+          // 📡 서버에서 최신 통계 데이터 재로드 (안전장치)
+          setTimeout(() => {
+            refreshServiceStats();
+          }, 500);
         } else {
           showError('후기 등록에 실패했습니다');
         }
@@ -836,12 +875,22 @@ export default function ServiceDetail() {
               serviceStats: {
                 ...prev.serviceStats,
                 inquiries: (prev.serviceStats?.inquiries || 0) + 1
+              },
+              // stats 객체도 함께 업데이트
+              stats: {
+                ...prev.stats,
+                inquiry_count: (prev.stats?.inquiry_count || 0) + 1
               }
             };
           });
           
           // 댓글 새로고침하여 새로운 문의 표시
           await loadComments();
+          
+          // 📡 서버에서 최신 통계 데이터 재로드 (안전장치)
+          setTimeout(() => {
+            refreshServiceStats();
+          }, 500);
         } else {
           console.error('❌ Inquiry submission failed:', response);
           showError('문의 등록에 실패했습니다');

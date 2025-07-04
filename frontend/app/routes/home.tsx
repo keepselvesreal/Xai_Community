@@ -64,6 +64,7 @@ export default function Home() {
       });
       if (response.success && response.data) {
         const posts = response.data.items;
+        console.log('Home: Loaded posts:', posts);
         setRecentPosts(posts);
         
         // 캐시에 저장 (5분 TTL)
@@ -187,21 +188,27 @@ export default function Home() {
           <PostCardSkeleton count={4} />
         ) : recentPosts.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {recentPosts.map((post) => (
-              <Card key={post.id} className="hover:shadow-md transition-shadow">
-                <Card.Content>
-                  <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                    {post.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                    {post.content}
-                  </p>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <span>{post.author?.display_name || '익명'}</span>
-                    <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                  </div>
-                </Card.Content>
-              </Card>
+            {recentPosts.map((post, index) => (
+              <Link 
+                key={post.id || post._id || post.slug || index}
+                to={`/board/${post.slug}`}
+                className="block"
+              >
+                <Card className="hover:shadow-md transition-shadow">
+                  <Card.Content>
+                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
+                      {post.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                      {post.content}
+                    </p>
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <span>{post.author?.display_name || '익명'}</span>
+                      <span>{new Date(post.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </Card.Content>
+                </Card>
+              </Link>
             ))}
           </div>
         ) : (

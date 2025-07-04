@@ -52,7 +52,7 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
 export default function PostDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { showError, showSuccess } = useNotification();
   
   const [post, setPost] = useState<Post | null>(null);
@@ -237,7 +237,7 @@ export default function PostDetail() {
 
   if (isLoading) {
     return (
-      <AppLayout title="게시글" user={user}>
+      <AppLayout title="게시글" user={user} onLogout={logout}>
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
         </div>
@@ -247,7 +247,7 @@ export default function PostDetail() {
 
   if (isNotFound || !post) {
     return (
-      <AppLayout title="게시글을 찾을 수 없음" user={user}>
+      <AppLayout title="게시글을 찾을 수 없음" user={user} onLogout={logout}>
         <div className="text-center py-12">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">
             게시글을 찾을 수 없습니다
@@ -264,7 +264,7 @@ export default function PostDetail() {
   }
 
   return (
-    <AppLayout title={post.title} user={user}>
+    <AppLayout title={post.title} user={user} onLogout={logout}>
       <div className="max-w-4xl mx-auto space-y-6">
         {/* 게시글 헤더 */}
         <Card>

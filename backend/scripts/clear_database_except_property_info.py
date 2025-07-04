@@ -274,7 +274,7 @@ class SelectiveDatabaseCleaner:
         }
 
 
-def confirm_deletion(stats: Dict[str, Any]) -> bool:
+def confirm_deletion(stats: Dict[str, Any], auto_confirm: bool = False) -> bool:
     """삭제 확인 대화"""
     print("\n" + "="*60)
     print("⚠️  MongoDB Atlas 선택적 데이터 삭제 확인")
@@ -313,6 +313,10 @@ def confirm_deletion(stats: Dict[str, Any]) -> bool:
     print("  • 부동산 정보 게시글만 보존됩니다")
     print()
     
+    if auto_confirm:
+        print("🤖 자동 확인 모드: 삭제를 진행합니다.")
+        return True
+    
     while True:
         response = input("정말로 선택된 데이터를 삭제하시겠습니까? (yes/no): ").lower().strip()
         if response in ['yes', 'y']:
@@ -323,7 +327,7 @@ def confirm_deletion(stats: Dict[str, Any]) -> bool:
             print("'yes' 또는 'no'를 입력해주세요.")
 
 
-async def main():
+async def main(auto_confirm: bool = False):
     """메인 실행 함수"""
     print("🗑️  MongoDB Atlas 선택적 데이터베이스 정리 도구")
     print("🏡 부동산 정보 게시글 보존 모드")
@@ -341,7 +345,7 @@ async def main():
         stats = await cleaner.get_collection_stats()
         
         # 삭제 확인
-        if not confirm_deletion(stats):
+        if not confirm_deletion(stats, auto_confirm):
             logger.info("🚫 사용자가 삭제를 취소했습니다.")
             return
         
@@ -387,7 +391,9 @@ async def main():
 
 if __name__ == "__main__":
     try:
-        asyncio.run(main())
+        # 명령줄 인자로 자동 확인 모드 설정
+        auto_confirm = len(sys.argv) > 1 and sys.argv[1] == "--auto-confirm"
+        asyncio.run(main(auto_confirm))
     except KeyboardInterrupt:
         print("\n\n🚫 사용자가 프로그램을 중단했습니다.")
         sys.exit(0)

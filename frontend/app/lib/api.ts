@@ -18,6 +18,12 @@ import type {
   UserActivityResponse,
 } from "~/types";
 import { validateJWTFormat, decodeJWTPayload, isTokenExpired } from './jwt-utils';
+import { 
+  STORAGE_KEYS, 
+  SESSION_CONFIG, 
+  SESSION_EXPIRY_REASONS,
+  SESSION_MESSAGES
+} from './constants';
 
 const API_BASE_URL = process.env.NODE_ENV === 'production' 
   ? 'https://api.your-domain.com' 
@@ -38,15 +44,15 @@ class ApiClient {
 
   private loadTokens(): void {
     if (typeof window !== 'undefined') {
-      let token = localStorage.getItem('authToken');
-      let refreshToken = localStorage.getItem('refreshToken');
+      let token = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      let refreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
       
       // JSON.stringify로 저장된 경우 파싱
       if (token && (token.startsWith('"') && token.endsWith('"'))) {
         try {
           token = JSON.parse(token);
           if (token) {
-            localStorage.setItem('authToken', token); // 정리된 토큰 재저장
+            localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token); // 정리된 토큰 재저장
             console.log('ApiClient: Cleaned JSON stringified token');
           }
         } catch (e) {
@@ -57,7 +63,7 @@ class ApiClient {
       // Bearer 접두사가 잘못 저장된 경우 제거
       if (token && token.startsWith('Bearer ')) {
         token = token.substring(7);
-        localStorage.setItem('authToken', token);
+        localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
         console.log('ApiClient: Cleaned Bearer prefix from stored token');
       }
       
@@ -68,8 +74,15 @@ class ApiClient {
         this.refreshToken ? `refresh: ${this.refreshToken.substring(0, 10)}...` : 'refresh: null'
       );
       
-      // 토큰이 있으면 자동 갱신 타이머 시작
+      // 세션 만료 체크
       if (this.token && this.refreshToken) {
+        if (this.isSessionExpired()) {
+          console.log('ApiClient: Session expired, forcing logout');
+          this.handleSessionExpiry(this.getSessionExpiryReason());
+          return;
+        }
+        
+        // 토큰이 있고 세션이 유효하면 자동 갱신 타이머 시작
         this.startTokenRefreshTimer();
       }
     }
@@ -85,9 +98,9 @@ class ApiClient {
     }
     
     if (typeof window !== 'undefined') {
-      localStorage.setItem('authToken', cleanToken);
+      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, cleanToken);
       if (refreshToken) {
-        localStorage.setItem('refreshToken', refreshToken);
+        localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
       }
       console.log('ApiClient: Tokens saved to localStorage:', 
         cleanToken ? `access: ${cleanToken.substring(0, 10)}...` : 'access: null',
@@ -96,12 +109,111 @@ class ApiClient {
     }
   }
 
+  // 세션 관리 메서드들 (하이브리드 방식)
+  private saveLoginTime(): void {
+    if (typeof window !== 'undefined') {
+      const loginTime = new Date().toISOString();
+      localStorage.setItem(STORAGE_KEYS.LOGIN_TIME, loginTime);
+      localStorage.setItem(STORAGE_KEYS.REFRESH_COUNT, '0');
+      console.log('ApiClient: Login time saved:', loginTime);
+    }
+  }
+
+  private getLoginTime(): Date | null {
+    if (typeof window === 'undefined') return null;
+    
+    const loginTimeStr = localStorage.getItem(STORAGE_KEYS.LOGIN_TIME);
+    return loginTimeStr ? new Date(loginTimeStr) : null;
+  }
+
+  private getRefreshCount(): number {
+    if (typeof window === 'undefined') return 0;
+    
+    const count = localStorage.getItem(STORAGE_KEYS.REFRESH_COUNT);
+    return count ? parseInt(count, 10) : 0;
+  }
+
+  private incrementRefreshCount(): void {
+    if (typeof window !== 'undefined') {
+      const currentCount = this.getRefreshCount();
+      const newCount = currentCount + 1;
+      localStorage.setItem(STORAGE_KEYS.REFRESH_COUNT, newCount.toString());
+      console.log('ApiClient: Refresh count incremented to:', newCount);
+    }
+  }
+
+  private isSessionExpired(): boolean {
+    const loginTime = this.getLoginTime();
+    const refreshCount = this.getRefreshCount();
+    
+    if (!loginTime) return false;
+    
+    // 조건 1: 절대 시간 제한 (8시간 경과)
+    const elapsed = (Date.now() - loginTime.getTime()) / (1000 * 60 * 60);
+    if (elapsed > SESSION_CONFIG.MAX_SESSION_HOURS) {
+      console.log('ApiClient: Session expired due to time limit:', elapsed, 'hours');
+      return true;
+    }
+    
+    // 조건 2: 갱신 횟수 제한 (16회 초과)
+    if (refreshCount >= SESSION_CONFIG.MAX_REFRESH_COUNT) {
+      console.log('ApiClient: Session expired due to refresh limit:', refreshCount);
+      return true;
+    }
+    
+    return false;
+  }
+
+  private getSessionExpiryReason(): string {
+    const loginTime = this.getLoginTime();
+    const refreshCount = this.getRefreshCount();
+    
+    if (!loginTime) return SESSION_EXPIRY_REASONS.TOKEN_INVALID;
+    
+    const elapsed = (Date.now() - loginTime.getTime()) / (1000 * 60 * 60);
+    if (elapsed > SESSION_CONFIG.MAX_SESSION_HOURS) {
+      return SESSION_EXPIRY_REASONS.TIME_LIMIT;
+    }
+    
+    if (refreshCount >= SESSION_CONFIG.MAX_REFRESH_COUNT) {
+      return SESSION_EXPIRY_REASONS.REFRESH_LIMIT;
+    }
+    
+    return SESSION_EXPIRY_REASONS.TOKEN_INVALID;
+  }
+
+  private shouldShowSessionWarning(): boolean {
+    const loginTime = this.getLoginTime();
+    if (!loginTime) return false;
+    
+    const elapsed = (Date.now() - loginTime.getTime()) / (1000 * 60);
+    const warningThreshold = (SESSION_CONFIG.MAX_SESSION_HOURS * 60) - SESSION_CONFIG.WARNING_BEFORE_LOGOUT_MINUTES;
+    
+    return elapsed > warningThreshold;
+  }
+
+  private handleSessionExpiry(reason: string): void {
+    console.log('ApiClient: Handling session expiry, reason:', reason);
+    
+    // 토큰 및 세션 데이터 정리
+    this.removeTokens();
+    
+    // 세션 만료 이벤트 발생 (AuthContext에서 처리)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sessionExpired', { 
+        detail: { reason } 
+      }));
+    }
+  }
+
   private removeTokens(): void {
     this.token = null;
     this.refreshToken = null;
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('refreshToken');
+      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.LOGIN_TIME);
+      localStorage.removeItem(STORAGE_KEYS.REFRESH_COUNT);
     }
     this.stopTokenRefreshTimer();
   }
@@ -112,10 +224,11 @@ class ApiClient {
     // 기존 타이머 정리
     this.stopTokenRefreshTimer();
     
-    // 5분마다 토큰 상태 확인
+    // 설정된 주기마다 토큰 및 세션 상태 확인
+    const intervalMinutes = SESSION_CONFIG.SESSION_CHECK_INTERVAL_MINUTES;
     this.tokenCheckInterval = window.setInterval(() => {
       this.checkAndRefreshToken();
-    }, 5 * 60 * 1000); // 5분
+    }, intervalMinutes * 60 * 1000);
   }
 
   private stopTokenRefreshTimer(): void {
@@ -131,8 +244,24 @@ class ApiClient {
     }
 
     try {
-      // 토큰이 10분 이내에 만료되는지 확인
-      if (this.isTokenExpired(this.token) || this.isTokenExpiringSoon(this.token, 10 * 60)) {
+      // 1. 먼저 세션 만료 체크
+      if (this.isSessionExpired()) {
+        console.log('ApiClient: Session expired during check');
+        this.handleSessionExpiry(this.getSessionExpiryReason());
+        return;
+      }
+
+      // 2. 세션 경고 체크
+      if (this.shouldShowSessionWarning()) {
+        console.log('ApiClient: Session warning should be shown');
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('sessionWarning'));
+        }
+      }
+
+      // 3. 토큰 만료 체크 및 갱신
+      const thresholdMinutes = SESSION_CONFIG.TOKEN_REFRESH_THRESHOLD_MINUTES;
+      if (this.isTokenExpired(this.token) || this.isTokenExpiringSoon(this.token, thresholdMinutes * 60)) {
         console.log('ApiClient: Token is expired or expiring soon, refreshing...');
         await this.refreshAccessToken();
       }
@@ -197,6 +326,13 @@ class ApiClient {
     try {
       console.log('ApiClient: Attempting to refresh access token...');
       
+      // 갱신 전 세션 만료 체크
+      if (this.isSessionExpired()) {
+        console.log('ApiClient: Session expired, cannot refresh token');
+        this.handleSessionExpiry(this.getSessionExpiryReason());
+        return false;
+      }
+      
       const response = await fetch(`${this.baseURL}/api/auth/refresh`, {
         method: 'POST',
         headers: {
@@ -208,15 +344,25 @@ class ApiClient {
       if (!response.ok) {
         console.error('ApiClient: Token refresh failed:', response.status, response.statusText);
         // 리프레시 토큰이 만료되었거나 무효함 - 로그아웃 처리
-        this.removeTokens();
+        this.handleSessionExpiry(SESSION_EXPIRY_REASONS.TOKEN_INVALID);
         return false;
       }
 
       const data = await response.json();
       console.log('ApiClient: Token refresh successful');
       
+      // 갱신 횟수 증가
+      this.incrementRefreshCount();
+      
       // 새로운 access token 저장 (refresh token은 그대로 유지)
       this.saveTokens(data.access_token);
+      
+      // 갱신 후 세션 만료 재체크 (갱신 횟수 제한)
+      if (this.isSessionExpired()) {
+        console.log('ApiClient: Session expired after refresh');
+        this.handleSessionExpiry(this.getSessionExpiryReason());
+        return false;
+      }
       
       // 토큰 갱신 후 타이머 재시작
       this.startTokenRefreshTimer();
@@ -224,7 +370,7 @@ class ApiClient {
       return true;
     } catch (error) {
       console.error('ApiClient: Token refresh error:', error);
-      this.removeTokens();
+      this.handleSessionExpiry(SESSION_EXPIRY_REASONS.TOKEN_INVALID);
       return false;
     }
   }
@@ -381,6 +527,9 @@ class ApiClient {
 
       this.saveTokens(data.access_token, data.refresh_token);
       
+      // 로그인 시간 저장 (세션 관리용)
+      this.saveLoginTime();
+      
       // 로그인 성공 시 토큰 자동 갱신 타이머 시작
       this.startTokenRefreshTimer();
       
@@ -451,6 +600,42 @@ class ApiClient {
 
   public getHeadersPublic(): Record<string, string> {
     return this.getHeaders();
+  }
+
+  // 세션 상태 확인을 위한 public 메서드들
+  public getSessionInfo() {
+    const loginTime = this.getLoginTime();
+    const refreshCount = this.getRefreshCount();
+    const isExpired = this.isSessionExpired();
+    const showWarning = this.shouldShowSessionWarning();
+    
+    let timeRemaining = 0;
+    if (loginTime) {
+      const elapsed = (Date.now() - loginTime.getTime()) / (1000 * 60 * 60);
+      timeRemaining = Math.max(0, SESSION_CONFIG.MAX_SESSION_HOURS - elapsed);
+    }
+    
+    return {
+      loginTime,
+      refreshCount,
+      maxRefreshCount: SESSION_CONFIG.MAX_REFRESH_COUNT,
+      isExpired,
+      showWarning,
+      timeRemaining: Math.round(timeRemaining * 100) / 100, // 소수점 2자리
+      maxSessionHours: SESSION_CONFIG.MAX_SESSION_HOURS
+    };
+  }
+
+  public extendSession(): boolean {
+    // 세션 연장 요청 (리프레시 토큰으로 갱신 시도)
+    if (this.isSessionExpired()) {
+      console.log('ApiClient: Cannot extend expired session');
+      return false;
+    }
+    
+    console.log('ApiClient: Extending session by refreshing token');
+    this.refreshAccessToken();
+    return true;
   }
 
   // JWT 검증 메서드들

@@ -7,6 +7,7 @@ import Input from "~/components/ui/Input";
 import Button from "~/components/ui/Button";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
+import LogoutReasonAlert from "~/components/common/LogoutReasonAlert";
 import { validateEmail } from "~/lib/utils";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "~/lib/constants";
 import type { LoginRequest } from "~/types";
@@ -55,7 +56,7 @@ export default function Login() {
   const navigation = useNavigation();
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
-  const { showSuccess, showError } = useNotification();
+  const { showSuccess, showError, showWarning } = useNotification();
 
   const isSubmitting = navigation.state === "submitting";
 
@@ -85,8 +86,14 @@ export default function Login() {
     }
   };
 
+  const handleLogoutReason = (reason: string, message: string) => {
+    showWarning(message, 7000); // 7초간 표시
+  };
+
   return (
     <div className="min-h-screen bg-var-primary">
+      {/* 로그아웃 사유 알림 체크 */}
+      <LogoutReasonAlert onReasonFound={handleLogoutReason} />
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-var-primary mb-2">XAI 아파트 커뮤니티</h1>
