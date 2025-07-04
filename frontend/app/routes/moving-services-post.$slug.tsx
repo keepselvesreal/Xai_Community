@@ -64,6 +64,16 @@ export default function ServiceDetail() {
         // Post 데이터를 Service로 변환
         const serviceData = convertPostToService(response.data);
         if (serviceData) {
+          // 🔍 디버깅: 작성자 정보 상세 로깅
+          console.log('🔍 Service author debugging:', {
+            originalPostData: response.data,
+            originalAuthor: response.data.author,
+            originalAuthorId: response.data.author_id,
+            convertedServiceData: serviceData,
+            serviceAuthor: serviceData.author,
+            serviceAuthorId: serviceData.author_id
+          });
+          
           setService(serviceData);
           
           // 사용자의 북마크 상태 설정
@@ -519,7 +529,88 @@ export default function ServiceDetail() {
     );
   };
 
-  // 사용자 소유권 확인 함수
+  // 서비스 업체 글 작성자 확인 함수
+  const isServiceOwner = () => {
+    if (!user || !service) {
+      console.log('🔍 Service owner check - missing data:', { hasUser: !!user, hasService: !!service });
+      return false;
+    }
+
+    // 🔍 현재 사용자 정보 상세 로깅
+    console.log('🔍 Current user info:', {
+      user: user,
+      userId: user.id,
+      userHandle: user.user_handle,
+      userEmail: user.email,
+      userType: typeof user.id
+    });
+    
+    // service에서 작성자 정보 확인 (여러 가능한 필드 체크)
+    const possibleAuthorFields = [
+      service.author,
+      service.author_id, 
+      service.user_id,
+      service.created_by,
+      service.originalAuthor,
+      service.postAuthor
+    ];
+    
+    console.log('🔍 Service owner check - all possible author fields:', {
+      service: service,
+      author: service.author,
+      author_id: service.author_id,
+      user_id: service.user_id,
+      created_by: service.created_by,
+      originalAuthor: service.originalAuthor,
+      postAuthor: service.postAuthor,
+      possibleAuthorFields: possibleAuthorFields.filter(field => field !== undefined)
+    });
+    
+    // 각 가능한 작성자 필드에 대해 확인
+    for (const authorInfo of possibleAuthorFields) {
+      if (!authorInfo) continue;
+      
+      console.log('🔍 Checking author field:', { authorInfo, type: typeof authorInfo });
+      
+      // 여러 방법으로 소유권 확인
+      let userIdMatch = false;
+      let userHandleMatch = false;
+      let emailMatch = false;
+      
+      if (typeof authorInfo === 'string') {
+        // 문자열인 경우 ID로 간주
+        userIdMatch = authorInfo === user.id;
+      } else if (typeof authorInfo === 'object' && authorInfo !== null) {
+        // 객체인 경우 여러 필드 확인
+        userIdMatch = authorInfo.id === user.id || authorInfo._id === user.id || authorInfo.user_id === user.id;
+        userHandleMatch = authorInfo.user_handle === user.user_handle;
+        emailMatch = authorInfo.email === user.email;
+      }
+      
+      const isOwnerForThisField = userIdMatch || userHandleMatch || emailMatch;
+      
+      console.log('🔍 Service owner check for field:', { 
+        authorInfo,
+        isOwnerForThisField,
+        userIdMatch,
+        userHandleMatch,
+        emailMatch,
+        userId: user.id, 
+        userHandle: user.user_handle,
+        userEmail: user.email
+      });
+      
+      if (isOwnerForThisField) {
+        console.log('✅ Service ownership confirmed via field:', authorInfo);
+        return true;
+      }
+    }
+    
+    console.log('❌ Service ownership not confirmed for any field');
+    return false;
+  };
+
+  // 댓글 작성자 확인 함수
   const isCommentOwner = (comment: any) => {
     if (!user || !comment.author) {
       console.log('🔍 Owner check - missing data:', { hasUser: !!user, hasAuthor: !!comment.author });
@@ -674,6 +765,44 @@ export default function ServiceDetail() {
     }
   };
 
+  const handleEditService = () => {
+    if (!service) return;
+    
+    // 수정 페이지로 이동 (slug를 파라미터로 전달)
+    navigate(`/services/write?edit=${service.slug || service.postId}`);
+  };
+
+  const handleDeleteService = async () => {
+    if (!service) return;
+    
+    // 삭제 확인 다이얼로그
+    const confirmDelete = window.confirm(
+      `정말로 "${service.name}" 업체 정보를 삭제하시겠습니까?\n\n삭제된 정보는 복구할 수 없습니다.`
+    );
+    
+    if (!confirmDelete) return;
+    
+    try {
+      console.log('🗑️ Deleting service:', service.slug || service.postId);
+      
+      // API 클라이언트의 deletePost 메서드 사용
+      const response = await apiClient.deletePost(service.slug || service.postId || '');
+      
+      if (response.success) {
+        showSuccess('업체 정보가 삭제되었습니다.');
+        
+        // 서비스 목록 페이지로 리다이렉트
+        navigate('/services');
+      } else {
+        console.error('❌ Service deletion failed:', response);
+        showError('업체 정보 삭제에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('🚨 업체 정보 삭제 오류:', error);
+      showError('업체 정보 삭제 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleInquirySubmit = async () => {
     if (inquiryTitle.trim() && inquiryContent.trim()) {
       try {
@@ -743,6 +872,23 @@ export default function ServiceDetail() {
             ← 목록으로
           </button>
           <div className="flex items-center gap-3">
+            {/* 작성자 전용 수정/삭제 버튼 */}
+            {isServiceOwner() && (
+              <>
+                <button 
+                  onClick={handleEditService}
+                  className="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  ✏️ 수정
+                </button>
+                <button 
+                  onClick={handleDeleteService}
+                  className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                >
+                  🗑️ 삭제
+                </button>
+              </>
+            )}
             <button 
               onClick={() => window.open(`mailto:${service.contact.email}`)}
               className="px-4 py-2 border border-var-color rounded-lg text-var-secondary hover:border-accent-primary hover:text-accent-primary transition-colors"

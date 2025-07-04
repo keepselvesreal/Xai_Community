@@ -551,12 +551,15 @@ class CommentsService:
         """Generate route path based on page type and slug.
         
         Args:
-            page_type: Page type (board, info, services, tips)
+            page_type: Page type (normalized or raw)
             slug: Post slug
             
         Returns:
             Route path string
         """
+        # Ensure page type is normalized
+        normalized_type = normalize_post_type(page_type) or "board"
+        
         route_mapping = {
             "board": f"/board-post/{slug}",
             "info": f"/property-info/{slug}",
@@ -564,4 +567,4 @@ class CommentsService:
             "tips": f"/expert-tips/{slug}"
         }
         
-        return route_mapping.get(page_type, f"/post/{slug}")
+        return route_mapping.get(normalized_type, f"/post/{slug}")

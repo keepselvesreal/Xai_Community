@@ -74,6 +74,16 @@ export interface Service extends ServicePost, BaseListItem {
   postId?: string;
   /** 수정일 */
   updated_at?: string;
+  
+  // 🔑 작성자 정보 필드들 (Post에서 가져옴)
+  /** 작성자 정보 (객체) */
+  author?: any;
+  /** 작성자 ID */
+  author_id?: string;
+  /** 사용자 ID */
+  user_id?: string;
+  /** 생성자 ID */
+  created_by?: string;
 }
 
 // 서비스 통계 타입
@@ -449,6 +459,13 @@ export function convertPostToService(post: any): Service | null {
     // ID 처리 - MongoDB _id나 id 필드 사용
     const serviceId = post._id || post.id || `service-${Date.now()}-${Math.random()}`;
     
+    console.log('🔍 Post author info for service conversion:', {
+      post_author: post.author,
+      post_author_id: post.author_id,
+      post_user_id: post.user_id,
+      post_created_by: post.created_by
+    });
+
     return {
       // ServicePost 필드들
       company: serviceData.company,
@@ -462,6 +479,13 @@ export function convertPostToService(post: any): Service | null {
       category,
       rating: 0, // 기본값 (추후 실제 평점 시스템 구현 시 수정)
       description: serviceData.company.description,
+      
+      // 🔑 작성자 정보 추가 (여러 가능한 필드로)
+      author: post.author,
+      author_id: post.author_id,
+      user_id: post.user_id,
+      created_by: post.created_by,
+      
       stats: {
         view_count: post.view_count || 0,
         like_count: post.like_count || 0,

@@ -184,7 +184,7 @@ class TestUserActivityService:
         comment_like.metadata = {"route_path": "/board-post/board-post-slug", "target_title": "일반 댓글입니다"}
         reactions.append(comment_like)
         
-        # Bookmark
+        # Bookmark (info page)
         bookmark = Mock()
         bookmark.id = "507f1f77bcf86cd799439032"
         bookmark.user_id = "507f1f77bcf86cd799439011"
@@ -196,6 +196,32 @@ class TestUserActivityService:
         bookmark.created_at = datetime.utcnow()
         bookmark.metadata = {"route_path": "/property-info/info-post-slug", "target_title": "입주 정보 게시글"}
         reactions.append(bookmark)
+        
+        # Services dislike
+        services_dislike = Mock()
+        services_dislike.id = "507f1f77bcf86cd799439033"
+        services_dislike.user_id = "507f1f77bcf86cd799439011"
+        services_dislike.target_type = "post"
+        services_dislike.target_id = "507f1f77bcf86cd799439014"
+        services_dislike.liked = False
+        services_dislike.disliked = True
+        services_dislike.bookmarked = False
+        services_dislike.created_at = datetime.utcnow()
+        services_dislike.metadata = {"route_path": "/moving-services-post/services-post-slug", "target_title": "이사 서비스 게시글"}
+        reactions.append(services_dislike)
+        
+        # Tips like
+        tips_like = Mock()
+        tips_like.id = "507f1f77bcf86cd799439034"
+        tips_like.user_id = "507f1f77bcf86cd799439011"
+        tips_like.target_type = "post"
+        tips_like.target_id = "507f1f77bcf86cd799439015"
+        tips_like.liked = True
+        tips_like.disliked = False
+        tips_like.bookmarked = False
+        tips_like.created_at = datetime.utcnow()
+        tips_like.metadata = {"route_path": "/expert-tips/tips-post-slug", "target_title": "전문가 꿀팁"}
+        reactions.append(tips_like)
         
         return reactions
 
@@ -232,9 +258,17 @@ class TestUserActivityService:
         assert len(inquiry_comments) == 1
         assert len(review_comments) == 1
         
-        # Verify reactions are grouped by type
+        # Verify reactions are grouped by type and page
         assert "likes" in result["reactions"]
         assert "bookmarks" in result["reactions"]
+        assert "dislikes" in result["reactions"]
+        
+        # Verify reaction structure has page type groups
+        for reaction_type in ["likes", "bookmarks", "dislikes"]:
+            assert reaction_type in result["reactions"]
+            for page_type in ["board", "info", "services", "tips"]:
+                assert page_type in result["reactions"][reaction_type]
+                assert isinstance(result["reactions"][reaction_type][page_type], list)
         
         # Verify routing information is included
         for post_group in result["posts"].values():
@@ -244,9 +278,10 @@ class TestUserActivityService:
         for comment in result["comments"]:
             assert "route_path" in comment
             
-        for reaction_group in result["reactions"].values():
-            for reaction in reaction_group:
-                assert "route_path" in reaction
+        for reaction_type_group in result["reactions"].values():
+            for page_group in reaction_type_group.values():
+                for reaction in page_group:
+                    assert "route_path" in reaction
 
     async def test_get_user_posts_by_page_type(
         self, user_activity_service, mock_post_repository, sample_user, sample_posts
@@ -313,10 +348,10 @@ class TestUserActivityService:
         assert regular_comment["content"] == "일반 댓글입니다"
         assert regular_comment["route_path"] == "/board-post/board-post-slug"
 
-    async def test_get_user_reactions_grouped(
+    async def test_get_user_reactions_grouped_legacy(
         self, user_activity_service, mock_user_reaction_repository, sample_user, sample_reactions
     ):
-        """Test retrieval of user reactions grouped by type."""
+        """Test retrieval of user reactions grouped by type (legacy method)."""
         # Arrange
         mock_user_reaction_repository.find_by_user.return_value = sample_reactions
         
@@ -327,24 +362,25 @@ class TestUserActivityService:
         assert isinstance(result, dict)
         assert "likes" in result
         assert "bookmarks" in result
+        assert "dislikes" in result
         
-        # Verify likes include both post and comment likes
-        assert len(result["likes"]) == 2
-        post_like = next((r for r in result["likes"] if r["target_type"] == "post"), None)
-        comment_like = next((r for r in result["likes"] if r["target_type"] == "comment"), None)
+        # Verify likes include post, comment, and tips likes
+        assert len(result["likes"]) == 3  # board post + board comment + tips post
+        post_likes = [r for r in result["likes"] if r["target_type"] == "post"]
+        comment_likes = [r for r in result["likes"] if r["target_type"] == "comment"]
         
-        assert post_like is not None
-        assert post_like["route_path"] == "/board-post/board-post-slug"
-        assert post_like["target_title"] == "게시판 게시글"
-        
-        assert comment_like is not None
-        assert comment_like["route_path"] == "/board-post/board-post-slug"
-        assert comment_like["target_title"] == "일반 댓글입니다"
+        assert len(post_likes) == 2  # board post + tips post
+        assert len(comment_likes) == 1  # board comment
         
         # Verify bookmarks
         assert len(result["bookmarks"]) == 1
         assert result["bookmarks"][0]["route_path"] == "/property-info/info-post-slug"
         assert result["bookmarks"][0]["target_title"] == "입주 정보 게시글"
+        
+        # Verify dislikes
+        assert len(result["dislikes"]) == 1
+        assert result["dislikes"][0]["route_path"] == "/moving-services-post/services-post-slug"
+        assert result["dislikes"][0]["target_title"] == "이사 서비스 게시글"
 
     def test_generate_route_path(self, user_activity_service):
         """Test route path generation for different page types."""
@@ -385,7 +421,15 @@ class TestUserActivityService:
         assert result is not None
         assert result["posts"] == {"board": [], "info": [], "services": [], "tips": []}
         assert result["comments"] == []
-        assert result["reactions"] == {"likes": [], "bookmarks": [], "dislikes": []}
+        
+        # Verify empty reactions structure
+        expected_reactions = {
+            "likes": {"board": [], "info": [], "services": [], "tips": []},
+            "bookmarks": {"board": [], "info": [], "services": [], "tips": []},
+            "dislikes": {"board": [], "info": [], "services": [], "tips": []}
+        }
+        assert result["reactions"] == expected_reactions
+        
         assert result["summary"]["total_posts"] == 0
         assert result["summary"]["total_comments"] == 0
         assert result["summary"]["total_reactions"] == 0
@@ -486,3 +530,103 @@ class TestUserActivityService:
         mock_post_repository.find_by_author_paginated.assert_called_once_with(sample_user.id, 10, 10)
         mock_comment_repository.find_by_author_paginated.assert_called_once_with(sample_user.id, 10, 10)
         mock_user_reaction_repository.find_by_user_paginated.assert_called_once_with(sample_user.id, 10, 10)
+
+    # 새로운 페이지별 분류 테스트 추가
+    def test_extract_page_type_from_reaction(self, user_activity_service):
+        """Test page type extraction from reaction route_path."""
+        # Test board reactions
+        board_path = user_activity_service._extract_page_type_from_reaction("/board-post/test-slug")
+        assert board_path == "board"
+        
+        # Test info reactions  
+        info_path = user_activity_service._extract_page_type_from_reaction("/property-info/test-slug")
+        assert info_path == "info"
+        
+        # Test services reactions
+        services_path = user_activity_service._extract_page_type_from_reaction("/moving-services-post/test-slug")
+        assert services_path == "services"
+        
+        # Test tips reactions
+        tips_path = user_activity_service._extract_page_type_from_reaction("/expert-tips/test-slug")
+        assert tips_path == "tips"
+        
+        # Test unknown route (should return None)
+        unknown_path = user_activity_service._extract_page_type_from_reaction("/unknown/test-slug")
+        assert unknown_path is None
+
+    async def test_get_user_reactions_grouped_by_page_type_paginated(
+        self, user_activity_service, mock_user_reaction_repository, mock_post_repository, sample_user, sample_reactions
+    ):
+        """Test retrieval of user reactions grouped by page type and reaction type."""
+        # Arrange
+        mock_user_reaction_repository.find_by_user_paginated.return_value = sample_reactions
+        
+        # Mock post repository responses for post reactions
+        async def mock_get_by_id(post_id):
+            mock_post = Mock()
+            mock_post.status = "active"
+            if post_id == "507f1f77bcf86cd799439012":
+                mock_post.title = "게시판 게시글"
+            elif post_id == "507f1f77bcf86cd799439013":
+                mock_post.title = "입주 정보 게시글"
+            elif post_id == "507f1f77bcf86cd799439014":
+                mock_post.title = "이사 서비스 게시글"
+            elif post_id == "507f1f77bcf86cd799439015":
+                mock_post.title = "전문가 꿀팁"
+            return mock_post
+        
+        mock_post_repository.get_by_id.side_effect = mock_get_by_id
+        
+        # Act
+        result = await user_activity_service._get_user_reactions_grouped_paginated(sample_user.id, 10, 0)
+        
+        # Assert
+        assert isinstance(result, dict)
+        
+        # Verify structure has both reaction type and page type grouping
+        for reaction_type in ["likes", "bookmarks", "dislikes"]:
+            assert reaction_type in result
+            for page_type in ["board", "info", "services", "tips"]:
+                assert page_type in result[reaction_type]
+                assert isinstance(result[reaction_type][page_type], list)
+        
+        # Verify specific counts by page type
+        assert len(result["likes"]["board"]) == 2  # post like + comment like
+        assert len(result["likes"]["info"]) == 0
+        assert len(result["likes"]["services"]) == 0
+        assert len(result["likes"]["tips"]) == 1  # tips like
+        
+        assert len(result["bookmarks"]["board"]) == 0
+        assert len(result["bookmarks"]["info"]) == 1  # info bookmark
+        assert len(result["bookmarks"]["services"]) == 0
+        assert len(result["bookmarks"]["tips"]) == 0
+        
+        assert len(result["dislikes"]["board"]) == 0
+        assert len(result["dislikes"]["info"]) == 0
+        assert len(result["dislikes"]["services"]) == 1  # services dislike
+        assert len(result["dislikes"]["tips"]) == 0
+        
+        # Verify reaction data structure
+        board_post_like = result["likes"]["board"][0]
+        assert board_post_like["target_type"] == "post"
+        assert board_post_like["route_path"] == "/board-post/board-post-slug"
+        assert board_post_like["target_title"] == "게시판 게시글"
+        assert board_post_like["title"] == "게시판 게시글"
+        
+        info_bookmark = result["bookmarks"]["info"][0]
+        assert info_bookmark["target_type"] == "post"
+        assert info_bookmark["route_path"] == "/property-info/info-post-slug"
+        assert info_bookmark["target_title"] == "입주 정보 게시글"
+        assert info_bookmark["title"] == "입주 정보 게시글"
+        
+        services_dislike = result["dislikes"]["services"][0]
+        assert services_dislike["target_type"] == "post"
+        assert services_dislike["route_path"] == "/moving-services-post/services-post-slug"
+        assert services_dislike["target_title"] == "이사 서비스 게시글"
+        assert services_dislike["title"] == "이사 서비스 게시글"
+        
+        tips_like = result["likes"]["tips"][0]
+        assert tips_like["target_type"] == "post"
+        assert tips_like["route_path"] == "/expert-tips/tips-post-slug"
+        assert tips_like["target_title"] == "전문가 꿀팁"
+        assert tips_like["title"] == "전문가 꿀팁"

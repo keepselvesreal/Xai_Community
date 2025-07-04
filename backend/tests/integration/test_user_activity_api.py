@@ -141,35 +141,53 @@ def sample_activity_data():
             }
         ],
         "reactions": {
-            "likes": [
-                {
-                    "id": "507f1f77bcf86cd799439030",
-                    "target_type": "post",
-                    "target_id": "507f1f77bcf86cd799439012",
-                    "created_at": "2024-01-01T17:00:00Z",
-                    "route_path": "/board-post/board-post-slug",
-                    "target_title": "게시판 게시글"
-                },
-                {
-                    "id": "507f1f77bcf86cd799439031",
-                    "target_type": "comment",
-                    "target_id": "507f1f77bcf86cd799439020",
-                    "created_at": "2024-01-01T18:00:00Z",
-                    "route_path": "/board-post/board-post-slug",
-                    "target_title": "일반 댓글입니다"
-                }
-            ],
-            "bookmarks": [
-                {
-                    "id": "507f1f77bcf86cd799439032",
-                    "target_type": "post",
-                    "target_id": "507f1f77bcf86cd799439013",
-                    "created_at": "2024-01-01T19:00:00Z",
-                    "route_path": "/property-info/info-post-slug",
-                    "target_title": "입주 정보 게시글"
-                }
-            ],
-            "dislikes": []
+            "likes": {
+                "board": [
+                    {
+                        "id": "507f1f77bcf86cd799439030",
+                        "target_type": "post",
+                        "target_id": "507f1f77bcf86cd799439012",
+                        "created_at": "2024-01-01T17:00:00Z",
+                        "route_path": "/board-post/board-post-slug",
+                        "target_title": "게시판 게시글",
+                        "title": "게시판 게시글"
+                    },
+                    {
+                        "id": "507f1f77bcf86cd799439031",
+                        "target_type": "comment",
+                        "target_id": "507f1f77bcf86cd799439020",
+                        "created_at": "2024-01-01T18:00:00Z",
+                        "route_path": "/board-post/board-post-slug",
+                        "target_title": "일반 댓글입니다",
+                        "title": "일반 댓글입니다"
+                    }
+                ],
+                "info": [],
+                "services": [],
+                "tips": []
+            },
+            "bookmarks": {
+                "board": [],
+                "info": [
+                    {
+                        "id": "507f1f77bcf86cd799439032",
+                        "target_type": "post",
+                        "target_id": "507f1f77bcf86cd799439013",
+                        "created_at": "2024-01-01T19:00:00Z",
+                        "route_path": "/property-info/info-post-slug",
+                        "target_title": "입주 정보 게시글",
+                        "title": "입주 정보 게시글"
+                    }
+                ],
+                "services": [],
+                "tips": []
+            },
+            "dislikes": {
+                "board": [],
+                "info": [],
+                "services": [],
+                "tips": []
+            }
         },
         "summary": {
             "total_posts": 4,
@@ -255,24 +273,43 @@ class TestUserActivityAPI:
         assert review_comment["content"] == "서비스 후기 댓글입니다"
         assert review_comment["route_path"] == "/moving-services-post/services-post-slug"
         
-        # Verify reaction data grouped by type
+        # Verify reaction data grouped by type and page
         assert "likes" in data["reactions"]
         assert "bookmarks" in data["reactions"]
         assert "dislikes" in data["reactions"]
         
-        assert len(data["reactions"]["likes"]) == 2
-        assert len(data["reactions"]["bookmarks"]) == 1
-        assert len(data["reactions"]["dislikes"]) == 0
+        # Verify reaction structure has page type groups
+        for reaction_type in ["likes", "bookmarks", "dislikes"]:
+            assert reaction_type in data["reactions"]
+            for page_type in ["board", "info", "services", "tips"]:
+                assert page_type in data["reactions"][reaction_type]
+                assert isinstance(data["reactions"][reaction_type][page_type], list)
+        
+        # Verify specific reaction counts by page type
+        assert len(data["reactions"]["likes"]["board"]) == 2  # 게시판 좋아요 2개
+        assert len(data["reactions"]["likes"]["info"]) == 0
+        assert len(data["reactions"]["likes"]["services"]) == 0
+        assert len(data["reactions"]["likes"]["tips"]) == 0
+        
+        assert len(data["reactions"]["bookmarks"]["board"]) == 0
+        assert len(data["reactions"]["bookmarks"]["info"]) == 1  # 정보 북마크 1개
+        assert len(data["reactions"]["bookmarks"]["services"]) == 0
+        assert len(data["reactions"]["bookmarks"]["tips"]) == 0
         
         # Verify reaction routing information
-        post_like = next((r for r in data["reactions"]["likes"] if r["target_type"] == "post"), None)
-        assert post_like is not None
-        assert post_like["route_path"] == "/board-post/board-post-slug"
-        assert post_like["target_title"] == "게시판 게시글"
+        board_post_like = data["reactions"]["likes"]["board"][0]
+        assert board_post_like["target_type"] == "post"
+        assert board_post_like["route_path"] == "/board-post/board-post-slug"
+        assert board_post_like["target_title"] == "게시판 게시글"
         
-        bookmark = data["reactions"]["bookmarks"][0]
-        assert bookmark["route_path"] == "/property-info/info-post-slug"
-        assert bookmark["target_title"] == "입주 정보 게시글"
+        board_comment_like = data["reactions"]["likes"]["board"][1]
+        assert board_comment_like["target_type"] == "comment"
+        assert board_comment_like["route_path"] == "/board-post/board-post-slug"
+        assert board_comment_like["target_title"] == "일반 댓글입니다"
+        
+        info_bookmark = data["reactions"]["bookmarks"]["info"][0]
+        assert info_bookmark["route_path"] == "/property-info/info-post-slug"
+        assert info_bookmark["target_title"] == "입주 정보 게시글"
         
         # Verify pagination data
         assert data["pagination"]["posts"]["total_count"] == 4
@@ -292,7 +329,11 @@ class TestUserActivityAPI:
         empty_data = {
             "posts": {"board": [], "info": [], "services": [], "tips": []},
             "comments": [],
-            "reactions": {"likes": [], "bookmarks": [], "dislikes": []},
+            "reactions": {
+                "likes": {"board": [], "info": [], "services": [], "tips": []},
+                "bookmarks": {"board": [], "info": [], "services": [], "tips": []},
+                "dislikes": {"board": [], "info": [], "services": [], "tips": []}
+            },
             "pagination": {
                 "posts": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
                 "comments": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
@@ -313,9 +354,11 @@ class TestUserActivityAPI:
         assert data["posts"]["services"] == []
         assert data["posts"]["tips"] == []
         assert data["comments"] == []
-        assert data["reactions"]["likes"] == []
-        assert data["reactions"]["bookmarks"] == []
-        assert data["reactions"]["dislikes"] == []
+        
+        # Verify empty reactions structure
+        for reaction_type in ["likes", "bookmarks", "dislikes"]:
+            for page_type in ["board", "info", "services", "tips"]:
+                assert data["reactions"][reaction_type][page_type] == []
         assert data["pagination"]["posts"]["total_count"] == 0
         assert data["pagination"]["comments"]["total_count"] == 0
         assert data["pagination"]["reactions"]["total_count"] == 0
@@ -392,12 +435,14 @@ class TestUserActivityAPI:
         
         # Verify each reaction has required navigation fields
         for reaction_type in ["likes", "bookmarks", "dislikes"]:
-            for reaction in data["reactions"][reaction_type]:
-                assert "id" in reaction
-                assert "target_type" in reaction
-                assert "route_path" in reaction
-                assert "created_at" in reaction
-                assert "target_title" in reaction
+            for page_type in ["board", "info", "services", "tips"]:
+                for reaction in data["reactions"][reaction_type][page_type]:
+                    assert "id" in reaction
+                    assert "target_type" in reaction
+                    assert "route_path" in reaction
+                    assert "created_at" in reaction
+                    assert "target_title" in reaction
+                    assert "title" in reaction
 
     def test_get_user_activity_with_pagination_params(
         self, client, mock_user_activity_service
@@ -435,19 +480,34 @@ class TestUserActivityAPI:
                 }
             ],
             "reactions": {
-                "likes": [
-                    {
-                        "id": "507f1f77bcf86cd799439030",
-                        "target_type": "post",
-                        "target_id": "507f1f77bcf86cd799439012",
-                        "created_at": "2024-01-01T17:00:00Z",
-                        "route_path": "/board-post/board-post-slug",
-                        "target_title": "게시판 게시글",
-                        "title": "게시판 게시글"
-                    }
-                ],
-                "bookmarks": [],
-                "dislikes": []
+                "likes": {
+                    "board": [
+                        {
+                            "id": "507f1f77bcf86cd799439030",
+                            "target_type": "post",
+                            "target_id": "507f1f77bcf86cd799439012",
+                            "created_at": "2024-01-01T17:00:00Z",
+                            "route_path": "/board-post/board-post-slug",
+                            "target_title": "게시판 게시글",
+                            "title": "게시판 게시글"
+                        }
+                    ],
+                    "info": [],
+                    "services": [],
+                    "tips": []
+                },
+                "bookmarks": {
+                    "board": [],
+                    "info": [],
+                    "services": [],
+                    "tips": []
+                },
+                "dislikes": {
+                    "board": [],
+                    "info": [],
+                    "services": [],
+                    "tips": []
+                }
             },
             "pagination": {
                 "posts": {
@@ -497,7 +557,11 @@ class TestUserActivityAPI:
         default_paginated_data = {
             "posts": {"board": [], "info": [], "services": [], "tips": []},
             "comments": [],
-            "reactions": {"likes": [], "bookmarks": [], "dislikes": []},
+            "reactions": {
+                "likes": {"board": [], "info": [], "services": [], "tips": []},
+                "bookmarks": {"board": [], "info": [], "services": [], "tips": []},
+                "dislikes": {"board": [], "info": [], "services": [], "tips": []}
+            },
             "pagination": {
                 "posts": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
                 "comments": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
@@ -525,7 +589,11 @@ class TestUserActivityAPI:
         mock_user_activity_service.get_user_activity_summary.return_value = {
             "posts": {"board": [], "info": [], "services": [], "tips": []},
             "comments": [],
-            "reactions": {"likes": [], "bookmarks": [], "dislikes": []},
+            "reactions": {
+                "likes": {"board": [], "info": [], "services": [], "tips": []},
+                "bookmarks": {"board": [], "info": [], "services": [], "tips": []},
+                "dislikes": {"board": [], "info": [], "services": [], "tips": []}
+            },
             "pagination": {
                 "posts": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},
                 "comments": {"total_count": 0, "page": 1, "limit": 10, "has_more": False},

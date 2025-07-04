@@ -12,39 +12,26 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_post_type(post_type: Optional[str]) -> Optional[str]:
-    """Normalize post type to match expected page types.
+    """Normalize post type - simplified to use DB types directly.
     
-    Maps database stored types to frontend page types:
-    - expert_tips -> tips
-    - property_information -> info  
-    - board -> board
-    - services -> services
-    - Unknown types -> None (with logging)
+    Only normalizes 'moving services' to 'services' for consistency.
+    All other DB types are used as-is in frontend.
     
     Args:
         post_type: The post type from database
         
     Returns:
-        Normalized page type or None for unknown types
+        DB post type or 'services' for moving services
     """
     if not post_type:
         return None
         
-    # Type mapping from DB to frontend
-    type_mapping = {
-        "expert_tips": "tips",
-        "property_information": "info", 
-        "board": "board",
-        "services": "services",
-        "moving services": "services"  # 입주 업체 서비스
-    }
-    
-    normalized = type_mapping.get(post_type)
-    
-    if normalized is None:
-        logger.warning(f"Unrecognized post type: '{post_type}'. This type will be ignored.")
+    # Only normalize inconsistent naming
+    if post_type == "moving services":
+        return "services"
         
-    return normalized
+    # Use DB types directly (expert_tips, property_information, board, services)
+    return post_type
 
 
 class UserActivityService:
@@ -68,7 +55,7 @@ class UserActivityService:
         self.user_reaction_repository = user_reaction_repository
     
     def normalize_post_type(self, post_type: Optional[str]) -> Optional[str]:
-        """Normalize post type to match expected page types."""
+        """Normalize post type - simplified to use DB types directly."""
         return normalize_post_type(post_type)
     
     async def get_user_activity_summary(self, user_id: str, page: int = 1, limit: int = 10) -> Dict[str, Any]:
@@ -162,28 +149,28 @@ class UserActivityService:
         # Get paginated user posts
         posts = await self.post_repository.find_by_author_paginated(user_id, limit, skip)
         
-        # Initialize result with all page types
+        # Initialize result with DB-native page types
         result = {
             "board": [],
-            "info": [],
-            "services": [],
-            "tips": []
+            "property_information": [],  # DB 원시 타입 사용
+            "expert_tips": [],           # DB 원시 타입 사용
+            "services": []
         }
         
         # Group posts by page type
         for post in posts:
-            # Get the original type from metadata
-            original_type = getattr(post.metadata, "type", None) if post.metadata else None
+            # Get the type from metadata (use DB type directly)
+            post_type = getattr(post.metadata, "type", None) if post.metadata else None
             
-            # Normalize the post type
-            normalized_type = self.normalize_post_type(original_type)
+            # Only normalize 'moving services' to 'services', keep others as-is
+            normalized_type = self.normalize_post_type(post_type)
             
-            # Skip posts with unrecognized types (they are already logged)
+            # Skip posts with unrecognized types
             if normalized_type is None:
                 continue
                 
-            # Generate route path using original type for routing
-            route_path = self._generate_route_path(original_type or "board", post.slug)
+            # Generate route path using normalized type
+            route_path = self._generate_route_path(normalized_type, post.slug)
             
             # Use model fields directly instead of real-time calculation
             post_data = {
@@ -250,18 +237,33 @@ class UserActivityService:
         return result
     
     async def _get_user_reactions_grouped(self, user_id: str) -> Dict[str, List[Dict[str, Any]]]:
-        """Get user reactions grouped by reaction type (backward compatibility - uses pagination with high limit).
+        """Get user reactions grouped by reaction type (backward compatibility - flattens page type grouping).
         
         Args:
             user_id: User ID
             
         Returns:
-            Dictionary with reaction types as keys and reaction lists as values
+            Dictionary with reaction types as keys and reaction lists as values (legacy format)
         """
-        return await self._get_user_reactions_grouped_paginated(user_id, limit=1000, skip=0)
+        # Get new page-type grouped reactions
+        page_grouped_reactions = await self._get_user_reactions_grouped_paginated(user_id, limit=1000, skip=0)
+        
+        # Flatten page grouping for backward compatibility
+        result = {
+            "likes": [],
+            "bookmarks": [],
+            "dislikes": []
+        }
+        
+        for reaction_type in ["likes", "bookmarks", "dislikes"]:
+            reaction_key = f"reaction-{reaction_type}"
+            for page_type in ["board", "property_information", "expert_tips", "services"]:
+                result[reaction_type].extend(page_grouped_reactions[reaction_key][page_type])
+        
+        return result
     
-    async def _get_user_reactions_grouped_paginated(self, user_id: str, limit: int = 10, skip: int = 0) -> Dict[str, List[Dict[str, Any]]]:
-        """Get user reactions grouped by reaction type with pagination.
+    async def _get_user_reactions_grouped_paginated(self, user_id: str, limit: int = 10, skip: int = 0) -> Dict[str, Dict[str, List[Dict[str, Any]]]]:
+        """Get user reactions grouped by reaction type and page type with pagination (similar to posts classification).
         
         Args:
             user_id: User ID
@@ -269,23 +271,60 @@ class UserActivityService:
             skip: Number of reactions to skip
             
         Returns:
-            Dictionary with reaction types as keys and reaction lists as values
+            Dictionary with reaction types as keys and page type dictionaries as values
         """
         # Get paginated user reactions
         reactions = await self.user_reaction_repository.find_by_user_paginated(user_id, limit, skip)
         
-        # Initialize result
+        # Initialize result with reaction-* prefix pattern and DB-native page types
         result = {
-            "likes": [],
-            "bookmarks": [],
-            "dislikes": []
+            "reaction-likes": {
+                "board": [],
+                "property_information": [],  # DB 원시 타입 사용
+                "expert_tips": [],           # DB 원시 타입 사용
+                "services": []
+            },
+            "reaction-bookmarks": {
+                "board": [],
+                "property_information": [],
+                "expert_tips": [],
+                "services": []
+            },
+            "reaction-dislikes": {
+                "board": [],
+                "property_information": [],
+                "expert_tips": [],
+                "services": []
+            }
         }
         
-        # Group reactions by type
+        # Group reactions by type and page
+        logger.info(f"🔍 ANALYZING {len(reactions)} reactions for user {user_id}")
+        
+        # 모든 route_path 패턴 수집
+        all_route_paths = set()
         for reaction in reactions:
+            route_path = reaction.metadata.get("route_path", "/")
+            all_route_paths.add(route_path)
+        
+        logger.info(f"📋 ALL UNIQUE ROUTE PATHS FOUND: {sorted(list(all_route_paths))}")
+        
+        for i, reaction in enumerate(reactions):
             # Extract routing information from metadata
             route_path = reaction.metadata.get("route_path", "/")
             target_title = reaction.metadata.get("target_title", "")
+            
+            logger.info(f"Reaction {i+1}/{len(reactions)}: route_path='{route_path}', target_type='{reaction.target_type}', liked={reaction.liked}, disliked={reaction.disliked}, bookmarked={reaction.bookmarked}")
+            
+            # Extract page type from route_path (similar to posts classification)
+            page_type = self._extract_page_type_from_reaction(route_path)
+            
+            # Skip reactions with unknown page types (already logged)
+            if page_type is None:
+                logger.warning(f"❌ SKIPPING reaction {reaction.id} due to unknown page_type for route_path '{route_path}'")
+                continue
+                
+            logger.info(f"✅ ADDING reaction {reaction.id} to {page_type} page_type")
             
             # Get post information for reactions (only for post reactions)
             post_title = target_title
@@ -311,16 +350,65 @@ class UserActivityService:
                 "title": post_title  # 프론트엔드에서 사용할 제목
             }
             
-            # Add to appropriate category (각 반응은 독립적이므로 elif 대신 if 사용)
+            # Add to appropriate category using reaction-* prefix pattern
             if reaction.liked:
-                result["likes"].append(reaction_data)
+                result["reaction-likes"][page_type].append(reaction_data)
             if reaction.disliked:
-                result["dislikes"].append(reaction_data)
+                result["reaction-dislikes"][page_type].append(reaction_data)
             if reaction.bookmarked:
-                result["bookmarks"].append(reaction_data)
+                result["reaction-bookmarks"][page_type].append(reaction_data)
         
         return result
     
+    def _extract_page_type_from_reaction(self, route_path: str) -> Optional[str]:
+        """Extract page type from reaction route_path (similar to posts classification).
+        
+        Args:
+            route_path: Route path from reaction metadata
+            
+        Returns:
+            Page type (board, info, services, tips) or None for unknown routes
+        """
+        if not route_path:
+            logger.warning("Empty route_path detected in reaction")
+            return None
+            
+        logger.info(f"Processing reaction route_path: '{route_path}'")
+            
+        # 현재 올바른 패턴들 (DB 원시 타입 사용)
+        route_to_page_mapping = {
+            "/board-post/": "board",
+            "/property-info/": "property_information",  # DB 원시 타입 사용
+            "/moving-services-post/": "services",
+            "/expert-tips/": "expert_tips"             # DB 원시 타입 사용
+        }
+        
+        # 기존 데이터에 있을 수 있는 다른 패턴들 (DB 원시 타입으로 매핑)
+        legacy_patterns = {
+            "/board/": "board",
+            "/post/": "board",  # 기본 패턴이 board일 가능성
+            "/property/": "property_information",
+            "/info/": "property_information",
+            "/services/": "services",
+            "/tips/": "expert_tips",
+            "/expert/": "expert_tips"
+        }
+        
+        # 현재 패턴 먼저 확인
+        for route_prefix, page_type in route_to_page_mapping.items():
+            if route_path.startswith(route_prefix):
+                logger.info(f"✅ CURRENT PATTERN MATCHED: route_path '{route_path}' → page_type '{page_type}' (prefix: '{route_prefix}')")
+                return page_type
+        
+        # 레거시 패턴 확인
+        for route_prefix, page_type in legacy_patterns.items():
+            if route_path.startswith(route_prefix):
+                logger.info(f"✅ LEGACY PATTERN MATCHED: route_path '{route_path}' → page_type '{page_type}' (prefix: '{route_prefix}')")
+                return page_type
+                
+        logger.warning(f"Unrecognized reaction route_path: '{route_path}'. This reaction will be ignored.")
+        return None
+
     def _generate_route_path(self, page_type: str, slug: str) -> str:
         """Generate route path based on page type and slug.
         
@@ -332,14 +420,11 @@ class UserActivityService:
             Route path string
         """
         route_mapping = {
-            # Normalized types (for backward compatibility)
+            # DB types to route paths
             "board": f"/board-post/{slug}",
-            "info": f"/property-info/{slug}",
-            "services": f"/moving-services-post/{slug}",
-            "tips": f"/expert-tips/{slug}",
-            # Original DB types
             "property_information": f"/property-info/{slug}",
-            "expert_tips": f"/expert-tips/{slug}"
+            "expert_tips": f"/expert-tips/{slug}",
+            "services": f"/moving-services-post/{slug}"
         }
         
         return route_mapping.get(page_type, f"/post/{slug}")

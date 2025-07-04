@@ -385,8 +385,11 @@ class PostsService:
         
         if not user_reaction:
             # Generate route path for the post
-            page_type = getattr(post.metadata, "type", "board") if post.metadata else "board"
-            route_path = self._generate_route_path(page_type, post.slug)
+            raw_page_type = getattr(post.metadata, "type", "board") if post.metadata else "board"
+            # Normalize page type before generating route
+            from nadle_backend.services.user_activity_service import normalize_post_type
+            normalized_page_type = normalize_post_type(raw_page_type) or "board"
+            route_path = self._generate_route_path(normalized_page_type, post.slug)
             
             user_reaction = UserReaction(
                 user_id=str(current_user.id),
@@ -455,12 +458,16 @@ class PostsService:
         """Generate route path based on page type and slug.
         
         Args:
-            page_type: Page type (board, info, services, tips)
+            page_type: Page type (can be raw DB type or normalized type)
             slug: Post slug
             
         Returns:
             Route path string
         """
+        # Normalize page type first
+        from nadle_backend.services.user_activity_service import normalize_post_type
+        normalized_type = normalize_post_type(page_type) or "board"
+        
         route_mapping = {
             "board": f"/board-post/{slug}",
             "info": f"/property-info/{slug}",
@@ -468,7 +475,7 @@ class PostsService:
             "tips": f"/expert-tips/{slug}"
         }
         
-        return route_mapping.get(page_type, f"/post/{slug}")
+        return route_mapping.get(normalized_type, f"/post/{slug}")
     
     async def get_service_post_with_extended_stats(
         self, 
@@ -489,6 +496,26 @@ class PostsService:
         """
         # 기본 게시글 정보 조회
         post = await self.get_post(slug_or_id, current_user)
+        
+        return await self.get_service_post_with_extended_stats_from_post(post, current_user)
+    
+    async def get_service_post_with_extended_stats_from_post(
+        self, 
+        post: Post, 
+        current_user: Optional[User] = None
+    ) -> Dict[str, Any]:
+        """이미 조회된 Post 객체로부터 입주 서비스 업체 게시글을 확장 통계와 함께 반환.
+        
+        Args:
+            post: 이미 조회된 Post 객체
+            current_user: 현재 사용자 (선택적)
+            
+        Returns:
+            확장된 통계 정보를 포함한 게시글 데이터
+            
+        Raises:
+            PostNotFoundError: 입주 서비스 업체 게시글이 아닌 경우
+        """
         
         # 입주 서비스 업체 게시글인지 확인
         if not (post.metadata and post.metadata.type == "moving services"):
@@ -513,6 +540,42 @@ class PostsService:
             "general_comment_count": comment_stats["general"]
         }
         
+        # Get user reaction if authenticated
+        user_reaction = None
+        if current_user:
+            from nadle_backend.models.core import UserReaction
+            reaction = await UserReaction.find_one({
+                "user_id": str(current_user.id),
+                "target_type": "post",
+                "target_id": str(post.id)
+            })
+            if reaction:
+                user_reaction = {
+                    "liked": reaction.liked,
+                    "disliked": reaction.disliked,
+                    "bookmarked": reaction.bookmarked
+                }
+
+        # Get author information
+        author_info = None
+        try:
+            author = await User.get(post.author_id)
+            if author:
+                author_info = {
+                    "id": str(author.id),
+                    "user_handle": author.user_handle,
+                    "display_name": author.display_name,
+                    "name": author.name
+                }
+        except Exception as e:
+            print(f"Failed to get author info: {e}")
+            author_info = {
+                "id": str(post.author_id),
+                "user_handle": "익명",
+                "display_name": "익명",
+                "name": "익명"
+            }
+
         # Post 객체를 딕셔너리로 수동 변환 (ObjectId 직렬화 문제 해결)
         post_dict = {
             "_id": str(post.id),
@@ -522,19 +585,24 @@ class PostsService:
             "slug": post.slug,
             "service": post.service,
             "metadata": post.metadata.model_dump() if post.metadata else None,
+            "file_ids": post.metadata.file_ids if post.metadata else [],  # 파일 IDs 추가
             "author_id": str(post.author_id),
+            "author": author_info,  # 작성자 정보 추가
             "status": post.status,
             "created_at": post.created_at.isoformat() if post.created_at else None,
             "updated_at": post.updated_at.isoformat() if post.updated_at else None,
             "published_at": post.published_at.isoformat() if post.published_at else None,
+            "stats": extended_stats,
             # 기본 통계 필드들 추가 (프론트엔드 convertPostToService 함수 호환성을 위해)
             "view_count": post.view_count or 0,
             "like_count": post.like_count or 0,
             "dislike_count": post.dislike_count or 0,
             "comment_count": post.comment_count or 0,
-            "bookmark_count": post.bookmark_count or 0,
-            "extended_stats": extended_stats
+            "bookmark_count": post.bookmark_count or 0
         }
+
+        if user_reaction:
+            post_dict["user_reaction"] = user_reaction
         
         return post_dict
 

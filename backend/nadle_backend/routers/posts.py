@@ -132,10 +132,10 @@ async def get_post(
         else:
             print("📝 메타데이터 없음")
         
-        # 🔍 서비스 포스트인 경우 확장 통계 포함
+        # 🔍 서비스 포스트인 경우 확장 통계 포함 (이미 조회된 post 객체 재사용하여 조회수 중복 증가 방지)
         if post.metadata and post.metadata.type == "moving services":
             print("📊 서비스 포스트 - 확장 통계 포함")
-            return await posts_service.get_service_post_with_extended_stats(slug_or_id, current_user)
+            return await posts_service.get_service_post_with_extended_stats_from_post(post, current_user)
         
         # ✅ Use denormalized stats from Post model (no real-time calculation)
         real_stats = {

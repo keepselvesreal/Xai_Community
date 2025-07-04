@@ -39,11 +39,15 @@ class ActivityItem(BaseModel):
 
 
 class UserActivityResponse(BaseModel):
-    """User activity response model."""
-    posts: Dict[str, list[ActivityItem]]
+    """User activity response model with simplified structure."""
+    posts: Dict[str, list[ActivityItem]]  # DB native types: board, property_information, expert_tips, services
     comments: list[ActivityItem]
-    reactions: Dict[str, list[ActivityItem]]
+    # Simplified reaction structure with reaction-* prefix
+    # Dynamic keys: reaction-likes, reaction-dislikes, reaction-bookmarks
     pagination: Dict[str, PaginationInfo]
+    
+    class Config:
+        extra = "allow"  # Allow dynamic reaction-* keys
 
 
 router = APIRouter()
@@ -128,21 +132,23 @@ async def get_user_activity(
             for comment in activity_data["comments"]
         ]
         
-        # Convert reactions to ActivityItem format
+        # Convert reactions to ActivityItem format (reaction-* prefix structure)
         reactions_formatted = {}
-        for reaction_type, reactions in activity_data["reactions"].items():
-            reactions_formatted[reaction_type] = [
-                ActivityItem(
-                    id=reaction["id"],
-                    target_type=reaction["target_type"],
-                    target_id=reaction["target_id"],
-                    target_title=reaction["target_title"],
-                    title=reaction.get("title"),  # 반응한 게시글 제목
-                    created_at=reaction["created_at"],
-                    route_path=reaction["route_path"]
-                )
-                for reaction in reactions
-            ]
+        for reaction_key, page_groups in activity_data["reactions"].items():
+            reactions_formatted[reaction_key] = {}
+            for page_type, reactions in page_groups.items():
+                reactions_formatted[reaction_key][page_type] = [
+                    ActivityItem(
+                        id=reaction["id"],
+                        target_type=reaction["target_type"],
+                        target_id=reaction["target_id"],
+                        target_title=reaction["target_title"],
+                        title=reaction.get("title"),  # 반응한 게시글 제목
+                        created_at=reaction["created_at"],
+                        route_path=reaction["route_path"]
+                    )
+                    for reaction in reactions
+                ]
         
         # Convert pagination info
         pagination_formatted = {}
@@ -154,12 +160,17 @@ async def get_user_activity(
                 has_more=pagination_data["has_more"]
             )
         
-        return UserActivityResponse(
-            posts=posts_formatted,
-            comments=comments_formatted,
-            reactions=reactions_formatted,
-            pagination=pagination_formatted
-        )
+        # Build response with dynamic reaction keys
+        response_data = {
+            "posts": posts_formatted,
+            "comments": comments_formatted,
+            "pagination": pagination_formatted
+        }
+        
+        # Add reaction data with reaction-* keys
+        response_data.update(reactions_formatted)
+        
+        return UserActivityResponse(**response_data)
         
     except Exception as e:
         raise HTTPException(

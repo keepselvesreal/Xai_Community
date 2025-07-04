@@ -548,6 +548,19 @@ export interface ActivitySummary {
   most_active_page_type?: string;
 }
 
+// DB 원시 타입 정의
+export type DbPageType = 'board' | 'property_information' | 'expert_tips' | 'services';
+export type ReactionType = 'reaction-likes' | 'reaction-dislikes' | 'reaction-bookmarks';
+
+// 타입 안전성을 위한 헬퍼 타입
+export type PageTypeGroups<T> = {
+  [K in DbPageType]: T[];
+};
+
+export type ReactionGroups = {
+  [K in ReactionType]: PageTypeGroups<ActivityItem>;
+};
+
 export interface ActivityItem {
   // 필수 필드
   id: string;
@@ -559,29 +572,70 @@ export interface ActivityItem {
   slug?: string;
   like_count?: number;
   comment_count?: number;
+  view_count?: number;
+  dislike_count?: number;
+  bookmark_count?: number;
   
   // 댓글 관련 optional 필드
   content?: string;
-  subtype?: 'inquiry' | 'review';
+  subtype?: 'inquiry' | 'review' | 'service_inquiry' | 'service_review';
   
   // 반응 관련 optional 필드
   target_type?: string;
   target_id?: string;
   target_title?: string;
+  reaction_type?: 'like' | 'dislike' | 'bookmark';
 }
 
 export interface UserActivityResponse {
+  // Posts using DB native types
   posts: {
     board: ActivityItem[];
-    info: ActivityItem[];
+    property_information: ActivityItem[];  // DB 원시 타입 사용 (기존 info)
+    expert_tips: ActivityItem[];           // DB 원시 타입 사용 (기존 tips) 
     services: ActivityItem[];
-    tips: ActivityItem[];
   };
   comments: ActivityItem[];
-  reactions: {
-    likes: ActivityItem[];
-    bookmarks: ActivityItem[];
-    dislikes: ActivityItem[];
+  
+  // Simplified reactions structure with reaction-* prefix
+  "reaction-likes": {
+    board: ActivityItem[];
+    property_information: ActivityItem[];
+    expert_tips: ActivityItem[];
+    services: ActivityItem[];
   };
-  summary: ActivitySummary;
+  "reaction-dislikes": {
+    board: ActivityItem[];
+    property_information: ActivityItem[];
+    expert_tips: ActivityItem[];
+    services: ActivityItem[];
+  };
+  "reaction-bookmarks": {
+    board: ActivityItem[];
+    property_information: ActivityItem[];
+    expert_tips: ActivityItem[];
+    services: ActivityItem[];
+  };
+  
+  summary?: ActivitySummary;  // Optional for compatibility
+  pagination?: {
+    posts: {
+      total_count: number;
+      page: number;
+      limit: number;
+      has_more: boolean;
+    };
+    comments: {
+      total_count: number;
+      page: number;
+      limit: number;
+      has_more: boolean;
+    };
+    reactions: {
+      total_count: number;
+      page: number;
+      limit: number;
+      has_more: boolean;
+    };
+  };
 }

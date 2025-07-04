@@ -1,9 +1,12 @@
-import { useState } from "react";
-import { useNavigate } from "@remix-run/react";
+import { useState, useEffect } from "react";
+import { useNavigate, useSearchParams } from "@remix-run/react";
 import { type MetaFunction } from "@remix-run/node";
 import AppLayout from "~/components/layout/AppLayout";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
+import { apiClient } from "~/lib/api";
+import { parseServicePost } from "~/types/service-types";
+import type { ServicePost } from "~/types/service-types";
 
 export const meta: MetaFunction = () => {
   return [
@@ -20,8 +23,13 @@ const categories = [
 
 export default function ServicesWrite() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, logout } = useAuth();
   const { showSuccess, showError } = useNotification();
+  
+  // 수정 모드 확인
+  const editSlug = searchParams.get('edit');
+  const isEditMode = !!editSlug;
   
   const [formData, setFormData] = useState({
     category: "moving",
@@ -34,6 +42,99 @@ export default function ServicesWrite() {
     { serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [originalPost, setOriginalPost] = useState<any>(null);
+
+  // 수정 모드일 때 기존 데이터 로드
+  const loadExistingService = async () => {
+    if (!isEditMode || !editSlug) return;
+    
+    setIsLoading(true);
+    try {
+      console.log('🔍 Loading existing service for edit:', editSlug);
+      
+      // 기존 서비스 데이터 가져오기
+      const response = await apiClient.getPost(editSlug);
+      
+      if (response.success && response.data) {
+        console.log('📦 Loaded post data:', response.data);
+        setOriginalPost(response.data);
+        
+        // content 필드에서 ServicePost JSON 파싱
+        try {
+          console.log('📝 Parsing content:', response.data.content);
+          const serviceData: ServicePost = parseServicePost(response.data.content);
+          console.log('✅ Parsed service data:', serviceData);
+          
+          // 카테고리 매핑 (metadata에서 가져오기)
+          let category = "moving"; // 기본값
+          if (response.data.metadata?.category) {
+            const categoryMap: { [key: string]: string } = {
+              '이사': 'moving',
+              '청소': 'cleaning', 
+              '에어컨': 'aircon'
+            };
+            category = categoryMap[response.data.metadata.category] || "moving";
+          }
+          
+          // 폼 데이터 설정
+          setFormData({
+            category,
+            companyName: serviceData.company.name,
+            contact: serviceData.company.contact,
+            availableHours: serviceData.company.availableHours,
+            description: serviceData.company.description
+          });
+          
+          // 서비스 목록 설정
+          const mappedServices = serviceData.services.map(service => ({
+            serviceName: service.name,
+            price: service.price.toString(),
+            specialPrice: service.specialPrice ? service.specialPrice.toString() : "",
+            hasSpecialPrice: !!service.specialPrice
+          }));
+          
+          setServices(mappedServices.length > 0 ? mappedServices : [
+            { serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }
+          ]);
+          
+          console.log('✅ Form data loaded successfully:', {
+            formData: {
+              category,
+              companyName: serviceData.company.name,
+              contact: serviceData.company.contact,
+              availableHours: serviceData.company.availableHours,
+              description: serviceData.company.description
+            },
+            services: mappedServices
+          });
+          
+        } catch (parseError) {
+          console.error('❌ Failed to parse service content:', parseError);
+          showError('업체 정보를 불러오는 중 오류가 발생했습니다. 올바르지 않은 데이터 형식입니다.');
+          navigate('/services');
+          return;
+        }
+      } else {
+        console.error('❌ Failed to load post:', response);
+        showError('업체 정보를 찾을 수 없습니다.');
+        navigate('/services');
+      }
+    } catch (error) {
+      console.error('🚨 Error loading existing service:', error);
+      showError('업체 정보를 불러오는 중 오류가 발생했습니다.');
+      navigate('/services');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 컴포넌트 마운트 시 수정 모드라면 데이터 로드
+  useEffect(() => {
+    if (isEditMode) {
+      loadExistingService();
+    }
+  }, [isEditMode, editSlug]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -106,7 +207,7 @@ export default function ServicesWrite() {
     setIsSubmitting(true);
     
     try {
-      // 업체 등록 데이터를 ServicePost 형식으로 구성
+      // 업체 데이터를 ServicePost 형식으로 구성
       const servicePostData = {
         company: {
           name: formData.companyName.trim(),
@@ -125,37 +226,70 @@ export default function ServicesWrite() {
           }))
       };
 
-      // 실제 API 호출
-      const { createService } = await import('~/lib/services-api');
-      const response = await createService({
-        servicePost: servicePostData,
-        category: formData.category === 'moving' ? '이사' : 
-                 formData.category === 'cleaning' ? '청소' : '에어컨'
-      });
+      const categoryKorean = formData.category === 'moving' ? '이사' : 
+                            formData.category === 'cleaning' ? '청소' : '에어컨';
 
-      if (response.success) {
-        showSuccess("업체가 성공적으로 등록되었습니다!");
-        console.log('Service created successfully:', response.data);
+      if (isEditMode && originalPost) {
+        // 수정 모드: PUT 요청
+        console.log('📝 Updating existing service:', editSlug);
+        
+        const updateData = {
+          title: servicePostData.company.name,
+          content: JSON.stringify(servicePostData, null, 2),
+          metadata: {
+            type: 'moving services',
+            category: categoryKorean,
+            tags: [categoryKorean, '업체', '서비스'],
+            visibility: 'public'
+          }
+        };
+        
+        const response = await apiClient.updatePost(editSlug!, updateData);
+        
+        if (response.success) {
+          showSuccess("업체 정보가 성공적으로 수정되었습니다!");
+          console.log('Service updated successfully:', response.data);
+          
+          // 수정된 서비스 상세 페이지로 이동
+          navigate(`/moving-services-post/${editSlug}`);
+        } else {
+          throw new Error(response.error || '서비스 수정에 실패했습니다.');
+        }
       } else {
-        throw new Error(response.error || '서비스 등록에 실패했습니다.');
+        // 신규 등록 모드: POST 요청
+        console.log('🆕 Creating new service');
+        
+        const { createService } = await import('~/lib/services-api');
+        const response = await createService({
+          servicePost: servicePostData,
+          category: categoryKorean
+        });
+
+        if (response.success) {
+          showSuccess("업체가 성공적으로 등록되었습니다!");
+          console.log('Service created successfully:', response.data);
+          
+          // 폼 리셋
+          setFormData({
+            category: "moving",
+            companyName: "",
+            contact: "",
+            availableHours: "",
+            description: ""
+          });
+          setServices([{ serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }]);
+          
+          // 서비스 목록 페이지로 이동
+          navigate("/services");
+        } else {
+          throw new Error(response.error || '서비스 등록에 실패했습니다.');
+        }
       }
       
-      // 폼 리셋
-      setFormData({
-        category: "moving",
-        companyName: "",
-        contact: "",
-        availableHours: "",
-        description: ""
-      });
-      setServices([{ serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }]);
-      
-      // 서비스 목록 페이지로 이동 (새로 등록된 서비스 확인 가능)
-      navigate("/services");
-      
     } catch (error) {
-      showError("업체 등록 중 오류가 발생했습니다.");
-      console.error("업체 등록 오류:", error);
+      const errorMessage = isEditMode ? "업체 정보 수정 중 오류가 발생했습니다." : "업체 등록 중 오류가 발생했습니다.";
+      showError(errorMessage);
+      console.error("업체 처리 오류:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -166,14 +300,45 @@ export default function ServicesWrite() {
                       formData.description.trim() || 
                       services.some(s => s.serviceName.trim() || s.price.trim());
     
+    const cancelMessage = isEditMode 
+      ? "수정 중인 내용이 있습니다. 정말로 취소하시겠습니까?"
+      : "작성 중인 내용이 있습니다. 정말로 취소하시겠습니까?";
+    
     if (hasContent) {
-      if (window.confirm("작성 중인 내용이 있습니다. 정말로 취소하시겠습니까?")) {
-        navigate("/services");
+      if (window.confirm(cancelMessage)) {
+        if (isEditMode) {
+          navigate(`/moving-services-post/${editSlug}`);
+        } else {
+          navigate("/services");
+        }
       }
     } else {
-      navigate("/services");
+      if (isEditMode) {
+        navigate(`/moving-services-post/${editSlug}`);
+      } else {
+        navigate("/services");
+      }
     }
   };
+
+  // 로딩 중일 때 표시할 컴포넌트
+  if (isLoading) {
+    return (
+      <AppLayout 
+        user={user || { id: 'test', email: 'test@test.com', name: '테스트사용자' }}
+        onLogout={logout}
+      >
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-center items-center h-64">
+            <div className="text-center">
+              <div className="text-4xl mb-4">⏳</div>
+              <p className="text-var-secondary">업체 정보를 불러오는 중...</p>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout 
@@ -183,9 +348,14 @@ export default function ServicesWrite() {
       <div className="max-w-4xl mx-auto">
         {/* 헤더 */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-var-primary mb-2">업체 등록</h1>
+          <h1 className="text-2xl font-bold text-var-primary mb-2">
+            {isEditMode ? '업체 정보 수정' : '업체 등록'}
+          </h1>
           <p className="text-var-secondary">
-            아파트 주민들에게 유용한 서비스를 제공하는 업체를 등록해보세요.
+            {isEditMode 
+              ? '등록된 업체 정보를 수정할 수 있습니다.'
+              : '아파트 주민들에게 유용한 서비스를 제공하는 업체를 등록해보세요.'
+            }
           </p>
         </div>
 
@@ -404,11 +574,11 @@ export default function ServicesWrite() {
                 {isSubmitting ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    등록 중...
+                    {isEditMode ? '수정 중...' : '등록 중...'}
                   </>
                 ) : (
                   <>
-                    📝 업체 등록
+                    {isEditMode ? '✅ 업체 정보 수정' : '📝 업체 등록'}
                   </>
                 )}
               </button>
