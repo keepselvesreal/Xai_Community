@@ -146,6 +146,7 @@ export interface Reaction {
   created_at: string;
 }
 
+// 개별 반응 타입 (API 요청용)
 export type ReactionType = "like" | "dislike" | "bookmark";
 
 // API 응답 타입
@@ -548,9 +549,9 @@ export interface ActivitySummary {
   most_active_page_type?: string;
 }
 
-// DB 원시 타입 정의
-export type DbPageType = 'board' | 'property_information' | 'expert_tips' | 'services';
-export type ReactionType = 'reaction-likes' | 'reaction-dislikes' | 'reaction-bookmarks';
+// DB 원시 타입 정의 (Phase 5: 백엔드와 완전 일치, URL 패턴과도 일치)
+export type DbPageType = 'board' | 'property_information' | 'expert_tips' | 'moving_services';
+export type ReactionTypePrefix = 'reaction-likes' | 'reaction-dislikes' | 'reaction-bookmarks';
 
 // 타입 안전성을 위한 헬퍼 타입
 export type PageTypeGroups<T> = {
@@ -558,7 +559,7 @@ export type PageTypeGroups<T> = {
 };
 
 export type ReactionGroups = {
-  [K in ReactionType]: PageTypeGroups<ActivityItem>;
+  [K in ReactionTypePrefix]: PageTypeGroups<ActivityItem>;
 };
 
 export interface ActivityItem {
@@ -588,33 +589,33 @@ export interface ActivityItem {
 }
 
 export interface UserActivityResponse {
-  // Posts using DB native types
+  // Posts using DB native types (Phase 5: 완전 통일)
   posts: {
     board: ActivityItem[];
-    property_information: ActivityItem[];  // DB 원시 타입 사용 (기존 info)
-    expert_tips: ActivityItem[];           // DB 원시 타입 사용 (기존 tips) 
-    services: ActivityItem[];
+    property_information: ActivityItem[];
+    expert_tips: ActivityItem[];
+    moving_services: ActivityItem[];  // Phase 5: DB 원시 타입으로 통일
   };
   comments: ActivityItem[];
   
-  // Simplified reactions structure with reaction-* prefix
+  // Simplified reactions structure with reaction-* prefix (Phase 5: 완전 통일)
   "reaction-likes": {
     board: ActivityItem[];
     property_information: ActivityItem[];
     expert_tips: ActivityItem[];
-    services: ActivityItem[];
+    moving_services: ActivityItem[];
   };
   "reaction-dislikes": {
     board: ActivityItem[];
     property_information: ActivityItem[];
     expert_tips: ActivityItem[];
-    services: ActivityItem[];
+    moving_services: ActivityItem[];
   };
   "reaction-bookmarks": {
     board: ActivityItem[];
     property_information: ActivityItem[];
     expert_tips: ActivityItem[];
-    services: ActivityItem[];
+    moving_services: ActivityItem[];
   };
   
   summary?: ActivitySummary;  // Optional for compatibility

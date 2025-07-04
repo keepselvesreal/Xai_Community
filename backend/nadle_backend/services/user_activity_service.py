@@ -12,25 +12,25 @@ logger = logging.getLogger(__name__)
 
 
 def normalize_post_type(post_type: Optional[str]) -> Optional[str]:
-    """Normalize post type - simplified to use DB types directly.
+    """Normalize post type - now uses DB raw types completely.
     
-    Only normalizes 'moving services' to 'services' for consistency.
-    All other DB types are used as-is in frontend.
+    Phase 5: Unified to use moving_services as DB raw type.
+    No more mapping - frontend uses DB types directly.
     
     Args:
         post_type: The post type from database
         
     Returns:
-        DB post type or 'services' for moving services
+        DB raw type (board, property_information, expert_tips, moving_services)
     """
     if not post_type:
         return None
         
-    # Only normalize inconsistent naming
-    if post_type == "moving services":
-        return "services"
+    # Normalize variations to DB raw type
+    if post_type in ["moving services", "services"]:
+        return "moving_services"
         
-    # Use DB types directly (expert_tips, property_information, board, services)
+    # Use DB raw types directly (expert_tips, property_information, board, moving_services)
     return post_type
 
 
@@ -149,12 +149,12 @@ class UserActivityService:
         # Get paginated user posts
         posts = await self.post_repository.find_by_author_paginated(user_id, limit, skip)
         
-        # Initialize result with DB-native page types
+        # Initialize result with DB-native page types (Phase 5: unified)
         result = {
             "board": [],
             "property_information": [],  # DB 원시 타입 사용
             "expert_tips": [],           # DB 원시 타입 사용
-            "services": []
+            "moving_services": []        # Phase 5: DB 원시 타입으로 통일
         }
         
         # Group posts by page type
@@ -257,7 +257,7 @@ class UserActivityService:
         
         for reaction_type in ["likes", "bookmarks", "dislikes"]:
             reaction_key = f"reaction-{reaction_type}"
-            for page_type in ["board", "property_information", "expert_tips", "services"]:
+            for page_type in ["board", "property_information", "expert_tips", "moving_services"]:
                 result[reaction_type].extend(page_grouped_reactions[reaction_key][page_type])
         
         return result
@@ -276,25 +276,25 @@ class UserActivityService:
         # Get paginated user reactions
         reactions = await self.user_reaction_repository.find_by_user_paginated(user_id, limit, skip)
         
-        # Initialize result with reaction-* prefix pattern and DB-native page types
+        # Initialize result with reaction-* prefix pattern and DB-native page types (Phase 5: unified)
         result = {
             "reaction-likes": {
                 "board": [],
                 "property_information": [],  # DB 원시 타입 사용
                 "expert_tips": [],           # DB 원시 타입 사용
-                "services": []
+                "moving_services": []        # Phase 5: DB 원시 타입으로 통일
             },
             "reaction-bookmarks": {
                 "board": [],
                 "property_information": [],
                 "expert_tips": [],
-                "services": []
+                "moving_services": []
             },
             "reaction-dislikes": {
                 "board": [],
                 "property_information": [],
                 "expert_tips": [],
-                "services": []
+                "moving_services": []
             }
         }
         
@@ -361,13 +361,16 @@ class UserActivityService:
         return result
     
     def _extract_page_type_from_reaction(self, route_path: str) -> Optional[str]:
-        """Extract page type from reaction route_path (similar to posts classification).
+        """Extract page type from reaction route_path.
+        
+        Phase 6: 완전 단순화 - 매핑 테이블 완전 제거
+        DB 데이터 재생성으로 레거시 패턴 불필요
         
         Args:
             route_path: Route path from reaction metadata
             
         Returns:
-            Page type (board, info, services, tips) or None for unknown routes
+            Page type (board, property_information, expert_tips, moving_services) or None
         """
         if not route_path:
             logger.warning("Empty route_path detected in reaction")
@@ -375,57 +378,39 @@ class UserActivityService:
             
         logger.info(f"Processing reaction route_path: '{route_path}'")
             
-        # 현재 올바른 패턴들 (DB 원시 타입 사용)
-        route_to_page_mapping = {
-            "/board-post/": "board",
-            "/property-info/": "property_information",  # DB 원시 타입 사용
-            "/moving-services-post/": "services",
-            "/expert-tips/": "expert_tips"             # DB 원시 타입 사용
-        }
+        # URL에서 첫 번째 세그먼트 추출: /moving-services/slug → moving-services
+        segments = route_path.strip('/').split('/')
+        if not segments:
+            logger.warning(f"No segments found in route_path: '{route_path}'")
+            return None
+            
+        url_type = segments[0]
         
-        # 기존 데이터에 있을 수 있는 다른 패턴들 (DB 원시 타입으로 매핑)
-        legacy_patterns = {
-            "/board/": "board",
-            "/post/": "board",  # 기본 패턴이 board일 가능성
-            "/property/": "property_information",
-            "/info/": "property_information",
-            "/services/": "services",
-            "/tips/": "expert_tips",
-            "/expert/": "expert_tips"
-        }
+        # 직접 변환: hyphen → underscore
+        page_type = url_type.replace('-', '_')
         
-        # 현재 패턴 먼저 확인
-        for route_prefix, page_type in route_to_page_mapping.items():
-            if route_path.startswith(route_prefix):
-                logger.info(f"✅ CURRENT PATTERN MATCHED: route_path '{route_path}' → page_type '{page_type}' (prefix: '{route_prefix}')")
-                return page_type
+        # 유효한 DB 타입 체크
+        valid_types = ['board', 'property_information', 'expert_tips', 'moving_services']
+        if page_type in valid_types:
+            logger.info(f"✅ DIRECT MATCH: route_path '{route_path}' → page_type '{page_type}'")
+            return page_type
         
-        # 레거시 패턴 확인
-        for route_prefix, page_type in legacy_patterns.items():
-            if route_path.startswith(route_prefix):
-                logger.info(f"✅ LEGACY PATTERN MATCHED: route_path '{route_path}' → page_type '{page_type}' (prefix: '{route_prefix}')")
-                return page_type
-                
-        logger.warning(f"Unrecognized reaction route_path: '{route_path}'. This reaction will be ignored.")
+        logger.warning(f"Unrecognized route_path: '{route_path}'. Expected format: /{valid_types}/*")
         return None
 
     def _generate_route_path(self, page_type: str, slug: str) -> str:
         """Generate route path based on page type and slug.
         
+        Phase 5: 완전 단순화 - DB 타입과 URL 패턴 직접 매칭
+        
         Args:
-            page_type: Page type (including both normalized and original DB types)
+            page_type: Page type (DB raw type)
             slug: Post slug
             
         Returns:
-            Route path string
+            Route path string with pattern: /{page_type_with_hyphens}/{slug}
         """
-        route_mapping = {
-            # DB types to route paths
-            "board": f"/board-post/{slug}",
-            "property_information": f"/property-info/{slug}",
-            "expert_tips": f"/expert-tips/{slug}",
-            "services": f"/moving-services-post/{slug}"
-        }
-        
-        return route_mapping.get(page_type, f"/post/{slug}")
+        # 단순한 변환: underscore → hyphen
+        url_type = page_type.replace("_", "-")
+        return f"/{url_type}/{slug}"
     

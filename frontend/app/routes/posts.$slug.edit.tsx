@@ -63,7 +63,7 @@ export default function PostEdit() {
         // 권한 체크 - 작성자인지 확인
         if (user && postData.author_id !== user.id) {
           showError('게시글을 수정할 권한이 없습니다');
-          navigate(`/board-post/${slug}`);
+          navigate(`/board/${slug}`);
           return;
         }
       } else {
@@ -152,7 +152,7 @@ export default function PostEdit() {
         showSuccess("게시글이 성공적으로 수정되었습니다!");
         // 제목이 변경되면 새로운 slug가 생성되므로 응답에서 받은 slug로 이동
         const newSlug = response.data.slug || slug;
-        navigate(`/board-post/${newSlug}`);
+        navigate(`/board/${newSlug}`);
       } else {
         showError(response.error || "게시글 수정에 실패했습니다.");
       }
@@ -169,7 +169,7 @@ export default function PostEdit() {
         formData.content.trim() !== (post?.content || '') || 
         tagInput.tags.length > 0) {
       if (window.confirm("수정 중인 내용이 있습니다. 정말로 취소하시겠습니까?")) {
-        navigate(`/board-post/${slug}`);
+        navigate(`/board/${slug}`);
       }
     } else {
       navigate(`/board-post/${slug}`);

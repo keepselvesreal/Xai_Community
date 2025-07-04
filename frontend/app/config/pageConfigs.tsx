@@ -8,7 +8,6 @@ import { convertPostToService } from '~/types/service-types';
 
 // 게시판 카드 렌더러
 const PostCardRenderer = ({ post }: { post: Post }) => {
-  const navigate = useNavigate();
   
   const getTagColor = (category: string) => {
     switch (category) {
@@ -31,14 +30,7 @@ const PostCardRenderer = ({ post }: { post: Post }) => {
   const isNew = new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000;
 
   return (
-    <div 
-      className="post-item flex items-start cursor-pointer"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate(`/board-post/${post.slug}`);
-      }}
-    >
+    <div className="post-item flex items-start">
       <div className="flex-1">
         {/* 카테고리와 제목 (같은 줄) */}
         <div className="post-title flex items-center gap-2 mb-2">
@@ -220,10 +212,10 @@ const ServiceCardRenderer = ({ service }: { service: Service }) => {
         e.stopPropagation();
         
         const targetSlug = service.slug || service.id;
-        console.log('🚀 Direct navigation to:', `/moving-services-post/${targetSlug}`);
+        console.log('🚀 Direct navigation to:', `/moving-services/${targetSlug}`);
         
         // 강제로 페이지 이동
-        window.location.href = `/moving-services-post/${targetSlug}`;
+        window.location.href = `/moving-services/${targetSlug}`;
       }}
     >
       {/* 카테고리와 인증 */}
@@ -828,7 +820,7 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        navigate(`/property-info/${info.slug}`);
+        navigate(`/property-information/${info.slug}`);
       }}
     >
       {/* 상단: 콘텐츠 타입 배지 */}

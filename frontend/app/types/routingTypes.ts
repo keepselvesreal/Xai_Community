@@ -1,54 +1,54 @@
 /**
- * 라우팅 패턴 정의 및 타입 힌트
+ * 라우팅 패턴 정의 및 타입 힌트 (DB 원시 타입 통일)
  * 
  * 모든 페이지는 다음 패턴을 따라야 합니다:
  * - 목록 페이지: /{pageName}.tsx → /{pageName}
- * - 상세 페이지: /{pageName}-post.$slug.tsx → /{pageName}-post/{slug}
+ * - 상세 페이지: /{db-type}.$slug.tsx → /{db-type}/{slug}
  */
 
-// 지원되는 페이지 타입 정의
-export type PageType = 'board' | 'services' | 'tips' | 'info' | 'notices' | 'events';
+// 지원되는 페이지 타입 정의 (DB 원시 타입과 통일)
+export type PageType = 'board' | 'moving-services' | 'expert-tips' | 'property-information' | 'notices' | 'events';
 
 // 라우팅 패턴 타입
 export type RoutePattern = {
   listRoute: string;      // 목록 페이지 경로
-  detailRoute: string;    // 상세 페이지 경로
+  detailRoute: string;    // 상세 페이지 경로 (DB 타입과 동일)
   fileName: string;       // 파일명 패턴
 };
 
 /**
- * 페이지별 라우팅 패턴 매핑
+ * 페이지별 라우팅 패턴 매핑 (DB 원시 타입 통일)
  */
 export const ROUTING_PATTERNS: Record<PageType, RoutePattern> = {
   board: {
     listRoute: '/board',
-    detailRoute: '/board-post',
-    fileName: 'board-post.$slug.tsx'
+    detailRoute: '/board',
+    fileName: 'board.$slug.tsx'
   },
-  services: {
+  'moving-services': {
     listRoute: '/services', 
-    detailRoute: '/moving-services-post',
-    fileName: 'moving-services-post.$slug.tsx'
+    detailRoute: '/moving-services',
+    fileName: 'moving-services.$slug.tsx'
   },
-  tips: {
+  'expert-tips': {
     listRoute: '/tips',
     detailRoute: '/expert-tips', 
     fileName: 'expert-tips.$slug.tsx'
   },
-  info: {
+  'property-information': {
     listRoute: '/info',
-    detailRoute: '/property-info',
-    fileName: 'property-info.$slug.tsx'
+    detailRoute: '/property-information',
+    fileName: 'property-information.$slug.tsx'
   },
   notices: {
     listRoute: '/notices',
-    detailRoute: '/notices-post',
-    fileName: 'notices-post.$slug.tsx'
+    detailRoute: '/notices',
+    fileName: 'notices.$slug.tsx'
   },
   events: {
     listRoute: '/events',
-    detailRoute: '/events-post',
-    fileName: 'events-post.$slug.tsx'
+    detailRoute: '/events',
+    fileName: 'events.$slug.tsx'
   }
 } as const;
 
@@ -106,13 +106,13 @@ export function validateRoutingPattern(pageName: string): boolean {
 }
 
 /**
- * 메타데이터 타입별 페이지 타입 매핑
+ * 메타데이터 타입별 페이지 타입 매핑 (DB 원시 타입 통일)
  */
 export const METADATA_TYPE_TO_PAGE_TYPE: Record<string, PageType> = {
   'board': 'board',
-  'moving services': 'services',
-  'expert_tips': 'tips',
-  'property_information': 'info',
+  'moving services': 'moving-services',
+  'expert_tips': 'expert-tips',
+  'property_information': 'property-information',
   'notices': 'notices',
   'events': 'events'
 } as const;
@@ -135,13 +135,14 @@ export function getNavigationUrl(metadataType: string, slug: string): string {
 export type NavigateFunction = (url: string) => void;
 
 /**
- * 라우팅 패턴 체크리스트 (개발자 가이드)
+ * 라우팅 패턴 체크리스트 (개발자 가이드) - DB 원시 타입 통일
  */
 export const ROUTING_CHECKLIST = [
   '✅ 목록 페이지: /{pageName}.tsx',
-  '✅ 상세 페이지: /{pageName}-post.$slug.tsx', 
+  '✅ 상세 페이지: /{db-type}.$slug.tsx', 
   '✅ 목록 URL: /{pageName}',
-  '✅ 상세 URL: /{pageName}-post/{slug}',
+  '✅ 상세 URL: /{db-type}/{slug}',
   '✅ 메타데이터 타입 매핑 추가',
+  '✅ DB 원시 타입과 라우트 파일명 완전 통일',
   '✅ ListPageConfig에서 올바른 네비게이션 사용'
 ] as const;

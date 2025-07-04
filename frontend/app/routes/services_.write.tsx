@@ -251,7 +251,7 @@ export default function ServicesWrite() {
           console.log('Service updated successfully:', response.data);
           
           // 수정된 서비스 상세 페이지로 이동
-          navigate(`/moving-services-post/${editSlug}`);
+          navigate(`/moving-services/${editSlug}`);
         } else {
           throw new Error(response.error || '서비스 수정에 실패했습니다.');
         }

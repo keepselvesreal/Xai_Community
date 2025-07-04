@@ -5,6 +5,7 @@ import AppLayout from "~/components/layout/AppLayout";
 import { useAuth } from "~/contexts/AuthContext";
 import { apiClient } from "~/lib/api";
 import { formatNumber } from "~/lib/utils";
+import { extractPageTypeFromRoute, getPageTypeDisplayInfo, ALL_PAGE_TYPES } from "~/lib/route-utils";
 import type { UserActivityResponse, ActivityItem } from "~/types";
 import { UserInfoSkeleton } from "~/components/mypage/UserInfoSkeleton";
 import { ActivitySectionSkeleton } from "~/components/mypage/ActivitySectionSkeleton";
@@ -154,28 +155,18 @@ export default function MyPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 댓글을 페이지 타입별로 분류하는 헬퍼 함수 (DB 원시 타입 사용)
+  // 댓글을 페이지 타입별로 분류하는 헬퍼 함수 (Phase 6: 유틸리티 사용으로 완전 단순화)
   const getCommentsByPageType = (comments: ActivityItem[], pageType: string): ActivityItem[] => {
     if (!comments) return [];
     
     return comments.filter(comment => {
       if (!comment.route_path) return false;
       
-      switch (pageType) {
-        case 'board':
-          return comment.route_path.startsWith('/board-post/') && !comment.subtype;
-        case 'property_information':
-          return comment.route_path.startsWith('/property-info/') && !comment.subtype;
-        case 'services':
-          return (comment.route_path.startsWith('/moving-services-post/') || 
-                  comment.route_path.startsWith('/services/')) && !comment.subtype;
-        case 'expert_tips':
-          return (comment.route_path.startsWith('/expert-tips/') || 
-                  comment.route_path.startsWith('/expert-tip/') ||
-                  comment.route_path.startsWith('/tips/')) && !comment.subtype;
-        default:
-          return false;
-      }
+      // Phase 6: 유틸리티 함수 사용으로 매핑 로직 완전 제거
+      const extractedPageType = extractPageTypeFromRoute(comment.route_path);
+      
+      // 서브타입이 없는 일반 댓글만 필터링
+      return extractedPageType === pageType && !comment.subtype;
     });
   };
 
@@ -184,8 +175,11 @@ export default function MyPage() {
   // 사용자 활동 데이터 로드 함수
   const loadUserActivity = async () => {
     if (!user || !apiClient.isAuthenticated()) {
+      console.log('🚫 No user or not authenticated');
       return;
     }
+    
+    console.log('👤 Current user:', user.email, user.user_handle);
 
     setIsLoading(true);
     setError(null);
@@ -194,11 +188,17 @@ export default function MyPage() {
       const activity = await apiClient.getUserActivity(1, 10); // 페이지네이션 파라미터 추가
       
       // 디버깅: API 응답 구조 확인 (새로운 reaction-* 구조)
-      console.log('User Activity Response:', activity);
+      console.log('🔍 Full User Activity Response:', JSON.stringify(activity, null, 2));
       
-      // 새로운 reaction-* 구조 디버깅
+      // 새로운 reaction-* 구조 디버깅 (Phase 6: 유틸리티 사용)
       const reactionTypes = ['reaction-likes', 'reaction-dislikes', 'reaction-bookmarks'] as const;
-      const pageTypes = ['board', 'property_information', 'expert_tips', 'services'] as const;
+      const pageTypes = ALL_PAGE_TYPES;
+      
+      // 실제 API 응답 구조 확인
+      console.log('🔍 API Response structure check:');
+      console.log('Activity keys:', Object.keys(activity));
+      console.log('Has reactions key:', 'reactions' in activity);
+      console.log('Has direct reaction keys:', reactionTypes.map(type => `${type}: ${type in activity}`));
       
       reactionTypes.forEach(reactionType => {
         if (activity[reactionType]) {
@@ -206,8 +206,10 @@ export default function MyPage() {
           
           pageTypes.forEach(pageType => {
             const reactions = activity[reactionType][pageType] || [];
+            console.log(`${reactionType}.${pageType} raw:`, reactions);
+            console.log(`${reactionType}.${pageType} length:`, reactions.length);
             if (reactions.length > 0) {
-              console.log(`${reactionType}.${pageType}:`, {
+              console.log(`${reactionType}.${pageType} details:`, {
                 count: reactions.length,
                 items: reactions.map(r => ({
                   id: r.id,
@@ -217,6 +219,8 @@ export default function MyPage() {
               });
             }
           });
+        } else {
+          console.log(`${reactionType}: NOT FOUND`);
         }
       });
       
@@ -247,7 +251,8 @@ export default function MyPage() {
   // 게스트 사용자를 위한 기본 데이터
   const displayUser = user || {
     email: 'guest@example.com',
-    username: 'Guest User'
+    user_handle: 'Guest User',
+    display_name: 'Guest User'
   };
 
   // 헬퍼 함수들
@@ -268,8 +273,8 @@ export default function MyPage() {
       alert('로그인이 필요한 기능입니다.');
       return;
     }
-    const newUserId = window.prompt('새로운 아이디를 입력하세요:', user?.username || user?.email);
-    if (newUserId && newUserId !== (user?.username || user?.email)) {
+    const newUserId = window.prompt('새로운 아이디를 입력하세요:', user?.user_handle || user?.email);
+    if (newUserId && newUserId !== (user?.user_handle || user?.email)) {
       if (window.confirm(`아이디를 '${newUserId}'로 변경하시겠습니까?`)) {
         alert('아이디가 성공적으로 변경되었습니다.');
       }
@@ -378,7 +383,7 @@ export default function MyPage() {
             <div className="flex justify-between items-start py-4">
               <div className="flex-1">
                 <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>아이디</div>
-                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{displayUser.username || displayUser.email}</div>
+                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{displayUser.user_handle || displayUser.display_name || displayUser.email}</div>
                 <div className="text-sm" style={{color: 'var(--text-muted)'}}>로그인에 사용되는 아이디</div>
               </div>
               <button 
@@ -584,10 +589,10 @@ export default function MyPage() {
                     </div>
                   )}
 
-                  {/* 입주 업체 서비스 */}
+                  {/* 입주 업체 서비스 (Phase 5: moving_services로 통일) */}
                   {userActivity && (
-                    (userActivity.posts.services?.length > 0 || 
-                     getCommentsByPageType(userActivity.comments, 'services').length > 0 ||
+                    (userActivity.posts.moving_services?.length > 0 || 
+                     getCommentsByPageType(userActivity.comments, 'moving_services').length > 0 ||
                      userActivity.comments.filter(c => c.subtype === 'service_inquiry').length > 0 ||
                      userActivity.comments.filter(c => c.subtype === 'service_review').length > 0)
                   ) && (
@@ -596,24 +601,24 @@ export default function MyPage() {
                         🏢 입주 업체 서비스
                       </h4>
                       <div className="space-y-2">
-                        {userActivity?.posts.services?.length > 0 && (
+                        {userActivity?.posts.moving_services?.length > 0 && (
                           <ActivityItem 
-                            type="service-posts" 
+                            type="moving-services-posts" 
                             icon="📝" 
                             name="글" 
-                            items={userActivity.posts.services}
+                            items={userActivity.posts.moving_services}
                             onToggle={toggleActivityDetail}
-                            isExpanded={expandedActivities.has('service-posts')}
+                            isExpanded={expandedActivities.has('moving-services-posts')}
                           />
                         )}
-                        {getCommentsByPageType(userActivity?.comments || [], 'services').length > 0 && (
+                        {getCommentsByPageType(userActivity?.comments || [], 'moving_services').length > 0 && (
                           <ActivityItem 
-                            type="service-comments" 
+                            type="moving-services-comments" 
                             icon="💬" 
                             name="댓글" 
-                            items={getCommentsByPageType(userActivity.comments, 'services')}
+                            items={getCommentsByPageType(userActivity.comments, 'moving_services')}
                             onToggle={toggleActivityDetail}
-                            isExpanded={expandedActivities.has('service-comments')}
+                            isExpanded={expandedActivities.has('moving-services-comments')}
                           />
                         )}
                         {userActivity?.comments.filter(c => c.subtype === 'service_inquiry').length > 0 && (
@@ -680,7 +685,7 @@ export default function MyPage() {
                   {/* 전체 반응이 없는 경우 메시지 표시 (reaction-* 구조) */}
                   {userActivity && 
                     (['reaction-likes', 'reaction-dislikes', 'reaction-bookmarks'] as const).every(reactionType => 
-                      userActivity[reactionType] && 
+                      !userActivity[reactionType] || 
                       Object.values(userActivity[reactionType]).every(pageReactions => pageReactions.length === 0)
                     ) && (
                     <div className="text-center py-12">
@@ -692,14 +697,12 @@ export default function MyPage() {
                     </div>
                   )}
 
-                  {/* 새로운 reaction-* 구조로 반응 섹션 렌더링 */}
+                  {/* 새로운 reaction-* 구조로 반응 섹션 렌더링 (Phase 6: 유틸리티 사용) */}
                   {userActivity && (() => {
-                    const pageTypeInfo = [
-                      { key: 'board', title: '📝 게시판', name: '게시판' },
-                      { key: 'property_information', title: '📋 부동산 정보', name: '부동산 정보' },
-                      { key: 'expert_tips', title: '💡 전문가 꿀정보', name: '전문가 꿀정보' },
-                      { key: 'services', title: '🏢 입주 업체 서비스', name: '입주 업체 서비스' }
-                    ] as const;
+                    const pageTypeInfo = ALL_PAGE_TYPES.map(pageType => ({
+                      key: pageType,
+                      ...getPageTypeDisplayInfo(pageType)
+                    }));
                     
                     const reactionInfo = [
                       { key: 'reaction-likes', icon: '👍', name: '추천' },
@@ -707,11 +710,25 @@ export default function MyPage() {
                       { key: 'reaction-bookmarks', icon: '📌', name: '저장' }
                     ] as const;
 
+                    // 디버깅: 반응 섹션 렌더링 로직 확인
+                    console.log('🎯 Rendering reaction section');
+                    console.log('📊 Available reaction types:', reactionInfo.map(r => r.key));
+                    console.log('📋 Available page types:', pageTypeInfo.map(p => p.key));
+
                     return pageTypeInfo.map(pageType => {
                       // 현재 페이지 타입에 반응이 있는지 확인
                       const hasReactions = reactionInfo.some(reaction => 
                         userActivity[reaction.key]?.[pageType.key]?.length > 0
                       );
+                      
+                      // 디버깅: 각 페이지 타입별 반응 확인
+                      console.log(`🔍 Checking ${pageType.key}:`, {
+                        hasReactions,
+                        reactionDetails: reactionInfo.map(reaction => ({
+                          type: reaction.key,
+                          count: userActivity[reaction.key]?.[pageType.key]?.length || 0
+                        }))
+                      });
                       
                       if (!hasReactions) return null;
                       

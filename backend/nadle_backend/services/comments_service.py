@@ -561,10 +561,10 @@ class CommentsService:
         normalized_type = normalize_post_type(page_type) or "board"
         
         route_mapping = {
-            "board": f"/board-post/{slug}",
-            "info": f"/property-info/{slug}",
-            "services": f"/moving-services-post/{slug}",
-            "tips": f"/expert-tips/{slug}"
+            "board": f"/board/{slug}",
+            "property_information": f"/property-information/{slug}",
+            "moving_services": f"/moving-services/{slug}",
+            "expert_tips": f"/expert-tips/{slug}"
         }
         
         return route_mapping.get(normalized_type, f"/post/{slug}")
