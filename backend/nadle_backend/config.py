@@ -243,6 +243,12 @@ class Settings(BaseSettings):
     def parse_cors_origins(cls, v):
         """Parse CORS origins from string or list."""
         if isinstance(v, str):
+            # Handle wildcard
+            if v.strip() == "*":
+                return ["*"]
+            # Handle empty string
+            if not v.strip():
+                return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
             # Handle string representation of list
             if v.startswith("[") and v.endswith("]"):
                 import json
