@@ -10,19 +10,26 @@ def find_env_file() -> Optional[str]:
     """
     Find environment file with priority order:
     1. ENV_FILE_PATH environment variable (explicit override)
-    2. .env.local (local development overrides)
-    3. .env (main environment file)
-    4. .env.example (template/example file)
+    2. .env.local (local development overrides) - only in development
+    3. .env (main environment file) - only in development
+    4. .env.example (template file) - only in development
+    
+    In production, no .env file is loaded to rely on environment variables.
     
     Returns:
         Path to the first found environment file, or None if none found
     """
+    # Check if we're in production
+    environment = os.getenv("ENVIRONMENT", "development")
+    if environment == "production":
+        return None  # Don't load any .env file in production
+    
     # Check for explicit path override
     explicit_path = os.getenv("ENV_FILE_PATH")
     if explicit_path and Path(explicit_path).exists():
         return explicit_path
     
-    # Priority order for automatic discovery
+    # Priority order for automatic discovery (development only)
     env_file_candidates = [
         ".env.local",      # Local overrides (git ignored)
         ".env",            # Main environment file (git ignored)
