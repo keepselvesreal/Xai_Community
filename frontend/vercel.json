@@ -2,15 +2,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "build/client",
   "installCommand": "npm ci",
-  "devCommand": "npm run dev",
   "framework": "remix",
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "app/entry.server.tsx": {
-      "runtime": "@vercel/remix"
-    }
   },
   "rewrites": [
     {
