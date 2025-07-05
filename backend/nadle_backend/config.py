@@ -53,7 +53,7 @@ class Settings(BaseSettings):
         description="MongoDB connection URL (Atlas or local)"
     )
     database_name: str = Field(
-        default="app_database",
+        default="xai_community",
         description="Database name for the application"
     )
     
@@ -136,6 +136,12 @@ class Settings(BaseSettings):
     cors_origins: List[str] = Field(
         default=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"],
         description="List of allowed CORS origins for frontend access"
+    )
+    
+    # Frontend URL for production (Vercel deployment)
+    frontend_url: str = Field(
+        default="http://localhost:3000",
+        description="Frontend URL for CORS and redirects (automatically added to cors_origins)"
     )
     
     # Environment Configuration
@@ -248,31 +254,181 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def parse_cors_origins(cls, v) -> List[str]:
-        """Parse CORS origins from string or list."""
-        if isinstance(v, list):
-            return v
-        if isinstance(v, str):
-            # Handle wildcard
-            if v.strip() == "*":
-                return ["*"]
-            # Handle empty string
-            if not v.strip():
-                return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
-            # Handle string representation of list
-            if v.startswith("[") and v.endswith("]"):
-                import json
-                try:
-                    return json.loads(v)
-                except json.JSONDecodeError:
-                    return [origin.strip() for origin in v.strip("[]").split(",")]
-            # Handle comma-separated string
-            return [origin.strip() for origin in v.split(",") if origin.strip()]
-        # Fallback for any other type
-        return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+        """Parse CORS origins from string or list with robust error handling."""
+        # 기본 fallback 값들
+        default_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+        
+        try:
+            # 이미 리스트인 경우
+            if isinstance(v, list):
+                return v
+            
+            # None이거나 빈 값인 경우
+            if v is None or (isinstance(v, str) and not v.strip()):
+                return default_origins
+            
+            # 문자열 처리
+            if isinstance(v, str):
+                # 와일드카드 처리
+                if v.strip() == "*":
+                    return ["*"]
+                
+                # JSON 배열 형태 문자열 처리 (더 안전하게)
+                if v.strip().startswith("[") and v.strip().endswith("]"):
+                    import json
+                    try:
+                        parsed = json.loads(v.strip())
+                        if isinstance(parsed, list):
+                            return [str(origin).strip() for origin in parsed if str(origin).strip()]
+                    except (json.JSONDecodeError, ValueError, TypeError):
+                        # JSON 파싱 실패 시 수동으로 파싱
+                        try:
+                            content = v.strip()[1:-1]  # 대괄호 제거
+                            if content:
+                                return [origin.strip().strip('"\'') for origin in content.split(",") if origin.strip()]
+                        except Exception:
+                            pass
+                
+                # 쉼표로 구분된 문자열 처리
+                if "," in v:
+                    origins = [origin.strip().strip('"\'') for origin in v.split(",") if origin.strip()]
+                    return origins if origins else default_origins
+                
+                # 단일 URL 문자열
+                cleaned_url = v.strip().strip('"\'')
+                if cleaned_url and cleaned_url.startswith("http"):
+                    return [cleaned_url]
+            
+            # 다른 타입이거나 파싱 실패 시 기본값 반환
+            return default_origins
+            
+        except Exception as e:
+            # 모든 예외 상황에서 안전한 기본값 반환
+            import os
+            if os.getenv("ENVIRONMENT") == "production":
+                # 프로덕션에서는 로그만 남기고 기본값 사용
+                print(f"Warning: CORS origins parsing failed, using defaults. Error: {e}")
+            return default_origins
+    
+    def __init__(self, **kwargs):
+        """Initialize settings and configure CORS origins."""
+        super().__init__(**kwargs)
+        self._configure_cors_origins()
+        self._apply_deployment_safety_overrides()
+    
+    def _configure_cors_origins(self):
+        """Configure CORS origins based on environment and frontend URL."""
+        try:
+            # 기본 로컬 개발 origins
+            default_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+            
+            # 현재 CORS origins가 기본값이거나 비어있는 경우
+            if not self.cors_origins or self.cors_origins == default_origins:
+                origins = set(default_origins)
+                
+                # 프로덕션 환경에서 frontend_url이 설정되어 있으면 추가
+                if self.environment == "production" and self.frontend_url and self.frontend_url != "http://localhost:3000":
+                    origins.add(self.frontend_url)
+                    # HTTPS 변형도 추가
+                    if self.frontend_url.startswith("http://"):
+                        https_url = self.frontend_url.replace("http://", "https://", 1)
+                        origins.add(https_url)
+                
+                self.cors_origins = list(origins)
+                print(f"CORS origins configured: {self.cors_origins}")
+                
+        except Exception as e:
+            print(f"Warning: Failed to configure CORS origins automatically: {e}")
+            # 실패 시 안전한 기본값 유지
+            if not hasattr(self, 'cors_origins') or not self.cors_origins:
+                self.cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+    
+    def _apply_deployment_safety_overrides(self):
+        """Apply deployment-specific overrides as a safety measure."""
+        try:
+            # 프로덕션 환경에서 수동으로 환경변수 설정
+            if os.getenv("ENVIRONMENT") == "production":
+                print("Production environment detected - applying manual environment variable configuration")
+                self._apply_manual_env_vars()
+                
+                # 배포 설정도 적용
+                from .deploy_config import apply_deployment_overrides
+                apply_deployment_overrides(self)
+        except ImportError:
+            print("Warning: deploy_config module not found, skipping deployment overrides")
+        except Exception as e:
+            print(f"Warning: Failed to apply deployment overrides: {e}")
+    
+    def _apply_manual_env_vars(self):
+        """Manually apply environment variables in production to avoid parsing issues."""
+        try:
+            # 안전하게 환경변수를 하나씩 설정
+            env_mappings = {
+                'MONGODB_URL': 'mongodb_url',
+                'DATABASE_NAME': 'database_name',
+                'SECRET_KEY': 'secret_key',
+                'API_TITLE': 'api_title',
+                'API_VERSION': 'api_version',
+                'API_DESCRIPTION': 'api_description',
+                'ALGORITHM': 'algorithm',
+                'PORT': 'port',
+                'HOST': 'host',
+                'LOG_LEVEL': 'log_level',
+            }
+            
+            # 숫자형 환경변수
+            numeric_vars = {
+                'ACCESS_TOKEN_EXPIRE_MINUTES': 'access_token_expire_minutes',
+                'REFRESH_TOKEN_EXPIRE_DAYS': 'refresh_token_expire_days',
+                'PORT': 'port',
+            }
+            
+            # 문자열 환경변수 적용
+            for env_var, attr_name in env_mappings.items():
+                env_value = os.getenv(env_var)
+                if env_value and hasattr(self, attr_name):
+                    setattr(self, attr_name, env_value)
+                    print(f"Set {attr_name} from environment")
+            
+            # 숫자형 환경변수 적용
+            for env_var, attr_name in numeric_vars.items():
+                env_value = os.getenv(env_var)
+                if env_value and hasattr(self, attr_name):
+                    try:
+                        setattr(self, attr_name, int(env_value))
+                        print(f"Set {attr_name} from environment (numeric)")
+                    except ValueError:
+                        print(f"Warning: Invalid numeric value for {env_var}: {env_value}")
+            
+            # CORS origins 수동 설정 (가장 중요)
+            cors_value = os.getenv('CORS_ORIGINS')
+            frontend_url = os.getenv('FRONTEND_URL')
+            
+            if cors_value:
+                # 단순 문자열로 처리
+                if cors_value.strip() == "*":
+                    self.cors_origins = ["*"]
+                elif cors_value.startswith("http"):
+                    self.cors_origins = [cors_value.strip()]
+                else:
+                    # 쉼표로 분리된 경우
+                    self.cors_origins = [url.strip() for url in cors_value.split(",") if url.strip()]
+                print(f"CORS origins set manually: {self.cors_origins}")
+            
+            if frontend_url and hasattr(self, 'frontend_url'):
+                self.frontend_url = frontend_url
+                # frontend_url이 cors_origins에 없으면 추가
+                if frontend_url not in self.cors_origins:
+                    self.cors_origins.append(frontend_url)
+                print(f"Frontend URL set: {frontend_url}")
+                
+        except Exception as e:
+            print(f"Warning: Error in manual environment variable application: {e}")
     
     class Config:
         """Pydantic configuration."""
-        env_file = find_env_file()  # Use auto-discovery
+        # 프로덕션에서는 환경변수 자동 파싱 비활성화 (수동으로 처리)
+        env_file = None if os.getenv("ENVIRONMENT") == "production" else find_env_file()
         env_file_encoding = "utf-8"
         case_sensitive = False
         validate_assignment = True
