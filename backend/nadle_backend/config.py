@@ -236,9 +236,22 @@ class Settings(BaseSettings):
         if len(v) < 32:
             raise ValueError("Secret key must be at least 32 characters long")
         
-        # Check if using default key in production
+        # Check if using default key in production - but be more lenient during manual setup
+        environment = os.getenv("ENVIRONMENT", "development")
         if (v == "your-secret-key-here-change-in-production-32-characters" and 
-            os.getenv("ENVIRONMENT", "development") == "production"):
+            environment == "production"):
+            print(f"WARNING: Using default secret key in production!")
+            print(f"Environment variables check:")
+            print(f"  ENVIRONMENT: {environment}")
+            print(f"  SECRET_KEY env var exists: {bool(os.getenv('SECRET_KEY'))}")
+            print(f"  SECRET_KEY env var value (first 10): {os.getenv('SECRET_KEY', '')[:10]}...")
+            
+            # 환경변수에서 실제 값을 읽을 수 있다면 사용
+            env_secret = os.getenv('SECRET_KEY')
+            if env_secret and len(env_secret) >= 32:
+                print("Using SECRET_KEY from environment variable")
+                return env_secret
+            
             raise ValueError("Default secret key cannot be used in production")
         
         return v
@@ -362,6 +375,8 @@ class Settings(BaseSettings):
     def _apply_manual_env_vars(self):
         """Manually apply environment variables in production to avoid parsing issues."""
         try:
+            print("=== Manual Environment Variable Application ===")
+            
             # 안전하게 환경변수를 하나씩 설정
             env_mappings = {
                 'MONGODB_URL': 'mongodb_url',
@@ -375,6 +390,10 @@ class Settings(BaseSettings):
                 'HOST': 'host',
                 'LOG_LEVEL': 'log_level',
             }
+            
+            print(f"Environment check - SECRET_KEY exists: {bool(os.getenv('SECRET_KEY'))}")
+            print(f"Environment check - SECRET_KEY value (first 10 chars): {os.getenv('SECRET_KEY', '')[:10]}...")
+            print(f"Environment check - ENVIRONMENT: {os.getenv('ENVIRONMENT')}")
             
             # 숫자형 환경변수
             numeric_vars = {
