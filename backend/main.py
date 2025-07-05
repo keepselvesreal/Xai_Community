@@ -129,6 +129,11 @@ def create_app() -> FastAPI:
     async def root():
         return {"message": settings.api_title, "status": "running"}
     
+    # 헬스 체크 엔드포인트
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy", "service": "xai-community-backend"}
+    
     # 정적 파일 서빙 (프론트엔드용)
     frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend-prototypes")
     if os.path.exists(frontend_path):

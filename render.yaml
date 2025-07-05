@@ -1,0 +1,38 @@
+services:
+  - type: web
+    name: xai-community-backend
+    runtime: python
+    rootDir: ./backend
+    buildCommand: |
+      pip install uv
+      uv sync --frozen
+    startCommand: uv run uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: PORT
+        value: 8000
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: INFO
+      - key: CORS_ORIGINS
+        value: "https://xai-community-frontend.vercel.app,https://localhost:3000,https://localhost:5173"
+      - key: MONGODB_URL
+        value: mongodb+srv://nadle:miQXsXpzayvMQAzE@cluster0.bh7mhfi.mongodb.net/
+      - key: DATABASE_NAME
+        value: XAI_Community
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 30
+    autoDeploy: true
+    healthCheckPath: /health
+    
+  # 선택사항: 정적 자산 서비스 (필요시)
+  # - type: static
+  #   name: xai-community-static
+  #   staticPublishPath: ./backend/uploads
+  #   buildCommand: echo "No build needed for static files"
