@@ -240,8 +240,10 @@ class Settings(BaseSettings):
     
     @field_validator("cors_origins", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v):
+    def parse_cors_origins(cls, v) -> List[str]:
         """Parse CORS origins from string or list."""
+        if isinstance(v, list):
+            return v
         if isinstance(v, str):
             # Handle wildcard
             if v.strip() == "*":
@@ -257,8 +259,9 @@ class Settings(BaseSettings):
                 except json.JSONDecodeError:
                     return [origin.strip() for origin in v.strip("[]").split(",")]
             # Handle comma-separated string
-            return [origin.strip() for origin in v.split(",")]
-        return v
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        # Fallback for any other type
+        return ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
     
     class Config:
         """Pydantic configuration."""
