@@ -470,8 +470,30 @@ class Settings(BaseSettings):
         extra = "forbid"
 
 
-# Create global settings instance
-settings = Settings()
+# Create global settings instance with error handling
+try:
+    settings = Settings()
+except Exception as e:
+    # GitHub Actions나 다른 환경에서 환경변수 파싱 오류 발생 시 폴백
+    import os
+    from .deploy_config import DeploymentConfig
+    
+    print(f"Warning: Settings initialization failed: {e}")
+    print("Using fallback configuration...")
+    
+    # 안전한 폴백 설정으로 다시 시도
+    os.environ.pop("CORS_ORIGINS", None)  # 문제가 될 수 있는 환경변수 제거
+    
+    # 배포 설정에서 안전한 설정 가져오기
+    deploy_config = DeploymentConfig.get_safe_environment_config()
+    
+    # 기본값으로 재시도
+    settings = Settings(
+        cors_origins=deploy_config.get("cors_origins", ["http://localhost:3000"]),
+        environment=deploy_config.get("environment", "development"),
+        mongodb_url=deploy_config.get("mongodb_url", "mongodb://localhost:27017"),
+        database_name=deploy_config.get("database_name", "xai_community"),
+    )
 
 
 def get_settings() -> Settings:
