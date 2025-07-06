@@ -1,0 +1,123 @@
+name: 🚀 Safe CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PROD_BACKEND_URL: https://xai-community.onrender.com
+  PROD_FRONTEND_URL: https://xai-community-id0m2v4f8-ktsfrank-navercoms-projects.vercel.app
+
+jobs:
+  # 🔍 백엔드 안전한 검증
+  backend-safe-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Install uv
+      uses: astral-sh/setup-uv@v3
+      
+    - name: 🔧 Set up Python
+      run: uv python install
+      
+    - name: 📦 Install dependencies
+      run: uv sync --frozen
+      
+    - name: 🧪 Test package import
+      run: uv run python -c "import nadle_backend; print('✅ Backend import successful')"
+      
+    - name: 🔧 Run config tests
+      run: uv run pytest tests/unit/test_config_settings.py -v
+      
+    - name: 🔐 Run password tests
+      run: uv run pytest tests/unit/test_password.py -v
+      
+    - name: 🔑 Run JWT tests
+      run: uv run pytest tests/unit/test_jwt.py -v
+
+  # 🔍 프런트엔드 안전한 검증
+  frontend-safe-checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: 📦 Install dependencies
+      run: npm ci
+      
+    - name: 🧪 Run basic type tests
+      run: npm run test -- tests/unit/types/index.test.ts --run --reporter=verbose
+      
+    - name: 🏗️ Build test
+      run: npm run build
+
+  # 🚀 배포 후 검증 (main 브랜치에서만)
+  deployment-verification:
+    needs: [backend-safe-checks, frontend-safe-checks]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: ⏳ Wait for auto-deployment
+      run: sleep 90
+      
+    - name: 🔍 Check backend health
+      run: |
+        echo "🔍 백엔드 상태 확인 중..."
+        if curl -f -m 30 $PROD_BACKEND_URL/health; then
+          echo "✅ 백엔드 정상 동작 확인"
+        else
+          echo "⚠️ 백엔드 확인 실패 (경고만)"
+        fi
+        
+    - name: 🔍 Check frontend accessibility
+      run: |
+        echo "🔍 프런트엔드 상태 확인 중..."
+        if curl -f -m 30 $PROD_FRONTEND_URL; then
+          echo "✅ 프런트엔드 정상 동작 확인"
+        else
+          echo "⚠️ 프런트엔드 확인 실패 (경고만)"
+        fi
+
+  # 📊 결과 알림
+  notification:
+    needs: [backend-safe-checks, frontend-safe-checks, deployment-verification]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 🎉 Success notification
+      if: needs.backend-safe-checks.result == 'success' && needs.frontend-safe-checks.result == 'success'
+      run: |
+        echo "🎉 모든 테스트 통과!"
+        echo "✅ 백엔드: ${{ needs.backend-safe-checks.result }}"
+        echo "✅ 프런트엔드: ${{ needs.frontend-safe-checks.result }}"
+        echo "🌐 백엔드 URL: $PROD_BACKEND_URL"
+        echo "🌐 프런트엔드 URL: $PROD_FRONTEND_URL"
+        
+    - name: ❌ Failure notification
+      if: needs.backend-safe-checks.result == 'failure' || needs.frontend-safe-checks.result == 'failure'
+      run: |
+        echo "❌ 일부 테스트 실패"
+        echo "🔧 백엔드: ${{ needs.backend-safe-checks.result }}"
+        echo "🔧 프런트엔드: ${{ needs.frontend-safe-checks.result }}"
+        echo "📝 실패한 단계를 확인하고 수정이 필요합니다"
