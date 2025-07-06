@@ -101,11 +101,14 @@ def create_app() -> FastAPI:
         ]
     )
     
-    # 동적 CORS 검증 미들웨어 (최적화)
+    # 동적 CORS 검증 미들웨어 (완전 커스텀)
     @app.middleware("http")
     async def dynamic_cors_middleware(request: Request, call_next):
         """동적 CORS 검증 및 실시간 URL 모니터링."""
         origin = request.headers.get("origin")
+        method = request.method
+        
+        logger.info(f"🔍 Request: {method} {request.url.path} from origin: {origin}")
         
         # Origin이 있는 경우 로깅 및 검증
         if origin:
@@ -126,13 +129,11 @@ def create_app() -> FastAPI:
             else:
                 logger.warning(f"🚫 Unknown origin: {origin}")
         
-        response = await call_next(request)
+        # CORS 허용 여부 확인
+        allowed = False
+        reason = ""
         
-        # CORS 헤더 동적 설정 (우선순위 기반)
         if origin:
-            allowed = False
-            reason = ""
-            
             # 1. Production Domain 최우선
             if origin == DeploymentConfig.PRODUCTION_DOMAIN:
                 allowed = True
@@ -145,47 +146,68 @@ def create_app() -> FastAPI:
             elif settings.environment == "development" and any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
                 allowed = True
                 reason = "Development"
-                
+        
+        # OPTIONS 요청 (preflight) 직접 처리
+        if method == "OPTIONS" and origin:
             if allowed:
+                from fastapi.responses import Response
+                response = Response(status_code=200)
                 response.headers["Access-Control-Allow-Origin"] = origin
                 response.headers["Access-Control-Allow-Credentials"] = "true"
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
                 response.headers["Access-Control-Allow-Headers"] = "*"
-                logger.info(f"✅ CORS allowed for {origin} (reason: {reason})")
+                response.headers["Access-Control-Max-Age"] = "86400"
+                logger.info(f"✅ CORS preflight allowed for {origin} (reason: {reason})")
+                return response
             else:
-                logger.warning(f"🚫 CORS denied for {origin}")
+                from fastapi.responses import Response
+                response = Response(status_code=403)
+                logger.warning(f"🚫 CORS preflight denied for {origin}")
+                return response
+        
+        # 일반 요청 처리
+        response = await call_next(request)
+        
+        # CORS 헤더 동적 설정
+        if origin and allowed:
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+            logger.info(f"✅ CORS allowed for {origin} (reason: {reason})")
+        elif origin:
+            logger.warning(f"🚫 CORS denied for {origin}")
         
         return response
     
-    # 기본 CORS 설정 (폴백용) - Production Domain 우선  
+    # 기본 FastAPI CORSMiddleware 비활성화 - 동적 CORS 미들웨어만 사용
+    logger.info("🔧 Using dynamic CORS middleware only (FastAPI CORSMiddleware disabled)")
+    
+    # 참고용 설정 출력만 하고 실제 미들웨어는 추가하지 않음
     if settings.environment == "production":
-        cors_origins = [
-            DeploymentConfig.PRODUCTION_DOMAIN,
-            "*"  # 임시로 모든 origin 허용 (디버깅용)
-        ] + DeploymentConfig.LEGACY_DEPLOYMENT_URLS
+        reference_origins = [DeploymentConfig.PRODUCTION_DOMAIN] + DeploymentConfig.LEGACY_DEPLOYMENT_URLS
         logger.info(f"Production mode: Primary domain {DeploymentConfig.PRODUCTION_DOMAIN}")
     elif settings.environment == "development":
-        cors_origins = [
+        reference_origins = [
             "http://localhost:3000",
             "http://127.0.0.1:3000", 
             "http://localhost:5173",
-            "http://127.0.0.1:5173",
-            "http://localhost:8080",
-            "http://127.0.0.1:8080"
+            "http://127.0.0.1:5173"
         ]
         logger.info("Development mode: CORS set for local development")
     else:
-        cors_origins = settings.cors_origins if hasattr(settings, 'cors_origins') else ["*"]
+        reference_origins = ["*"]
     
-    logger.info(f"Base CORS Origins: {cors_origins[:3]}{'...' if len(cors_origins) > 3 else ''}")
+    logger.info(f"Reference CORS Origins: {reference_origins[:3]}{'...' if len(reference_origins) > 3 else ''}")
     
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
-    )
+    # FastAPI CORSMiddleware 주석 처리 - 동적 미들웨어와 충돌 방지
+    # app.add_middleware(
+    #     CORSMiddleware,
+    #     allow_origins=cors_origins,
+    #     allow_credentials=True,
+    #     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    #     allow_headers=["*"],
+    # )
     
     # 기본 라우트
     @app.get("/")
