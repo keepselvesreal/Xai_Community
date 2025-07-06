@@ -11,15 +11,18 @@ from typing import List, Dict, Any
 class DeploymentConfig:
     """Static deployment configuration as a fallback."""
     
-    # Vercel URL 패턴 정의 (동적 배포 대응)
+    # Primary Production Domain (권장 - 고정 도메인)
+    PRODUCTION_DOMAIN = "https://xai-community.vercel.app"
+    
+    # Vercel URL 패턴 정의 (Preview/Branch 배포용)
     VERCEL_PATTERNS = [
         r"https://xai-community.*-ktsfrank-navercoms-projects\.vercel\.app",
         r"https://xai-community-git-.*-ktsfrank-navercoms-projects\.vercel\.app", 
         r"https://xai-community.*\.vercel\.app"
     ]
     
-    # 기존 Production Frontend URLs (하위 호환성)
-    PRODUCTION_FRONTEND_URLS = [
+    # 기존 배포별 URLs (하위 호환성 - 레거시)
+    LEGACY_DEPLOYMENT_URLS = [
         "https://xai-community-beda86vwl-ktsfrank-navercoms-projects.vercel.app",
         "https://xai-community-git-main-ktsfrank-navercoms-projects.vercel.app",
         "https://xai-community-ktsfrank-navercoms-projects.vercel.app",
@@ -41,11 +44,15 @@ class DeploymentConfig:
         if not url:
             return False
             
-        # 기존 URL 목록에서 정확히 매치되는지 확인
-        if url in cls.PRODUCTION_FRONTEND_URLS:
+        # 1. Primary Production Domain (최우선)
+        if url == cls.PRODUCTION_DOMAIN:
             return True
             
-        # 패턴 기반 매칭
+        # 2. 레거시 URL들 (하위 호환성)
+        if url in cls.LEGACY_DEPLOYMENT_URLS:
+            return True
+            
+        # 3. 패턴 기반 매칭 (Preview/Branch 배포)
         for pattern in cls.VERCEL_PATTERNS:
             if re.match(pattern, url):
                 return True
@@ -58,8 +65,8 @@ class DeploymentConfig:
         environment = os.getenv("ENVIRONMENT", "development").lower()
         
         if environment == "production":
-            # 프로덕션에서는 Frontend URLs + 개발용 origins 결합
-            origins = cls.PRODUCTION_FRONTEND_URLS.copy()
+            # 프로덕션에서는 Primary Domain 우선, 레거시 URL들 포함
+            origins = [cls.PRODUCTION_DOMAIN] + cls.LEGACY_DEPLOYMENT_URLS.copy()
             
             # 환경변수에서 추가 frontend URL이 있다면 포함
             frontend_url = os.getenv("FRONTEND_URL")

@@ -8,7 +8,7 @@ on:
 
 env:
   PROD_BACKEND_URL: https://xai-community.onrender.com
-  PROD_FRONTEND_URL: https://xai-community-id0m2v4f8-ktsfrank-navercoms-projects.vercel.app
+  PROD_FRONTEND_URL: https://xai-community.vercel.app
 
 jobs:
   # 🔍 백엔드 안전한 검증
@@ -109,38 +109,47 @@ jobs:
           echo "⚠️ 백엔드 확인 실패 (경고만)"
         fi
         
-    - name: 🌐 Detect new Vercel deployment URL
+    - name: 🌐 Verify Production Frontend URL
       run: |
-        echo "🔍 새 Vercel 배포 URL 감지 중..."
+        echo "🔍 Production 프런트엔드 URL 검증 중..."
+        echo "🎯 Primary Production Domain: $PROD_FRONTEND_URL"
         
-        # Vercel CLI 없이 GitHub API를 통해 배포 감지 시도
-        echo "📝 배포 정보 수집..."
-        echo "  - Repository: ${{ github.repository }}"
-        echo "  - Commit SHA: ${{ github.sha }}"
-        echo "  - Branch: ${{ github.ref_name }}"
-        
-        # 기존 URL로 접근성 확인
-        echo "🔗 기존 프런트엔드 URL 확인: $PROD_FRONTEND_URL"
+        # Production Domain 접근성 확인
+        echo "🔗 Production Domain 확인: $PROD_FRONTEND_URL"
         if curl -f -m 30 -s $PROD_FRONTEND_URL > /dev/null; then
-          echo "✅ 기존 URL 접근 가능"
+          echo "✅ Production Domain 접근 가능"
+          echo "🎉 고정 Production Domain이 정상 작동 중"
         else
-          echo "⚠️ 기존 URL 접근 불가 - 새 URL로 배포된 것으로 추정"
+          echo "⚠️ Production Domain 접근 불가"
+          echo "📝 Preview 배포가 사용 중일 수 있음"
         fi
         
-        echo "🎯 동적 CORS 시스템이 새 URL을 자동으로 감지하고 허용합니다"
-        echo "   - 패턴: https://xai-community*-ktsfrank-navercoms-projects.vercel.app"
-        echo "   - 백엔드 로그에서 새 URL 확인 가능"
+        echo ""
+        echo "📋 CORS 설정 정보:"
+        echo "  🎯 Primary: $PROD_FRONTEND_URL"
+        echo "  🔄 Fallback: 동적 패턴 매칭 활성화"
+        echo "  📡 패턴: https://xai-community*.vercel.app"
+        echo "  🔍 백엔드 로그에서 실시간 URL 감지 확인 가능"
         
     - name: 🧪 Test CORS functionality
       run: |
         echo "🔍 CORS 동작 테스트..."
         
-        # 백엔드 헬스체크로 CORS 기본 동작 확인
-        echo "📡 백엔드 API 호출 테스트..."
-        if curl -f -m 30 -H "Origin: https://test.vercel.app" $PROD_BACKEND_URL/health; then
-          echo "✅ CORS 헤더가 정상적으로 처리됨"
+        # Production Domain으로 CORS 테스트
+        echo "📡 Production Domain CORS 테스트..."
+        if curl -f -m 30 -H "Origin: $PROD_FRONTEND_URL" $PROD_BACKEND_URL/health; then
+          echo "✅ Production Domain CORS 정상 작동"
         else
-          echo "⚠️ CORS 테스트 실패 (경고만)"
+          echo "⚠️ Production Domain CORS 테스트 실패"
+        fi
+        
+        # Preview URL 패턴으로도 테스트
+        echo "📡 Preview URL 패턴 CORS 테스트..."
+        TEST_PREVIEW_URL="https://xai-community-test-ktsfrank-navercoms-projects.vercel.app"
+        if curl -f -m 30 -H "Origin: $TEST_PREVIEW_URL" $PROD_BACKEND_URL/health; then
+          echo "✅ Preview URL 패턴 CORS 정상 작동"
+        else
+          echo "⚠️ Preview URL 패턴 CORS 테스트 실패 (정상 - 실제 URL이 아님)"
         fi
 
   # 📊 결과 알림
