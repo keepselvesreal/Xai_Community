@@ -124,12 +124,14 @@ def create_app() -> FastAPI:
         # FastAPI CORSMiddleware에서 CORS 처리하도록 위임
         response = await call_next(request)
         
-        # CORS 헤더가 설정되었는지 로깅만 수행
-        if origin and "access-control-allow-origin" in response.headers:
-            allowed_origin = response.headers.get("access-control-allow-origin")
-            logger.info(f"✅ CORS processed by FastAPI: {origin} -> {allowed_origin}")
-        elif origin:
-            logger.warning(f"⚠️ No CORS header set for: {origin}")
+        # CORS 헤더가 설정되었는지 로깅 (Simple Request는 헤더가 없을 수 있음)
+        if origin:
+            if "access-control-allow-origin" in response.headers:
+                allowed_origin = response.headers.get("access-control-allow-origin")
+                logger.info(f"✅ CORS processed by FastAPI: {origin} -> {allowed_origin}")
+            else:
+                # Simple Request나 preflight가 아닌 경우 CORS 헤더가 없을 수 있음
+                logger.debug(f"🔍 No CORS header (possibly Simple Request): {origin}")
         
         return response
     
