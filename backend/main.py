@@ -110,20 +110,16 @@ def create_app() -> FastAPI:
         
         logger.info(f"🔍 Request: {method} {request.url.path} from origin: {origin}")
         
-        # Origin 분류 로깅만 수행 (CORS 처리는 하지 않음)
+        # Origin 분류 로깅만 수행 (CORS 처리는 FastAPI CORSMiddleware에서 담당)
         if origin:
             if origin == DeploymentConfig.PRODUCTION_DOMAIN:
                 logger.info(f"🎯 Production domain request: {origin}")
             elif "vercel.app" in origin:
                 logger.info(f"🌐 Vercel frontend request: {origin}")
-                if DeploymentConfig.is_allowed_vercel_url(origin):
-                    logger.info(f"✅ Recognized Vercel URL: {origin}")
-                else:
-                    logger.warning(f"⚠️ Unknown Vercel URL: {origin}")
             elif any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
                 logger.debug(f"🔧 Development request: {origin}")
             else:
-                logger.info(f"🌍 External origin: {origin}")
+                logger.debug(f"🌍 External origin: {origin}")
         
         # FastAPI CORSMiddleware에서 CORS 처리하도록 위임
         response = await call_next(request)
@@ -151,6 +147,7 @@ def create_app() -> FastAPI:
             # Legacy URLs 추가
             origins.extend(DeploymentConfig.LEGACY_DEPLOYMENT_URLS)
             logger.info(f"Production mode: Primary domain {DeploymentConfig.PRODUCTION_DOMAIN}")
+            logger.info(f"Production CORS origins: {origins}")
         elif settings.environment == "development":
             # Development URLs
             origins.extend([
@@ -162,27 +159,37 @@ def create_app() -> FastAPI:
                 "http://127.0.0.1:8080"
             ])
             logger.info("Development mode: CORS set for local development")
-        # 와일드카드는 regex와 함께 사용할 수 없으므로 사용하지 않음
-        # 패턴 매칭은 allow_origin_regex로 처리
         
         return origins
     
     cors_origins = get_dynamic_cors_origins()
+    
     logger.info(f"CORS Origins: {cors_origins}")
     
-    # Vercel 패턴을 위한 정규식
-    vercel_pattern = r"^https://xai-community.*\.vercel\.app$"
+    # 단순화: allow_origin_regex만 사용 (와일드카드 문제 회피)
+    # Production에서는 Vercel 패턴으로 모든 배포 허용
+    if settings.environment == "production":
+        vercel_pattern = r"^https://xai-community.*\.vercel\.app$"
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origin_regex=vercel_pattern,  # 패턴만 사용
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+        )
+        logger.info(f"Production: Using regex pattern only: {vercel_pattern}")
+    else:
+        # Development에서는 명시적 origins 사용
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=cors_origins,
+            allow_credentials=True,
+            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+            allow_headers=["*"],
+        )
+        logger.info(f"Development: Using explicit origins: {cors_origins}")
     
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=cors_origins,
-        allow_origin_regex=vercel_pattern,  # 패턴 기반 동적 매칭
-        allow_credentials=True,
-        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        allow_headers=["*"],
-    )
-    
-    logger.info(f"FastAPI CORSMiddleware configured with pattern: {vercel_pattern}")
+    logger.info("✅ FastAPI CORSMiddleware configured successfully")
     
     # 기본 라우트
     @app.get("/")
