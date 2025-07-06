@@ -15,6 +15,7 @@ class DeploymentConfig:
         "https://xai-community-beda86vwl-ktsfrank-navercoms-projects.vercel.app",
         "https://xai-community-git-main-ktsfrank-navercoms-projects.vercel.app",
         "https://xai-community-ktsfrank-navercoms-projects.vercel.app",
+        "https://xai-community-2biahwrqh-ktsfrank-navercoms-projects.vercel.app",
     ]
     
     # Development origins
