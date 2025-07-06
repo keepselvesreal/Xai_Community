@@ -98,6 +98,8 @@ class AuthService:
             raise InvalidCredentialsError()
         
         # Verify password
+        if not user.password_hash:
+            raise InvalidCredentialsError("Account requires password reset")
         if not self.password_manager.verify_password(password, user.password_hash):
             raise InvalidCredentialsError()
         
