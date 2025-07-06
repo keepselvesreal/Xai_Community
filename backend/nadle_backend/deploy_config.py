@@ -4,18 +4,27 @@ This file serves as a fallback when environment variables fail to parse correctl
 """
 
 import os
+import re
 from typing import List, Dict, Any
 
 
 class DeploymentConfig:
     """Static deployment configuration as a fallback."""
     
-    # Production Frontend URLs (Vercel deployment)
+    # Vercel URL 패턴 정의 (동적 배포 대응)
+    VERCEL_PATTERNS = [
+        r"https://xai-community.*-ktsfrank-navercoms-projects\.vercel\.app",
+        r"https://xai-community-git-.*-ktsfrank-navercoms-projects\.vercel\.app", 
+        r"https://xai-community.*\.vercel\.app"
+    ]
+    
+    # 기존 Production Frontend URLs (하위 호환성)
     PRODUCTION_FRONTEND_URLS = [
         "https://xai-community-beda86vwl-ktsfrank-navercoms-projects.vercel.app",
         "https://xai-community-git-main-ktsfrank-navercoms-projects.vercel.app",
         "https://xai-community-ktsfrank-navercoms-projects.vercel.app",
         "https://xai-community-2biahwrqh-ktsfrank-navercoms-projects.vercel.app",
+        "https://xai-community-id0m2v4f8-ktsfrank-navercoms-projects.vercel.app",
     ]
     
     # Development origins
@@ -25,6 +34,23 @@ class DeploymentConfig:
         "http://localhost:5173",
         "http://127.0.0.1:5173"
     ]
+    
+    @classmethod
+    def is_allowed_vercel_url(cls, url: str) -> bool:
+        """Vercel URL이 허용된 패턴과 매치되는지 확인."""
+        if not url:
+            return False
+            
+        # 기존 URL 목록에서 정확히 매치되는지 확인
+        if url in cls.PRODUCTION_FRONTEND_URLS:
+            return True
+            
+        # 패턴 기반 매칭
+        for pattern in cls.VERCEL_PATTERNS:
+            if re.match(pattern, url):
+                return True
+                
+        return False
     
     @classmethod
     def get_cors_origins(cls) -> List[str]:

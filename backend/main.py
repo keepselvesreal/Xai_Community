@@ -1,10 +1,11 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
 import logging
 import os
 from nadle_backend.config import settings
+from nadle_backend.deploy_config import DeploymentConfig
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -100,10 +101,44 @@ def create_app() -> FastAPI:
         ]
     )
     
-    # CORS 설정 - 설정 파일에서 읽어오기
-    cors_origins = settings.cors_origins
+    # 동적 CORS 검증 미들웨어
+    @app.middleware("http")
+    async def dynamic_cors_middleware(request: Request, call_next):
+        """동적 CORS 검증 및 실시간 URL 모니터링."""
+        origin = request.headers.get("origin")
+        
+        # Origin이 있는 경우 로깅 및 검증
+        if origin:
+            # Vercel URL 감지 및 로깅
+            if "vercel.app" in origin:
+                logger.info(f"🌐 Vercel frontend request: {origin}")
+                # 패턴 기반 검증
+                if DeploymentConfig.is_allowed_vercel_url(origin):
+                    logger.info(f"✅ Allowed Vercel URL: {origin}")
+                else:
+                    logger.warning(f"⚠️ Unknown Vercel URL: {origin}")
+            
+            # 개발 환경 URL 감지
+            elif any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
+                logger.debug(f"🔧 Development request: {origin}")
+        
+        response = await call_next(request)
+        
+        # CORS 헤더 동적 설정
+        if origin and (
+            DeploymentConfig.is_allowed_vercel_url(origin) or
+            settings.environment == "development" and any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"])
+        ):
+            response.headers["Access-Control-Allow-Origin"] = origin
+            response.headers["Access-Control-Allow-Credentials"] = "true"
+            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+            response.headers["Access-Control-Allow-Headers"] = "*"
+        
+        return response
+    
+    # 기본 CORS 설정 (폴백용)
+    cors_origins = settings.cors_origins if hasattr(settings, 'cors_origins') else ["*"]
     if settings.environment == "development":
-        # 개발 환경에서는 더 관대하게
         cors_origins = [
             "http://localhost:3000",
             "http://127.0.0.1:3000", 
@@ -114,7 +149,7 @@ def create_app() -> FastAPI:
         ]
         logger.info("Development mode: CORS set for local development")
     
-    logger.info(f"CORS Origins: {cors_origins}")
+    logger.info(f"Base CORS Origins: {cors_origins}")
     
     app.add_middleware(
         CORSMiddleware,

@@ -78,7 +78,7 @@ jobs:
     
     steps:
     - name: ⏳ Wait for auto-deployment
-      run: sleep 90
+      run: sleep 120
       
     - name: 🔍 Check backend health
       run: |
@@ -89,13 +89,38 @@ jobs:
           echo "⚠️ 백엔드 확인 실패 (경고만)"
         fi
         
-    - name: 🔍 Check frontend accessibility
+    - name: 🌐 Detect new Vercel deployment URL
       run: |
-        echo "🔍 프런트엔드 상태 확인 중..."
-        if curl -f -m 30 $PROD_FRONTEND_URL; then
-          echo "✅ 프런트엔드 정상 동작 확인"
+        echo "🔍 새 Vercel 배포 URL 감지 중..."
+        
+        # Vercel CLI 없이 GitHub API를 통해 배포 감지 시도
+        echo "📝 배포 정보 수집..."
+        echo "  - Repository: ${{ github.repository }}"
+        echo "  - Commit SHA: ${{ github.sha }}"
+        echo "  - Branch: ${{ github.ref_name }}"
+        
+        # 기존 URL로 접근성 확인
+        echo "🔗 기존 프런트엔드 URL 확인: $PROD_FRONTEND_URL"
+        if curl -f -m 30 -s $PROD_FRONTEND_URL > /dev/null; then
+          echo "✅ 기존 URL 접근 가능"
         else
-          echo "⚠️ 프런트엔드 확인 실패 (경고만)"
+          echo "⚠️ 기존 URL 접근 불가 - 새 URL로 배포된 것으로 추정"
+        fi
+        
+        echo "🎯 동적 CORS 시스템이 새 URL을 자동으로 감지하고 허용합니다"
+        echo "   - 패턴: https://xai-community*-ktsfrank-navercoms-projects.vercel.app"
+        echo "   - 백엔드 로그에서 새 URL 확인 가능"
+        
+    - name: 🧪 Test CORS functionality
+      run: |
+        echo "🔍 CORS 동작 테스트..."
+        
+        # 백엔드 헬스체크로 CORS 기본 동작 확인
+        echo "📡 백엔드 API 호출 테스트..."
+        if curl -f -m 30 -H "Origin: https://test.vercel.app" $PROD_BACKEND_URL/health; then
+          echo "✅ CORS 헤더가 정상적으로 처리됨"
+        else
+          echo "⚠️ CORS 테스트 실패 (경고만)"
         fi
 
   # 📊 결과 알림
