@@ -1,4 +1,4 @@
-name: 🚀 Safe CI/CD Pipeline
+name: 🚀 Safe CI/CD Pipeline with Dynamic CORS
 
 on:
   push:
@@ -22,26 +22,36 @@ jobs:
     - name: 📥 Checkout code
       uses: actions/checkout@v4
     
-    - name: 🐍 Install uv
-      uses: astral-sh/setup-uv@v3
-      
-    - name: 🔧 Set up Python
-      run: uv python install
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 🔧 Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
       
     - name: 📦 Install dependencies
-      run: uv sync --frozen
+      run: |
+        uv python install 3.11
+        uv sync --frozen
       
     - name: 🧪 Test package import
-      run: uv run python -c "import nadle_backend; print('✅ Backend import successful')"
+      run: |
+        uv run python -c "import nadle_backend; print('✅ Backend import successful')"
       
     - name: 🔧 Run config tests
-      run: uv run pytest tests/unit/test_config_settings.py -v
+      run: |
+        uv run pytest tests/unit/test_config_settings.py -v --tb=short
       
-    - name: 🔐 Run password tests
-      run: uv run pytest tests/unit/test_password.py -v
+    - name: 🔐 Run password tests  
+      run: |
+        uv run pytest tests/unit/test_password.py -v --tb=short
       
     - name: 🔑 Run JWT tests
-      run: uv run pytest tests/unit/test_jwt.py -v
+      run: |
+        uv run pytest tests/unit/test_jwt.py -v --tb=short
 
   # 🔍 프런트엔드 안전한 검증
   frontend-safe-checks:
@@ -62,13 +72,16 @@ jobs:
         cache-dependency-path: frontend/package-lock.json
         
     - name: 📦 Install dependencies
-      run: npm ci
-      
+      run: |
+        npm ci --no-audit --no-fund
+        
     - name: 🧪 Run basic type tests
-      run: npm run test -- tests/unit/types/index.test.ts --run --reporter=verbose
+      run: |
+        npm run test -- tests/unit/types/index.test.ts --run --reporter=verbose
       
     - name: 🏗️ Build test
-      run: npm run build
+      run: |
+        npm run build
 
   # 🚀 배포 후 검증 (main 브랜치에서만)
   deployment-verification:
