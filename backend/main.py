@@ -101,113 +101,88 @@ def create_app() -> FastAPI:
         ]
     )
     
-    # 동적 CORS 검증 미들웨어 (완전 커스텀)
+    # 요청 로깅 미들웨어 (CORS 처리는 FastAPI CORSMiddleware에 위임)
     @app.middleware("http")
-    async def dynamic_cors_middleware(request: Request, call_next):
-        """동적 CORS 검증 및 실시간 URL 모니터링."""
+    async def request_logging_middleware(request: Request, call_next):
+        """요청 로깅 및 모니터링 (CORS 처리 없음)."""
         origin = request.headers.get("origin")
         method = request.method
         
         logger.info(f"🔍 Request: {method} {request.url.path} from origin: {origin}")
         
-        # Origin이 있는 경우 로깅 및 검증
+        # Origin 분류 로깅만 수행 (CORS 처리는 하지 않음)
         if origin:
-            # Production Domain 우선 확인
             if origin == DeploymentConfig.PRODUCTION_DOMAIN:
                 logger.info(f"🎯 Production domain request: {origin}")
-            # Vercel URL 감지 및 로깅
             elif "vercel.app" in origin:
                 logger.info(f"🌐 Vercel frontend request: {origin}")
-                # 패턴 기반 검증
                 if DeploymentConfig.is_allowed_vercel_url(origin):
-                    logger.info(f"✅ Allowed Vercel URL: {origin}")
+                    logger.info(f"✅ Recognized Vercel URL: {origin}")
                 else:
                     logger.warning(f"⚠️ Unknown Vercel URL: {origin}")
-            # 개발 환경 URL 감지
             elif any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
                 logger.debug(f"🔧 Development request: {origin}")
             else:
-                logger.warning(f"🚫 Unknown origin: {origin}")
+                logger.info(f"🌍 External origin: {origin}")
         
-        # CORS 허용 여부 확인
-        allowed = False
-        reason = ""
-        
-        if origin:
-            # 1. Production Domain 최우선
-            if origin == DeploymentConfig.PRODUCTION_DOMAIN:
-                allowed = True
-                reason = "Production Domain"
-            # 2. Vercel URL 패턴 검증
-            elif DeploymentConfig.is_allowed_vercel_url(origin):
-                allowed = True
-                reason = "Vercel Pattern"
-            # 3. 개발 환경 허용
-            elif settings.environment == "development" and any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
-                allowed = True
-                reason = "Development"
-        
-        # OPTIONS 요청 (preflight) 직접 처리
-        if method == "OPTIONS" and origin:
-            if allowed:
-                from fastapi.responses import Response
-                response = Response(status_code=200)
-                response.headers["Access-Control-Allow-Origin"] = origin
-                response.headers["Access-Control-Allow-Credentials"] = "true"
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-                response.headers["Access-Control-Allow-Headers"] = "*"
-                response.headers["Access-Control-Max-Age"] = "86400"
-                logger.info(f"✅ CORS preflight allowed for {origin} (reason: {reason})")
-                return response
-            else:
-                from fastapi.responses import Response
-                response = Response(status_code=403)
-                logger.warning(f"🚫 CORS preflight denied for {origin}")
-                return response
-        
-        # 일반 요청 처리
+        # FastAPI CORSMiddleware에서 CORS 처리하도록 위임
         response = await call_next(request)
         
-        # CORS 헤더 동적 설정
-        if origin and allowed:
-            response.headers["Access-Control-Allow-Origin"] = origin
-            response.headers["Access-Control-Allow-Credentials"] = "true"
-            response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
-            response.headers["Access-Control-Allow-Headers"] = "*"
-            logger.info(f"✅ CORS allowed for {origin} (reason: {reason})")
+        # CORS 헤더가 설정되었는지 로깅만 수행
+        if origin and "access-control-allow-origin" in response.headers:
+            allowed_origin = response.headers.get("access-control-allow-origin")
+            logger.info(f"✅ CORS processed by FastAPI: {origin} -> {allowed_origin}")
         elif origin:
-            logger.warning(f"🚫 CORS denied for {origin}")
+            logger.warning(f"⚠️ No CORS header set for: {origin}")
         
         return response
     
-    # 기본 FastAPI CORSMiddleware 비활성화 - 동적 CORS 미들웨어만 사용
-    logger.info("🔧 Using dynamic CORS middleware only (FastAPI CORSMiddleware disabled)")
+    # FastAPI CORSMiddleware 활성화 - 동적 CORS 기능 포함
+    logger.info("🔧 Using FastAPI CORSMiddleware with dynamic origin support")
     
-    # 참고용 설정 출력만 하고 실제 미들웨어는 추가하지 않음
-    if settings.environment == "production":
-        reference_origins = [DeploymentConfig.PRODUCTION_DOMAIN] + DeploymentConfig.LEGACY_DEPLOYMENT_URLS
-        logger.info(f"Production mode: Primary domain {DeploymentConfig.PRODUCTION_DOMAIN}")
-    elif settings.environment == "development":
-        reference_origins = [
-            "http://localhost:3000",
-            "http://127.0.0.1:3000", 
-            "http://localhost:5173",
-            "http://127.0.0.1:5173"
-        ]
-        logger.info("Development mode: CORS set for local development")
-    else:
-        reference_origins = ["*"]
+    # 동적 CORS Origins 생성 함수
+    def get_dynamic_cors_origins():
+        """동적으로 CORS Origins를 생성하는 함수."""
+        origins = []
+        
+        if settings.environment == "production":
+            # Production Domain 우선
+            origins.append(DeploymentConfig.PRODUCTION_DOMAIN)
+            # Legacy URLs 추가
+            origins.extend(DeploymentConfig.LEGACY_DEPLOYMENT_URLS)
+            logger.info(f"Production mode: Primary domain {DeploymentConfig.PRODUCTION_DOMAIN}")
+        elif settings.environment == "development":
+            # Development URLs
+            origins.extend([
+                "http://localhost:3000",
+                "http://127.0.0.1:3000", 
+                "http://localhost:5173",
+                "http://127.0.0.1:5173",
+                "http://localhost:8080",
+                "http://127.0.0.1:8080"
+            ])
+            logger.info("Development mode: CORS set for local development")
+        # 와일드카드는 regex와 함께 사용할 수 없으므로 사용하지 않음
+        # 패턴 매칭은 allow_origin_regex로 처리
+        
+        return origins
     
-    logger.info(f"Reference CORS Origins: {reference_origins[:3]}{'...' if len(reference_origins) > 3 else ''}")
+    cors_origins = get_dynamic_cors_origins()
+    logger.info(f"CORS Origins: {cors_origins}")
     
-    # FastAPI CORSMiddleware 주석 처리 - 동적 미들웨어와 충돌 방지
-    # app.add_middleware(
-    #     CORSMiddleware,
-    #     allow_origins=cors_origins,
-    #     allow_credentials=True,
-    #     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    #     allow_headers=["*"],
-    # )
+    # Vercel 패턴을 위한 정규식
+    vercel_pattern = r"^https://xai-community.*\.vercel\.app$"
+    
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=cors_origins,
+        allow_origin_regex=vercel_pattern,  # 패턴 기반 동적 매칭
+        allow_credentials=True,
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["*"],
+    )
+    
+    logger.info(f"FastAPI CORSMiddleware configured with pattern: {vercel_pattern}")
     
     # 기본 라우트
     @app.get("/")
