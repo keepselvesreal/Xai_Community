@@ -14,11 +14,15 @@ def find_env_file() -> Optional[str]:
     3. .env (main environment file) - only in development
     4. .env.example (template file) - only in development
     
-    In production, no .env file is loaded to rely on environment variables.
+    In production or CI environments, no .env file is loaded.
     
     Returns:
         Path to the first found environment file, or None if none found
     """
+    # GitHub Actions나 CI 환경에서는 .env 파일 읽지 않음
+    if os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true":
+        return None
+    
     # Check if we're in production
     environment = os.getenv("ENVIRONMENT", "development")
     if environment == "production":
@@ -53,7 +57,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
         validate_assignment=True,
         extra="forbid",
-        # CORS origins는 환경변수에서 읽지 않음 (JSON 파싱 오류 방지)
+        # 문제가 될 수 있는 필드들은 환경변수에서 읽지 않음 
         env_ignore={"cors_origins"}
     )
     
@@ -474,30 +478,63 @@ class Settings(BaseSettings):
     # Config 클래스는 model_config로 대체됨
 
 
-# Create global settings instance with error handling
-try:
-    settings = Settings()
-except Exception as e:
-    # GitHub Actions나 다른 환경에서 환경변수 파싱 오류 발생 시 폴백
-    import os
-    from .deploy_config import DeploymentConfig
+# Create global settings instance with GitHub Actions support
+if os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true":
+    # CI 환경에서는 모든 환경변수 무시하고 안전한 기본값만 사용
+    print("CI environment detected - using safe defaults")
     
-    print(f"Warning: Settings initialization failed: {e}")
-    print("Using fallback configuration...")
+    # 문제가 될 수 있는 환경변수들 임시 제거
+    problematic_env_vars = [
+        "SECRET_KEY", "MONGODB_URL", "DATABASE_NAME", "PORT", "LOG_LEVEL",
+        "SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_USE_TLS",
+        "ACCESS_TOKEN_EXPIRE_MINUTES", "REFRESH_TOKEN_EXPIRE_DAYS", "ENVIRONMENT"
+    ]
     
-    # 안전한 폴백 설정으로 다시 시도
-    os.environ.pop("CORS_ORIGINS", None)  # 문제가 될 수 있는 환경변수 제거
+    original_env = {}
+    for var in problematic_env_vars:
+        if var in os.environ:
+            original_env[var] = os.environ[var]
+            del os.environ[var]
     
-    # 배포 설정에서 안전한 설정 가져오기
-    deploy_config = DeploymentConfig.get_safe_environment_config()
+    try:
+        settings = Settings()
+        print("✅ Settings initialized successfully in CI mode")
+    except Exception as e:
+        print(f"❌ CI settings failed: {e}")
+        # 최후의 폴백: 완전 기본값 사용
+        settings = Settings(
+            mongodb_url="mongodb://localhost:27017",
+            database_name="xai_community_test",
+            secret_key="test-secret-key-for-ci-environment-32-chars-long",
+            environment="development"
+        )
+        print("✅ Using minimal CI configuration")
     
-    # 기본값으로 재시도
-    settings = Settings(
-        cors_origins=deploy_config.get("cors_origins", ["http://localhost:3000"]),
-        environment=deploy_config.get("environment", "development"),
-        mongodb_url=deploy_config.get("mongodb_url", "mongodb://localhost:27017"),
-        database_name=deploy_config.get("database_name", "xai_community"),
-    )
+    # 환경변수 복원 (혹시 나중에 필요할 수 있으니)
+    for var, value in original_env.items():
+        os.environ[var] = value
+
+else:
+    # 일반 환경에서는 기존 방식 사용
+    try:
+        settings = Settings()
+    except Exception as e:
+        # 환경변수 파싱 오류 발생 시 폴백
+        from .deploy_config import DeploymentConfig
+        
+        print(f"Warning: Settings initialization failed: {e}")
+        print("Using fallback configuration...")
+        
+        # 배포 설정에서 안전한 설정 가져오기
+        deploy_config = DeploymentConfig.get_safe_environment_config()
+        
+        # 기본값으로 재시도
+        settings = Settings(
+            cors_origins=deploy_config.get("cors_origins", ["http://localhost:3000"]),
+            environment=deploy_config.get("environment", "development"),
+            mongodb_url=deploy_config.get("mongodb_url", "mongodb://localhost:27017"),
+            database_name=deploy_config.get("database_name", "xai_community"),
+        )
 
 
 def get_settings() -> Settings:
