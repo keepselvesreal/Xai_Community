@@ -111,7 +111,7 @@ def create_app() -> FastAPI:
         if origin:
             # Production Domain 우선 확인
             if origin == DeploymentConfig.PRODUCTION_DOMAIN:
-                logger.debug(f"🎯 Production domain request: {origin}")
+                logger.info(f"🎯 Production domain request: {origin}")
             # Vercel URL 감지 및 로깅
             elif "vercel.app" in origin:
                 logger.info(f"🌐 Vercel frontend request: {origin}")
@@ -123,34 +123,46 @@ def create_app() -> FastAPI:
             # 개발 환경 URL 감지
             elif any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
                 logger.debug(f"🔧 Development request: {origin}")
+            else:
+                logger.warning(f"🚫 Unknown origin: {origin}")
         
         response = await call_next(request)
         
         # CORS 헤더 동적 설정 (우선순위 기반)
         if origin:
             allowed = False
+            reason = ""
             
             # 1. Production Domain 최우선
             if origin == DeploymentConfig.PRODUCTION_DOMAIN:
                 allowed = True
+                reason = "Production Domain"
             # 2. Vercel URL 패턴 검증
             elif DeploymentConfig.is_allowed_vercel_url(origin):
                 allowed = True
+                reason = "Vercel Pattern"
             # 3. 개발 환경 허용
             elif settings.environment == "development" and any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
                 allowed = True
+                reason = "Development"
                 
             if allowed:
                 response.headers["Access-Control-Allow-Origin"] = origin
                 response.headers["Access-Control-Allow-Credentials"] = "true"
                 response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
                 response.headers["Access-Control-Allow-Headers"] = "*"
+                logger.info(f"✅ CORS allowed for {origin} (reason: {reason})")
+            else:
+                logger.warning(f"🚫 CORS denied for {origin}")
         
         return response
     
-    # 기본 CORS 설정 (폴백용) - Production Domain 우선
+    # 기본 CORS 설정 (폴백용) - Production Domain 우선  
     if settings.environment == "production":
-        cors_origins = [DeploymentConfig.PRODUCTION_DOMAIN] + DeploymentConfig.LEGACY_DEPLOYMENT_URLS
+        cors_origins = [
+            DeploymentConfig.PRODUCTION_DOMAIN,
+            "*"  # 임시로 모든 origin 허용 (디버깅용)
+        ] + DeploymentConfig.LEGACY_DEPLOYMENT_URLS
         logger.info(f"Production mode: Primary domain {DeploymentConfig.PRODUCTION_DOMAIN}")
     elif settings.environment == "development":
         cors_origins = [
