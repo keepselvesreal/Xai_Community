@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
 from typing import List, Literal, Optional, Union
 from datetime import timedelta
@@ -46,6 +46,16 @@ def find_env_file() -> Optional[str]:
 
 class Settings(BaseSettings):
     """Application configuration settings."""
+    
+    model_config = SettingsConfigDict(
+        env_file=find_env_file(),
+        env_file_encoding="utf-8",
+        case_sensitive=False,
+        validate_assignment=True,
+        extra="forbid",
+        # CORS origins는 환경변수에서 읽지 않음 (JSON 파싱 오류 방지)
+        env_ignore={"cors_origins"}
+    )
     
     # Database Configuration
     mongodb_url: str = Field(
@@ -132,9 +142,9 @@ class Settings(BaseSettings):
         description="API service description"
     )
     
-    # CORS Configuration
-    cors_origins: List[str] = Field(
-        default=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"],
+    # CORS Configuration - GitHub Actions 호환성을 위해 단순화
+    cors_origins: Optional[List[str]] = Field(
+        default=None,
         description="List of allowed CORS origins for frontend access"
     )
     
@@ -335,8 +345,8 @@ class Settings(BaseSettings):
             # 기본 로컬 개발 origins
             default_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
             
-            # 현재 CORS origins가 기본값이거나 비어있는 경우
-            if not self.cors_origins or self.cors_origins == default_origins:
+            # CORS origins가 None이거나 기본값이거나 비어있는 경우
+            if self.cors_origins is None or not self.cors_origins or self.cors_origins == default_origins:
                 origins = set(default_origins)
                 
                 # 프로덕션 환경에서 frontend_url이 설정되어 있으면 추가
@@ -461,13 +471,7 @@ class Settings(BaseSettings):
             # 개발 환경에서는 기본 소스들 사용
             return (init_settings, env_settings, dotenv_settings, file_secret_settings)
     
-    class Config:
-        """Pydantic configuration."""
-        env_file = find_env_file()
-        env_file_encoding = "utf-8"
-        case_sensitive = False
-        validate_assignment = True
-        extra = "forbid"
+    # Config 클래스는 model_config로 대체됨
 
 
 # Create global settings instance with error handling
