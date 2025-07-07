@@ -446,16 +446,44 @@ else:
     try:
         settings = Settings()
     except Exception as e:
-        print(f"경고: 설정 초기화 실패: {e}")
-        print("안전한 폴백 설정 사용...")
+        environment = os.getenv("ENVIRONMENT", "development")
         
-        # 안전한 기본값으로 재시도 (개발 환경용)
-        settings = Settings(
-            mongodb_url="mongodb://localhost:27017",
-            secret_key="fallback-dev-secret-key-32-chars-minimum-length",
-            database_name="xai_community_fallback",
-            environment="development",
-        )
+        if environment == "production":
+            # 프로덕션에서는 폴백 사용하지 않고 바로 실패
+            print(f"❌ 프로덕션 환경 설정 오류: {e}")
+            print("프로덕션에서는 모든 필수 환경변수가 설정되어야 합니다:")
+            print("- MONGODB_URL: MongoDB 연결 URL")
+            print("- SECRET_KEY: JWT 서명용 비밀키")
+            print("- DATABASE_NAME: 데이터베이스 이름")
+            print("- ALLOWED_ORIGINS: CORS 허용 도메인")
+            
+            # 환경변수 상태 확인
+            print("\n현재 환경변수 상태:")
+            required_vars = ["MONGODB_URL", "SECRET_KEY", "DATABASE_NAME", "ALLOWED_ORIGINS"]
+            for var in required_vars:
+                value = os.getenv(var)
+                if value:
+                    # 민감한 정보는 일부만 표시
+                    if var in ["MONGODB_URL", "SECRET_KEY"]:
+                        masked = value[:10] + "..." + value[-4:] if len(value) > 14 else "***"
+                        print(f"✅ {var}: {masked}")
+                    else:
+                        print(f"✅ {var}: {value}")
+                else:
+                    print(f"❌ {var}: 설정되지 않음")
+            
+            raise e
+        else:
+            # 개발 환경에서만 폴백 사용
+            print(f"경고: 설정 초기화 실패: {e}")
+            print("안전한 폴백 설정 사용... (개발 환경만)")
+            
+            settings = Settings(
+                mongodb_url="mongodb://localhost:27017",
+                secret_key="fallback-dev-secret-key-32-chars-minimum-length",
+                database_name="xai_community_fallback",
+                environment="development",
+            )
 
 
 def get_settings() -> Settings:
