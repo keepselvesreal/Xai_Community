@@ -8,36 +8,36 @@ from pathlib import Path
 
 def find_env_file() -> Optional[str]:
     """
-    Find environment file with priority order:
-    1. ENV_FILE_PATH environment variable (explicit override)
-    2. .env.local (local development overrides) - only in development
-    3. .env (main environment file) - only in development
-    4. .env.example (template file) - only in development
+    환경변수 파일을 우선순위에 따라 찾습니다.
     
-    In production or CI environments, no .env file is loaded.
+    우선순위:
+    1. ENV_FILE_PATH 환경변수 (명시적 파일 경로 지정)
+    2. .env.dev (개발용 환경변수 파일) - 개발 환경에서만
+    3. .env.example (템플릿 파일) - 개발 환경에서만
+    
+    프로덕션이나 CI 환경에서는 .env 파일을 로드하지 않습니다.
     
     Returns:
-        Path to the first found environment file, or None if none found
+        찾은 환경변수 파일의 경로, 없으면 None
     """
-    # GitHub Actions나 CI 환경에서는 .env 파일 읽지 않음
+    # GitHub Actions나 CI 환경에서는 .env 파일을 읽지 않음
     if os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true":
         return None
     
-    # Check if we're in production
+    # 프로덕션 환경 확인
     environment = os.getenv("ENVIRONMENT", "development")
     if environment == "production":
-        return None  # Don't load any .env file in production
+        return None  # 프로덕션에서는 .env 파일을 로드하지 않음
     
-    # Check for explicit path override
+    # 명시적 경로 오버라이드 확인
     explicit_path = os.getenv("ENV_FILE_PATH")
     if explicit_path and Path(explicit_path).exists():
         return explicit_path
     
-    # Priority order for automatic discovery (development only)
+    # 자동 검색 우선순위 (개발 환경에서만)
     env_file_candidates = [
-        ".env.local",      # Local overrides (git ignored)
-        ".env",            # Main environment file (git ignored)
-        ".env.example",    # Template file (git tracked)
+        ".env.dev",        # 개발용 환경변수 파일 (git에서 무시됨)
+        ".env.example",    # 템플릿 파일 (git에서 추적됨)
     ]
     
     for candidate in env_file_candidates:
@@ -49,7 +49,12 @@ def find_env_file() -> Optional[str]:
 
 
 class Settings(BaseSettings):
-    """Application configuration settings."""
+    """
+    애플리케이션 설정 클래스
+    
+    Pydantic BaseSettings를 상속받아 환경변수 기반으로 설정을 관리합니다.
+    개발환경에서는 .env.dev 파일을, 프로덕션에서는 시스템 환경변수를 사용합니다.
+    """
     
     model_config = SettingsConfigDict(
         env_file=find_env_file(),
@@ -57,129 +62,127 @@ class Settings(BaseSettings):
         case_sensitive=False,
         validate_assignment=True,
         extra="forbid",
-        # 문제가 될 수 있는 필드들은 환경변수에서 읽지 않음 
-        env_ignore={"cors_origins"}
+        # 환경변수에서 제외할 필드 없음 (단순화됨)
+        env_ignore=set()
     )
     
-    # Database Configuration
+    # === 데이터베이스 설정 ===
     mongodb_url: str = Field(
-        default="mongodb://localhost:27017",
-        description="MongoDB connection URL (Atlas or local)"
+        description="MongoDB 연결 URL (Atlas 클라우드 또는 로컬) - 환경변수 MONGODB_URL 필수"
     )
     database_name: str = Field(
-        default="xai_community",
-        description="Database name for the application"
+        default="REQUIRED_SET_IN_ENV",
+        description="애플리케이션에서 사용할 데이터베이스 이름 - 환경변수 DATABASE_NAME 설정 권장"
     )
     
-    # Collection Configuration
+    # === 컬렉션 설정 ===
     users_collection: str = Field(
         default="users",
-        description="Collection name for user documents"
+        description="사용자 문서를 저장할 컬렉션 이름"
     )
     posts_collection: str = Field(
         default="posts",
-        description="Collection name for post documents"
+        description="게시글 문서를 저장할 컬렉션 이름"
     )
     comments_collection: str = Field(
         default="comments",
-        description="Collection name for comment documents"
+        description="댓글 문서를 저장할 컬렉션 이름"
     )
     post_stats_collection: str = Field(
         default="post_stats",
-        description="Collection name for post statistics"
+        description="게시글 통계를 저장할 컬렉션 이름"
     )
     user_reactions_collection: str = Field(
         default="user_reactions",
-        description="Collection name for user reactions"
+        description="사용자 반응(좋아요/싫어요)을 저장할 컬렉션 이름"
     )
     files_collection: str = Field(
         default="files",
-        description="Collection name for file metadata"
+        description="파일 메타데이터를 저장할 컬렉션 이름"
     )
     stats_collection: str = Field(
         default="stats",
-        description="Collection name for application statistics"
+        description="애플리케이션 통계를 저장할 컬렉션 이름"
     )
     
-    # Security Configuration
+    # === 보안 설정 ===
     secret_key: str = Field(
-        default="your-secret-key-here-change-in-production-32-characters",
-        description="Secret key for JWT token signing (min 32 chars)",
+        description="JWT 토큰 서명용 비밀키 (최소 32자 이상) - 환경변수 SECRET_KEY 필수",
         min_length=32
     )
     algorithm: str = Field(
         default="HS256",
-        description="JWT signing algorithm"
+        description="JWT 서명 알고리즘"
     )
     access_token_expire_minutes: int = Field(
         default=30,
         gt=0,
-        description="Access token expiration time in minutes"
+        description="액세스 토큰 만료 시간 (분 단위)"
     )
     refresh_token_expire_days: int = Field(
         default=7,
         gt=0,
-        description="Refresh token expiration time in days"
+        description="리프레시 토큰 만료 시간 (일 단위)"
     )
     
     @property
     def access_token_expire(self) -> timedelta:
-        """Get access token expiration as timedelta."""
+        """액세스 토큰 만료 시간을 timedelta 객체로 반환합니다."""
         return timedelta(minutes=self.access_token_expire_minutes)
     
     @property
     def refresh_token_expire(self) -> timedelta:
-        """Get refresh token expiration as timedelta."""
+        """리프레시 토큰 만료 시간을 timedelta 객체로 반환합니다."""
         return timedelta(days=self.refresh_token_expire_days)
     
-    # API Configuration
+    # === API 설정 ===
     api_title: str = Field(
         default="Content Management API",
-        description="API service title"
+        description="API 서비스 제목"
     )
     api_version: str = Field(
         default="1.0.0",
-        description="API version number"
+        description="API 버전 번호"
     )
     api_description: str = Field(
         default="FastAPI backend for content management system",
-        description="API service description"
+        description="API 서비스 설명"
     )
     
-    # CORS Configuration - GitHub Actions 호환성을 위해 단순화
-    cors_origins: Optional[List[str]] = Field(
+    # === CORS 설정 ===
+    allowed_origins: Optional[List[str]] = Field(
         default=None,
-        description="List of allowed CORS origins for frontend access"
+        description="프론트엔드 접근을 허용할 CORS origins 목록 - 환경변수 ALLOWED_ORIGINS 권장"
     )
     
-    # Frontend URL for production (Vercel deployment)
-    frontend_url: str = Field(
-        default="http://localhost:3000",
-        description="Frontend URL for CORS and redirects (automatically added to cors_origins)"
+    # 프론트엔드 URL (프로덕션 Vercel 배포용)
+    frontend_url: Optional[str] = Field(
+        default=None,
+        description="CORS 및 리다이렉트용 프론트엔드 URL - 환경변수 FRONTEND_URL 권장"
     )
     
-    # Environment Configuration
-    environment: Literal["development", "staging", "production"] = Field(
+    # === 환경 설정 ===
+    environment: Literal["development", "staging", "production", "test"] = Field(
         default="development",
-        description="Application deployment environment"
+        description="애플리케이션 배포 환경 (development/staging/production/test)"
     )
     
-    # Server Configuration
+    # === 서버 설정 ===
     port: int = Field(
         default=8000,
         ge=1,
         le=65535,
-        description="Server listening port number"
+        description="서버 청취 포트 번호 (1-65535)"
     )
     host: str = Field(
         default="0.0.0.0",
-        description="Server host address (0.0.0.0 for all interfaces)"
+        description="서버 호스트 주소 (0.0.0.0은 모든 인터페이스에서 접근 허용)"
     )
     
-    # Logging Configuration
+    # === 로깅 설정 ===
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
         default="INFO",
-        description="Application logging level"
+        description="애플리케이션 로깅 레벨"
     )
     
     # Feature Flags
@@ -246,217 +249,141 @@ class Settings(BaseSettings):
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
-        """Validate secret key length and production safety."""
+        """비밀키 길이와 안전성을 검증합니다."""
         if len(v) < 32:
-            raise ValueError("Secret key must be at least 32 characters long")
+            raise ValueError("비밀키는 최소 32자 이상이어야 합니다")
         
-        # Check if using default key in production - but be more lenient during manual setup
-        environment = os.getenv("ENVIRONMENT", "development")
-        if (v == "your-secret-key-here-change-in-production-32-characters" and 
-            environment == "production"):
-            print(f"WARNING: Using default secret key in production!")
-            print(f"Environment variables check:")
-            print(f"  ENVIRONMENT: {environment}")
-            print(f"  SECRET_KEY env var exists: {bool(os.getenv('SECRET_KEY'))}")
-            print(f"  SECRET_KEY env var value (first 10): {os.getenv('SECRET_KEY', '')[:10]}...")
-            
-            # 환경변수에서 실제 값을 읽을 수 있다면 사용
-            env_secret = os.getenv('SECRET_KEY')
-            if env_secret and len(env_secret) >= 32:
-                print("Using SECRET_KEY from environment variable")
-                return env_secret
-            
-            raise ValueError("Default secret key cannot be used in production")
+        # 개발 환경에서도 안전하지 않은 기본값 경고
+        unsafe_patterns = [
+            "your-secret-key-here",
+            "change-in-production", 
+            "default-secret",
+            "test-secret",
+            "dev-secret"
+        ]
+        
+        if any(pattern in v.lower() for pattern in unsafe_patterns):
+            environment = os.getenv("ENVIRONMENT", "development")
+            if environment == "production":
+                raise ValueError("프로덕션에서 안전하지 않은 비밀키를 사용할 수 없습니다")
+            else:
+                print(f"⚠️  경고: 안전하지 않은 비밀키가 감지되었습니다. 프로덕션에서는 안전한 비밀키를 사용하세요.")
         
         return v
     
     @field_validator("mongodb_url")
     @classmethod
     def validate_mongodb_url(cls, v: str) -> str:
-        """Validate MongoDB connection URL format."""
+        """MongoDB 연결 URL 형식을 검증합니다."""
         if not v.startswith(("mongodb://", "mongodb+srv://")):
-            raise ValueError("MongoDB URL must start with mongodb:// or mongodb+srv://")
+            raise ValueError("MongoDB URL은 mongodb:// 또는 mongodb+srv://로 시작해야 합니다")
         return v
     
-    @field_validator("cors_origins", mode="before")
+    @field_validator("allowed_origins", mode="before")
     @classmethod
-    def parse_cors_origins(cls, v) -> List[str]:
-        """Parse CORS origins from string or list with robust error handling."""
-        # 기본 fallback 값들
-        default_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+    def parse_allowed_origins(cls, v) -> Optional[List[str]]:
+        """허용된 CORS origins를 간단하게 파싱합니다."""        
+        if v is None:
+            return None  # _setup_cors_origins에서 환경별로 처리
         
-        try:
-            # 이미 리스트인 경우
-            if isinstance(v, list):
-                return v
+        if isinstance(v, list):
+            return v
+        
+        if isinstance(v, str):
+            # JSON 배열 형태 처리 (예: '["http://localhost:3000", "http://localhost:5173"]')
+            if v.strip().startswith("[") and v.strip().endswith("]"):
+                import json
+                try:
+                    parsed = json.loads(v.strip())
+                    if isinstance(parsed, list):
+                        return [str(origin).strip() for origin in parsed if str(origin).strip()]
+                except json.JSONDecodeError:
+                    pass
             
-            # None이거나 빈 값인 경우
-            if v is None or (isinstance(v, str) and not v.strip()):
-                return default_origins
-            
-            # 문자열 처리
-            if isinstance(v, str):
-                # 와일드카드 처리
-                if v.strip() == "*":
-                    return ["*"]
-                
-                # JSON 배열 형태 문자열 처리 (더 안전하게)
-                if v.strip().startswith("[") and v.strip().endswith("]"):
-                    import json
-                    try:
-                        parsed = json.loads(v.strip())
-                        if isinstance(parsed, list):
-                            return [str(origin).strip() for origin in parsed if str(origin).strip()]
-                    except (json.JSONDecodeError, ValueError, TypeError):
-                        # JSON 파싱 실패 시 수동으로 파싱
-                        try:
-                            content = v.strip()[1:-1]  # 대괄호 제거
-                            if content:
-                                return [origin.strip().strip('"\'') for origin in content.split(",") if origin.strip()]
-                        except Exception:
-                            pass
-                
-                # 쉼표로 구분된 문자열 처리
-                if "," in v:
-                    origins = [origin.strip().strip('"\'') for origin in v.split(",") if origin.strip()]
-                    return origins if origins else default_origins
-                
-                # 단일 URL 문자열
-                cleaned_url = v.strip().strip('"\'')
-                if cleaned_url and cleaned_url.startswith("http"):
-                    return [cleaned_url]
-            
-            # 다른 타입이거나 파싱 실패 시 기본값 반환
-            return default_origins
-            
-        except Exception as e:
-            # 모든 예외 상황에서 안전한 기본값 반환
-            import os
-            if os.getenv("ENVIRONMENT") == "production":
-                # 프로덕션에서는 로그만 남기고 기본값 사용
-                print(f"Warning: CORS origins parsing failed, using defaults. Error: {e}")
-            return default_origins
+            # 쉼표로 구분된 문자열 처리 (예: 'url1,url2,url3')
+            if "," in v:
+                return [url.strip() for url in v.split(",") if url.strip()]
+            else:
+                return [v.strip()] if v.strip() else None
+        
+        return None
     
     def __init__(self, **kwargs):
-        """Initialize settings and configure CORS origins."""
+        """간단한 환경변수 기반 설정으로 초기화합니다."""
         super().__init__(**kwargs)
-        self._configure_cors_origins()
-        self._apply_deployment_safety_overrides()
+        self._setup_cors_origins()
+        if os.getenv("ENVIRONMENT") == "production":
+            self.validate_production_settings()
     
-    def _configure_cors_origins(self):
-        """Configure CORS origins based on environment and frontend URL."""
-        try:
-            # 기본 로컬 개발 origins
-            default_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
-            
-            # CORS origins가 None이거나 기본값이거나 비어있는 경우
-            if self.cors_origins is None or not self.cors_origins or self.cors_origins == default_origins:
-                origins = set(default_origins)
-                
-                # 프로덕션 환경에서 frontend_url이 설정되어 있으면 추가
-                if self.environment == "production" and self.frontend_url and self.frontend_url != "http://localhost:3000":
-                    origins.add(self.frontend_url)
-                    # HTTPS 변형도 추가
-                    if self.frontend_url.startswith("http://"):
-                        https_url = self.frontend_url.replace("http://", "https://", 1)
-                        origins.add(https_url)
-                
-                self.cors_origins = list(origins)
-                print(f"CORS origins configured: {self.cors_origins}")
-                
-        except Exception as e:
-            print(f"Warning: Failed to configure CORS origins automatically: {e}")
-            # 실패 시 안전한 기본값 유지
-            if not hasattr(self, 'cors_origins') or not self.cors_origins:
-                self.cors_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
-    
-    def _apply_deployment_safety_overrides(self):
-        """Apply deployment-specific overrides as a safety measure."""
-        try:
-            # 프로덕션 환경에서 수동으로 환경변수 설정
-            if os.getenv("ENVIRONMENT") == "production":
-                print("Production environment detected - applying manual environment variable configuration")
-                self._apply_manual_env_vars()
-                
-                # 배포 설정도 적용
-                from .deploy_config import apply_deployment_overrides
-                apply_deployment_overrides(self)
-        except ImportError:
-            print("Warning: deploy_config module not found, skipping deployment overrides")
-        except Exception as e:
-            print(f"Warning: Failed to apply deployment overrides: {e}")
-    
-    def _apply_manual_env_vars(self):
-        """Manually apply environment variables in production to avoid parsing issues."""
-        try:
-            print("=== Manual Environment Variable Application ===")
-            
-            # 안전하게 환경변수를 하나씩 설정
-            env_mappings = {
-                'MONGODB_URL': 'mongodb_url',
-                'DATABASE_NAME': 'database_name',
-                'SECRET_KEY': 'secret_key',
-                'API_TITLE': 'api_title',
-                'API_VERSION': 'api_version',
-                'API_DESCRIPTION': 'api_description',
-                'ALGORITHM': 'algorithm',
-                'PORT': 'port',
-                'HOST': 'host',
-                'LOG_LEVEL': 'log_level',
-            }
-            
-            print(f"Environment check - SECRET_KEY exists: {bool(os.getenv('SECRET_KEY'))}")
-            print(f"Environment check - SECRET_KEY value (first 10 chars): {os.getenv('SECRET_KEY', '')[:10]}...")
-            print(f"Environment check - ENVIRONMENT: {os.getenv('ENVIRONMENT')}")
-            
-            # 숫자형 환경변수
-            numeric_vars = {
-                'ACCESS_TOKEN_EXPIRE_MINUTES': 'access_token_expire_minutes',
-                'REFRESH_TOKEN_EXPIRE_DAYS': 'refresh_token_expire_days',
-                'PORT': 'port',
-            }
-            
-            # 문자열 환경변수 적용
-            for env_var, attr_name in env_mappings.items():
-                env_value = os.getenv(env_var)
-                if env_value and hasattr(self, attr_name):
-                    setattr(self, attr_name, env_value)
-                    print(f"Set {attr_name} from environment")
-            
-            # 숫자형 환경변수 적용
-            for env_var, attr_name in numeric_vars.items():
-                env_value = os.getenv(env_var)
-                if env_value and hasattr(self, attr_name):
-                    try:
-                        setattr(self, attr_name, int(env_value))
-                        print(f"Set {attr_name} from environment (numeric)")
-                    except ValueError:
-                        print(f"Warning: Invalid numeric value for {env_var}: {env_value}")
-            
-            # CORS origins 수동 설정 (가장 중요)
-            cors_value = os.getenv('CORS_ORIGINS')
-            frontend_url = os.getenv('FRONTEND_URL')
-            
-            if cors_value:
-                # 단순 문자열로 처리
-                if cors_value.strip() == "*":
-                    self.cors_origins = ["*"]
-                elif cors_value.startswith("http"):
-                    self.cors_origins = [cors_value.strip()]
+    def _setup_cors_origins(self):
+        """환경에 따른 CORS origins 설정 (환경변수 필수화 적용)"""
+        environment = os.getenv("ENVIRONMENT", "development")
+        
+        print(f"=== CORS 설정 - 환경: {environment} ===")
+        
+        # CORS origins가 설정되지 않은 경우 환경별 기본값 적용
+        if self.allowed_origins is None:
+            if environment == "production":
+                # 프로덕션: 환경변수 필수
+                allowed_origins_env = os.getenv("ALLOWED_ORIGINS")
+                if allowed_origins_env:
+                    if "," in allowed_origins_env:
+                        self.allowed_origins = [url.strip() for url in allowed_origins_env.split(",") if url.strip()]
+                    else:
+                        self.allowed_origins = [allowed_origins_env.strip()]
+                    print(f"프로덕션 CORS origins (환경변수): {self.allowed_origins}")
                 else:
-                    # 쉼표로 분리된 경우
-                    self.cors_origins = [url.strip() for url in cors_value.split(",") if url.strip()]
-                print(f"CORS origins set manually: {self.cors_origins}")
-            
-            if frontend_url and hasattr(self, 'frontend_url'):
-                self.frontend_url = frontend_url
-                # frontend_url이 cors_origins에 없으면 추가
-                if frontend_url not in self.cors_origins:
-                    self.cors_origins.append(frontend_url)
-                print(f"Frontend URL set: {frontend_url}")
-                
-        except Exception as e:
-            print(f"Warning: Error in manual environment variable application: {e}")
+                    print("❌ 오류: 프로덕션에서 ALLOWED_ORIGINS 환경변수가 설정되지 않았습니다!")
+                    raise ValueError("프로덕션에서 ALLOWED_ORIGINS 환경변수가 필수입니다")
+            else:
+                # 개발환경: 안전한 로컬 기본값
+                self.allowed_origins = [
+                    "http://localhost:3000", 
+                    "http://127.0.0.1:3000", 
+                    "http://localhost:5173", 
+                    "http://127.0.0.1:5173"
+                ]
+                print(f"개발 환경 CORS origins (기본값): {self.allowed_origins}")
+        else:
+            print(f"CORS origins (설정된 값): {self.allowed_origins}")
+        
+        print(f"최종 CORS origins: {self.allowed_origins}")
+        print("=== CORS 설정 완료 ===")
+    
+    def validate_production_settings(self):
+        """프로덕션 환경에서 중요 설정들을 검증합니다."""
+        errors = []
+        
+        # CORS origins 검증
+        default_dev_origins = ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:5173", "http://127.0.0.1:5173"]
+        localhost_patterns = ["localhost", "127.0.0.1"]
+        
+        if not self.allowed_origins:
+            errors.append("ALLOWED_ORIGINS가 설정되지 않음")
+        elif self.allowed_origins == default_dev_origins:
+            errors.append("ALLOWED_ORIGINS가 개발용 기본값으로 설정되어 있음")
+        elif any(any(pattern in origin for pattern in localhost_patterns) for origin in self.allowed_origins):
+            errors.append("ALLOWED_ORIGINS에 localhost URL이 포함되어 있음 (프로덕션 부적절)")
+        
+        # Database name 검증
+        if self.database_name == "REQUIRED_SET_IN_ENV":
+            errors.append("DATABASE_NAME이 환경변수로 설정되지 않음")
+        elif self.database_name in ["test", "dev", "development"]:
+            errors.append("DATABASE_NAME이 개발/테스트용 이름으로 설정되어 있음")
+        
+        # MongoDB URL 검증 (기본값 체크 불가 - 환경변수 필수이므로)
+        if not self.mongodb_url.startswith(("mongodb://", "mongodb+srv://")):
+            errors.append("MONGODB_URL 형식이 올바르지 않음")
+        elif "localhost" in self.mongodb_url:
+            errors.append("MONGODB_URL이 localhost를 가리키고 있음 (프로덕션 부적절)")
+        
+        if errors:
+            print(f"❌ 프로덕션 검증 오류:")
+            for error in errors:
+                print(f"   - {error}")
+            raise ValueError(f"프로덕션 설정 오류: {len(errors)}개 문제 발견")
+        else:
+            print("✅ 프로덕션 설정 검증 통과")
     
     @classmethod
     def settings_customise_sources(
@@ -467,7 +394,7 @@ class Settings(BaseSettings):
         dotenv_settings,
         file_secret_settings,
     ):
-        """Custom source configuration to disable env parsing in production."""
+        """프로덕션에서 환경변수 파싱을 비활성화하는 커스텀 소스 설정"""
         # 프로덕션에서는 환경변수 소스 완전 제거
         if os.getenv("ENVIRONMENT") == "production":
             return (init_settings,)  # 초기화 설정만 사용
@@ -475,15 +402,15 @@ class Settings(BaseSettings):
             # 개발 환경에서는 기본 소스들 사용
             return (init_settings, env_settings, dotenv_settings, file_secret_settings)
     
-    # Config 클래스는 model_config로 대체됨
+    # 참고: Config 클래스는 model_config로 대체되었습니다
 
 
-# Create global settings instance with GitHub Actions support
+# GitHub Actions 지원과 함께 전역 설정 인스턴스 생성
 if os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true":
-    # CI 환경에서는 모든 환경변수 무시하고 안전한 기본값만 사용
-    print("CI environment detected - using safe defaults")
+    # CI 환경에서는 모든 환경변수를 무시하고 안전한 기본값만 사용
+    print("CI 환경 감지 - 안전한 기본값 사용")
     
-    # 문제가 될 수 있는 환경변수들 임시 제거
+    # 문제가 될 수 있는 환경변수들을 임시 제거
     problematic_env_vars = [
         "SECRET_KEY", "MONGODB_URL", "DATABASE_NAME", "PORT", "LOG_LEVEL",
         "SMTP_HOST", "SMTP_PORT", "SMTP_USERNAME", "SMTP_PASSWORD", "SMTP_USE_TLS",
@@ -498,9 +425,9 @@ if os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true":
     
     try:
         settings = Settings()
-        print("✅ Settings initialized successfully in CI mode")
+        print("✅ CI 모드에서 설정 초기화 성공")
     except Exception as e:
-        print(f"❌ CI settings failed: {e}")
+        print(f"❌ CI 설정 실패: {e}")
         # 최후의 폴백: 완전 기본값 사용
         settings = Settings(
             mongodb_url="mongodb://localhost:27017",
@@ -508,9 +435,9 @@ if os.getenv("GITHUB_ACTIONS") == "true" or os.getenv("CI") == "true":
             secret_key="test-secret-key-for-ci-environment-32-chars-long",
             environment="development"
         )
-        print("✅ Using minimal CI configuration")
+        print("✅ 최소 CI 설정 사용")
     
-    # 환경변수 복원 (혹시 나중에 필요할 수 있으니)
+    # 환경변수 복원 (나중에 필요할 수 있음)
     for var, value in original_env.items():
         os.environ[var] = value
 
@@ -519,28 +446,22 @@ else:
     try:
         settings = Settings()
     except Exception as e:
-        # 환경변수 파싱 오류 발생 시 폴백
-        from .deploy_config import DeploymentConfig
+        print(f"경고: 설정 초기화 실패: {e}")
+        print("안전한 폴백 설정 사용...")
         
-        print(f"Warning: Settings initialization failed: {e}")
-        print("Using fallback configuration...")
-        
-        # 배포 설정에서 안전한 설정 가져오기
-        deploy_config = DeploymentConfig.get_safe_environment_config()
-        
-        # 기본값으로 재시도
+        # 안전한 기본값으로 재시도 (개발 환경용)
         settings = Settings(
-            cors_origins=deploy_config.get("cors_origins", ["http://localhost:3000"]),
-            environment=deploy_config.get("environment", "development"),
-            mongodb_url=deploy_config.get("mongodb_url", "mongodb://localhost:27017"),
-            database_name=deploy_config.get("database_name", "xai_community"),
+            mongodb_url="mongodb://localhost:27017",
+            secret_key="fallback-dev-secret-key-32-chars-minimum-length",
+            database_name="xai_community_fallback",
+            environment="development",
         )
 
 
 def get_settings() -> Settings:
-    """Get application settings.
+    """애플리케이션 설정을 반환합니다.
     
     Returns:
-        Settings instance
+        Settings 인스턴스
     """
     return settings
