@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 import logging
 import os
 from nadle_backend.config import settings
-from nadle_backend.deploy_config import DeploymentConfig
+# DeploymentConfig removed - using settings instead
 
 # 로깅 설정
 logging.basicConfig(level=logging.INFO)
@@ -112,9 +112,7 @@ def create_app() -> FastAPI:
         
         # Origin 분류 로깅만 수행 (CORS 처리는 FastAPI CORSMiddleware에서 담당)
         if origin:
-            if origin == DeploymentConfig.PRODUCTION_DOMAIN:
-                logger.info(f"🎯 Production domain request: {origin}")
-            elif "vercel.app" in origin:
+            if "vercel.app" in origin:
                 logger.info(f"🌐 Vercel frontend request: {origin}")
             elif any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
                 logger.debug(f"🔧 Development request: {origin}")
@@ -144,11 +142,9 @@ def create_app() -> FastAPI:
         origins = []
         
         if settings.environment == "production":
-            # Production Domain 우선
-            origins.append(DeploymentConfig.PRODUCTION_DOMAIN)
-            # Legacy URLs 추가
-            origins.extend(DeploymentConfig.LEGACY_DEPLOYMENT_URLS)
-            logger.info(f"Production mode: Primary domain {DeploymentConfig.PRODUCTION_DOMAIN}")
+            # 프로덕션에서는 설정된 origins 사용
+            if settings.allowed_origins:
+                origins.extend(settings.allowed_origins)
             logger.info(f"Production CORS origins: {origins}")
         elif settings.environment == "development":
             # Development URLs
