@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    container_name: xai-backend
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - ENVIRONMENT=production
+      - PORT=8080
+      - MONGODB_URL=${MONGODB_URL}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM:-HS256}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      - REFRESH_TOKEN_EXPIRE_DAYS=${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - MAX_COMMENT_DEPTH=${MAX_COMMENT_DEPTH:-3}
+      - ENABLE_DOCS=${ENABLE_DOCS:-false}
+      - ENABLE_CORS=${ENABLE_CORS:-true}
+      - USERS_COLLECTION=${USERS_COLLECTION:-users}
+      - POSTS_COLLECTION=${POSTS_COLLECTION:-posts}
+      - COMMENTS_COLLECTION=${COMMENTS_COLLECTION:-comments}
+      - POST_STATS_COLLECTION=${POST_STATS_COLLECTION:-post_stats}
+      - USER_REACTIONS_COLLECTION=${USER_REACTIONS_COLLECTION:-user_reactions}
+      - FILES_COLLECTION=${FILES_COLLECTION:-files}
+      - STATS_COLLECTION=${STATS_COLLECTION:-stats}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - xai-network
+
+  # nginx (선택사항 - 리버스 프록시 및 SSL 종단점)
+  nginx:
+    image: nginx:alpine
+    container_name: xai-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+    networks:
+      - xai-network
+    profiles:
+      - nginx
+
+networks:
+  xai-network:
+    driver: bridge
+
+volumes:
+  uploads:
+    driver: local
+  logs:
+    driver: local
