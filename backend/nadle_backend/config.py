@@ -394,10 +394,10 @@ class Settings(BaseSettings):
         dotenv_settings,
         file_secret_settings,
     ):
-        """프로덕션에서 환경변수 파싱을 비활성화하는 커스텀 소스 설정"""
-        # 프로덕션에서는 환경변수 소스 완전 제거
+        """환경별 설정 소스 커스터마이징"""
+        # 프로덕션에서는 dotenv 파일은 제외하고 환경변수는 사용
         if os.getenv("ENVIRONMENT") == "production":
-            return (init_settings,)  # 초기화 설정만 사용
+            return (init_settings, env_settings)  # 초기화 설정과 환경변수만 사용
         else:
             # 개발 환경에서는 기본 소스들 사용
             return (init_settings, env_settings, dotenv_settings, file_secret_settings)
