@@ -48,7 +48,7 @@ class TestCommentRepository:
         author_id = "user123"
         parent_id = "post123"
         
-        with patch('src.repositories.comment_repository.Comment') as MockComment:
+        with patch('nadle_backend.repositories.comment_repository.Comment') as MockComment:
             mock_comment = Mock()
             mock_comment.save = AsyncMock()
             MockComment.return_value = mock_comment
@@ -72,7 +72,7 @@ class TestCommentRepository:
         author_id = "user123"
         parent_id = "post123"
         
-        with patch('src.repositories.comment_repository.Comment') as MockComment, \
+        with patch('nadle_backend.repositories.comment_repository.Comment') as MockComment, \
              patch.object(comment_repo, '_validate_reply_depth', new_callable=AsyncMock) as mock_validate:
             
             mock_comment = Mock()
@@ -112,7 +112,7 @@ class TestCommentRepository:
         # Arrange
         comment_id = str(sample_comment.id)
         
-        with patch('src.repositories.comment_repository.Comment.get', new_callable=AsyncMock) as mock_get:
+        with patch('nadle_backend.repositories.comment_repository.Comment.get', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = sample_comment
             
             # Act
@@ -128,7 +128,7 @@ class TestCommentRepository:
         # Arrange
         comment_id = str(PydanticObjectId())
         
-        with patch('src.repositories.comment_repository.Comment.get', new_callable=AsyncMock) as mock_get:
+        with patch('nadle_backend.repositories.comment_repository.Comment.get', new_callable=AsyncMock) as mock_get:
             mock_get.return_value = None
             
             # Act & Assert

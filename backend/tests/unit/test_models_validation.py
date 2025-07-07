@@ -4,7 +4,7 @@ from pydantic import ValidationError
 from beanie import init_beanie
 
 from nadle_backend.models import (
-    User, Post, Comment, UserReaction, Stats,
+    User, Post, Comment, UserUserReaction, Stats,
     UserCreate, UserUpdate, UserResponse,
     PostCreate, PostUpdate, PostResponse,
     CommentCreate, CommentDetail,
@@ -31,13 +31,13 @@ class TestModelsValidation:
         # Initialize Beanie with all document models
         await init_beanie(
             database=test_db,
-            document_models=[User, Post, Comment, Reaction, Stats]
+            document_models=[User, Post, Comment, UserReaction, Stats]
         )
         
         yield test_db
         
         # Cleanup
-        for model in [User, Post, Comment, Reaction, Stats]:
+        for model in [User, Post, Comment, UserReaction, Stats]:
             await model.delete_all()
         
         await db.disconnect()
@@ -314,9 +314,9 @@ class TestModelsValidation:
     
     @pytest.mark.asyncio
     async def test_reaction_document_beanie(self, initialized_beanie):
-        """Test Reaction document with Beanie ODM."""
+        """Test UserReaction document with Beanie ODM."""
         # Create and save reaction
-        reaction = Reaction(
+        reaction = UserReaction(
             user_id="user123",
             target_id="post456",
             target_type="post",
@@ -326,9 +326,9 @@ class TestModelsValidation:
         await reaction.insert()
         
         # Find reaction
-        found = await Reaction.find_one(
-            Reaction.user_id == "user123",
-            Reaction.target_id == "post456"
+        found = await UserReaction.find_one(
+            UserReaction.user_id == "user123",
+            UserReaction.target_id == "post456"
         )
         assert found is not None
         assert found.reaction_type == "like"

@@ -23,7 +23,7 @@ class TestPostRepositorySimple:
         return PostCreate(
             title="Test Post",
             content="This is test content for the post.",
-            service="community",
+            service="residential_community",
             metadata=PostMetadata(
                 type="자유게시판",
                 tags=["test", "sample"],
@@ -37,7 +37,7 @@ class TestPostRepositorySimple:
         # Arrange
         author_id = "user123"
         
-        with patch('src.repositories.post_repository.Post') as MockPost, \
+        with patch('nadle_backend.models.core.Post') as MockPost, \
              patch.object(post_repo, '_generate_slug', return_value="test-post"), \
              patch.object(post_repo, '_ensure_unique_slug', new_callable=AsyncMock, return_value="test-post"):
             

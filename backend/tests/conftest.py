@@ -73,6 +73,17 @@ async def clean_db(test_db: AsyncIOMotorDatabase) -> AsyncIOMotorDatabase:
 
 
 @pytest.fixture
+async def database():
+    """Provide a database connection fixture."""
+    from nadle_backend.database import Database
+    
+    db = Database()
+    await db.connect()
+    yield db
+    await db.disconnect()
+
+
+@pytest.fixture
 def client():
     """Provide a test client for API testing."""
     from main import app

@@ -88,7 +88,7 @@ class TestPostsServiceEnhanced:
         post.content = "Test content"
         post.slug = "test-post"
         post.author_id = "user123"
-        post.service = "community"
+        post.service = "residential_community"
         post.status = "published"
         post.created_at = datetime.utcnow()
         post.updated_at = datetime.utcnow()
@@ -101,7 +101,7 @@ class TestPostsServiceEnhanced:
         return PostCreate(
             title="New Test Post",
             content="New test content",
-            service="community",
+            service="residential_community",
             metadata=PostMetadata(
                 type="자유게시판",
                 tags=["test"],
@@ -158,7 +158,7 @@ class TestPostsServiceEnhanced:
         post_data = PostCreate(
             title="Test Post",
             content="Test content",
-            service="community",
+            service="residential_community",
             metadata=PostMetadata()  # 기본값 사용
         )
         mock_post = Mock()
@@ -260,7 +260,7 @@ class TestPostsServiceEnhanced:
         mock_post_repository.get_by_slug.return_value = sample_post
         mock_post_repository.update.return_value = sample_post
         
-        with patch('src.utils.permissions.check_post_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_post_permission') as mock_permission:
             mock_permission.return_value = True
             
             # Act
@@ -280,7 +280,7 @@ class TestPostsServiceEnhanced:
         sample_post.author_id = "other_user_id"  # Different from sample_user.id
         mock_post_repository.get_by_slug.return_value = sample_post
         
-        with patch('src.utils.permissions.check_post_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_post_permission') as mock_permission:
             mock_permission.side_effect = PostPermissionError("Permission denied")
             
             # Act & Assert
@@ -295,7 +295,7 @@ class TestPostsServiceEnhanced:
         mock_post_repository.get_by_slug.return_value = sample_post
         mock_post_repository.delete.return_value = True
         
-        with patch('src.utils.permissions.check_post_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_post_permission') as mock_permission:
             mock_permission.return_value = True
             
             # Act
@@ -315,7 +315,7 @@ class TestPostsServiceEnhanced:
         mock_post_repository.get_by_slug.return_value = sample_post
         mock_post_repository.delete.return_value = True
         
-        with patch('src.utils.permissions.check_post_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_post_permission') as mock_permission:
             mock_permission.return_value = True  # Admin can delete any post
             
             # Act
@@ -345,7 +345,7 @@ class TestPostsServiceEnhanced:
             # Act
             result = await posts_service.search_posts(
                 query=query,
-                service_type="community",
+                service_type="residential_community",
                 sort_by="created_at",
                 page=1,
                 page_size=20
@@ -356,7 +356,7 @@ class TestPostsServiceEnhanced:
             assert len(result["items"]) == 1
             mock_post_repository.search_posts.assert_called_once_with(
                 query=query,
-                service_type="community",
+                service_type="residential_community",
                 sort_by="created_at",
                 page=1,
                 page_size=20
@@ -368,8 +368,8 @@ class TestPostsServiceEnhanced:
         # Arrange
         post_id = "post123"
         
-        with patch('src.models.core.UserReaction.find') as mock_reaction_find, \
-             patch('src.models.core.Comment.find') as mock_comment_find:
+        with patch('nadle_backend.models.core.UserReaction.find') as mock_reaction_find, \
+             patch('nadle_backend.models.core.Comment.find') as mock_comment_find:
             
             # Mock UserReaction aggregation
             mock_reaction_query = Mock()

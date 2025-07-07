@@ -18,7 +18,7 @@ class TestDatabaseConnection:
     async def test_connect_success(self, database):
         """Test successful database connection."""
         # Arrange
-        with patch('src.database.connection.AsyncIOMotorClient') as mock_client_class:
+        with patch('nadle_backend.database.connection.AsyncIOMotorClient') as mock_client_class:
             mock_client = MagicMock()
             mock_client.admin.command = AsyncMock(return_value={"ok": 1})
             mock_client_class.return_value = mock_client
@@ -36,7 +36,7 @@ class TestDatabaseConnection:
     async def test_connect_failure(self, database):
         """Test database connection failure."""
         # Arrange
-        with patch('src.database.connection.AsyncIOMotorClient') as mock_client_class:
+        with patch('nadle_backend.database.connection.AsyncIOMotorClient') as mock_client_class:
             mock_client = MagicMock()
             mock_client.admin.command = AsyncMock(side_effect=Exception("Connection failed"))
             mock_client_class.return_value = mock_client
@@ -275,7 +275,7 @@ class TestDatabaseConfiguration:
         # Arrange
         database = Database()
         
-        with patch('src.database.connection.AsyncIOMotorClient') as mock_client_class:
+        with patch('nadle_backend.database.connection.AsyncIOMotorClient') as mock_client_class:
             mock_client = MagicMock()
             mock_client.admin.command = AsyncMock(return_value={"ok": 1})
             mock_client_class.return_value = mock_client
@@ -296,7 +296,7 @@ class TestDatabaseErrorHandling:
     async def test_connect_with_retry_logic(self, database):
         """Test connection with retry logic."""
         # Arrange
-        with patch('src.database.connection.AsyncIOMotorClient') as mock_client_class:
+        with patch('nadle_backend.database.connection.AsyncIOMotorClient') as mock_client_class:
             mock_client = MagicMock()
             # First call fails, second succeeds
             mock_client.admin.command = AsyncMock(side_effect=[

@@ -5,7 +5,7 @@
 
 import pytest
 from fastapi.testclient import TestClient
-from nadle_backend.main import app
+from main import app
 from nadle_backend.models.core import User, Post, Comment, UserReaction
 from nadle_backend.services.user_activity_service import UserActivityService
 from nadle_backend.repositories.post_repository import PostRepository

@@ -263,7 +263,7 @@ class TestCommentsServiceEnhanced:
         mock_comment_repository.get_by_id.return_value = sample_comment
         mock_comment_repository.update.return_value = sample_comment
         
-        with patch('src.utils.permissions.check_comment_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_comment_permission') as mock_permission:
             mock_permission.return_value = True
             
             # Act
@@ -284,7 +284,7 @@ class TestCommentsServiceEnhanced:
         sample_comment.author_id = "other_user_id"
         mock_comment_repository.get_by_id.return_value = sample_comment
         
-        with patch('src.utils.permissions.check_comment_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_comment_permission') as mock_permission:
             mock_permission.side_effect = CommentPermissionError("Permission denied")
             
             # Act & Assert
@@ -300,7 +300,7 @@ class TestCommentsServiceEnhanced:
         mock_comment_repository.get_by_id.return_value = sample_comment
         mock_comment_repository.delete.return_value = True
         
-        with patch('src.utils.permissions.check_comment_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_comment_permission') as mock_permission:
             mock_permission.return_value = True
             
             # Act
@@ -321,7 +321,7 @@ class TestCommentsServiceEnhanced:
         mock_comment_repository.get_by_id.return_value = sample_comment
         mock_comment_repository.delete.return_value = True
         
-        with patch('src.utils.permissions.check_comment_permission') as mock_permission:
+        with patch('nadle_backend.utils.permissions.check_comment_permission') as mock_permission:
             mock_permission.return_value = True  # Admin can delete any comment
             
             # Act

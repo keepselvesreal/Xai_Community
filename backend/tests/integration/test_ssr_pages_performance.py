@@ -22,7 +22,7 @@ from typing import Dict, Any
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 
-from nadle_backend.main import app
+from main import app
 from nadle_backend.database import Database
 from nadle_backend.models.core import Post, User, PostMetadata
 from nadle_backend.database.manager import IndexManager
@@ -31,7 +31,7 @@ from nadle_backend.database.manager import IndexManager
 class TestSSRPagesPerformance:
     """SSR 페이지 성능 통합 테스트."""
     
-    @pytest.fixture(scope="class")
+    @pytest.fixture(scope="function")
     async def setup_test_data(self):
         """테스트용 데이터 설정."""
         # 데이터베이스 연결

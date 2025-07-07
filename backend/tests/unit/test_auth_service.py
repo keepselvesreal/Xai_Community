@@ -65,7 +65,7 @@ def user_create_data():
     return UserCreate(
         name="Test User",
         email="test@example.com",
-        handle="testuser",
+        user_handle="testuser",
         password="TestPassword123!"
     )
 

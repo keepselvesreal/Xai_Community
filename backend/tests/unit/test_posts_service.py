@@ -3,7 +3,7 @@
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, Mock, patch
-from nadle_backend.models.core import User, Post, PostCreate, PostUpdate, PostResponse
+from nadle_backend.models.core import User, Post, PostCreate, PostUpdate, PostResponse, PostMetadata
 from nadle_backend.services.posts_service import PostsService
 from nadle_backend.repositories.post_repository import PostRepository
 from nadle_backend.exceptions.user import UserNotFoundError
@@ -42,8 +42,11 @@ class TestPostsService:
         return PostCreate(
             title="Test Post",
             content="This is a test post content",
-            service="X",
-            tags=["test", "python"]
+            service="residential_community",
+            metadata=PostMetadata(
+                tags=["test", "python"],
+                editor_type="plain"
+            )
         )
     
     @pytest.fixture
@@ -129,8 +132,20 @@ class TestPostsService:
     async def test_list_posts_with_user_data(self, posts_service, mock_post_repository, sample_post, sample_user):
         """Test listing posts with user-specific data."""
         # Arrange
-        posts_list = [sample_post]
-        mock_post_repository.list_posts.return_value = (posts_list, 1)
+        from datetime import datetime
+        posts_data = [{
+            "_id": "507f1f77bcf86cd799439011",
+            "title": "Test Post",
+            "content": "Test content",
+            "slug": "test-post",
+            "author_id": "507f1f77bcf86cd799439012",
+            "service": "residential_community",
+            "metadata": {"type": "board"},
+            "status": "published",
+            "created_at": datetime(2023, 1, 1),
+            "updated_at": datetime(2023, 1, 1)
+        }]
+        mock_post_repository.list_posts_optimized.return_value = (posts_data, 1)
         
         # Act
         result = await posts_service.list_posts(page=1, page_size=20, current_user=sample_user)
@@ -143,7 +158,7 @@ class TestPostsService:
         assert result["total"] == 1
         
         # Verify repository calls
-        mock_post_repository.list_posts.assert_called_once()
+        mock_post_repository.list_posts_optimized.assert_called_once()
     
     async def test_update_post_with_permission(self, posts_service, mock_post_repository, sample_post, sample_user):
         """Test updating a post with proper permissions."""
@@ -195,7 +210,7 @@ class TestPostsService:
         # Act
         result = await posts_service.search_posts(
             query="test",
-            service_type="X",
+            service_type="residential_community",
             sort_by="created_at",
             page=1,
             page_size=20
@@ -211,7 +226,8 @@ class TestPostsService:
         # Verify repository calls
         mock_post_repository.search_posts.assert_called_once_with(
             query="test",
-            service_type="X",
+            service_type="residential_community",
+            metadata_type=None,
             sort_by="created_at",
             page=1,
             page_size=20

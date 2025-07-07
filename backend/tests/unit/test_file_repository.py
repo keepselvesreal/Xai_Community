@@ -33,7 +33,7 @@ class TestFileRepository:
         }
         
         # Mock database operations
-        with patch('src.repositories.file_repository.get_database') as mock_get_db:
+        with patch('nadle_backend.repositories.file_repository.get_database') as mock_get_db:
             mock_db = AsyncMock()
             mock_collection = AsyncMock()
             mock_db.__getitem__.return_value = mock_collection
@@ -51,7 +51,7 @@ class TestFileRepository:
             mock_collection.insert_one.assert_called_once_with(file_document)
         
         # Test save failure
-        with patch('src.repositories.file_repository.get_database') as mock_get_db:
+        with patch('nadle_backend.repositories.file_repository.get_database') as mock_get_db:
             mock_db = AsyncMock()
             mock_collection = AsyncMock()
             mock_db.__getitem__.return_value = mock_collection
@@ -78,7 +78,7 @@ class TestFileRepository:
         }
         
         # Mock successful find
-        with patch('src.repositories.file_repository.get_database') as mock_get_db:
+        with patch('nadle_backend.repositories.file_repository.get_database') as mock_get_db:
             mock_db = AsyncMock()
             mock_collection = AsyncMock()
             mock_db.__getitem__.return_value = mock_collection
@@ -92,7 +92,7 @@ class TestFileRepository:
             mock_collection.find_one.assert_called_once_with({"file_id": file_id})
         
         # Test file not found
-        with patch('src.repositories.file_repository.get_database') as mock_get_db:
+        with patch('nadle_backend.repositories.file_repository.get_database') as mock_get_db:
             mock_db = AsyncMock()
             mock_collection = AsyncMock()
             mock_db.__getitem__.return_value = mock_collection
@@ -104,7 +104,7 @@ class TestFileRepository:
             assert result is None
         
         # Test database error
-        with patch('src.repositories.file_repository.get_database') as mock_get_db:
+        with patch('nadle_backend.repositories.file_repository.get_database') as mock_get_db:
             mock_db = AsyncMock()
             mock_collection = AsyncMock()
             mock_db.__getitem__.return_value = mock_collection
