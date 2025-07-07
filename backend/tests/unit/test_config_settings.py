@@ -70,17 +70,26 @@ class TestConfigSettings:
         """Test MongoDB Atlas connection string validation."""
         # Valid MongoDB Atlas URL
         atlas_url = "mongodb+srv://user:pass@cluster0.mongodb.net/"
-        settings = Settings(mongodb_url=atlas_url)
+        settings = Settings(
+            mongodb_url=atlas_url,
+            secret_key="test-secret-key-for-validation-32-chars"
+        )
         assert settings.mongodb_url == atlas_url
         
         # Valid standard MongoDB URL
         standard_url = "mongodb://user:pass@localhost:27017/"
-        settings = Settings(mongodb_url=standard_url)
+        settings = Settings(
+            mongodb_url=standard_url,
+            secret_key="test-secret-key-for-validation-32-chars"
+        )
         assert settings.mongodb_url == standard_url
         
         # Invalid URL - should raise ValidationError
         with pytest.raises(ValidationError) as exc_info:
-            Settings(mongodb_url="invalid://url")
+            Settings(
+                mongodb_url="invalid://url",
+                secret_key="test-secret-key-for-validation-32-chars"
+            )
         
         errors = exc_info.value.errors()
         assert len(errors) == 1
@@ -91,12 +100,18 @@ class TestConfigSettings:
         """Test secret key validation rules."""
         # Valid secret key (32+ characters)
         valid_key = "a" * 32
-        settings = Settings(secret_key=valid_key)
+        settings = Settings(
+            mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+            secret_key=valid_key
+        )
         assert settings.secret_key == valid_key
         
         # Invalid secret key (too short)
         with pytest.raises(ValidationError) as exc_info:
-            Settings(secret_key="short")
+            Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="short"
+            )
         
         errors = exc_info.value.errors()
         assert len(errors) == 1
@@ -120,12 +135,20 @@ class TestConfigSettings:
         """Test environment setting validation."""
         # Valid environments
         for env in ["development", "staging", "production"]:
-            settings = Settings(environment=env)
+            settings = Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="test-secret-key-for-env-validation-32chars",
+                environment=env
+            )
             assert settings.environment == env
         
         # Invalid environment
         with pytest.raises(ValidationError) as exc_info:
-            Settings(environment="invalid")
+            Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="test-secret-key-for-env-validation-32chars",
+                environment="invalid"
+            )
         
         errors = exc_info.value.errors()
         assert len(errors) == 1
@@ -134,21 +157,41 @@ class TestConfigSettings:
     def test_port_validation(self):
         """Test port number validation."""
         # Valid ports
-        settings = Settings(port=8080)
+        settings = Settings(
+            mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+            secret_key="test-secret-key-for-port-validation-32chars",
+            port=8080
+        )
         assert settings.port == 8080
         
-        settings = Settings(port=1)
+        settings = Settings(
+            mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+            secret_key="test-secret-key-for-port-validation-32chars",
+            port=1
+        )
         assert settings.port == 1
         
-        settings = Settings(port=65535)
+        settings = Settings(
+            mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+            secret_key="test-secret-key-for-port-validation-32chars",
+            port=65535
+        )
         assert settings.port == 65535
         
         # Invalid ports
         with pytest.raises(ValidationError):
-            Settings(port=0)
+            Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="test-secret-key-for-port-validation-32chars",
+                port=0
+            )
         
         with pytest.raises(ValidationError):
-            Settings(port=65536)
+            Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="test-secret-key-for-port-validation-32chars",
+                port=65536
+            )
     
     def test_cors_origins_parsing(self):
         """Test CORS origins parsing from different formats."""
@@ -195,7 +238,10 @@ PORT=9000
             mock_open.return_value.__enter__.return_value.read.return_value = env_content
             
             # Force reload of settings
-            settings = Settings()
+            settings = Settings(
+                mongodb_url="mongodb+srv://envtestuser:envtestpass@envcluster.mongodb.net/envtestdb",
+                secret_key="env-test-secret-key-32-chars-minimum"
+            )
             
             # Note: In actual implementation, env vars would override these
             # This test mainly verifies the structure is correct
@@ -203,21 +249,37 @@ PORT=9000
     def test_access_token_expire_validation(self):
         """Test access token expiration time validation."""
         # Valid expiration times
-        settings = Settings(access_token_expire_minutes=60)
+        settings = Settings(
+            mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+            secret_key="test-secret-key-for-token-validation-32chars",
+            access_token_expire_minutes=60
+        )
         assert settings.access_token_expire_minutes == 60
         
         # Invalid (zero or negative)
         with pytest.raises(ValidationError):
-            Settings(access_token_expire_minutes=0)
+            Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="test-secret-key-for-token-validation-32chars",
+                access_token_expire_minutes=0
+            )
         
         with pytest.raises(ValidationError):
-            Settings(access_token_expire_minutes=-1)
+            Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="test-secret-key-for-token-validation-32chars",
+                access_token_expire_minutes=-1
+            )
     
     def test_log_level_validation(self):
         """Test log level validation."""
         # Valid log levels
         for level in ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]:
-            settings = Settings(log_level=level)
+            settings = Settings(
+                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+                secret_key="test-secret-key-for-log-validation-32chars",
+                log_level=level
+            )
             assert settings.log_level == level
         
         # Invalid log level
