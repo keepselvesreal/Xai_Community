@@ -179,6 +179,7 @@ class Settings(BaseSettings):
     
     # === 환경 설정 ===
     environment: Literal["development", "staging", "production", "test"] = Field(
+        default="development",
         description="애플리케이션 배포 환경 (development/staging/production/test) - 반드시 환경변수 파일에서 설정 필요"
     )
     
@@ -190,6 +191,9 @@ class Settings(BaseSettings):
         env_from_system = os.getenv("ENVIRONMENT")
         env_file = find_env_file()
         
+        # 환경변수 파일이나 시스템 환경변수에서 명시적으로 설정되었는지 확인
+        explicitly_set = False
+        
         if env_file:
             # .env 파일에서 ENVIRONMENT 찾기
             try:
@@ -198,27 +202,32 @@ class Settings(BaseSettings):
                         if line.strip().startswith('ENVIRONMENT='):
                             env_from_file = line.split('=', 1)[1].strip().strip('"\'')
                             print(f"✅ ENVIRONMENT 설정 확인: {env_from_file} (파일: {env_file})")
-                            return v
+                            explicitly_set = True
+                            break
             except Exception as e:
                 print(f"⚠️  환경변수 파일 읽기 실패: {e}")
         
         if env_from_system:
             print(f"✅ ENVIRONMENT 설정 확인: {env_from_system} (시스템 환경변수)")
+            explicitly_set = True
+        
+        # CI/테스트 환경에서는 예외 처리
+        if (os.getenv("GITHUB_ACTIONS") == "true" or 
+            os.getenv("CI") == "true" or
+            os.getenv("PYTEST_CURRENT_TEST")):  # pytest 환경 감지
+            print("ℹ️  CI/테스트 환경에서 ENVIRONMENT 기본값 사용")
             return v
         
-        # CI나 프로덕션 환경에서는 경고만
-        if (os.getenv("GITHUB_ACTIONS") == "true" or 
-            os.getenv("CI") == "true"):
-            print("ℹ️  CI 환경에서 ENVIRONMENT 기본값 사용")
-            return v
-            
-        # 개발 환경에서는 강력한 경고
-        print("🚨 CRITICAL: ENVIRONMENT 환경변수가 명시적으로 설정되지 않았습니다!")
-        print("   다음 중 하나를 수행해주세요:")
-        print("   1. .env.dev 파일에 ENVIRONMENT=development 추가")
-        print("   2. .env.prod 파일에 ENVIRONMENT=production 추가")
-        print("   3. 시스템 환경변수로 export ENVIRONMENT=development 설정")
-        print(f"   현재 사용 중인 기본값: {v}")
+        # 개발/프로덕션 환경에서는 강제
+        if not explicitly_set:
+            raise ValueError(
+                "ENVIRONMENT는 반드시 환경변수 파일(.env.dev, .env.prod) 또는 "
+                "시스템 환경변수에서 명시적으로 설정되어야 합니다. "
+                "다음 중 하나를 수행해주세요: "
+                "1. .env.dev 파일에 ENVIRONMENT=development 추가, "
+                "2. .env.prod 파일에 ENVIRONMENT=production 추가, "
+                "3. 시스템 환경변수로 export ENVIRONMENT=development 설정"
+            )
         
         return v
     
