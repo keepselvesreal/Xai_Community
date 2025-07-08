@@ -734,7 +734,7 @@ class ApiClient {
 
   async createPost(postData: CreatePostRequest): Promise<ApiResponse<Post>> {
     console.log('🚀 createPost 호출 - 전송할 데이터:', JSON.stringify(postData, null, 2));
-    return this.request<Post>('/api/posts', {
+    return this.request<Post>('/api/posts/', {
       method: 'POST',
       body: JSON.stringify(postData),
     });
