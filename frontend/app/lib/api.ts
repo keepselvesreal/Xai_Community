@@ -27,6 +27,10 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
 
+// 디버깅: API URL 확인
+console.log('🔍 API_BASE_URL 설정값:', API_BASE_URL);
+console.log('🔍 VITE_API_URL 환경변수:', import.meta.env.VITE_API_URL);
+
 class ApiClient {
   private baseURL: string;
   private token: string | null = null;
@@ -386,6 +390,7 @@ class ApiClient {
     isRetry: boolean = false
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseURL}${endpoint}`;
+    console.log('🔍 요청 URL 구성:', { baseURL: this.baseURL, endpoint, finalURL: url });
     
     // 토큰이 없고 refresh token이 있다면 먼저 토큰 갱신 시도
     if (!this.token && this.refreshToken && !isRetry) {
