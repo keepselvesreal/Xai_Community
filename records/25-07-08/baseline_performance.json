@@ -1,0 +1,110 @@
+{
+  "phase": "baseline",
+  "iterations": 5,
+  "avg_response_time_ms": 22.67,
+  "min_response_time_ms": 12.39,
+  "max_response_time_ms": 53.78,
+  "all_results": [
+    {
+      "post_detail": {
+        "endpoint": "/posts/686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 41.62,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.267368"
+      },
+      "comments": {
+        "endpoint": "/comments?post_slug=686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 12.16,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.292693"
+      },
+      "total_time_ms": 53.78,
+      "test_type": "post_detail_performance"
+    },
+    {
+      "post_detail": {
+        "endpoint": "/posts/686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 7.08,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.410136"
+      },
+      "comments": {
+        "endpoint": "/comments?post_slug=686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 10.37,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.431379"
+      },
+      "total_time_ms": 17.45,
+      "test_type": "post_detail_performance"
+    },
+    {
+      "post_detail": {
+        "endpoint": "/posts/686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 6.91,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.548796"
+      },
+      "comments": {
+        "endpoint": "/comments?post_slug=686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 5.48,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.563427"
+      },
+      "total_time_ms": 12.39,
+      "test_type": "post_detail_performance"
+    },
+    {
+      "post_detail": {
+        "endpoint": "/posts/686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 8.51,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.682194"
+      },
+      "comments": {
+        "endpoint": "/comments?post_slug=686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 5.29,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.697981"
+      },
+      "total_time_ms": 13.8,
+      "test_type": "post_detail_performance"
+    },
+    {
+      "post_detail": {
+        "endpoint": "/posts/686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 6.59,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.816671"
+      },
+      "comments": {
+        "endpoint": "/comments?post_slug=686c6cd040839f99492cab46-25-07-08-글쓰기",
+        "method": "GET",
+        "response_time_ms": 9.35,
+        "status_code": 404,
+        "success": false,
+        "timestamp": "2025-07-08T11:54:08.836559"
+      },
+      "total_time_ms": 15.94,
+      "test_type": "post_detail_performance"
+    }
+  ],
+  "timestamp": "2025-07-08T11:54:08.937882"
+}

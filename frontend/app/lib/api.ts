@@ -748,6 +748,11 @@ class ApiClient {
     return this.request<CommentListResponse>(`/api/posts/${postSlug}/comments?page=${page}`);
   }
 
+  // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 조회
+  async getCommentsBatch(postSlug: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/posts/${postSlug}/comments`);
+  }
+
   async createComment(postSlug: string, commentData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
     return this.request<Comment>(`/api/posts/${postSlug}/comments`, {
       method: 'POST',

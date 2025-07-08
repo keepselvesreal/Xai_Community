@@ -1,5 +1,5 @@
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
-import { useLoaderData, useNavigate } from "@remix-run/react";
+import { useLoaderData, useNavigate, useParams } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import AppLayout from "~/components/layout/AppLayout";
 import SafeHTMLRenderer from "~/components/common/SafeHTMLRenderer";
@@ -12,6 +12,7 @@ import { convertPostToInfoItem } from "~/types";
 
 interface LoaderData {
   infoItem: InfoItem | null;
+  comments: Comment[];
   error?: string;
 }
 
@@ -33,46 +34,24 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => {
   ];
 };
 
+// 🚀 Hybrid 방식: 기본 구조만 SSR, 데이터는 클라이언트에서 빠르게 로드
 export const loader: LoaderFunction = async ({ params }) => {
   const { slug } = params;
   
   if (!slug) {
     return json<LoaderData>({ 
       infoItem: null, 
+      comments: [],
       error: "잘못된 요청입니다." 
     }, { status: 400 });
   }
 
-  try {
-    // API에서 정보 데이터 조회 (개별 조회 API 사용)
-    const response = await apiClient.getPost(slug);
-
-    if (response.success && response.data) {
-      const post = response.data;
-      
-      // property_information 타입인지 확인
-      if (post.metadata?.type !== 'property_information') {
-        return json<LoaderData>({ 
-          infoItem: null, 
-          error: "정보를 찾을 수 없습니다." 
-        }, { status: 404 });
-      }
-      
-      const infoItem = convertPostToInfoItem(post);
-      return json<LoaderData>({ infoItem });
-    } else {
-      return json<LoaderData>({ 
-        infoItem: null, 
-        error: "정보를 찾을 수 없습니다." 
-      }, { status: 404 });
-    }
-  } catch (error) {
-    console.error('정보 로딩 오류:', error);
-    return json<LoaderData>({ 
-      infoItem: null, 
-      error: "정보를 불러오는 중 오류가 발생했습니다." 
-    }, { status: 500 });
-  }
+  // ⚡ 즉시 응답: 데이터 없이 페이지 구조만 전송
+  return json<LoaderData>({ 
+    infoItem: null, 
+    comments: [],
+    error: null 
+  });
 };
 
 function getContentTypeLabel(contentType: ContentType): string {
@@ -107,14 +86,166 @@ function getCategoryLabel(category: string): string {
 
 
 export default function InfoDetail() {
-  const { infoItem, error } = useLoaderData<LoaderData>();
+  const { slug } = useParams();
+  const loaderData = useLoaderData<LoaderData>();
   const { user, logout } = useAuth();
   const { showError, showSuccess } = useNotification();
   const navigate = useNavigate();
+  
+  // ⚡ Hybrid: 페이지 구조는 즉시 표시, 데이터는 빠르게 로드
+  const [infoItem, setInfoItem] = useState<InfoItem | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isNotFound, setIsNotFound] = useState(false);
+
+  // ⚡ 페이지 마운트 후 즉시 데이터 로드 (Hybrid 방식)
+  useEffect(() => {
+    const loadData = async () => {
+      if (!slug) return;
+      
+      setIsLoading(true);
+      try {
+        // 🚀 병렬 로딩: 정보와 댓글을 동시에 호출 (배치 조회 적용)
+        const [infoResult, commentsResult] = await Promise.all([
+          apiClient.getPost(slug),
+          apiClient.getCommentsBatch(slug)  // 🚀 2단계: 배치 조회 사용
+        ]);
+        
+        // 정보 처리
+        if (infoResult.success && infoResult.data) {
+          const post = infoResult.data;
+          
+          // property_information 타입인지 확인
+          if (post.metadata?.type !== 'property_information') {
+            setIsNotFound(true);
+            showError('해당 정보를 찾을 수 없습니다');
+            return;
+          }
+          
+          const convertedInfoItem = convertPostToInfoItem(post);
+          setInfoItem(convertedInfoItem);
+        } else {
+          setIsNotFound(true);
+          showError('정보를 찾을 수 없습니다');
+        }
+        
+        // 댓글 처리 (배치 조회된 댓글 + 작성자 정보)
+        if (commentsResult.success && commentsResult.data) {
+          // 🚀 배치 조회로 이미 작성자 정보가 포함된 댓글 데이터 사용
+          let comments = [];
+          if (commentsResult.data.data?.comments) {
+            comments = commentsResult.data.data.comments;  // 배치 조회 응답 구조
+          } else if (commentsResult.data.comments) {
+            comments = commentsResult.data.comments;
+          } else if (Array.isArray(commentsResult.data)) {
+            comments = commentsResult.data;
+          }
+          
+          // 중첩된 댓글의 ID 필드 변환 (배치 조회된 데이터는 이미 작성자 정보 포함)
+          const processCommentsRecursive = (comments: any[]): Comment[] => {
+            return comments.map(comment => {
+              const processedComment = {
+                ...comment,
+                id: comment.id || comment._id
+              };
+              
+              // 중첩된 답글도 재귀적으로 처리
+              if (processedComment.replies && Array.isArray(processedComment.replies)) {
+                processedComment.replies = processCommentsRecursive(processedComment.replies);
+              }
+              
+              return processedComment;
+            });
+          };
+          
+          const processedComments = processCommentsRecursive(comments);
+          setComments(processedComments);
+        }
+      } catch (error) {
+        setIsNotFound(true);
+        showError('데이터를 불러오는 중 오류가 발생했습니다');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [slug]);
+
+  if (isLoading) {
+    return (
+      <AppLayout user={user} onLogout={logout}>
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* 스켈레톤 UI - 정보 헤더 */}
+          <div className="animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-32 mb-6"></div>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-6 bg-gray-200 rounded w-20"></div>
+              <div className="h-6 bg-gray-200 rounded w-16"></div>
+              <div className="h-6 bg-gray-200 rounded w-10"></div>
+            </div>
+            <div className="h-10 bg-gray-200 rounded w-3/4 mb-4"></div>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-4">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                <div className="h-4 bg-gray-200 rounded w-20"></div>
+              </div>
+              <div className="flex items-center gap-4">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="h-4 bg-gray-200 rounded w-8"></div>
+                ))}
+              </div>
+            </div>
+            <div className="bg-gray-100 p-4 rounded-lg mb-6">
+              <div className="h-4 bg-gray-200 rounded w-16 mb-2"></div>
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 콘텐츠 */}
+          <div className="animate-pulse">
+            <div className="space-y-3 mb-8">
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 액션 버튼들 */}
+          <div className="animate-pulse">
+            <div className="flex items-center justify-center gap-4 p-6 bg-gray-100 rounded-lg mb-8">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-10 bg-gray-200 rounded w-20"></div>
+              ))}
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 댓글 섹션 */}
+          <div className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-32 mb-4"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex space-x-3">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
 
   // 에러 상태 처리
-  if (error || !infoItem) {
+  if (isNotFound || !infoItem) {
     return (
       <AppLayout user={user} onLogout={logout}>
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
@@ -123,7 +254,7 @@ export default function InfoDetail() {
             정보를 찾을 수 없습니다
           </h2>
           <p className="text-var-secondary mb-6">
-            {error || "요청하신 정보가 존재하지 않거나 삭제되었을 수 있습니다."}
+            {loaderData.error || "요청하신 정보가 존재하지 않거나 삭제되었을 수 있습니다."}
           </p>
           <button
             onClick={() => navigate('/info')}
@@ -136,30 +267,24 @@ export default function InfoDetail() {
     );
   }
 
-  const loadComments = async () => {
-    if (!infoItem?.slug) return;
+  const handleCommentAdded = async () => {
+    if (!slug) return;
     
     try {
-      console.log('댓글 로딩 시작 - slug:', infoItem.slug);
-      const response = await apiClient.getComments(infoItem.slug);
-      console.log('API 응답:', response);
-      
+      // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 로드
+      const response = await apiClient.getCommentsBatch(slug);
       if (response.success && response.data) {
-        console.log('댓글 데이터:', response.data);
-        console.log('댓글 items:', response.data.items);
-        console.log('response.data 전체 구조:', JSON.stringify(response.data, null, 2));
-        
-        // API 응답 구조 확인 후 적절한 경로로 댓글 추출
+        // 배치 조회된 댓글 데이터 처리
         let comments = [];
-        if (response.data.items) {
-          comments = response.data.items;
+        if (response.data.data?.comments) {
+          comments = response.data.data.comments;  // 배치 조회 응답 구조
         } else if (response.data.comments) {
           comments = response.data.comments;
         } else if (Array.isArray(response.data)) {
           comments = response.data;
         }
         
-        // 중첩된 댓글의 ID 필드 변환 (게시판 페이지와 동일한 로직)
+        // 중첩된 댓글의 ID 필드 변환 (배치 조회된 데이터는 이미 작성자 정보 포함)
         const processCommentsRecursive = (comments: any[]): Comment[] => {
           return comments.map(comment => {
             const processedComment = {
@@ -167,7 +292,6 @@ export default function InfoDetail() {
               id: comment.id || comment._id
             };
             
-            // 중첩된 답글도 재귀적으로 처리
             if (processedComment.replies && Array.isArray(processedComment.replies)) {
               processedComment.replies = processCommentsRecursive(processedComment.replies);
             }
@@ -176,35 +300,13 @@ export default function InfoDetail() {
           });
         };
         
-        comments = processCommentsRecursive(comments);
-        
-        console.log('추출된 댓글 배열:', comments);
-        console.log('첫 번째 댓글 구조:', comments[0]);
-        if (comments[0]) {
-          console.log('첫 번째 댓글 ID 필드들:', {
-            id: comments[0].id,
-            _id: comments[0]._id,
-            comment_id: comments[0].comment_id,
-            keys: Object.keys(comments[0])
-          });
-        }
-        setComments(comments);
-        console.log('setComments 호출 후 - comments 상태 업데이트됨');
-      } else {
-        console.log('API 응답 실패 또는 데이터 없음:', response);
+        const processedComments = processCommentsRecursive(comments);
+        setComments(processedComments);
       }
     } catch (error) {
       console.error('댓글 로드 실패:', error);
     }
   };
-
-  const handleCommentAdded = () => {
-    loadComments();
-  };
-
-  useEffect(() => {
-    loadComments();
-  }, [infoItem?.slug]);
 
   const handleReactionChange = async (reactionType: 'like' | 'dislike' | 'bookmark') => {
     if (!user) {

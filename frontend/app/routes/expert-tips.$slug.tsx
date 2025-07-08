@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate, Link } from '@remix-run/react';
+import { useParams, useNavigate, Link, useLoaderData } from '@remix-run/react';
+import { json, type LoaderFunction } from '@remix-run/node';
 import AppLayout from '~/components/layout/AppLayout';
 import CommentSection from '~/components/comment/CommentSection';
 import { useAuth } from '~/contexts/AuthContext';
@@ -8,16 +9,95 @@ import { apiClient } from '~/lib/api';
 import type { Post, Tip, Comment } from '~/types';
 import { formatNumber } from "~/lib/utils";
 
+interface LoaderData {
+  post: Post | null;
+  tip: Tip | null;
+  comments: Comment[];
+  error?: string;
+}
+
+// 🚀 SSR 방식: 서버에서 데이터를 미리 로드하여 깜빡임 방지
+export const loader: LoaderFunction = async ({ params }) => {
+  const { slug } = params;
+  
+  if (!slug) {
+    return json<LoaderData>({ 
+      post: null, 
+      tip: null,
+      comments: [],
+      error: "잘못된 요청입니다." 
+    }, { status: 400 });
+  }
+
+  try {
+    // 서버에서 게시글과 댓글 데이터 미리 로드
+    const [postResult, commentsResult] = await Promise.all([
+      apiClient.getPost(slug),
+      apiClient.getCommentsBatch(slug)
+    ]);
+
+    // 게시글 데이터 처리
+    if (postResult.success && postResult.data) {
+      // expert_tips 타입 확인
+      if (postResult.data.metadata?.type !== 'expert_tips') {
+        return json<LoaderData>({ 
+          post: null, 
+          tip: null,
+          comments: [],
+          error: "해당 전문가 꿀정보를 찾을 수 없습니다." 
+        }, { status: 404 });
+      }
+
+      // 댓글 데이터 처리
+      let comments = [];
+      if (commentsResult.success && commentsResult.data) {
+        if (commentsResult.data.data?.comments) {
+          comments = commentsResult.data.data.comments;
+        } else if (commentsResult.data.comments) {
+          comments = commentsResult.data.comments;
+        } else if (Array.isArray(commentsResult.data)) {
+          comments = commentsResult.data;
+        }
+      }
+
+      return json<LoaderData>({ 
+        post: postResult.data, 
+        tip: null, // 클라이언트에서 변환
+        comments: comments,
+        error: null 
+      });
+    } else {
+      return json<LoaderData>({ 
+        post: null, 
+        tip: null,
+        comments: [],
+        error: "전문가 꿀정보를 찾을 수 없습니다." 
+      }, { status: 404 });
+    }
+  } catch (error) {
+    console.error('SSR Loader Error (expert-tips):', error);
+    return json<LoaderData>({ 
+      post: null, 
+      tip: null,
+      comments: [],
+      error: "데이터를 불러오는 중 오류가 발생했습니다." 
+    }, { status: 500 });
+  }
+};
+
 export default function ExpertTipDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { showError, showSuccess } = useNotification();
+  const loaderData = useLoaderData<LoaderData>();
+  
+  // ⚡ SSR: 서버에서 로드된 데이터를 초기값으로 사용
   const [tip, setTip] = useState<Tip | null>(null);
-  const [post, setPost] = useState<Post | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isNotFound, setIsNotFound] = useState(false);
+  const [post, setPost] = useState<Post | null>(loaderData.post);
+  const [comments, setComments] = useState<Comment[]>(loaderData.comments || []);
+  const [isLoading, setIsLoading] = useState(false); // SSR 데이터가 있으면 로딩 불필요
+  const [isNotFound, setIsNotFound] = useState(!!loaderData.error);
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -26,9 +106,8 @@ export default function ExpertTipDetail() {
   const [bookmarkCount, setBookmarkCount] = useState(0);
   const [commentCount, setCommentCount] = useState(0);
 
-  // Post를 Tip으로 변환하는 함수
+  // Post를 Tip으로 변환하는 함수 (클라이언트에서 다시 필요)
   const convertPostToTip = (post: Post): Tip => {
-    // JSON content 파싱 시도
     let parsedContent = null;
     let introduction = '전문가';
     let actualContent = post.content;
@@ -40,7 +119,6 @@ export default function ExpertTipDetail() {
         actualContent = parsedContent.content || post.content;
       }
     } catch (error) {
-      // JSON 파싱 실패 시 기존 방식으로 fallback
       introduction = post.metadata?.expert_title || '전문가';
       actualContent = post.content;
     }
@@ -49,7 +127,7 @@ export default function ExpertTipDetail() {
       id: parseInt(post.id),
       title: post.title,
       content: actualContent,
-      slug: post.slug || post.id, // slug가 없으면 id를 사용
+      slug: post.slug || post.id,
       expert_name: post.author?.display_name || post.metadata?.expert_name || '익명 전문가',
       expert_title: introduction,
       created_at: post.created_at,
@@ -64,40 +142,7 @@ export default function ExpertTipDetail() {
     };
   };
 
-  const loadTip = async () => {
-    if (!slug) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await apiClient.getPost(slug);
-      if (response.success && response.data) {
-        // expert_tips 타입인지 확인
-        if (response.data.metadata?.type !== 'expert_tips') {
-          setIsNotFound(true);
-          showError('해당 전문가 꿀정보를 찾을 수 없습니다');
-          return;
-        }
-        
-        // 원본 post 데이터 저장 (권한 체크용)
-        setPost(response.data);
-        
-        const convertedTip = convertPostToTip(response.data);
-        setTip(convertedTip);
-        setLikeCount(convertedTip.likes_count);
-        setDislikeCount(response.data.stats?.dislike_count || 0);
-        setBookmarkCount(convertedTip.saves_count);
-        setCommentCount(response.data.stats?.comment_count || 0);
-      } else {
-        setIsNotFound(true);
-        showError('전문가 꿀정보를 찾을 수 없습니다');
-      }
-    } catch (error) {
-      setIsNotFound(true);
-      showError('전문가 꿀정보를 불러오는 중 오류가 발생했습니다');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // 🗑️ 기존 loadTip 함수 제거 - 병렬 로딩으로 통합됨
   
 
   const handleLike = async () => {
@@ -194,26 +239,44 @@ export default function ExpertTipDetail() {
     }
   };
 
-  const loadComments = async () => {
+  // 🗑️ 기존 loadComments 함수 제거 - 병렬 로딩으로 통합됨
+
+  const formatDateSimple = (dateString: string): string => {
+    const date = new Date(dateString);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  };
+
+  const handleCommentAdded = async () => {
     if (!slug) return;
     
     try {
-      const response = await apiClient.getComments(slug);
+      // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 로드
+      const response = await apiClient.getCommentsBatch(slug);
       if (response.success && response.data) {
-        console.log('원본 댓글 데이터:', response.data.comments);
+        // 배치 조회된 댓글 데이터 처리
+        let comments = [];
+        if (response.data.data?.comments) {
+          comments = response.data.data.comments;  // 배치 조회 응답 구조
+        } else if (response.data.comments) {
+          comments = response.data.comments;
+        } else if (Array.isArray(response.data)) {
+          comments = response.data;
+        }
         
-        // 재귀적으로 모든 중첩된 답글의 id 필드 보장
         const processCommentsRecursive = (comments: any[]): any[] => {
           return comments.map(comment => ({
             ...comment,
-            id: comment.id || comment._id, // id가 없으면 _id 사용
+            id: comment.id || comment._id,
             replies: comment.replies ? processCommentsRecursive(comment.replies) : []
           }));
         };
         
-        const processedComments = processCommentsRecursive(response.data.comments || []);
-        
-        console.log('처리된 댓글 데이터:', processedComments);
+        const processedComments = processCommentsRecursive(comments);
         setComments(processedComments);
         
         // 댓글 수 업데이트 (중첩된 답글 포함 총 개수 계산)
@@ -229,20 +292,6 @@ export default function ExpertTipDetail() {
     } catch (error) {
       console.error('댓글 로드 실패:', error);
     }
-  };
-
-  const formatDateSimple = (dateString: string): string => {
-    const date = new Date(dateString);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}`;
-  };
-
-  const handleCommentAdded = () => {
-    loadComments();
   };
 
   // 작성자 권한 체크 함수
@@ -299,10 +348,59 @@ export default function ExpertTipDetail() {
     }
   };
 
+  // ⚡ SSR 데이터 활용: 서버에서 로드된 데이터를 초기화
   useEffect(() => {
-    loadTip();
-    loadComments();
-  }, [slug]);
+    const initializeData = () => {
+      if (!slug) return;
+      
+      // SSR에서 에러가 있으면 에러 상태 유지
+      if (loaderData.error) {
+        setIsNotFound(true);
+        showError(loaderData.error);
+        return;
+      }
+      
+      // SSR에서 로드된 post 데이터가 있으면 tip으로 변환
+      if (loaderData.post) {
+        const convertedTip = convertPostToTip(loaderData.post);
+        setTip(convertedTip);
+        setLikeCount(convertedTip.likes_count);
+        setDislikeCount(loaderData.post.stats?.dislike_count || 0);
+        setBookmarkCount(convertedTip.saves_count);
+        setCommentCount(loaderData.post.stats?.comment_count || 0);
+        
+        // 댓글 처리 (SSR에서 로드된 댓글 데이터)
+        if (loaderData.comments) {
+          const processCommentsRecursive = (comments: any[]): any[] => {
+            return comments.map(comment => ({
+              ...comment,
+              id: comment.id || comment._id,
+              replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+            }));
+          };
+          
+          const processedComments = processCommentsRecursive(loaderData.comments);
+          setComments(processedComments);
+          
+          // 댓글 수 업데이트 (중첩된 답글 포함 총 개수 계산)
+          const countAllComments = (comments: any[]): number => {
+            return comments.reduce((total, comment) => {
+              return total + 1 + (comment.replies ? countAllComments(comment.replies) : 0);
+            }, 0);
+          };
+          
+          const totalCommentCount = countAllComments(processedComments);
+          setCommentCount(totalCommentCount);
+        }
+      } else {
+        // SSR에서 데이터가 없으면 404 처리
+        setIsNotFound(true);
+        showError('전문가 꿀정보를 찾을 수 없습니다');
+      }
+    };
+    
+    initializeData();
+  }, [slug, loaderData]);
 
   if (isLoading) {
     return (
@@ -322,7 +420,7 @@ export default function ExpertTipDetail() {
             전문가 꿀정보를 찾을 수 없습니다
           </h2>
           <p className="text-gray-600 mb-6">
-            요청하신 전문가 꿀정보가 존재하지 않거나 삭제되었습니다.
+            {loaderData.error || "요청하신 전문가 꿀정보가 존재하지 않거나 삭제되었습니다."}
           </p>
           <Link 
             to="/tips"
@@ -345,11 +443,18 @@ export default function ExpertTipDetail() {
     >
       {/* 뒤로가기 버튼 */}
       <div className="mb-6">
+        <button
+          onClick={() => navigate(-1)}
+          className="inline-flex items-center gap-2 text-var-secondary hover:text-var-primary transition-colors mr-4"
+        >
+          <span>←</span>
+          <span>뒤로가기</span>
+        </button>
         <Link 
           to="/tips"
           className="inline-flex items-center gap-2 text-var-secondary hover:text-var-primary transition-colors"
         >
-          <span>←</span>
+          <span>📋</span>
           <span>목록으로</span>
         </Link>
       </div>

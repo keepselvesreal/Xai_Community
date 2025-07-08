@@ -1,6 +1,6 @@
 """Authentication service layer for business logic."""
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from datetime import datetime
 from nadle_backend.models.core import User, UserCreate, UserUpdate
 from nadle_backend.repositories.user_repository import UserRepository
@@ -15,6 +15,13 @@ from nadle_backend.exceptions.user import (
     UserSuspendedError
 )
 from nadle_backend.services.email_service import EmailService
+from nadle_backend.services.cache_service import get_cache_service
+from nadle_backend.services.session_service import get_session_service, SessionData
+from nadle_backend.services.token_blacklist_service import get_token_blacklist_service
+from nadle_backend.config import get_settings
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -39,6 +46,7 @@ class AuthService:
         self.jwt_manager = jwt_manager
         self.password_manager = password_manager or PasswordManager()
         self.email_service = email_service or EmailService(self.user_repository)
+        self.settings = get_settings()
     
     async def register_user(self, user_data: UserCreate) -> User:
         """Register a new user.
@@ -139,15 +147,17 @@ class AuthService:
         }
         return self.jwt_manager.create_token(payload, TokenType.REFRESH)
     
-    async def login(self, email: str, password: str) -> Dict[str, Any]:
-        """Login user and return tokens.
+    async def login(self, email: str, password: str, ip_address: str = None, user_agent: str = None) -> Dict[str, Any]:
+        """Login user and return tokens with session management.
         
         Args:
             email: User email
             password: User password
+            ip_address: Client IP address
+            user_agent: Client user agent
             
         Returns:
-            Dictionary with user, access_token, refresh_token, and token_type
+            Dictionary with user, access_token, refresh_token, token_type, and session_id
             
         Raises:
             InvalidCredentialsError: If authentication fails
@@ -162,11 +172,17 @@ class AuthService:
         access_token = await self.create_access_token(user)
         refresh_token = await self.create_refresh_token(user)
         
+        # Create session
+        session_id = await self._create_user_session(
+            user, access_token, refresh_token, ip_address, user_agent
+        )
+        
         return {
             "user": user,
             "access_token": access_token,
             "refresh_token": refresh_token,
-            "token_type": "bearer"
+            "token_type": "bearer",
+            "session_id": session_id
         }
     
     async def refresh_access_token(self, refresh_token: str) -> Dict[str, Any]:
@@ -198,7 +214,7 @@ class AuthService:
         }
     
     async def get_user_profile(self, user_id: str) -> User:
-        """Get user profile by ID.
+        """Get user profile by ID with caching.
         
         Args:
             user_id: User ID
@@ -209,10 +225,25 @@ class AuthService:
         Raises:
             UserNotFoundError: If user not found
         """
-        return await self.user_repository.get_by_id(user_id)
+        # 캐시에서 사용자 정보 확인
+        cache_service = await get_cache_service()
+        cached_user = await cache_service.get_user_cache(user_id)
+        
+        if cached_user:
+            # 캐시된 데이터를 User 객체로 변환
+            return User(**cached_user)
+        
+        # 캐시에 없으면 DB에서 조회
+        user = await self.user_repository.get_by_id(user_id)
+        
+        # 조회된 데이터를 캐시에 저장
+        user_dict = user.model_dump()
+        await cache_service.set_user_cache(user_id, user_dict)
+        
+        return user
     
     async def update_user_profile(self, user_id: str, user_update: UserUpdate) -> User:
-        """Update user profile.
+        """Update user profile and invalidate cache.
         
         Args:
             user_id: User ID
@@ -228,7 +259,13 @@ class AuthService:
         await self.user_repository.get_by_id(user_id)
         
         # Update user
-        return await self.user_repository.update(user_id, user_update)
+        updated_user = await self.user_repository.update(user_id, user_update)
+        
+        # 캐시 무효화
+        cache_service = await get_cache_service()
+        await cache_service.delete_user_cache(user_id)
+        
+        return updated_user
     
     async def change_password(self, user_id: str, old_password: str, new_password: str) -> User:
         """Change user password.
@@ -414,3 +451,208 @@ class AuthService:
             True if email is verified, False otherwise
         """
         return await self.email_service.is_email_verified(email)
+    
+    # Session and token management methods
+    async def _create_user_session(
+        self, 
+        user: User, 
+        access_token: str, 
+        refresh_token: str, 
+        ip_address: str = None, 
+        user_agent: str = None
+    ) -> Optional[str]:
+        """Create user session with Redis storage."""
+        try:
+            session_service = await get_session_service()
+            
+            # 토큰 만료 시간 계산
+            expires_at = datetime.now() + self.settings.refresh_token_expire
+            
+            # 세션 데이터 생성
+            session_data = SessionData(
+                user_id=str(user.id),
+                email=user.email,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                ip_address=ip_address or "unknown",
+                user_agent=user_agent or "unknown",
+                expires_at=expires_at
+            )
+            
+            # 세션 생성 (동시 로그인 제한 3개)
+            session_id = await session_service.create_session(
+                session_data, 
+                max_concurrent_sessions=3
+            )
+            
+            if session_id:
+                logger.info(f"세션 생성 성공: {user.email} ({session_id})")
+            else:
+                logger.warning(f"세션 생성 실패: {user.email}")
+            
+            return session_id
+            
+        except Exception as e:
+            logger.error(f"세션 생성 오류: {e}")
+            return None
+    
+    async def logout(self, access_token: str, refresh_token: str = None, user_id: str = None) -> Dict[str, Any]:
+        """Logout user and invalidate tokens.
+        
+        Args:
+            access_token: User's access token
+            refresh_token: User's refresh token (optional)
+            user_id: User ID (optional, for session cleanup)
+            
+        Returns:
+            Dictionary with logout status and message
+        """
+        try:
+            blacklist_service = await get_token_blacklist_service()
+            session_service = await get_session_service()
+            
+            # 토큰 만료 시간 계산
+            access_expires_at = datetime.now() + self.settings.access_token_expire
+            refresh_expires_at = datetime.now() + self.settings.refresh_token_expire
+            
+            # Access token 블랙리스트 추가
+            await blacklist_service.blacklist_token(
+                access_token, 
+                access_expires_at, 
+                "user_logout", 
+                user_id
+            )
+            
+            # Refresh token 블랙리스트 추가 (있는 경우)
+            if refresh_token:
+                await blacklist_service.blacklist_token(
+                    refresh_token, 
+                    refresh_expires_at, 
+                    "user_logout", 
+                    user_id
+                )
+            
+            # 사용자 세션 삭제 (있는 경우)
+            if user_id:
+                deleted_sessions = await session_service.delete_user_sessions(user_id)
+                logger.info(f"사용자 세션 삭제: {user_id}, 삭제된 세션 수: {deleted_sessions}")
+            
+            # 사용자 캐시 무효화
+            if user_id:
+                cache_service = await get_cache_service()
+                await cache_service.delete_user_cache(user_id)
+            
+            logger.info(f"로그아웃 성공: 사용자 {user_id}")
+            
+            return {
+                "status": "success",
+                "message": "Successfully logged out",
+                "tokens_invalidated": True,
+                "sessions_cleared": True
+            }
+            
+        except Exception as e:
+            logger.error(f"로그아웃 오류: {e}")
+            return {
+                "status": "partial",
+                "message": "Logout completed with some errors",
+                "error": str(e)
+            }
+    
+    async def logout_all_sessions(self, user_id: str) -> Dict[str, Any]:
+        """Logout user from all sessions and devices.
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            Dictionary with logout status and statistics
+        """
+        try:
+            blacklist_service = await get_token_blacklist_service()
+            session_service = await get_session_service()
+            cache_service = await get_cache_service()
+            
+            # 사용자의 모든 토큰 블랙리스트 추가
+            expires_at = datetime.now() + self.settings.refresh_token_expire
+            blacklisted_count = await blacklist_service.blacklist_user_tokens(
+                user_id, 
+                expires_at, 
+                "logout_all_sessions"
+            )
+            
+            # 모든 세션 삭제
+            deleted_sessions = await session_service.delete_user_sessions(user_id)
+            
+            # 사용자 캐시 무효화
+            await cache_service.delete_user_cache(user_id)
+            
+            logger.info(f"전체 로그아웃 성공: {user_id}, 세션: {deleted_sessions}, 블랙리스트: {blacklisted_count}")
+            
+            return {
+                "status": "success",
+                "message": "Successfully logged out from all sessions",
+                "deleted_sessions": deleted_sessions,
+                "blacklisted_tokens": blacklisted_count
+            }
+            
+        except Exception as e:
+            logger.error(f"전체 로그아웃 오류: {e}")
+            return {
+                "status": "error",
+                "message": "Failed to logout from all sessions",
+                "error": str(e)
+            }
+    
+    async def verify_token_validity(self, token: str) -> bool:
+        """Verify if token is valid and not blacklisted.
+        
+        Args:
+            token: JWT token to verify
+            
+        Returns:
+            True if token is valid and not blacklisted
+        """
+        try:
+            # JWT 토큰 검증
+            payload = self.jwt_manager.verify_token(token, TokenType.ACCESS)
+            
+            # 블랙리스트 확인
+            blacklist_service = await get_token_blacklist_service()
+            is_blacklisted = await blacklist_service.is_blacklisted(token)
+            
+            if is_blacklisted:
+                logger.debug(f"토큰이 블랙리스트에 있음: {token[:20]}...")
+                return False
+            
+            # 사용자 전체 블랙리스트 확인
+            user_id = payload.get("sub")
+            if user_id:
+                is_user_blacklisted = await blacklist_service.is_user_blacklisted(user_id)
+                if is_user_blacklisted:
+                    logger.debug(f"사용자 전체 블랙리스트: {user_id}")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            logger.debug(f"토큰 검증 실패: {e}")
+            return False
+    
+    async def get_user_sessions(self, user_id: str) -> List[Dict[str, Any]]:
+        """Get user's active sessions.
+        
+        Args:
+            user_id: User ID
+            
+        Returns:
+            List of active session information
+        """
+        try:
+            session_service = await get_session_service()
+            sessions = await session_service.get_user_sessions(user_id)
+            return sessions
+            
+        except Exception as e:
+            logger.error(f"사용자 세션 조회 오류: {e}")
+            return []

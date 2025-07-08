@@ -299,10 +299,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 };
 
 export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
+  // null 체크를 더 안전하게 처리
+  let context;
+  try {
+    context = useContext(AuthContext);
+  } catch (error) {
+    console.error('useAuth: useContext failed:', error);
+    context = undefined;
+  }
+  
+  if (context === undefined || context === null) {
     // 에러 발생 전에 디버깅 정보 출력
-    console.error('useAuth: AuthContext is undefined');
+    console.error('useAuth: AuthContext is undefined or null');
     console.error('useAuth: Current location:', typeof window !== 'undefined' ? window.location.href : 'server');
     console.error('useAuth: Stack trace:', new Error().stack);
     
@@ -317,6 +325,27 @@ export const useAuth = (): AuthContextType => {
         logout: () => { console.warn('Logout called but auth not available'); },
         isLoading: false,
         isAuthenticated: false,
+        // 세션 관리 기능들도 fallback 제공
+        showSessionWarning: false,
+        sessionExpiryReason: null,
+        extendSession: () => { 
+          console.warn('extendSession called but auth not available'); 
+          return false; 
+        },
+        getSessionInfo: () => { 
+          console.warn('getSessionInfo called but auth not available'); 
+          return {
+            loginTime: null,
+            refreshCount: 0,
+            maxRefreshCount: 0,
+            isExpired: true,
+            showWarning: false,
+            timeRemaining: 0,
+            maxSessionHours: 0
+          };
+        },
+        dismissSessionWarning: () => { console.warn('dismissSessionWarning called but auth not available'); },
+        getSessionExpiryMessage: () => 'Auth not available',
       };
     }
     

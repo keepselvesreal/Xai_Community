@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from '@remix-run/react';
+import { useParams, useNavigate, useLoaderData } from '@remix-run/react';
+import { json, type LoaderFunction } from '@remix-run/node';
 import AppLayout from '~/components/layout/AppLayout';
 import Card from '~/components/ui/Card';
 import Button from '~/components/ui/Button';
@@ -8,6 +9,32 @@ import { useAuth } from '~/contexts/AuthContext';
 import { useNotification } from '~/contexts/NotificationContext';
 import { apiClient } from '~/lib/api';
 import type { Post, Comment, PaginatedResponse } from '~/types';
+
+interface LoaderData {
+  post: Post | null;
+  comments: Comment[];
+  error?: string;
+}
+
+// 🚀 Hybrid 방식: 기본 구조만 SSR, 데이터는 클라이언트에서 빠르게 로드
+export const loader: LoaderFunction = async ({ params }) => {
+  const { slug } = params;
+  
+  if (!slug) {
+    return json<LoaderData>({ 
+      post: null, 
+      comments: [],
+      error: "잘못된 요청입니다." 
+    }, { status: 400 });
+  }
+
+  // ⚡ 즉시 응답: 데이터 없이 페이지 구조만 전송
+  return json<LoaderData>({ 
+    post: null, 
+    comments: [],
+    error: null 
+  });
+};
 
 interface ReactionButtonsProps {
   post: Post;
@@ -54,58 +81,15 @@ export default function PostDetail() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { showError, showSuccess } = useNotification();
+  const loaderData = useLoaderData<LoaderData>();
   
+  // ⚡ Hybrid: 페이지 구조는 즉시 표시, 데이터는 빠르게 로드
   const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // 클라이언트에서 데이터 로딩
   const [isNotFound, setIsNotFound] = useState(false);
 
-  const loadPost = async () => {
-    if (!slug) return;
-    
-    setIsLoading(true);
-    try {
-      const response = await apiClient.getPost(slug);
-      if (response.success && response.data) {
-        setPost(response.data);
-      } else {
-        setIsNotFound(true);
-        showError('게시글을 찾을 수 없습니다');
-      }
-    } catch (error) {
-      setIsNotFound(true);
-      showError('게시글을 불러오는 중 오류가 발생했습니다');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const loadComments = async () => {
-    if (!slug) return;
-    
-    try {
-      const response = await apiClient.getComments(slug);
-      if (response.success && response.data) {
-        console.log('원본 댓글 데이터:', response.data.comments);
-        
-        // 재귀적으로 모든 중첩된 답글의 id 필드 보장
-        const processCommentsRecursive = (comments: any[]): any[] => {
-          return comments.map(comment => ({
-            ...comment,
-            id: comment.id || comment._id, // id가 없으면 _id 사용
-            replies: comment.replies ? processCommentsRecursive(comment.replies) : []
-          }));
-        };
-        
-        const processedComments = processCommentsRecursive(response.data.comments || []);
-        
-        console.log('처리된 댓글 데이터:', processedComments);
-        setComments(processedComments);
-      }
-    } catch (error) {
-      console.error('댓글 로드 실패:', error);
-    }
-  };
+  // 🗑️ 기존 개별 로딩 함수들 제거 - 병렬 로딩으로 통합됨
 
   const handleReactionChange = async (reactionType: 'like' | 'dislike' | 'bookmark') => {
     if (!user) {
@@ -164,8 +148,26 @@ export default function PostDetail() {
     }
   };
 
-  const handleCommentAdded = () => {
-    loadComments();
+  const handleCommentAdded = async () => {
+    if (!slug) return;
+    
+    try {
+      const response = await apiClient.getComments(slug);
+      if (response.success && response.data) {
+        const processCommentsRecursive = (comments: any[]): any[] => {
+          return comments.map(comment => ({
+            ...comment,
+            id: comment.id || comment._id,
+            replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+          }));
+        };
+        
+        const processedComments = processCommentsRecursive(response.data.comments || []);
+        setComments(processedComments);
+      }
+    } catch (error) {
+      console.error('댓글 로드 실패:', error);
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -230,16 +232,98 @@ export default function PostDetail() {
     }
   };
 
+  // ⚡ 페이지 마운트 후 즉시 데이터 로드
   useEffect(() => {
-    loadPost();
-    loadComments();
+    const loadData = async () => {
+      if (!slug) return;
+      
+      setIsLoading(true);
+      try {
+        // 🚀 병렬 로딩: 게시글과 댓글을 동시에 호출
+        const [postResult, commentsResult] = await Promise.all([
+          apiClient.getPost(slug),
+          apiClient.getComments(slug)
+        ]);
+        
+        // 게시글 처리
+        if (postResult.success && postResult.data) {
+          setPost(postResult.data);
+        } else {
+          setIsNotFound(true);
+          showError('게시글을 찾을 수 없습니다');
+        }
+        
+        // 댓글 처리
+        if (commentsResult.success && commentsResult.data) {
+          const processCommentsRecursive = (comments: any[]): any[] => {
+            return comments.map(comment => ({
+              ...comment,
+              id: comment.id || comment._id,
+              replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+            }));
+          };
+          
+          const processedComments = processCommentsRecursive(commentsResult.data.comments || []);
+          setComments(processedComments);
+        }
+      } catch (error) {
+        setIsNotFound(true);
+        showError('데이터를 불러오는 중 오류가 발생했습니다');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, [slug]);
 
   if (isLoading) {
     return (
       <AppLayout title="게시글" user={user} onLogout={logout}>
-        <div className="flex justify-center items-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* 스켈레톤 UI - 게시글 헤더 */}
+          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+            <div className="flex space-x-4 mb-4">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+              <div className="h-4 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="flex space-x-2">
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 게시글 내용 */}
+          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
+            <div className="space-y-3">
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 댓글 섹션 */}
+          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-32 mb-4"></div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex space-x-3">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </AppLayout>
     );
@@ -253,7 +337,7 @@ export default function PostDetail() {
             게시글을 찾을 수 없습니다
           </h2>
           <p className="text-gray-600 mb-6">
-            요청하신 게시글이 존재하지 않거나 삭제되었습니다.
+            {loaderData.error || "요청하신 게시글이 존재하지 않거나 삭제되었습니다."}
           </p>
           <Button onClick={() => navigate('/board')}>
             게시글 목록으로 돌아가기

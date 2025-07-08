@@ -44,7 +44,7 @@ class RedisManager:
     async def disconnect(self):
         """Redis 연결 종료"""
         if self.redis_client:
-            await self.redis_client.close()
+            await self.redis_client.aclose()
             self._connected = False
             logger.info("Redis 연결 종료")
     

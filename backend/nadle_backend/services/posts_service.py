@@ -44,7 +44,7 @@ class PostsService:
         return post
     
     async def get_post(self, slug_or_id: str, current_user: Optional[User] = None) -> Post:
-        """Get post by slug or post ID.
+        """Get post by slug or post ID with Redis caching.
         
         Args:
             slug_or_id: Post slug or post ID
@@ -56,7 +56,58 @@ class PostsService:
         Raises:
             PostNotFoundError: If post not found
         """
-        # Try to get post by slug first, then by ID if that fails
+        # 🚀 Redis 캐시 확인
+        from nadle_backend.database.redis import get_redis_manager
+        redis_manager = await get_redis_manager()
+        
+        cache_key = f"post_detail:{slug_or_id}"
+        cached_post = await redis_manager.get(cache_key)
+        
+        if cached_post:
+            print(f"📦 Redis 캐시 적중 - {slug_or_id}")
+            # 캐시된 데이터에서 Post 객체 재구성
+            try:
+                from nadle_backend.models.core import Post, PostMetadata, PostStatus, ServiceType
+                from datetime import datetime
+                from bson import ObjectId
+                
+                # 캐시된 딕셔너리에서 Post 객체 재구성
+                metadata = None
+                if cached_post.get("metadata"):
+                    metadata = PostMetadata(**cached_post["metadata"])
+                
+                post = Post(
+                    id=ObjectId(cached_post["id"]),
+                    title=cached_post["title"],
+                    content=cached_post["content"],
+                    slug=cached_post["slug"],
+                    author_id=ObjectId(cached_post["author_id"]),
+                    service=ServiceType(cached_post["service"]),
+                    metadata=metadata,
+                    status=PostStatus(cached_post["status"]),
+                    view_count=cached_post["view_count"],
+                    like_count=cached_post["like_count"],
+                    dislike_count=cached_post["dislike_count"],
+                    comment_count=cached_post["comment_count"],
+                    bookmark_count=cached_post["bookmark_count"],
+                    created_at=datetime.fromisoformat(cached_post["created_at"]),
+                    updated_at=datetime.fromisoformat(cached_post["updated_at"]) if cached_post.get("updated_at") else None,
+                    published_at=datetime.fromisoformat(cached_post["published_at"]) if cached_post.get("published_at") else None
+                )
+                
+                # 조회수만 증가 (캐시는 유지)
+                await self.post_repository.increment_view_count(str(post.id))
+                post.view_count += 1  # 메모리상 객체도 업데이트
+                
+                return post
+                
+            except Exception as e:
+                print(f"⚠️ 캐시 데이터 파싱 실패: {e}, DB에서 조회")
+                # 캐시 파싱 실패 시 캐시 삭제하고 DB에서 조회
+                await redis_manager.delete(cache_key)
+        
+        # 캐시 미스 - DB에서 조회
+        print(f"💾 DB에서 조회 - {slug_or_id}")
         try:
             post = await self.post_repository.get_by_slug(slug_or_id)
         except PostNotFoundError:
@@ -70,6 +121,36 @@ class PostsService:
         print(f"Incrementing view count for post {post.id}")
         result = await self.post_repository.increment_view_count(str(post.id))
         print(f"View count increment result: {result}")
+        
+        # 🚀 Redis에 캐싱 (5분 TTL)
+        try:
+            cache_data = {
+                "id": str(post.id),
+                "title": post.title,
+                "content": post.content,
+                "slug": post.slug,
+                "author_id": str(post.author_id),
+                "service": post.service.value if post.service else "content",
+                "metadata": post.metadata.model_dump() if post.metadata else {},
+                "status": post.status.value if post.status else "published",
+                "view_count": post.view_count + 1,  # 증가된 조회수 반영
+                "like_count": post.like_count,
+                "dislike_count": post.dislike_count,
+                "comment_count": post.comment_count,
+                "bookmark_count": post.bookmark_count,
+                "created_at": post.created_at.isoformat() if post.created_at else None,
+                "updated_at": post.updated_at.isoformat() if post.updated_at else None,
+                "published_at": post.published_at.isoformat() if post.published_at else None
+            }
+            
+            success = await redis_manager.set(cache_key, cache_data, ttl=300)  # 5분 캐시
+            if success:
+                print(f"📦 Redis 캐시 저장 성공 - {slug_or_id}")
+            else:
+                print(f"⚠️ Redis 캐시 저장 실패 - {slug_or_id}")
+                
+        except Exception as e:
+            print(f"⚠️ Redis 캐시 저장 오류: {e}")
         
         return post
     
@@ -686,3 +767,484 @@ class PostsService:
         print(f"📊 Enhanced {len(enhanced_items)} service posts with extended stats")
         
         return result
+    
+    # ================================
+    # 🚀 1단계: 스마트 캐싱 메서드들
+    # ================================
+    
+    async def get_author_info_cached(self, author_id: str) -> Optional[Dict[str, Any]]:
+        """작성자 정보 캐시된 조회
+        
+        Args:
+            author_id: 작성자 ID
+            
+        Returns:
+            작성자 정보 딕셔너리 또는 None
+        """
+        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.models.core import User
+        
+        redis_manager = await get_redis_manager()
+        cache_key = f"author_info:{author_id}"
+        
+        # 캐시에서 조회
+        cached_author = await redis_manager.get(cache_key)
+        if cached_author:
+            print(f"📦 작성자 정보 캐시 적중 - {author_id}")
+            return cached_author
+        
+        # DB에서 조회 후 캐싱
+        try:
+            from bson import ObjectId
+            # ObjectId 형식으로 변환
+            if len(author_id) == 24:
+                author = await User.get(ObjectId(author_id))
+            else:
+                author = await User.find_one({"user_handle": author_id})
+            
+            if author:
+                author_info = {
+                    "id": str(author.id),
+                    "user_handle": author.user_handle,
+                    "display_name": author.display_name,
+                    "name": author.name,
+                    "email": author.email if hasattr(author, 'email') else ""
+                }
+                
+                # 캐시에 저장 (TTL: 1시간)
+                await redis_manager.set(cache_key, author_info, ttl=3600)
+                print(f"💾 작성자 정보 캐시 저장 - {author_id}")
+                return author_info
+        except Exception as e:
+            print(f"❌ 작성자 정보 조회 실패: {e}")
+            # 기본값 반환
+            return {
+                "id": str(author_id),
+                "user_handle": "익명",
+                "display_name": "익명",
+                "name": "익명",
+                "email": ""
+            }
+        
+        return None
+    
+    async def get_user_reaction_cached(self, user_id: str, post_id: str) -> Optional[Dict[str, bool]]:
+        """사용자 반응 정보 캐시된 조회
+        
+        Args:
+            user_id: 사용자 ID
+            post_id: 게시글 ID
+            
+        Returns:
+            사용자 반응 정보 딕셔너리 또는 None
+        """
+        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.models.core import UserReaction
+        
+        redis_manager = await get_redis_manager()
+        cache_key = f"user_reaction:{user_id}:{post_id}"
+        
+        # 캐시에서 조회
+        cached_reaction = await redis_manager.get(cache_key)
+        if cached_reaction:
+            print(f"📦 사용자 반응 캐시 적중 - {user_id}:{post_id}")
+            return cached_reaction
+        
+        # DB에서 조회 후 캐싱
+        try:
+            reaction = await UserReaction.find_one({
+                "user_id": user_id,
+                "target_type": "post",
+                "target_id": post_id
+            })
+            
+            if reaction:
+                reaction_info = {
+                    "liked": reaction.liked,
+                    "disliked": reaction.disliked,
+                    "bookmarked": reaction.bookmarked
+                }
+            else:
+                reaction_info = {
+                    "liked": False,
+                    "disliked": False,
+                    "bookmarked": False
+                }
+            
+            # 캐시에 저장 (TTL: 30분)
+            await redis_manager.set(cache_key, reaction_info, ttl=1800)
+            print(f"💾 사용자 반응 캐시 저장 - {user_id}:{post_id}")
+            return reaction_info
+            
+        except Exception as e:
+            print(f"❌ 사용자 반응 조회 실패: {e}")
+            return {
+                "liked": False,
+                "disliked": False,
+                "bookmarked": False
+            }
+    
+    async def invalidate_author_cache(self, author_id: str) -> None:
+        """작성자 정보 캐시 무효화
+        
+        Args:
+            author_id: 작성자 ID
+        """
+        from nadle_backend.database.redis import get_redis_manager
+        
+        redis_manager = await get_redis_manager()
+        cache_key = f"author_info:{author_id}"
+        
+        await redis_manager.delete(cache_key)
+        print(f"🗑️ 작성자 정보 캐시 무효화 - {author_id}")
+    
+    async def invalidate_user_reaction_cache(self, user_id: str, post_id: str) -> None:
+        """사용자 반응 캐시 무효화
+        
+        Args:
+            user_id: 사용자 ID
+            post_id: 게시글 ID
+        """
+        from nadle_backend.database.redis import get_redis_manager
+        
+        redis_manager = await get_redis_manager()
+        cache_key = f"user_reaction:{user_id}:{post_id}"
+        
+        await redis_manager.delete(cache_key)
+        print(f"🗑️ 사용자 반응 캐시 무효화 - {user_id}:{post_id}")
+    
+    # ================================
+    # 🚀 2단계: 배치 조회 메서드들
+    # ================================
+    
+    async def get_authors_info_batch(self, author_ids: List[str]) -> Dict[str, Dict[str, Any]]:
+        """작성자 정보 배치 조회
+        
+        Args:
+            author_ids: 작성자 ID 목록
+            
+        Returns:
+            {author_id: author_info} 딕셔너리
+        """
+        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.models.core import User
+        from bson import ObjectId
+        
+        redis_manager = await get_redis_manager()
+        result = {}
+        uncached_ids = []
+        
+        # 1. 캐시에서 먼저 조회
+        for author_id in author_ids:
+            cache_key = f"author_info:{author_id}"
+            cached_author = await redis_manager.get(cache_key)
+            
+            if cached_author:
+                result[author_id] = cached_author
+                print(f"📦 작성자 정보 캐시 적중 - {author_id}")
+            else:
+                uncached_ids.append(author_id)
+        
+        # 2. 캐시되지 않은 것들을 배치로 DB 조회
+        if uncached_ids:
+            try:
+                # ObjectId 형식으로 변환
+                object_ids = []
+                for author_id in uncached_ids:
+                    if len(author_id) == 24:
+                        try:
+                            object_ids.append(ObjectId(author_id))
+                        except:
+                            print(f"❌ 잘못된 ObjectId 형식: {author_id}")
+                            continue
+                
+                if object_ids:
+                    # 배치 조회
+                    authors = await User.find({"_id": {"$in": object_ids}}).to_list()
+                    print(f"🔄 배치 조회: {len(object_ids)}개 요청 → {len(authors)}개 결과")
+                    
+                    # 결과 처리 및 캐싱
+                    for author in authors:
+                        author_id = str(author.id)
+                        author_info = {
+                            "id": author_id,
+                            "user_handle": author.user_handle,
+                            "display_name": author.display_name,
+                            "name": author.name,
+                            "email": author.email if hasattr(author, 'email') else ""
+                        }
+                        
+                        result[author_id] = author_info
+                        
+                        # 개별 캐싱 (TTL: 1시간)
+                        cache_key = f"author_info:{author_id}"
+                        await redis_manager.set(cache_key, author_info, ttl=3600)
+                        print(f"💾 작성자 정보 캐시 저장 - {author_id}")
+                
+            except Exception as e:
+                print(f"❌ 배치 작성자 조회 실패: {e}")
+        
+        return result
+    
+    async def get_user_reactions_batch(self, user_id: str, post_ids: List[str]) -> Dict[str, Dict[str, bool]]:
+        """사용자 반응 배치 조회
+        
+        Args:
+            user_id: 사용자 ID
+            post_ids: 게시글 ID 목록
+            
+        Returns:
+            {post_id: reaction_info} 딕셔너리
+        """
+        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.models.core import UserReaction
+        
+        redis_manager = await get_redis_manager()
+        result = {}
+        uncached_post_ids = []
+        
+        # 1. 캐시에서 먼저 조회
+        for post_id in post_ids:
+            cache_key = f"user_reaction:{user_id}:{post_id}"
+            cached_reaction = await redis_manager.get(cache_key)
+            
+            if cached_reaction:
+                result[post_id] = cached_reaction
+                print(f"📦 사용자 반응 캐시 적중 - {user_id}:{post_id}")
+            else:
+                uncached_post_ids.append(post_id)
+        
+        # 2. 캐시되지 않은 것들을 배치로 DB 조회
+        if uncached_post_ids:
+            try:
+                # 배치 조회
+                reactions = await UserReaction.find({
+                    "user_id": user_id,
+                    "target_type": "post",
+                    "target_id": {"$in": uncached_post_ids}
+                }).to_list()
+                
+                print(f"🔄 사용자 반응 배치 조회: {len(uncached_post_ids)}개 요청 → {len(reactions)}개 결과")
+                
+                # 존재하는 반응들 처리
+                found_post_ids = set()
+                for reaction in reactions:
+                    post_id = reaction.target_id
+                    reaction_info = {
+                        "liked": reaction.liked,
+                        "disliked": reaction.disliked,
+                        "bookmarked": reaction.bookmarked
+                    }
+                    
+                    result[post_id] = reaction_info
+                    found_post_ids.add(post_id)
+                    
+                    # 캐싱 (TTL: 30분)
+                    cache_key = f"user_reaction:{user_id}:{post_id}"
+                    await redis_manager.set(cache_key, reaction_info, ttl=1800)
+                    print(f"💾 사용자 반응 캐시 저장 - {user_id}:{post_id}")
+                
+                # 반응이 없는 게시글들은 기본값으로 처리
+                for post_id in uncached_post_ids:
+                    if post_id not in found_post_ids:
+                        default_reaction = {
+                            "liked": False,
+                            "disliked": False,
+                            "bookmarked": False
+                        }
+                        result[post_id] = default_reaction
+                        
+                        # 기본값도 캐싱 (TTL: 30분)
+                        cache_key = f"user_reaction:{user_id}:{post_id}"
+                        await redis_manager.set(cache_key, default_reaction, ttl=1800)
+                        print(f"💾 기본 사용자 반응 캐시 저장 - {user_id}:{post_id}")
+                
+            except Exception as e:
+                print(f"❌ 배치 사용자 반응 조회 실패: {e}")
+                # 실패 시 기본값으로 채우기
+                for post_id in uncached_post_ids:
+                    result[post_id] = {
+                        "liked": False,
+                        "disliked": False,
+                        "bookmarked": False
+                    }
+        
+        return result
+    
+    async def get_comments_with_batch_authors(self, post_slug: str) -> List[Dict[str, Any]]:
+        """댓글 목록과 작성자 정보를 배치로 조회
+        
+        Args:
+            post_slug: 게시글 slug
+            
+        Returns:
+            작성자 정보가 포함된 댓글 목록
+        """
+        from nadle_backend.repositories.comment_repository import CommentRepository
+        
+        comment_repository = CommentRepository()
+        
+        # 1. 게시글 ID 조회
+        post = await self.post_repository.get_by_slug(post_slug)
+        if not post:
+            return []
+        
+        # 2. 댓글 목록 조회
+        comments, _ = await comment_repository.list_by_post(str(post.id))
+        
+        if not comments:
+            return []
+        
+        # 2. 작성자 ID 목록 추출
+        author_ids = list(set([str(comment.author_id) for comment in comments if comment.author_id]))
+        
+        # 3. 작성자 정보 배치 조회
+        authors_info = await self.get_authors_info_batch(author_ids)
+        
+        # 4. 댓글에 작성자 정보 결합
+        result = []
+        for comment in comments:
+            comment_dict = {
+                "id": str(comment.id),
+                "content": comment.content,
+                "author_id": str(comment.author_id),
+                "created_at": comment.created_at,
+                "updated_at": comment.updated_at,
+                "replies": comment.replies if hasattr(comment, 'replies') else []
+            }
+            
+            # 작성자 정보 추가
+            author_id = str(comment.author_id)
+            if author_id in authors_info:
+                comment_dict["author"] = authors_info[author_id]
+            else:
+                comment_dict["author"] = {
+                    "id": author_id,
+                    "user_handle": "익명",
+                    "display_name": "익명",
+                    "name": "익명",
+                    "email": ""
+                }
+            
+            result.append(comment_dict)
+        
+        print(f"📊 배치 조회로 {len(comments)}개 댓글에 {len(authors_info)}명의 작성자 정보 결합 완료")
+        return result
+    
+    # ================================
+    # 🚀 3단계: MongoDB Aggregation Pipeline
+    # ================================
+    
+    async def get_post_with_author_aggregated(self, post_slug: str) -> Optional[Dict[str, Any]]:
+        """MongoDB Aggregation으로 게시글 + 작성자 정보 한 번에 조회
+        
+        Args:
+            post_slug: 게시글 slug
+            
+        Returns:
+            작성자 정보가 포함된 게시글 데이터
+        """
+        from nadle_backend.models.core import Post
+        from nadle_backend.config import get_settings
+        from bson import ObjectId
+        
+        try:
+            settings = get_settings()
+            
+            # MongoDB Aggregation Pipeline - 단순화된 버전
+            pipeline = [
+                # 1. 해당 slug의 게시글 매칭
+                {"$match": {"slug": post_slug, "status": {"$ne": "deleted"}}},
+                
+                # 2. author_id를 ObjectId로 변환 후 작성자 정보 JOIN (단순 조인)
+                {"$lookup": {
+                    "from": settings.users_collection,
+                    "localField": "author_id", 
+                    "foreignField": "_id",
+                    "as": "author_info"
+                }},
+                
+                # 3. 작성자 정보 단일 객체로 변환
+                {"$addFields": {
+                    "author": {"$arrayElemAt": ["$author_info", 0]}
+                }},
+                
+                # 4. 필요한 필드만 선택 (단순화)
+                {"$project": {
+                    "_id": {"$toString": "$_id"},
+                    "id": {"$toString": "$_id"},
+                    "title": 1,
+                    "content": 1,
+                    "slug": 1,
+                    "service": 1,
+                    "metadata": 1,
+                    "author_id": {"$toString": "$author_id"},
+                    "author": {
+                        "id": {"$toString": "$author._id"},
+                        "user_handle": "$author.user_handle",
+                        "display_name": "$author.display_name", 
+                        "name": "$author.name",
+                        "email": "$author.email"
+                    },
+                    "status": 1,
+                    "created_at": 1,
+                    "updated_at": 1,
+                    "published_at": 1,
+                    "view_count": 1,
+                    "like_count": 1,
+                    "dislike_count": 1,
+                    "comment_count": 1,
+                    "bookmark_count": 1
+                }},
+                
+                # 5. 불필요한 필드 제거
+                {"$unset": "author_info"}
+            ]
+            
+            print(f"🔍 Aggregation Pipeline 실행 중: {post_slug}")
+            
+            # Aggregation 실행
+            results = await Post.aggregate(pipeline).to_list()
+            
+            if results:
+                result = results[0]
+                print(f"🔄 Aggregation으로 게시글 + 작성자 정보 한 번에 조회 완료 - {post_slug}")
+                return result
+            else:
+                print(f"❌ Aggregation: 게시글을 찾을 수 없음 - {post_slug}")
+                return None
+                
+        except Exception as e:
+            print(f"❌ Aggregation 실패: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+    
+    async def get_post_with_comments_aggregated(self, post_slug: str) -> Optional[Dict[str, Any]]:
+        """MongoDB Aggregation으로 게시글 + 댓글 + 작성자 정보 모두 한 번에 조회
+        
+        Args:
+            post_slug: 게시글 slug
+            
+        Returns:
+            댓글과 작성자 정보가 포함된 게시글 데이터
+        """
+        # 우선 단순한 방법으로 게시글만 먼저 조회해보자
+        post_data = await self.get_post_with_author_aggregated(post_slug)
+        if not post_data:
+            return None
+        
+        # 댓글은 기존 배치 조회 방식 사용 (안정적)
+        try:
+            comments = await self.get_comments_with_batch_authors(post_slug)
+            post_data["comments"] = comments
+            
+            print(f"🔄 Aggregation + 배치 조회로 게시글 + 댓글 + 작성자 정보 조회 완료 - {post_slug}")
+            print(f"📊 조회된 댓글 수: {len(comments)}")
+            return post_data
+            
+        except Exception as e:
+            print(f"❌ 댓글 배치 조회 실패: {e}")
+            # 댓글 없이라도 게시글 데이터는 반환
+            post_data["comments"] = []
+            return post_data

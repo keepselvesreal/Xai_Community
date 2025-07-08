@@ -101,37 +101,7 @@ def create_app() -> FastAPI:
         ]
     )
     
-    # 요청 로깅 미들웨어 (CORS 처리는 FastAPI CORSMiddleware에 위임)
-    @app.middleware("http")
-    async def request_logging_middleware(request: Request, call_next):
-        """요청 로깅 및 모니터링 (CORS 처리 없음)."""
-        origin = request.headers.get("origin")
-        method = request.method
-        
-        logger.info(f"🔍 Request: {method} {request.url.path} from origin: {origin}")
-        
-        # Origin 분류 로깅만 수행 (CORS 처리는 FastAPI CORSMiddleware에서 담당)
-        if origin:
-            if "vercel.app" in origin:
-                logger.info(f"🌐 Vercel frontend request: {origin}")
-            elif any(dev_url in origin for dev_url in ["localhost", "127.0.0.1"]):
-                logger.debug(f"🔧 Development request: {origin}")
-            else:
-                logger.debug(f"🌍 External origin: {origin}")
-        
-        # FastAPI CORSMiddleware에서 CORS 처리하도록 위임
-        response = await call_next(request)
-        
-        # CORS 헤더가 설정되었는지 로깅 (Simple Request는 헤더가 없을 수 있음)
-        if origin:
-            if "access-control-allow-origin" in response.headers:
-                allowed_origin = response.headers.get("access-control-allow-origin")
-                logger.info(f"✅ CORS processed by FastAPI: {origin} -> {allowed_origin}")
-            else:
-                # Simple Request나 preflight가 아닌 경우 CORS 헤더가 없을 수 있음
-                logger.debug(f"🔍 No CORS header (possibly Simple Request): {origin}")
-        
-        return response
+    # CORS 미들웨어를 먼저 등록하고, 나중에 로깅 미들웨어를 등록할 예정
     
     # FastAPI CORSMiddleware 활성화 - 동적 CORS 기능 포함
     logger.info("🔧 Using FastAPI CORSMiddleware with dynamic origin support")
@@ -189,6 +159,9 @@ def create_app() -> FastAPI:
     
     logger.info("✅ FastAPI CORSMiddleware configured successfully")
     
+    # 🎯 커스텀 미들웨어 제거 - CORS 문제 해결 및 성능 향상
+    # FastAPI는 이미 기본 요청 로깅을 제공하므로 별도 미들웨어 불필요
+    
     # 기본 라우트
     @app.get("/")
     async def root():
@@ -207,7 +180,8 @@ def create_app() -> FastAPI:
     
     # 라우터 등록 (안전하게)
     try:
-        from nadle_backend.routers import auth, posts, comments, file_upload, content, users
+        from nadle_backend.routers import auth, posts, comments, file_upload, content, users, health
+        app.include_router(health.router, tags=["Health"])
         app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
         app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
         app.include_router(comments.router, prefix="/api/posts", tags=["Comments"])

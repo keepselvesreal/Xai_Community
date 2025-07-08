@@ -272,9 +272,24 @@ async def require_admin_user(
     return current_user
 
 
+def get_current_token(
+    token: str = Depends(extract_token_from_header)
+) -> str:
+    """Get current JWT token for logout purposes.
+    
+    Args:
+        token: JWT token from authorization header
+        
+    Returns:
+        JWT token string
+    """
+    return token
+
+
 # Convenience dependencies for common auth patterns
 CurrentUser = Depends(get_current_user)
 CurrentActiveUser = Depends(get_current_active_user)
 OptionalCurrentUser = Depends(get_optional_current_user)
 OptionalCurrentActiveUser = Depends(get_optional_current_active_user)
 AdminUser = Depends(require_admin_user)
+CurrentToken = Depends(get_current_token)

@@ -56,6 +56,22 @@ class Settings(BaseSettings):
     개발환경에서는 .env.dev 파일을, 프로덕션에서는 시스템 환경변수를 사용합니다.
     """
     
+    def __init__(self, **kwargs):
+        """초기화 시 환경변수 파일 존재 여부 검증"""
+        env_file = find_env_file()
+        if not env_file:
+            # CI/production 환경이 아닌 경우에만 경고
+            if not (os.getenv("GITHUB_ACTIONS") == "true" or 
+                   os.getenv("CI") == "true" or 
+                   os.getenv("ENVIRONMENT") == "production"):
+                print("⚠️  WARNING: 환경변수 파일(.env.dev, .env.prod 등)이 없습니다.")
+                print("   프로덕션 환경이 아닌 경우 환경변수 파일을 생성하거나")
+                print("   시스템 환경변수 ENVIRONMENT를 설정해주세요.")
+        else:
+            print(f"✅ 환경변수 파일 로드: {env_file}")
+        
+        super().__init__(**kwargs)
+    
     model_config = SettingsConfigDict(
         env_file=find_env_file(),
         env_file_encoding="utf-8",
@@ -163,9 +179,48 @@ class Settings(BaseSettings):
     
     # === 환경 설정 ===
     environment: Literal["development", "staging", "production", "test"] = Field(
-        default="development",
-        description="애플리케이션 배포 환경 (development/staging/production/test)"
+        description="애플리케이션 배포 환경 (development/staging/production/test) - 반드시 환경변수 파일에서 설정 필요"
     )
+    
+    @field_validator('environment')
+    @classmethod
+    def validate_environment(cls, v):
+        """환경변수가 명시적으로 설정되었는지 검증"""
+        # 시스템 환경변수나 .env 파일에서 ENVIRONMENT가 설정되었는지 확인
+        env_from_system = os.getenv("ENVIRONMENT")
+        env_file = find_env_file()
+        
+        if env_file:
+            # .env 파일에서 ENVIRONMENT 찾기
+            try:
+                with open(env_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        if line.strip().startswith('ENVIRONMENT='):
+                            env_from_file = line.split('=', 1)[1].strip().strip('"\'')
+                            print(f"✅ ENVIRONMENT 설정 확인: {env_from_file} (파일: {env_file})")
+                            return v
+            except Exception as e:
+                print(f"⚠️  환경변수 파일 읽기 실패: {e}")
+        
+        if env_from_system:
+            print(f"✅ ENVIRONMENT 설정 확인: {env_from_system} (시스템 환경변수)")
+            return v
+        
+        # CI나 프로덕션 환경에서는 경고만
+        if (os.getenv("GITHUB_ACTIONS") == "true" or 
+            os.getenv("CI") == "true"):
+            print("ℹ️  CI 환경에서 ENVIRONMENT 기본값 사용")
+            return v
+            
+        # 개발 환경에서는 강력한 경고
+        print("🚨 CRITICAL: ENVIRONMENT 환경변수가 명시적으로 설정되지 않았습니다!")
+        print("   다음 중 하나를 수행해주세요:")
+        print("   1. .env.dev 파일에 ENVIRONMENT=development 추가")
+        print("   2. .env.prod 파일에 ENVIRONMENT=production 추가")
+        print("   3. 시스템 환경변수로 export ENVIRONMENT=development 설정")
+        print(f"   현재 사용 중인 기본값: {v}")
+        
+        return v
     
     # === 서버 설정 ===
     port: int = Field(
@@ -244,6 +299,33 @@ class Settings(BaseSettings):
         ge=1,
         le=10,
         description="Maximum depth for nested comment replies (1-10)"
+    )
+    
+    # === Redis 설정 ===
+    redis_url: str = Field(
+        default="redis://localhost:6379",
+        description="Redis 연결 URL (redis://host:port 형식)"
+    )
+    redis_db: int = Field(
+        default=0,
+        ge=0,
+        le=15,
+        description="Redis 데이터베이스 번호 (0-15)"
+    )
+    redis_password: Optional[str] = Field(
+        default=None,
+        description="Redis 비밀번호 (설정된 경우)"
+    )
+    
+    # Redis 캐시 설정
+    cache_ttl_user: int = Field(
+        default=3600,
+        gt=0,
+        description="사용자 정보 캐시 TTL (초 단위)"
+    )
+    cache_enabled: bool = Field(
+        default=True,
+        description="Redis 캐시 활성화 여부"
     )
     
     @field_validator("secret_key")

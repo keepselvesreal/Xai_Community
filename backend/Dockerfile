@@ -1,40 +1,55 @@
-# UV 기반 FastAPI 컨테이너
+# Python base image - optimized for Cloud Run
 FROM python:3.11-slim
 
-# 작업 디렉토리 설정
-WORKDIR /app
-
-# 시스템 패키지 업데이트 및 필수 도구 설치
+# Install system dependencies (curl for health check)
 RUN apt-get update && apt-get install -y \
-    build-essential \
     curl \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# UV 설치
-RUN pip install uv
+# Install UV
+RUN pip install --no-cache-dir uv
 
-# 프로젝트 의존성 파일 복사
+# Set working directory
+WORKDIR /app
+
+# Copy project files
 COPY pyproject.toml uv.lock ./
+COPY README.md ./
 
-# 의존성 설치 (lockfile 기반)
-RUN uv sync --frozen
+# Install dependencies
+RUN uv sync --frozen --no-dev
 
-# 소스 코드 복사
+# Copy application code
 COPY . .
 
-# 업로드 디렉토리 생성
-RUN mkdir -p uploads
+# Environment file will be set via Cloud Run environment variables
+# No need to copy .env.prod - using Cloud Run env vars instead
 
-# 포트 설정
-EXPOSE 8000
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-# 환경 변수 설정
-ENV PYTHONPATH=/app
+# Create uploads directory and set permissions  
+RUN mkdir -p uploads && chown -R appuser:appuser /app
+
+# Create UV cache directory and set permissions
+RUN mkdir -p /home/appuser/.cache/uv && chown -R appuser:appuser /home/appuser/.cache
+
+# Switch to non-root user
+USER appuser
+
+# Cloud Run optimized environment variables
+ENV PYTHONPATH="/app"
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 ENV ENVIRONMENT=production
 
-# 헬스체크 설정
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/ || exit 1
+# Expose port
+EXPOSE 8080
 
-# 애플리케이션 시작
-CMD ["uv", "run", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Health check for Cloud Run
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
+
+# Start application with uv run - use PORT environment variable for Cloud Run
+CMD ["sh", "-c", "uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --log-level info"]

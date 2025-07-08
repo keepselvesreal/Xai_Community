@@ -5,6 +5,7 @@ import logging
 
 # Import settings for dynamic collection names
 from ..config import settings
+from .redis import redis_manager
 
 logger = logging.getLogger(__name__)
 
@@ -292,3 +293,33 @@ class IndexManager:
         """
         await IndexManager.create_all_indexes(db)
         logger.info("All database indexes have been ensured")
+
+
+class DatabaseManager:
+    """Database 및 Redis 연결 관리 클래스"""
+    
+    @staticmethod
+    async def initialize_connections():
+        """MongoDB와 Redis 연결 초기화"""
+        try:
+            # Redis 연결 초기화
+            redis_connected = await redis_manager.connect()
+            if redis_connected:
+                logger.info("Redis 연결이 성공적으로 초기화되었습니다.")
+            else:
+                logger.warning("Redis 연결에 실패했습니다. 캐시 없이 계속 진행합니다.")
+                
+        except Exception as e:
+            logger.error(f"데이터베이스 초기화 중 오류 발생: {e}")
+            raise
+    
+    @staticmethod
+    async def close_connections():
+        """모든 데이터베이스 연결 종료"""
+        try:
+            # Redis 연결 종료
+            await redis_manager.disconnect()
+            logger.info("모든 데이터베이스 연결이 종료되었습니다.")
+            
+        except Exception as e:
+            logger.error(f"데이터베이스 연결 종료 중 오류 발생: {e}")

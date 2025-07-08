@@ -118,6 +118,7 @@ async def list_posts(
 @router.get("/{slug_or_id}", response_model=Dict[str, Any])
 async def get_post(
     slug_or_id: str,
+    include_comments: bool = Query(False, description="Include comments in response for faster loading"),
     current_user: Optional[User] = Depends(get_optional_current_active_user),
     posts_service: PostsService = Depends(get_posts_service)
 ):
@@ -146,41 +147,16 @@ async def get_post(
             "bookmark_count": post.bookmark_count
         }
         
-        # Get user reaction if authenticated
+        # 🚀 1단계: 캐시된 사용자 반응 조회
         user_reaction = None
         if current_user:
-            from nadle_backend.models.core import UserReaction
-            reaction = await UserReaction.find_one({
-                "user_id": str(current_user.id),
-                "target_type": "post",
-                "target_id": str(post.id)
-            })
-            if reaction:
-                user_reaction = {
-                    "liked": reaction.liked,
-                    "disliked": reaction.disliked,
-                    "bookmarked": reaction.bookmarked
-                }
+            user_reaction = await posts_service.get_user_reaction_cached(
+                str(current_user.id), 
+                str(post.id)
+            )
         
-        # Get author information
-        author_info = None
-        try:
-            author = await User.get(post.author_id)
-            if author:
-                author_info = {
-                    "id": str(author.id),
-                    "user_handle": author.user_handle,
-                    "display_name": author.display_name,
-                    "name": author.name
-                }
-        except Exception as e:
-            print(f"Failed to get author info: {e}")
-            author_info = {
-                "id": str(post.author_id),
-                "user_handle": "익명",
-                "display_name": "익명",
-                "name": "익명"
-            }
+        # 🚀 1단계: 캐시된 작성자 정보 조회
+        author_info = await posts_service.get_author_info_cached(str(post.author_id))
         
         # Build response with stats
         response = {
@@ -457,4 +433,113 @@ async def get_post_stats(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get post stats: {str(e)}"
+        )
+
+
+@router.get("/{slug}/comments", status_code=status.HTTP_200_OK)
+async def get_post_comments_batch(
+    slug: str,
+    current_user: Optional[User] = Depends(get_optional_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """🚀 2단계: 배치 조회로 게시글 댓글 조회"""
+    try:
+        # 배치 조회로 댓글과 작성자 정보 함께 조회
+        comments_with_authors = await posts_service.get_comments_with_batch_authors(slug)
+        
+        return {
+            "success": True,
+            "data": {
+                "comments": comments_with_authors,
+                "total": len(comments_with_authors)
+            }
+        }
+        
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get comments: {str(e)}"
+        )
+
+
+@router.get("/{slug}/full", status_code=status.HTTP_200_OK)
+async def get_post_full_aggregated(
+    slug: str,
+    current_user: Optional[User] = Depends(get_optional_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """🚀 3단계: Aggregation으로 게시글 + 댓글 + 작성자 정보 모두 한 번에 조회"""
+    try:
+        # Aggregation으로 모든 데이터 한 번에 조회
+        full_data = await posts_service.get_post_with_comments_aggregated(slug)
+        
+        if not full_data:
+            raise PostNotFoundError("Post not found")
+        
+        # 사용자 반응 정보 추가 (캐시된 방식 사용)
+        if current_user:
+            user_reaction = await posts_service.get_user_reaction_cached(
+                str(current_user.id),
+                str(full_data["id"])
+            )
+            full_data["user_reaction"] = user_reaction
+        
+        return {
+            "success": True,
+            "data": full_data
+        }
+        
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get full post data: {str(e)}"
+        )
+
+
+@router.get("/{slug}/aggregated", status_code=status.HTTP_200_OK) 
+async def get_post_aggregated(
+    slug: str,
+    current_user: Optional[User] = Depends(get_optional_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """🚀 3단계: Aggregation으로 게시글 + 작성자 정보만 조회 (성능 비교용)"""
+    try:
+        # Aggregation으로 게시글 + 작성자 정보만 조회
+        post_data = await posts_service.get_post_with_author_aggregated(slug)
+        
+        if not post_data:
+            raise PostNotFoundError("Post not found")
+        
+        # 사용자 반응 정보 추가 (캐시된 방식 사용)
+        if current_user:
+            user_reaction = await posts_service.get_user_reaction_cached(
+                str(current_user.id),
+                str(post_data["id"])
+            )
+            post_data["user_reaction"] = user_reaction
+        
+        return {
+            "success": True,
+            "data": post_data
+        }
+        
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get aggregated post: {str(e)}"
         )

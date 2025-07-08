@@ -1,12 +1,38 @@
 import { useState, useEffect } from "react";
-import { type MetaFunction } from "@remix-run/node";
-import { useParams, useNavigate } from "@remix-run/react";
+import { type MetaFunction, type LoaderFunction, json } from "@remix-run/node";
+import { useParams, useNavigate, useLoaderData } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 import { apiClient } from "~/lib/api";
 import { convertPostToService } from "~/types/service-types";
 import type { Service } from "~/types/service-types";
+
+interface LoaderData {
+  service: Service | null;
+  comments: any[];
+  error?: string;
+}
+
+// 🚀 Hybrid 방식: 기본 구조만 SSR, 데이터는 클라이언트에서 빠르게 로드
+export const loader: LoaderFunction = async ({ params }) => {
+  const { slug } = params;
+  
+  if (!slug) {
+    return json<LoaderData>({ 
+      service: null, 
+      comments: [],
+      error: "잘못된 요청입니다." 
+    }, { status: 400 });
+  }
+
+  // ⚡ 즉시 응답: 데이터 없이 페이지 구조만 전송
+  return json<LoaderData>({ 
+    service: null, 
+    comments: [],
+    error: null 
+  });
+};
 
 export const meta: MetaFunction = () => {
   return [
@@ -20,9 +46,11 @@ export default function ServiceDetail() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { showError, showSuccess } = useNotification();
+  const loaderData = useLoaderData<LoaderData>();
   
+  // ⚡ Hybrid: 페이지 구조는 즉시 표시, 데이터는 빠르게 로드
   const [service, setService] = useState<Service | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // 클라이언트에서 데이터 로딩
   const [isNotFound, setIsNotFound] = useState(false);
   const [reviewText, setReviewText] = useState("");
   const [isLiked, setIsLiked] = useState(false);
@@ -168,10 +196,21 @@ export default function ServiceDetail() {
     
     setIsLoadingComments(true);
     try {
-      const response = await apiClient.getComments(slug);
+      // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 로드
+      const response = await apiClient.getCommentsBatch(slug);
       if (response.success && response.data) {
-        const processedComments = processCommentsRecursive(response.data.comments || []);
-        console.log('📦 Processed comments:', processedComments);
+        // 배치 조회된 댓글 데이터 처리
+        let comments = [];
+        if (response.data.data?.comments) {
+          comments = response.data.data.comments;  // 배치 조회 응답 구조
+        } else if (response.data.comments) {
+          comments = response.data.comments;
+        } else if (Array.isArray(response.data)) {
+          comments = response.data;
+        }
+        
+        const processedComments = processCommentsRecursive(comments);
+        console.log('📦 Processed comments with batch data:', processedComments);
         setComments(processedComments);
       }
     } catch (error) {
@@ -181,19 +220,129 @@ export default function ServiceDetail() {
     }
   };
 
+  // ⚡ 페이지 마운트 후 즉시 데이터 로드 (Hybrid 방식)
   useEffect(() => {
-    loadService();
-    loadComments();
+    const loadData = async () => {
+      if (!slug) return;
+      
+      setIsLoading(true);
+      try {
+        // 🚀 병렬 로딩: 서비스와 댓글을 동시에 호출 (배치 조회 적용)
+        const [serviceResult, commentsResult] = await Promise.all([
+          apiClient.getPost(slug),
+          apiClient.getCommentsBatch(slug)  // 🚀 2단계: 배치 조회 사용
+        ]);
+        
+        // 서비스 처리
+        if (serviceResult.success && serviceResult.data) {
+          const serviceData = convertPostToService(serviceResult.data);
+          if (serviceData) {
+            setService(serviceData);
+            
+            // 사용자의 북마크 상태 설정
+            if (serviceResult.data.user_reaction) {
+              setIsLiked(serviceResult.data.user_reaction.bookmarked || false);
+            }
+          } else {
+            setIsNotFound(true);
+            showError('서비스 데이터 변환에 실패했습니다');
+          }
+        } else {
+          setIsNotFound(true);
+          showError('서비스를 찾을 수 없습니다');
+        }
+        
+        // 댓글 처리 (배치 조회된 댓글 + 작성자 정보)
+        if (commentsResult.success && commentsResult.data) {
+          // 🚀 배치 조회로 이미 작성자 정보가 포함된 댓글 데이터 사용
+          let comments = [];
+          if (commentsResult.data.data?.comments) {
+            comments = commentsResult.data.data.comments;  // 배치 조회 응답 구조
+          } else if (commentsResult.data.comments) {
+            comments = commentsResult.data.comments;
+          } else if (Array.isArray(commentsResult.data)) {
+            comments = commentsResult.data;
+          }
+          
+          const processedComments = processCommentsRecursive(comments);
+          setComments(processedComments);
+        }
+      } catch (error) {
+        setIsNotFound(true);
+        showError('데이터를 불러오는 중 오류가 발생했습니다');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, [slug]);
 
-  // 로딩 상태
+  // 로딩 상태 - 스켈레톤 UI
   if (isLoading) {
     return (
       <AppLayout user={user} onLogout={logout}>
-        <div className="flex justify-center items-center h-64">
-          <div className="text-center">
-            <div className="text-4xl mb-4">⏳</div>
-            <p className="text-var-secondary">서비스 정보를 불러오는 중...</p>
+        <div className="max-w-4xl mx-auto space-y-8">
+          {/* 스켈레톤 UI - 서비스 헤더 */}
+          <div className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
+            <div className="flex items-center justify-between mb-4">
+              <div className="h-6 bg-gray-200 rounded w-24"></div>
+              <div className="h-4 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
+            <div className="flex items-center space-x-4 mb-4">
+              <div className="h-4 bg-gray-200 rounded w-20"></div>
+              <div className="h-4 bg-gray-200 rounded w-24"></div>
+              <div className="h-4 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="flex space-x-2">
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 서비스 통계 */}
+          <div className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
+            <div className="grid grid-cols-4 gap-4 mb-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="text-center">
+                  <div className="h-8 bg-gray-200 rounded w-16 mx-auto mb-2"></div>
+                  <div className="h-4 bg-gray-200 rounded w-12 mx-auto"></div>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 서비스 내용 */}
+          <div className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
+            <div className="space-y-3">
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
+              <div className="h-4 bg-gray-200 rounded"></div>
+              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            </div>
+          </div>
+          
+          {/* 스켈레톤 UI - 문의/후기 탭 */}
+          <div className="bg-white rounded-lg shadow-lg p-6 animate-pulse">
+            <div className="flex space-x-4 mb-4">
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+              <div className="h-8 bg-gray-200 rounded w-16"></div>
+            </div>
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex space-x-3">
+                  <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                  <div className="flex-1">
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-full"></div>
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </AppLayout>

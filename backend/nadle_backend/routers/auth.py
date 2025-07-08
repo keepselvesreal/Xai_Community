@@ -9,9 +9,11 @@ from nadle_backend.services.auth_service import AuthService
 from nadle_backend.dependencies.auth import (
     CurrentActiveUser, 
     AdminUser,
+    CurrentToken,
     get_jwt_manager,
     get_password_manager,
-    get_user_repository
+    get_user_repository,
+    get_current_token
 )
 from nadle_backend.exceptions.auth import InvalidCredentialsError, InvalidTokenError, ExpiredTokenError
 from nadle_backend.exceptions.user import (
@@ -520,6 +522,107 @@ async def delete_user(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=str(e)
+        )
+
+
+# Logout endpoints
+class LogoutRequest(BaseModel):
+    """Logout request model."""
+    refresh_token: str = None
+
+
+class LogoutResponse(BaseModel):
+    """Logout response model."""
+    status: str
+    message: str
+    tokens_invalidated: bool = False
+    sessions_cleared: bool = False
+
+
+@router.post("/logout", response_model=LogoutResponse)
+async def logout(
+    logout_request: LogoutRequest,
+    current_user: User = CurrentActiveUser,
+    auth_service: AuthService = Depends(get_auth_service),
+    access_token: str = CurrentToken
+):
+    """
+    Logout user and invalidate tokens.
+    
+    Args:
+        logout_request: Logout request with optional refresh token
+        current_user: Currently authenticated user
+        auth_service: Auth service instance
+        access_token: Current access token
+        
+    Returns:
+        Logout confirmation with status
+    """
+    try:
+        result = await auth_service.logout(
+            access_token=access_token,
+            refresh_token=logout_request.refresh_token,
+            user_id=str(current_user.id)
+        )
+        
+        return LogoutResponse(**result)
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Logout failed: {str(e)}"
+        )
+
+
+@router.post("/logout/all", response_model=Dict[str, Any])
+async def logout_all_sessions(
+    current_user: User = CurrentActiveUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    Logout user from all sessions and devices.
+    
+    Args:
+        current_user: Currently authenticated user
+        auth_service: Auth service instance
+        
+    Returns:
+        Logout confirmation with statistics
+    """
+    try:
+        result = await auth_service.logout_all_sessions(str(current_user.id))
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Logout all sessions failed: {str(e)}"
+        )
+
+
+@router.get("/sessions", response_model=List[Dict[str, Any]])
+async def get_user_sessions(
+    current_user: User = CurrentActiveUser,
+    auth_service: AuthService = Depends(get_auth_service)
+):
+    """
+    Get user's active sessions.
+    
+    Args:
+        current_user: Currently authenticated user
+        auth_service: Auth service instance
+        
+    Returns:
+        List of active session information
+    """
+    try:
+        sessions = await auth_service.get_user_sessions(str(current_user.id))
+        return sessions
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get sessions: {str(e)}"
         )
 
 
