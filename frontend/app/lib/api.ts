@@ -25,7 +25,7 @@ import {
   SESSION_MESSAGES
 } from './constants';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xai-community.onrender.com';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
 
 class ApiClient {
   private baseURL: string;

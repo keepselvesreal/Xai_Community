@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  PROD_BACKEND_URL: https://xai-community.onrender.com
+  PROD_BACKEND_URL: https://xai-community-backend-798170408536.asia-northeast3.run.app
   PROD_FRONTEND_URL: https://xai-community.vercel.app
 
 jobs:

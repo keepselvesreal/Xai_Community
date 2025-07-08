@@ -7,7 +7,7 @@
  * 3. Aggregated 엔드포인트: /api/posts/{slug}/aggregated (게시글 + 작성자만)
  */
 
-const API_BASE_URL = 'https://xai-community.onrender.com';
+const API_BASE_URL = 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
 const TEST_SLUG = 'test-post-performance'; // 테스트용 게시글 슬러그
 const TEST_ITERATIONS = 10; // 각 방식당 측정 횟수
 
