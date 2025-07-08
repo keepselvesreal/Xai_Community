@@ -115,6 +115,40 @@ async def list_posts(
         )
 
 
+
+
+@router.get("/{slug}/complete", status_code=status.HTTP_200_OK) 
+async def get_post_complete_aggregated(
+    slug: str,
+    current_user: Optional[User] = Depends(get_optional_current_active_user),
+    posts_service: PostsService = Depends(get_posts_service)
+):
+    """🚀 완전 통합 Aggregation으로 게시글 + 작성자 + 댓글 + 댓글작성자 + 사용자반응을 모두 한 번의 쿼리로 조회"""
+    try:
+        # 완전 통합 Aggregation으로 모든 데이터 한 번에 조회
+        complete_data = await posts_service.get_post_with_everything_aggregated(
+            slug, 
+            str(current_user.id) if current_user else None
+        )
+        
+        if not complete_data:
+            raise PostNotFoundError("Post not found")
+        
+        # 기존 API와 동일한 응답 구조로 반환 (UI 변경 최소화)
+        return complete_data
+        
+    except PostNotFoundError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Post not found"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get complete post data: {str(e)}"
+        )
+
+
 @router.get("/{slug_or_id}", response_model=Dict[str, Any])
 async def get_post(
     slug_or_id: str,

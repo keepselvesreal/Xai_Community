@@ -721,6 +721,12 @@ class ApiClient {
     return this.request<Post>(`/api/posts/${slug}`);
   }
 
+
+  // 🚀 완전 통합 Aggregation으로 게시글 + 작성자 + 댓글 + 댓글작성자 + 사용자반응을 모두 한 번에 조회
+  async getPostComplete(slug: string): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/posts/${slug}/complete`);
+  }
+
   async createPost(postData: CreatePostRequest): Promise<ApiResponse<Post>> {
     console.log('🚀 createPost 호출 - 전송할 데이터:', JSON.stringify(postData, null, 2));
     return this.request<Post>('/api/posts', {

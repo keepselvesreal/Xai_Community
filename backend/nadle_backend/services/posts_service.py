@@ -143,7 +143,7 @@ class PostsService:
                 "published_at": post.published_at.isoformat() if post.published_at else None
             }
             
-            success = await redis_manager.set(cache_key, cache_data, ttl=300)  # 5분 캐시
+            success = await redis_manager.set(cache_key, cache_data, ttl=600)  # 10분 캐시 (Phase 2 개선)
             if success:
                 print(f"📦 Redis 캐시 저장 성공 - {slug_or_id}")
             else:
@@ -1072,7 +1072,7 @@ class PostsService:
         return result
     
     async def get_comments_with_batch_authors(self, post_slug: str) -> List[Dict[str, Any]]:
-        """댓글 목록과 작성자 정보를 배치로 조회
+        """댓글 목록과 작성자 정보를 배치로 조회 (Phase 2: 하이브리드 캐싱 적용)
         
         Args:
             post_slug: 게시글 slug
@@ -1081,7 +1081,19 @@ class PostsService:
             작성자 정보가 포함된 댓글 목록
         """
         from nadle_backend.repositories.comment_repository import CommentRepository
+        from nadle_backend.database.redis import get_redis_manager
         
+        # 🚀 Phase 2: 댓글 캐싱 확인
+        redis_manager = await get_redis_manager()
+        cache_key = f"comments_batch:{post_slug}"
+        
+        # 캐시에서 조회 시도
+        cached_comments = await redis_manager.get(cache_key)
+        if cached_comments:
+            print(f"📦 댓글 캐시 적중 - {post_slug}")
+            return cached_comments
+        
+        print(f"🔍 댓글 캐시 미스 - DB에서 조회: {post_slug}")
         comment_repository = CommentRepository()
         
         # 1. 게시글 ID 조회
@@ -1129,6 +1141,14 @@ class PostsService:
             result.append(comment_dict)
         
         print(f"📊 배치 조회로 {len(comments)}개 댓글에 {len(authors_info)}명의 작성자 정보 결합 완료")
+        
+        # 🚀 Phase 2: 댓글 결과를 캐시에 저장 (TTL: 5분)
+        try:
+            await redis_manager.set(cache_key, result, ttl=300)  # 5분 TTL
+            print(f"💾 댓글 배치 결과 캐시 저장 완료 - {post_slug}")
+        except Exception as cache_error:
+            print(f"⚠️ 댓글 캐시 저장 실패 (계속 진행): {cache_error}")
+        
         return result
     
     # ================================
@@ -1248,3 +1268,239 @@ class PostsService:
             # 댓글 없이라도 게시글 데이터는 반환
             post_data["comments"] = []
             return post_data
+    
+    async def get_post_with_everything_aggregated(self, post_slug: str, current_user_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
+        """MongoDB Aggregation으로 게시글 + 작성자 + 댓글 + 댓글작성자 + 사용자반응을 모두 한 번의 쿼리로 조회
+        
+        Args:
+            post_slug: 게시글 slug
+            current_user_id: 현재 사용자 ID (사용자 반응 조회용)
+            
+        Returns:
+            모든 정보가 포함된 게시글 데이터
+        """
+        from nadle_backend.models.core import Post
+        from nadle_backend.config import get_settings
+        from bson import ObjectId
+        
+        try:
+            settings = get_settings()
+            
+            print(f"🚀 완전 통합 Aggregation 파이프라인 실행 중: {post_slug}")
+            
+            # MongoDB Aggregation Pipeline - 기본 파이프라인
+            pipeline = [
+                # 1. 해당 slug의 게시글 매칭
+                {"$match": {"slug": post_slug, "status": {"$ne": "deleted"}}},
+                
+                # 2. 게시글 작성자 정보 JOIN (author_id를 ObjectId로 변환 후 매칭)
+                {"$lookup": {
+                    "from": settings.users_collection,
+                    "let": {"author_id": {"$toObjectId": "$author_id"}},
+                    "pipeline": [
+                        {"$match": {"$expr": {"$eq": ["$_id", "$$author_id"]}}}
+                    ],
+                    "as": "author_info"
+                }},
+                
+                # 3. 해당 게시글의 댓글들 JOIN
+                {"$lookup": {
+                    "from": settings.comments_collection,
+                    "let": {"post_id": "$_id"},
+                    "pipeline": [
+                        {"$match": {
+                            "$expr": {"$eq": ["$post_id", "$$post_id"]},
+                            "status": {"$ne": "deleted"}
+                        }},
+                        {"$sort": {"created_at": 1}}  # 댓글을 생성일순으로 정렬
+                    ],
+                    "as": "comments_raw"
+                }},
+                
+                # 4. 각 댓글의 작성자 정보 JOIN
+                {"$lookup": {
+                    "from": settings.users_collection,
+                    "localField": "comments_raw.author_id",
+                    "foreignField": "_id",
+                    "as": "comment_authors"
+                }}
+            ]
+            
+            # 5. 사용자 반응 정보 JOIN (현재 사용자가 있는 경우만)
+            if current_user_id:
+                pipeline.append({
+                    "$lookup": {
+                        "from": "user_reactions",  # UserReaction 컬렉션
+                        "let": {"post_id": "$_id"},
+                        "pipeline": [
+                            {"$match": {
+                                "$expr": {
+                                    "$and": [
+                                        {"$eq": ["$target_id", {"$toString": "$$post_id"}]},
+                                        {"$eq": ["$target_type", "post"]},
+                                        {"$eq": ["$user_id", current_user_id]}
+                                    ]
+                                }
+                            }}
+                        ],
+                        "as": "user_reaction_raw"
+                    }
+                })
+            
+            # 6. 데이터 정리 및 구조화
+            addfields_stage = {
+                "$addFields": {
+                    # 게시글 작성자 정보
+                    "author": {"$arrayElemAt": ["$author_info", 0]},
+                    
+                    # 댓글과 댓글 작성자 정보 매핑
+                    "comments": {
+                        "$map": {
+                            "input": "$comments_raw",
+                            "as": "comment",
+                            "in": {
+                                "id": {"$toString": "$$comment._id"},
+                                "_id": {"$toString": "$$comment._id"},
+                                "content": "$$comment.content", 
+                                "author_id": {"$toString": "$$comment.author_id"},
+                                "post_id": {"$toString": "$$comment.post_id"},
+                                "parent_id": {"$toString": "$$comment.parent_id"},
+                                "status": "$$comment.status",
+                                "created_at": "$$comment.created_at",
+                                "updated_at": "$$comment.updated_at",
+                                "like_count": "$$comment.like_count",
+                                "dislike_count": "$$comment.dislike_count",
+                                # 댓글 작성자 정보 매핑
+                                "author": {
+                                    "$let": {
+                                        "vars": {
+                                            "author": {
+                                                "$arrayElemAt": [
+                                                    {
+                                                        "$filter": {
+                                                            "input": "$comment_authors",
+                                                            "cond": {"$eq": ["$$this._id", "$$comment.author_id"]}
+                                                        }
+                                                    }, 0
+                                                ]
+                                            }
+                                        },
+                                        "in": {
+                                            "id": {"$toString": "$$author._id"},
+                                            "user_handle": "$$author.user_handle",
+                                            "display_name": "$$author.display_name",
+                                            "name": "$$author.name",
+                                            "email": "$$author.email"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            
+            # 사용자 반응 정보 추가 (있는 경우만)
+            if current_user_id:
+                addfields_stage["$addFields"]["user_reaction"] = {
+                    "$let": {
+                        "vars": {"reaction": {"$arrayElemAt": ["$user_reaction_raw", 0]}},
+                        "in": {
+                            "$cond": {
+                                "if": {"$ne": ["$$reaction", None]},
+                                "then": {
+                                    "liked": "$$reaction.liked",
+                                    "disliked": "$$reaction.disliked", 
+                                    "bookmarked": "$$reaction.bookmarked"
+                                },
+                                "else": {
+                                    "liked": False,
+                                    "disliked": False,
+                                    "bookmarked": False
+                                }
+                            }
+                        }
+                    }
+                }
+            
+            pipeline.append(addfields_stage)
+            
+            # 7. 최종 출력 형태 정리
+            project_stage = {
+                "$project": {
+                    "_id": {"$toString": "$_id"},
+                    "id": {"$toString": "$_id"},
+                    "title": 1,
+                    "content": 1,
+                    "slug": 1,
+                    "service": 1,
+                    "metadata": 1,
+                    "author_id": {"$toString": "$author_id"},
+                    "author": {
+                        "id": {"$toString": "$author._id"},
+                        "user_handle": "$author.user_handle",
+                        "display_name": "$author.display_name", 
+                        "name": "$author.name",
+                        "email": "$author.email"
+                    },
+                    "status": 1,
+                    "created_at": 1,
+                    "updated_at": 1,
+                    "published_at": 1,
+                    "view_count": 1,
+                    "like_count": 1,
+                    "dislike_count": 1,
+                    "comment_count": 1,
+                    "bookmark_count": 1,
+                    "stats": {
+                        "view_count": "$view_count",
+                        "like_count": "$like_count",
+                        "dislike_count": "$dislike_count",
+                        "comment_count": "$comment_count",
+                        "bookmark_count": "$bookmark_count"
+                    },
+                    "comments": 1
+                }
+            }
+            
+            # 사용자 반응 필드 추가 (있는 경우만)
+            if current_user_id:
+                project_stage["$project"]["user_reaction"] = 1
+            
+            pipeline.append(project_stage)
+            
+            # 8. 불필요한 필드 제거
+            pipeline.append({"$unset": ["author_info", "comments_raw", "comment_authors", "user_reaction_raw"]})
+            
+            print(f"🔍 완전 통합 Aggregation Pipeline 단계 수: {len(pipeline)}")
+            
+            # Aggregation 실행
+            results = await Post.aggregate(pipeline).to_list()
+            
+            if results:
+                result = results[0]
+                print(f"✅ 완전 통합 Aggregation으로 모든 데이터 한 번에 조회 완료 - {post_slug}")
+                print(f"📊 조회된 댓글 수: {len(result.get('comments', []))}")
+                print(f"👤 게시글 작성자: {result.get('author', {}).get('user_handle', 'N/A')}")
+                print(f"🎯 사용자 반응 포함: {'user_reaction' in result}")
+                
+                # 조회수 증가 (별도 처리)
+                try:
+                    await self.post_repository.increment_view_count(str(result["id"]))
+                    result["view_count"] = result.get("view_count", 0) + 1
+                    # stats 필드도 동시에 업데이트
+                    if "stats" in result:
+                        result["stats"]["view_count"] = result["view_count"]
+                except Exception as e:
+                    print(f"⚠️ 조회수 증가 실패: {e}")
+                
+                return result
+            else:
+                print(f"❌ 완전 통합 Aggregation: 게시글을 찾을 수 없음 - {post_slug}")
+                return None
+                
+        except Exception as e:
+            print(f"❌ 완전 통합 Aggregation 실패: {e}")
+            import traceback
+            traceback.print_exc()
+            return None

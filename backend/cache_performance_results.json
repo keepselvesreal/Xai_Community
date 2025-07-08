@@ -1,0 +1,36 @@
+{
+  "response_times": {
+    "avg": 121.96073532104492,
+    "median": 73.48227500915527,
+    "min": 33.81609916687012,
+    "max": 510.1742744445801,
+    "std_dev": 118.78292388277892
+  },
+  "cache_hit_rates": {
+    "post_detail": {
+      "hit_rate": 0,
+      "hits": 0,
+      "misses": 0,
+      "total": 0
+    },
+    "comments_batch": {
+      "hit_rate": 0,
+      "hits": 0,
+      "misses": 0,
+      "total": 0
+    },
+    "author_info": {
+      "hit_rate": 0,
+      "hits": 0,
+      "misses": 0,
+      "total": 0
+    },
+    "user_reaction": {
+      "hit_rate": 0,
+      "hits": 0,
+      "misses": 0,
+      "total": 0
+    }
+  },
+  "overall_hit_rate": 0
+}
