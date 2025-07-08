@@ -159,6 +159,10 @@ class UserActivityService:
         
         # Group posts by page type
         for post in posts:
+            # Skip deleted posts
+            if post.status == "deleted":
+                continue
+                
             # Get the type from metadata (use DB type directly)
             post_type = getattr(post.metadata, "type", None) if post.metadata else None
             
@@ -169,7 +173,7 @@ class UserActivityService:
             if normalized_type is None:
                 continue
                 
-            # Generate route path using normalized type
+            # Generate route path using current post data (항상 최신 slug 사용)
             route_path = self._generate_route_path(normalized_type, post.slug)
             
             # Use model fields directly instead of real-time calculation
@@ -301,51 +305,42 @@ class UserActivityService:
         # Group reactions by type and page
         logger.info(f"🔍 ANALYZING {len(reactions)} reactions for user {user_id}")
         
-        # 모든 route_path 패턴 수집
-        all_route_paths = set()
-        for reaction in reactions:
-            route_path = reaction.metadata.get("route_path", "/")
-            all_route_paths.add(route_path)
-        
-        logger.info(f"📋 ALL UNIQUE ROUTE PATHS FOUND: {sorted(list(all_route_paths))}")
         
         for i, reaction in enumerate(reactions):
-            # Extract routing information from metadata
-            route_path = reaction.metadata.get("route_path", "/")
-            target_title = reaction.metadata.get("target_title", "")
+            logger.info(f"Reaction {i+1}/{len(reactions)}: target_type='{reaction.target_type}', liked={reaction.liked}, disliked={reaction.disliked}, bookmarked={reaction.bookmarked}")
             
-            logger.info(f"Reaction {i+1}/{len(reactions)}: route_path='{route_path}', target_type='{reaction.target_type}', liked={reaction.liked}, disliked={reaction.disliked}, bookmarked={reaction.bookmarked}")
-            
-            # Extract page type from route_path (similar to posts classification)
-            page_type = self._extract_page_type_from_reaction(route_path)
-            
-            # Skip reactions with unknown page types (already logged)
-            if page_type is None:
-                logger.warning(f"❌ SKIPPING reaction {reaction.id} due to unknown page_type for route_path '{route_path}'")
-                continue
-                
-            logger.info(f"✅ ADDING reaction {reaction.id} to {page_type} page_type")
-            
-            # Get post information for reactions (only for post reactions)
-            post_title = target_title
-            
+            # For post reactions, get current post information directly
             if reaction.target_type == "post" and reaction.target_id:
                 try:
                     post = await self.post_repository.get_by_id(reaction.target_id)
                     # 삭제된 게시글 스킵
                     if post.status == "deleted":
+                        logger.info(f"❌ SKIPPING reaction {reaction.id} - post is deleted")
                         continue
+                    
+                    # 실제 게시글의 현재 정보를 사용하여 페이지 타입과 route_path 생성
+                    raw_page_type = getattr(post.metadata, "type", "board") if post.metadata else "board"
+                    page_type = normalize_post_type(raw_page_type) or "board"
+                    actual_route_path = self._generate_route_path(page_type, post.slug)
                     post_title = post.title
-                except Exception:
+                    
+                    logger.info(f"✅ ADDING reaction {reaction.id} to {page_type} page_type with current route: {actual_route_path}")
+                    
+                except Exception as e:
                     # If post is not found or deleted, skip this reaction
+                    logger.warning(f"❌ SKIPPING reaction {reaction.id} - post not found: {e}")
                     continue
+            else:
+                # Non-post reactions (comments, etc.) - skip for now
+                logger.info(f"❌ SKIPPING reaction {reaction.id} - not a post reaction")
+                continue
             
             reaction_data = {
                 "id": str(reaction.id),
                 "target_type": reaction.target_type,
                 "target_id": reaction.target_id,
                 "created_at": reaction.created_at.isoformat(),
-                "route_path": route_path,
+                "route_path": actual_route_path,  # 실제 현재 slug를 사용한 route_path
                 "target_title": post_title,
                 "title": post_title  # 프론트엔드에서 사용할 제목
             }
@@ -360,57 +355,26 @@ class UserActivityService:
         
         return result
     
-    def _extract_page_type_from_reaction(self, route_path: str) -> Optional[str]:
-        """Extract page type from reaction route_path.
-        
-        Phase 6: 완전 단순화 - 매핑 테이블 완전 제거
-        DB 데이터 재생성으로 레거시 패턴 불필요
-        
-        Args:
-            route_path: Route path from reaction metadata
-            
-        Returns:
-            Page type (board, property_information, expert_tips, moving_services) or None
-        """
-        if not route_path:
-            logger.warning("Empty route_path detected in reaction")
-            return None
-            
-        logger.info(f"Processing reaction route_path: '{route_path}'")
-            
-        # URL에서 첫 번째 세그먼트 추출: /moving-services/slug → moving-services
-        segments = route_path.strip('/').split('/')
-        if not segments:
-            logger.warning(f"No segments found in route_path: '{route_path}'")
-            return None
-            
-        url_type = segments[0]
-        
-        # 직접 변환: hyphen → underscore
-        page_type = url_type.replace('-', '_')
-        
-        # 유효한 DB 타입 체크
-        valid_types = ['board', 'property_information', 'expert_tips', 'moving_services']
-        if page_type in valid_types:
-            logger.info(f"✅ DIRECT MATCH: route_path '{route_path}' → page_type '{page_type}'")
-            return page_type
-        
-        logger.warning(f"Unrecognized route_path: '{route_path}'. Expected format: /{valid_types}/*")
-        return None
 
     def _generate_route_path(self, page_type: str, slug: str) -> str:
         """Generate route path based on page type and slug.
         
-        Phase 5: 완전 단순화 - DB 타입과 URL 패턴 직접 매칭
+        posts_service와 동일한 매핑 방식 사용
         
         Args:
             page_type: Page type (DB raw type)
             slug: Post slug
             
         Returns:
-            Route path string with pattern: /{page_type_with_hyphens}/{slug}
+            Route path string
         """
-        # 단순한 변환: underscore → hyphen
-        url_type = page_type.replace("_", "-")
-        return f"/{url_type}/{slug}"
+        # posts_service와 동일한 매핑 테이블 사용
+        route_mapping = {
+            "board": f"/board/{slug}",
+            "property_information": f"/property-information/{slug}",
+            "moving_services": f"/moving-services/{slug}",
+            "expert_tips": f"/expert-tips/{slug}"
+        }
+        
+        return route_mapping.get(page_type, f"/post/{slug}")
     

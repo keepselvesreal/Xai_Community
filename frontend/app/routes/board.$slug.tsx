@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate, useLoaderData } from '@remix-run/react';
 import { json, type LoaderFunction } from '@remix-run/node';
 import AppLayout from '~/components/layout/AppLayout';
@@ -9,6 +9,7 @@ import { useAuth } from '~/contexts/AuthContext';
 import { useNotification } from '~/contexts/NotificationContext';
 import { apiClient } from '~/lib/api';
 import type { Post, Comment, PaginatedResponse } from '~/types';
+import { performanceMeasurer } from '~/utils/performance-measure';
 
 interface LoaderData {
   post: Post | null;
@@ -39,15 +40,23 @@ export const loader: LoaderFunction = async ({ params }) => {
 interface ReactionButtonsProps {
   post: Post;
   onReactionChange: (reactionType: 'like' | 'dislike' | 'bookmark') => void;
+  pendingReactions?: Set<string>;
 }
 
-const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
+// 🚀 React.memo로 성능 최적화: post.stats가 변경되지 않으면 리렌더링 방지
+const ReactionButtons = memo(({ post, onReactionChange, pendingReactions = new Set() }: ReactionButtonsProps) => {
+  // 매번 새로운 함수 생성 방지
+  const handleLike = useCallback(() => onReactionChange('like'), [onReactionChange]);
+  const handleDislike = useCallback(() => onReactionChange('dislike'), [onReactionChange]);
+  const handleBookmark = useCallback(() => onReactionChange('bookmark'), [onReactionChange]);
+
   return (
     <div className="flex items-center space-x-2">
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onReactionChange('like')}
+        onClick={handleLike}
+        disabled={pendingReactions.has('like')}
         className="flex items-center space-x-1"
       >
         <span>👍</span>
@@ -56,7 +65,8 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onReactionChange('dislike')}
+        onClick={handleDislike}
+        disabled={pendingReactions.has('dislike')}
         className="flex items-center space-x-1"
       >
         <span>👎</span>
@@ -65,7 +75,8 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
       <Button
         variant="outline"
         size="sm"
-        onClick={() => onReactionChange('bookmark')}
+        onClick={handleBookmark}
+        disabled={pendingReactions.has('bookmark')}
         className="flex items-center space-x-1"
       >
         <span>🔖</span>
@@ -73,7 +84,19 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
       </Button>
     </div>
   );
-};
+}, (prevProps, nextProps) => {
+  // 사용자 정의 비교 함수: 필요한 경우에만 리렌더링
+  const statsChanged = 
+    prevProps.post.stats?.like_count !== nextProps.post.stats?.like_count ||
+    prevProps.post.stats?.dislike_count !== nextProps.post.stats?.dislike_count ||
+    prevProps.post.stats?.bookmark_count !== nextProps.post.stats?.bookmark_count;
+  
+  const pendingChanged = 
+    prevProps.pendingReactions?.size !== nextProps.pendingReactions?.size ||
+    [...(prevProps.pendingReactions || [])].some(r => !nextProps.pendingReactions?.has(r));
+
+  return !statsChanged && !pendingChanged;
+});
 
 
 export default function PostDetail() {
@@ -88,10 +111,19 @@ export default function PostDetail() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true); // 클라이언트에서 데이터 로딩
   const [isNotFound, setIsNotFound] = useState(false);
+  const [pendingReactions, setPendingReactions] = useState<Set<string>>(new Set());
+  const [userReactions, setUserReactions] = useState<{
+    liked: boolean;
+    disliked: boolean;
+    bookmarked: boolean;
+  }>({ liked: false, disliked: false, bookmarked: false });
 
   // 🗑️ 기존 개별 로딩 함수들 제거 - 병렬 로딩으로 통합됨
 
-  const handleReactionChange = async (reactionType: 'like' | 'dislike' | 'bookmark') => {
+  // 🚀 Optimistic UI: 즉시 UI 업데이트, API는 백그라운드 처리
+  const handleReactionChange = useCallback(async (reactionType: 'like' | 'dislike' | 'bookmark') => {
+    const performanceId = `reaction_${reactionType}_${Date.now()}`;
+    performanceMeasurer.start(performanceId, { reactionType, postSlug: slug });
     if (!user) {
       showError('로그인이 필요합니다');
       return;
@@ -99,10 +131,80 @@ export default function PostDetail() {
 
     if (!post || !slug) return;
 
+    // 중복 클릭 방지
+    if (pendingReactions.has(reactionType)) {
+      return;
+    }
+
+    setPendingReactions(prev => new Set([...prev, reactionType]));
+
+    // 현재 상태 백업 (실패 시 복원용)
+    const originalPost = post;
+
+    // 🚀 1단계: 즉시 UI 업데이트 (Optimistic) - 토글 로직 적용
+    let newUserReactions = { ...userReactions };
+    
+    setPost(prev => {
+      if (!prev?.stats) return prev;
+      
+      const currentStats = prev.stats;
+      let newStats = { ...currentStats };
+
+      if (reactionType === 'like') {
+        if (userReactions.liked) {
+          // 이미 추천한 상태에서 다시 클릭 = 취소
+          newStats.like_count = Math.max(0, (currentStats.like_count || 0) - 1);
+          newUserReactions.liked = false;
+        } else {
+          // 추천 안 한 상태에서 클릭 = 추천
+          newStats.like_count = (currentStats.like_count || 0) + 1;
+          newUserReactions.liked = true;
+          // 비추천이 있었다면 취소
+          if (userReactions.disliked) {
+            newStats.dislike_count = Math.max(0, (currentStats.dislike_count || 0) - 1);
+            newUserReactions.disliked = false;
+          }
+        }
+      } else if (reactionType === 'dislike') {
+        if (userReactions.disliked) {
+          // 이미 비추천한 상태에서 다시 클릭 = 취소
+          newStats.dislike_count = Math.max(0, (currentStats.dislike_count || 0) - 1);
+          newUserReactions.disliked = false;
+        } else {
+          // 비추천 안 한 상태에서 클릭 = 비추천
+          newStats.dislike_count = (currentStats.dislike_count || 0) + 1;
+          newUserReactions.disliked = true;
+          // 추천이 있었다면 취소
+          if (userReactions.liked) {
+            newStats.like_count = Math.max(0, (currentStats.like_count || 0) - 1);
+            newUserReactions.liked = false;
+          }
+        }
+      } else if (reactionType === 'bookmark') {
+        if (userReactions.bookmarked) {
+          // 이미 북마크한 상태에서 다시 클릭 = 취소
+          newStats.bookmark_count = Math.max(0, (currentStats.bookmark_count || 0) - 1);
+          newUserReactions.bookmarked = false;
+        } else {
+          // 북마크 안 한 상태에서 클릭 = 북마크
+          newStats.bookmark_count = (currentStats.bookmark_count || 0) + 1;
+          newUserReactions.bookmarked = true;
+        }
+      }
+
+      return {
+        ...prev,
+        stats: newStats
+      };
+    });
+    
+    // 사용자 반응 상태 업데이트
+    setUserReactions(newUserReactions);
+
+    // 🚀 2단계: 백그라운드에서 API 호출
     try {
       let response;
       
-      // API v3 명세서에 따른 개별 엔드포인트 사용
       switch (reactionType) {
         case 'like':
           response = await apiClient.likePost(slug);
@@ -117,36 +219,55 @@ export default function PostDetail() {
           throw new Error('Invalid reaction type');
       }
       
-      if (response.success) {
-        // 페이지 전체 새로고침 대신 직접 상태 업데이트
-        if (response.data) {
-          setPost(prev => prev ? {
-            ...prev,
-            stats: {
-              ...prev.stats,
-              // 추천/비추천은 서로 배타적으로 업데이트
-              like_count: (reactionType === 'like' || reactionType === 'dislike') ? 
-                (response.data.like_count ?? prev.stats?.like_count ?? 0) : 
-                (prev.stats?.like_count ?? 0),
-              dislike_count: (reactionType === 'like' || reactionType === 'dislike') ? 
-                (response.data.dislike_count ?? prev.stats?.dislike_count ?? 0) : 
-                (prev.stats?.dislike_count ?? 0),
-              // 저장 기능은 독립적으로 업데이트
-              bookmark_count: reactionType === 'bookmark' ? 
-                (response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0) : 
-                (prev.stats?.bookmark_count ?? 0),
-              view_count: prev.stats?.view_count ?? 0,
-              comment_count: prev.stats?.comment_count ?? 0,
-            }
-          } : prev);
+      if (response.success && response.data) {
+        // 서버 응답으로 정확한 상태 동기화
+        setPost(prev => prev ? {
+          ...prev,
+          stats: {
+            ...prev.stats,
+            like_count: response.data.like_count ?? prev.stats?.like_count ?? 0,
+            dislike_count: response.data.dislike_count ?? prev.stats?.dislike_count ?? 0,
+            bookmark_count: response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0,
+            view_count: prev.stats?.view_count ?? 0,
+            comment_count: prev.stats?.comment_count ?? 0,
+          }
+        } : prev);
+        
+        // 서버에서 사용자 반응 상태 동기화
+        if (response.data.user_reaction) {
+          setUserReactions({
+            liked: response.data.user_reaction.liked || false,
+            disliked: response.data.user_reaction.disliked || false,
+            bookmarked: response.data.user_reaction.bookmarked || false
+          });
         }
       } else {
+        // API 실패 시 원래 상태로 복원
+        setPost(originalPost);
+        setUserReactions(userReactions); // 원래 사용자 반응 상태로 복원
         showError(response.error || '반응 처리에 실패했습니다');
       }
     } catch (error) {
+      // 오류 발생 시 원래 상태로 복원
+      setPost(originalPost);
+      setUserReactions(userReactions); // 원래 사용자 반응 상태로 복원
       showError('반응 처리 중 오류가 발생했습니다');
+    } finally {
+      // 요청 완료 처리
+      setPendingReactions(prev => {
+        const next = new Set(prev);
+        next.delete(reactionType);
+        return next;
+      });
+      
+      // 성능 측정 종료
+      performanceMeasurer.end(performanceId, { 
+        reactionType, 
+        postSlug: slug,
+        finalCount: post?.stats?.[`${reactionType}_count`] 
+      });
     }
-  };
+  }, [user, post, slug, pendingReactions, showError]);
 
   const handleCommentAdded = async () => {
     if (!slug) return;
@@ -248,6 +369,15 @@ export default function PostDetail() {
         // 게시글 처리
         if (postResult.success && postResult.data) {
           setPost(postResult.data);
+          
+          // 사용자 반응 상태 초기화 (로그인 사용자만)
+          if (user && postResult.data.user_reaction) {
+            setUserReactions({
+              liked: postResult.data.user_reaction.liked || false,
+              disliked: postResult.data.user_reaction.disliked || false,
+              bookmarked: postResult.data.user_reaction.bookmarked || false
+            });
+          }
         } else {
           setIsNotFound(true);
           showError('게시글을 찾을 수 없습니다');
@@ -381,6 +511,7 @@ export default function PostDetail() {
               <ReactionButtons 
                 post={post} 
                 onReactionChange={handleReactionChange}
+                pendingReactions={pendingReactions}
               />
               
               {/* 수정/삭제 버튼 (작성자만 보이도록) */}

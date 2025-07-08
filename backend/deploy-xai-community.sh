@@ -109,13 +109,35 @@ log_info "  - 서비스명: $SERVICE_NAME"
 log_info "  - 리전: $REGION"
 log_info "  - 이미지: $IMAGE_NAME"
 
-# 환경변수 파일 처리
-ENV_FILE_FLAG=""
+# 환경변수 파일 처리 - .env 형식을 gcloud 형식으로 변환
+ENV_VARS=""
 if [ -f ".env.prod" ]; then
-    log_info ".env.prod 파일 발견 - env-vars-file 옵션 사용"
-    ENV_FILE_FLAG="--env-vars-file .env.prod"
+    log_info ".env.prod 파일 발견 - 환경변수 자동 변환 중..."
+    
+    # .env 파일을 읽어서 gcloud 형식으로 변환
+    while IFS= read -r line; do
+        # 주석과 빈 줄 건너뛰기
+        if [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]] && [[ "$line" =~ ^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*= ]]; then
+            # 변수=값 형태 추출
+            var_name=$(echo "$line" | cut -d'=' -f1 | xargs)
+            var_value=$(echo "$line" | cut -d'=' -f2- | xargs)
+            
+            # 따옴표 제거 (있는 경우)
+            var_value=$(echo "$var_value" | sed 's/^"//; s/"$//')
+            
+            # ENV_VARS 문자열 구성
+            if [ -n "$ENV_VARS" ]; then
+                ENV_VARS="$ENV_VARS,$var_name=$var_value"
+            else
+                ENV_VARS="$var_name=$var_value"
+            fi
+        fi
+    done < ".env.prod"
+    
+    log_success "환경변수 변환 완료: $(echo "$ENV_VARS" | tr ',' '\n' | wc -l)개 변수"
 else
     log_warning ".env.prod 파일이 없습니다. 기본 환경변수만 사용합니다."
+    ENV_VARS="ENVIRONMENT=production"
 fi
 
 DEPLOY_CMD="gcloud run deploy $SERVICE_NAME \
@@ -129,12 +151,11 @@ DEPLOY_CMD="gcloud run deploy $SERVICE_NAME \
     --concurrency 100 \
     --max-instances 10 \
     --timeout 300 \
-    --set-env-vars ENVIRONMENT=production \
     --project=$PROJECT_ID \
     --quiet"
 
-if [ -n "$ENV_FILE_FLAG" ]; then
-    DEPLOY_CMD="$DEPLOY_CMD $ENV_FILE_FLAG"
+if [ -n "$ENV_VARS" ]; then
+    DEPLOY_CMD="$DEPLOY_CMD --set-env-vars=\"$ENV_VARS\""
 fi
 
 log_info "배포 명령 실행 중..."
