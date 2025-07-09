@@ -62,9 +62,42 @@ fi
 log_info "=== 1단계: Docker 이미지 빌드 ==="
 log_info "빌드 시작: $(date)"
 
-# 로그 스트리밍 문제 해결을 위해 --suppress-logs 사용
-BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$PROJECT_ID" --suppress-logs 2>&1)
+# 로그 스트리밍 문제 해결을 위해 --async 사용
+BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$PROJECT_ID" --async 2>&1)
 BUILD_EXIT_CODE=$?
+
+if [ $BUILD_EXIT_CODE -eq 0 ]; then
+    # 빌드 ID 추출
+    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'builds/[a-zA-Z0-9-]*' | head -1 | cut -d'/' -f2)
+    if [ -n "$BUILD_ID" ]; then
+        log_info "빌드 ID: $BUILD_ID"
+        log_info "빌드 상태 확인 중..."
+        
+        # 빌드 완료까지 대기
+        while true; do
+            BUILD_STATUS=$(gcloud builds describe "$BUILD_ID" --project="$PROJECT_ID" --format="value(status)" 2>/dev/null)
+            case "$BUILD_STATUS" in
+                "SUCCESS")
+                    log_success "빌드 완료!"
+                    break
+                    ;;
+                "FAILURE"|"CANCELLED"|"TIMEOUT")
+                    log_error "빌드 실패: $BUILD_STATUS"
+                    BUILD_EXIT_CODE=1
+                    break
+                    ;;
+                "QUEUED"|"WORKING")
+                    log_info "빌드 진행 중... ($BUILD_STATUS)"
+                    sleep 10
+                    ;;
+                *)
+                    log_warning "알 수 없는 빌드 상태: $BUILD_STATUS"
+                    sleep 10
+                    ;;
+            esac
+        done
+    fi
+fi
 
 log_info "빌드 완료: $(date)"
 log_info "빌드 Exit Code: $BUILD_EXIT_CODE"
