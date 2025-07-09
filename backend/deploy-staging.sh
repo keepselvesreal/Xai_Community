@@ -204,7 +204,8 @@ if [ -f ".env.staging" ]; then
             fi
             
             # 환경변수 배열에 추가 (쉼표 포함 시 이스케이핑)
-            if [[ "$var_value" == *","* ]]; then
+            if [[ "$var_value" == *","* ]] || [[ "$var_value" == *"="* ]] || [[ "$var_value" == *" "* ]]; then
+                # 특수문자가 포함된 경우 따옴표로 감싸기
                 ENV_VARS_ARRAY+=("$var_name=\"$var_value\"")
             else
                 ENV_VARS_ARRAY+=("$var_name=$var_value")
@@ -256,10 +257,19 @@ done
 log_success "환경변수 처리 완료: $ENV_COUNT개 변수"
 log_debug "필수 환경변수 모두 확인 완료"
 
-# 환경변수 배열을 쉼표로 구분된 문자열로 변환
-ENV_VARS=$(IFS=,; echo "${ENV_VARS_ARRAY[*]}")
-log_debug "환경변수 문자열 길이: ${#ENV_VARS}"
-log_debug "환경변수 미리보기: ${ENV_VARS:0:150}..."
+# 환경변수를 파일로 저장 (특수문자 이스케이핑 문제 해결)
+ENV_VARS_FILE="/tmp/env_vars_staging.txt"
+log_debug "환경변수 파일 생성: $ENV_VARS_FILE"
+
+# 환경변수 배열을 KEY=VALUE 형식으로 파일에 저장
+> "$ENV_VARS_FILE"  # 파일 초기화
+for env_var in "${ENV_VARS_ARRAY[@]}"; do
+    echo "$env_var" >> "$ENV_VARS_FILE"
+done
+
+log_debug "환경변수 파일 내용 확인:"
+head -10 "$ENV_VARS_FILE"
+log_debug "환경변수 파일 크기: $(wc -l < "$ENV_VARS_FILE") 줄"
 
 # 디버깅을 위한 환경변수 상세 출력
 log_debug "=== 환경변수 상세 정보 ==="
@@ -272,10 +282,10 @@ log_debug "=== 환경변수 상세 정보 끝 ==="
 log_info "=== 3단계: Cloud Run 배포 시작 ==="
 log_debug "배포 명령어 실행 시작: $(date)"
 
-# 환경변수 길이 확인 (Cloud Run 제한: 32KB)
-ENV_VARS_LENGTH=${#ENV_VARS}
-if [ $ENV_VARS_LENGTH -gt 30000 ]; then
-    log_error "환경변수 문자열이 너무 깁니다: ${ENV_VARS_LENGTH} bytes"
+# 환경변수 파일 크기 확인 (Cloud Run 제한: 32KB)
+ENV_VARS_FILE_SIZE=$(wc -c < "$ENV_VARS_FILE")
+if [ $ENV_VARS_FILE_SIZE -gt 30000 ]; then
+    log_error "환경변수 파일이 너무 큽니다: ${ENV_VARS_FILE_SIZE} bytes"
     exit 1
 fi
 
@@ -285,13 +295,13 @@ log_debug "  - 서비스명: $GCP_SERVICE_NAME"
 log_debug "  - 이미지: $IMAGE_NAME"
 log_debug "  - 리전: $GCP_REGION"
 log_debug "  - 환경변수 개수: $ENV_COUNT"
-log_debug "  - 환경변수 크기: ${ENV_VARS_LENGTH} bytes"
+log_debug "  - 환경변수 크기: ${ENV_VARS_FILE_SIZE} bytes"
 
 # 배포 실행 (동기식으로 변경)
 log_info "배포 명령어 실행 중... (최대 10분 소요 예상)"
 
 log_debug "배포 명령어: gcloud run deploy $GCP_SERVICE_NAME --image $IMAGE_NAME --platform managed --region $GCP_REGION --allow-unauthenticated --port 8080 --memory 512Mi --cpu 1 --concurrency 100 --max-instances 10 --timeout 300 --project=$GCP_PROJECT_ID"
-log_debug "환경변수 설정: ${ENV_VARS:0:200}..."
+log_debug "환경변수 파일: $ENV_VARS_FILE"
 
 DEPLOY_OUTPUT=$(gcloud run deploy "$GCP_SERVICE_NAME" \
     --image "$IMAGE_NAME" \
@@ -304,7 +314,7 @@ DEPLOY_OUTPUT=$(gcloud run deploy "$GCP_SERVICE_NAME" \
     --concurrency 100 \
     --max-instances 10 \
     --timeout 300 \
-    --set-env-vars="$ENV_VARS" \
+    --env-vars-file="$ENV_VARS_FILE" \
     --project="$GCP_PROJECT_ID" 2>&1)
 
 DEPLOY_EXIT_CODE=$?
@@ -338,6 +348,10 @@ if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
     echo "$DEPLOY_OUTPUT"
     echo "===================="
     
+    # 환경변수 파일 정리
+    rm -f "$ENV_VARS_FILE"
+    log_debug "환경변수 파일 정리 완료"
+    
     # 추가 디버깅 정보 수집
     log_debug "추가 디버깅 정보 수집 중..."
     log_debug "현재 프로젝트: $(gcloud config get-value project)"
@@ -357,6 +371,10 @@ if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
 fi
 
 log_success "Cloud Run 배포 성공!"
+
+# 환경변수 파일 정리
+rm -f "$ENV_VARS_FILE"
+log_debug "환경변수 파일 정리 완료"
 
 # 4단계: 서비스 URL 확인 및 상태 검증
 log_info "=== 4단계: 서비스 URL 확인 및 상태 검증 ==="
