@@ -136,37 +136,70 @@ ENV_COUNT=0
 # 필수 환경변수 목록
 REQUIRED_VARS=("ENVIRONMENT" "MONGODB_URL" "DATABASE_NAME" "SECRET_KEY" "ALLOWED_ORIGINS" "FRONTEND_URL")
 
-while IFS= read -r line; do
-    # 주석과 빈 줄 건너뛰기
-    if [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]] && [[ "$line" =~ ^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*= ]]; then
-        var_name=$(echo "$line" | cut -d'=' -f1 | xargs)
-        var_value=$(echo "$line" | cut -d'=' -f2- | xargs)
-        
-        log_debug "처리 중인 변수: $var_name"
-        
-        # PORT 변수는 Cloud Run에서 자동 설정되므로 제외
-        if [ "$var_name" = "PORT" ]; then
-            log_debug "PORT 변수 제외 (Cloud Run 시스템 예약)"
-            continue
+# 환경변수 처리 (로컬 개발 환경에서만 .env.staging 파일 사용)
+if [ -f ".env.staging" ]; then
+    log_info "로컬 개발 환경: .env.staging 파일에서 환경변수 읽기"
+    while IFS= read -r line; do
+        # 주석과 빈 줄 건너뛰기
+        if [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]] && [[ "$line" =~ ^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*= ]]; then
+            var_name=$(echo "$line" | cut -d'=' -f1 | xargs)
+            var_value=$(echo "$line" | cut -d'=' -f2- | xargs)
+            
+            log_debug "처리 중인 변수: $var_name"
+            
+            # PORT 변수는 Cloud Run에서 자동 설정되므로 제외
+            if [ "$var_name" = "PORT" ]; then
+                log_debug "PORT 변수 제외 (Cloud Run 시스템 예약)"
+                continue
+            fi
+            
+            # HOST 변수도 Cloud Run에서 자동 설정
+            if [ "$var_name" = "HOST" ]; then
+                log_debug "HOST 변수 제외 (Cloud Run 시스템 예약)"
+                continue
+            fi
+            
+            # GCP 설정 변수들은 배포용이므로 제외
+            if [[ "$var_name" =~ ^GCP_.* ]]; then
+                log_debug "GCP 설정 변수 제외: $var_name"
+                continue
+            fi
+            
+            # 환경변수 배열에 추가
+            ENV_VARS_ARRAY+=("$var_name=$var_value")
+            ENV_COUNT=$((ENV_COUNT + 1))
         fi
-        
-        # HOST 변수도 Cloud Run에서 자동 설정
-        if [ "$var_name" = "HOST" ]; then
-            log_debug "HOST 변수 제외 (Cloud Run 시스템 예약)"
-            continue
-        fi
-        
-        # GCP 설정 변수들은 배포용이므로 제외
-        if [[ "$var_name" =~ ^GCP_.* ]]; then
-            log_debug "GCP 설정 변수 제외: $var_name"
-            continue
-        fi
-        
-        # 환경변수 배열에 추가
-        ENV_VARS_ARRAY+=("$var_name=$var_value")
-        ENV_COUNT=$((ENV_COUNT + 1))
-    fi
-done < ".env.staging"
+    done < ".env.staging"
+else
+    log_info "CI/CD 환경: GitHub Secrets에서 환경변수 직접 사용"
+    # GitHub Secrets에서 주입된 환경변수들을 배열에 추가
+    ENV_VARS_ARRAY=(
+        "ENVIRONMENT=$ENVIRONMENT"
+        "MONGODB_URL=$MONGODB_URL"
+        "DATABASE_NAME=$DATABASE_NAME"
+        "USERS_COLLECTION=$USERS_COLLECTION"
+        "POSTS_COLLECTION=$POSTS_COLLECTION"
+        "COMMENTS_COLLECTION=$COMMENTS_COLLECTION"
+        "POST_STATS_COLLECTION=$POST_STATS_COLLECTION"
+        "USER_REACTIONS_COLLECTION=$USER_REACTIONS_COLLECTION"
+        "FILES_COLLECTION=$FILES_COLLECTION"
+        "STATS_COLLECTION=$STATS_COLLECTION"
+        "API_TITLE=$API_TITLE"
+        "API_VERSION=$API_VERSION"
+        "API_DESCRIPTION=$API_DESCRIPTION"
+        "SECRET_KEY=$SECRET_KEY"
+        "ALGORITHM=$ALGORITHM"
+        "ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
+        "REFRESH_TOKEN_EXPIRE_DAYS=$REFRESH_TOKEN_EXPIRE_DAYS"
+        "ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
+        "FRONTEND_URL=$FRONTEND_URL"
+        "LOG_LEVEL=$LOG_LEVEL"
+        "MAX_COMMENT_DEPTH=$MAX_COMMENT_DEPTH"
+        "ENABLE_DOCS=$ENABLE_DOCS"
+        "ENABLE_CORS=$ENABLE_CORS"
+    )
+    ENV_COUNT=${#ENV_VARS_ARRAY[@]}
+fi
 
 # 필수 환경변수 확인
 log_debug "필수 환경변수 확인 중..."
