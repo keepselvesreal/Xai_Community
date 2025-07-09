@@ -257,14 +257,18 @@ done
 log_success "환경변수 처리 완료: $ENV_COUNT개 변수"
 log_debug "필수 환경변수 모두 확인 완료"
 
-# 환경변수를 파일로 저장 (특수문자 이스케이핑 문제 해결)
-ENV_VARS_FILE="/tmp/env_vars_staging.txt"
+# 환경변수를 YAML 파일로 저장 (gcloud --env-vars-file 요구사항에 맞춤)
+ENV_VARS_FILE="/tmp/env_vars_staging.yaml"
 log_debug "환경변수 파일 생성: $ENV_VARS_FILE"
 
-# 환경변수 배열을 KEY=VALUE 형식으로 파일에 저장
+# YAML 형식으로 환경변수 파일 작성
 > "$ENV_VARS_FILE"  # 파일 초기화
 for env_var in "${ENV_VARS_ARRAY[@]}"; do
-    echo "$env_var" >> "$ENV_VARS_FILE"
+    # KEY=VALUE 형식을 YAML 형식으로 변환
+    var_name=$(echo "$env_var" | cut -d'=' -f1)
+    var_value=$(echo "$env_var" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//')
+    # YAML 형식으로 출력 (값을 따옴표로 감싸기)
+    echo "$var_name: \"$var_value\"" >> "$ENV_VARS_FILE"
 done
 
 log_debug "환경변수 파일 내용 확인:"
