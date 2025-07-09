@@ -2,7 +2,7 @@ name: 🚀 Safe CI/CD Pipeline with Dynamic CORS
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, staging ]
   pull_request:
     branches: [ main ]
 
@@ -93,83 +93,136 @@ jobs:
       run: |
         npm run build
 
-  # 🎯 스테이징 배포 시뮬레이션 (develop 브랜치에서만)
-  staging-deployment-simulation:
+  # 🎯 스테이징 배포 (staging 브랜치에서만)
+  staging-deployment:
     needs: [backend-safe-checks, frontend-safe-checks]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
     
     steps:
-    - name: 🚀 Staging 배포 시뮬레이션 시작
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔑 Setup Google Cloud Authentication
       run: |
-        echo "🎯 스테이징 배포 시뮬레이션 시작"
+        echo "🔑 Google Cloud 서비스 계정 설정 중..."
+        echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-key.json
+        
+        # gcloud CLI 설치 (Ubuntu 최신 버전)
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+        sudo apt-get update && sudo apt-get install google-cloud-cli
+        
+        # 서비스 계정 인증
+        gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+        gcloud config set project xai-community
+        echo "✅ Google Cloud 인증 완료"
+        
+    - name: 🚀 스테이징 배포 실행
+      run: |
+        echo "🎯 스테이징 배포 시작"
         echo "📂 Branch: ${{ github.ref }}"
         echo "🔨 Commit: ${{ github.sha }}"
         echo "👤 Author: ${{ github.actor }}"
         echo ""
         
-    - name: 🔧 백엔드 배포 시뮬레이션
-      run: |
-        echo "🔧 백엔드 스테이징 배포 시뮬레이션"
-        echo "📡 Target URL: $STAGING_BACKEND_URL"
-        echo "🐳 Docker 이미지 빌드 시뮬레이션..."
-        sleep 3
-        echo "✅ Docker 이미지 빌드 완료 (시뮬레이션)"
-        echo "🚀 Cloud Run 배포 시뮬레이션..."
-        sleep 2
-        echo "✅ 백엔드 스테이징 배포 완료 (시뮬레이션)"
+        cd backend
+        chmod +x deploy-staging.sh
+        ./deploy-staging.sh
         
-    - name: 🌐 프런트엔드 배포 시뮬레이션
+    - name: 🔍 스테이징 환경 검증
       run: |
-        echo "🌐 프런트엔드 스테이징 배포 시뮬레이션"
-        echo "📡 Target URL: $STAGING_FRONTEND_URL"
-        echo "🔨 빌드 시뮬레이션..."
-        sleep 2
-        echo "✅ 빌드 완료 (시뮬레이션)"
-        echo "🚀 Vercel 배포 시뮬레이션..."
-        sleep 2
-        echo "✅ 프런트엔드 스테이징 배포 완료 (시뮬레이션)"
-        
-    - name: 🔍 스테이징 환경 검증 시뮬레이션
-      run: |
-        echo "🔍 스테이징 환경 검증 시뮬레이션"
+        echo "🔍 스테이징 환경 검증 시작"
         echo "⏳ 배포 안정화 대기..."
-        sleep 5
+        sleep 10
         
-        echo "🔍 백엔드 헬스체크 시뮬레이션..."
-        echo "  📡 URL: $STAGING_BACKEND_URL/health"
-        echo "  ✅ 상태: 200 OK (시뮬레이션)"
-        echo "  📊 응답시간: 150ms (시뮬레이션)"
+        # 서비스 URL 가져오기
+        STAGING_URL=$(gcloud run services describe xai-community-backend-staging --region=asia-northeast3 --format="value(status.url)")
+        echo "🌐 스테이징 서비스 URL: $STAGING_URL"
         
-        echo "🔍 프런트엔드 접근성 확인 시뮬레이션..."
-        echo "  📡 URL: $STAGING_FRONTEND_URL"
-        echo "  ✅ 상태: 200 OK (시뮬레이션)"
-        echo "  📊 응답시간: 300ms (시뮬레이션)"
+        # 헬스체크
+        echo "🔍 백엔드 헬스체크..."
+        if curl -f -m 30 "$STAGING_URL/health"; then
+          echo "✅ 헬스체크 성공"
+        else
+          echo "❌ 헬스체크 실패"
+          exit 1
+        fi
         
-        echo "🔍 CORS 설정 확인 시뮬레이션..."
-        echo "  📡 Origin: $STAGING_FRONTEND_URL"
-        echo "  📡 Target: $STAGING_BACKEND_URL"
-        echo "  ✅ CORS: 정상 동작 (시뮬레이션)"
+        # 기본 API 테스트
+        echo "🔍 기본 API 테스트..."
+        if curl -f -m 30 "$STAGING_URL/"; then
+          echo "✅ 기본 API 테스트 성공"
+        else
+          echo "❌ 기본 API 테스트 실패"
+          exit 1
+        fi
         
         echo "🎉 스테이징 환경 검증 완료!"
 
-  # 🚀 배포 후 검증 (main 브랜치에서만)
-  deployment-verification:
+  # 🚀 프로덕션 배포 (main 브랜치에서만)
+  production-deployment:
     needs: [backend-safe-checks, frontend-safe-checks]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
-    - name: ⏳ Wait for auto-deployment
-      run: sleep 120
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
       
-    - name: 🔍 Check backend health
+    - name: 🔑 Setup Google Cloud Authentication
       run: |
-        echo "🔍 백엔드 상태 확인 중..."
-        if curl -f -m 30 $PROD_BACKEND_URL/health; then
-          echo "✅ 백엔드 정상 동작 확인"
+        echo "🔑 Google Cloud 서비스 계정 설정 중..."
+        echo '${{ secrets.GCP_SA_KEY }}' > /tmp/gcp-key.json
+        
+        # gcloud CLI 설치 (Ubuntu 최신 버전)
+        echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" | sudo tee -a /etc/apt/sources.list.d/google-cloud-sdk.list
+        curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key --keyring /usr/share/keyrings/cloud.google.gpg add -
+        sudo apt-get update && sudo apt-get install google-cloud-cli
+        
+        # 서비스 계정 인증
+        gcloud auth activate-service-account --key-file=/tmp/gcp-key.json
+        gcloud config set project xai-community
+        echo "✅ Google Cloud 인증 완료"
+        
+    - name: 🚀 프로덕션 배포 실행
+      run: |
+        echo "🎯 프로덕션 배포 시작"
+        echo "📂 Branch: ${{ github.ref }}"
+        echo "🔨 Commit: ${{ github.sha }}"
+        echo "👤 Author: ${{ github.actor }}"
+        echo ""
+        
+        cd backend
+        chmod +x deploy-production.sh
+        ./deploy-production.sh
+        
+    - name: 🔍 프로덕션 환경 검증
+      run: |
+        echo "🔍 프로덕션 환경 검증 시작"
+        echo "⏳ 배포 안정화 대기..."
+        sleep 10
+        
+        # 서비스 URL 가져오기
+        PRODUCTION_URL=$(gcloud run services describe xai-community-backend --region=asia-northeast3 --format="value(status.url)")
+        echo "🌐 프로덕션 서비스 URL: $PRODUCTION_URL"
+        
+        # 헬스체크
+        echo "🔍 백엔드 헬스체크..."
+        if curl -f -m 30 "$PRODUCTION_URL/health"; then
+          echo "✅ 헬스체크 성공"
         else
-          echo "⚠️ 백엔드 확인 실패 (경고만)"
+          echo "❌ 헬스체크 실패"
+          exit 1
+        fi
+        
+        # 기본 API 테스트
+        echo "🔍 기본 API 테스트..."
+        if curl -f -m 30 "$PRODUCTION_URL/"; then
+          echo "✅ 기본 API 테스트 성공"
+        else
+          echo "❌ 기본 API 테스트 실패"
+          exit 1
         fi
         
     - name: 🌐 Verify Production Frontend URL
@@ -217,7 +270,7 @@ jobs:
 
   # 📊 결과 알림
   notification:
-    needs: [backend-safe-checks, frontend-safe-checks, deployment-verification, staging-deployment-simulation]
+    needs: [backend-safe-checks, frontend-safe-checks, production-deployment, staging-deployment]
     runs-on: ubuntu-latest
     if: always()
     
@@ -229,35 +282,35 @@ jobs:
         echo "✅ 백엔드: ${{ needs.backend-safe-checks.result }}"
         echo "✅ 프런트엔드: ${{ needs.frontend-safe-checks.result }}"
         
-        # 스테이징 결과 표시 (develop 브랜치에서만)
-        if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-          echo "🎯 스테이징 시뮬레이션: ${{ needs.staging-deployment-simulation.result }}"
+        # 스테이징 결과 표시 (staging 브랜치에서만)
+        if [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+          echo "🎯 스테이징 배포: ${{ needs.staging-deployment.result }}"
           echo "🌐 스테이징 백엔드: $STAGING_BACKEND_URL"
           echo "🌐 스테이징 프런트엔드: $STAGING_FRONTEND_URL"
         fi
         
         # 프로덕션 결과 표시 (main 브랜치에서만)
         if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          echo "🚀 프로덕션 배포 검증: ${{ needs.deployment-verification.result }}"
+          echo "🚀 프로덕션 배포: ${{ needs.production-deployment.result }}"
           echo "🌐 프로덕션 백엔드: $PROD_BACKEND_URL"
           echo "🌐 프로덕션 프런트엔드: $PROD_FRONTEND_URL"
         fi
         
     - name: ❌ Failure notification
-      if: needs.backend-safe-checks.result == 'failure' || needs.frontend-safe-checks.result == 'failure'
+      if: needs.backend-safe-checks.result == 'failure' || needs.frontend-safe-checks.result == 'failure' || needs.production-deployment.result == 'failure' || needs.staging-deployment.result == 'failure'
       run: |
-        echo "❌ 일부 테스트 실패"
+        echo "❌ 일부 테스트 또는 배포 실패"
         echo "🔧 백엔드: ${{ needs.backend-safe-checks.result }}"
         echo "🔧 프런트엔드: ${{ needs.frontend-safe-checks.result }}"
         
         # 스테이징 실패 확인
-        if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-          echo "🎯 스테이징 시뮬레이션: ${{ needs.staging-deployment-simulation.result }}"
+        if [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+          echo "🎯 스테이징 배포: ${{ needs.staging-deployment.result }}"
         fi
         
         # 프로덕션 실패 확인
         if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-          echo "🚀 프로덕션 배포 검증: ${{ needs.deployment-verification.result }}"
+          echo "🚀 프로덕션 배포: ${{ needs.production-deployment.result }}"
         fi
         
         echo "📝 실패한 단계를 확인하고 수정이 필요합니다"
