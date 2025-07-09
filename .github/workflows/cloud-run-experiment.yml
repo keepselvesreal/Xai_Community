@@ -1,4 +1,4 @@
-name: 🚀 Cloud Run 실험용 배포
+name: 🧪 Cloud Run 실험용 배포 (디버깅 테스트)
 
 on:
   push:
@@ -39,7 +39,7 @@ jobs:
         cd cloud-run-experiment
         uv run python -c "import main; print('✅ FastAPI 앱 임포트 성공')"
 
-  # 실험용 배포 (experiment 브랜치에서만)
+  # 🧪 실험용 Cloud Run 배포 (experiment 브랜치에서만)
   experimental-deployment:
     needs: [basic-checks]
     runs-on: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
       with:
         project_id: ${{ env.PROJECT_ID }}
     
-    - name: 🚀 실험용 배포 실행
+    - name: 🧪 실험용 Cloud Run 배포 실행
       run: |
         echo "🎯 실험용 배포 시작"
         echo "📂 Branch: ${{ github.ref }}"

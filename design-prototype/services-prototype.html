@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입주업체 서비스 - 디자인 프로토타입</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 커스텀 색상 팔레트 - 디자인 시스템 기반 */
+        .card-bg-primary {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border-color: #0284c7;
+        }
+        
+        .card-bg-secondary {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border-color: #d97706;
+        }
+        
+        .card-bg-accent {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border-color: #16a34a;
+        }
+        
+        .card-bg-neutral {
+            background: linear-gradient(135deg, #fafafa 0%, #f4f4f5 100%);
+            border-color: #71717a;
+        }
+        
+        .card-bg-purple {
+            background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+            border-color: #9333ea;
+        }
+        
+        .card-bg-rose {
+            background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+            border-color: #e11d48;
+        }
+        
+        /* 호버 효과 */
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+        
+        .service-card {
+            transition: all 0.3s ease;
+        }
+        
+        /* 반응형 그리드 - 1행에 3개 카드 */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+        }
+        
+        /* 태블릿에서는 2개 */
+        @media (max-width: 1024px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        /* 모바일에서는 1개 */
+        @media (max-width: 640px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 헤더 -->
+    <header class="bg-white shadow-sm border-b">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-900">입주업체 서비스</h1>
+                    <p class="text-gray-600 text-sm mt-1">믿을 수 있는 입주 업체들을 소개합니다</p>
+                </div>
+                <button class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                    📝 업체 등록
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 필터 및 검색 -->
+        <div class="mb-8">
+            <div class="flex flex-col sm:flex-row gap-4 mb-6">
+                <div class="flex-1">
+                    <input 
+                        type="text" 
+                        placeholder="서비스 검색..." 
+                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                </div>
+                <div class="flex gap-2">
+                    <select class="px-4 py-2 border border-gray-300 rounded-lg bg-white">
+                        <option>전체</option>
+                        <option>이사</option>
+                        <option>청소</option>
+                        <option>에어컨</option>
+                    </select>
+                    <select class="px-4 py-2 border border-gray-300 rounded-lg bg-white">
+                        <option>최신순</option>
+                        <option>조회수</option>
+                        <option>저장수</option>
+                        <option>후기수</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- 서비스 카드 그리드 - 1행에 3개 -->
+        <div class="services-grid" id="servicesGrid">
+            <!-- 카드들이 JavaScript로 동적 생성됩니다 -->
+        </div>
+    </main>
+
+    <script>
+        // Mock 데이터
+        const mockServices = [
+            {
+                id: 1,
+                name: "깔끔한 이사 서비스",
+                category: "이사",
+                verified: true,
+                cardBg: "card-bg-primary",
+                services: [
+                    { name: "원룸 이사", price: 80000, specialPrice: 60000 },
+                    { name: "투룸 이사", price: 120000, specialPrice: null },
+                    { name: "포장 서비스", price: 50000, specialPrice: 40000 }
+                ],
+                contact: {
+                    phone: "010-1234-5678",
+                    hours: "09:00-18:00"
+                },
+                stats: {
+                    views: 1250,
+                    bookmarks: 89,
+                    inquiries: 23,
+                    reviews: 45
+                }
+            },
+            {
+                id: 2,
+                name: "프리미엄 청소 전문",
+                category: "청소",
+                verified: false,
+                cardBg: "card-bg-secondary",
+                services: [
+                    { name: "입주 청소", price: 150000, specialPrice: 120000 },
+                    { name: "거주 청소", price: 80000, specialPrice: null },
+                    { name: "새집 증후군 케어", price: 100000, specialPrice: 80000 }
+                ],
+                contact: {
+                    phone: "010-9876-5432",
+                    hours: "08:00-19:00"
+                },
+                stats: {
+                    views: 890,
+                    bookmarks: 67,
+                    inquiries: 18,
+                    reviews: 34
+                }
+            },
+            {
+                id: 3,
+                name: "시원한 에어컨 설치",
+                category: "에어컨",
+                verified: true,
+                cardBg: "card-bg-accent",
+                services: [
+                    { name: "벽걸이 에어컨", price: 200000, specialPrice: 180000 },
+                    { name: "스탠드 에어컨", price: 250000, specialPrice: null },
+                    { name: "시스템 에어컨", price: 500000, specialPrice: 450000 }
+                ],
+                contact: {
+                    phone: "010-5555-7777",
+                    hours: "09:00-17:00"
+                },
+                stats: {
+                    views: 2100,
+                    bookmarks: 156,
+                    inquiries: 42,
+                    reviews: 78
+                }
+            },
+            {
+                id: 4,
+                name: "안전한 가전 설치",
+                category: "가전",
+                verified: true,
+                cardBg: "card-bg-neutral",
+                services: [
+                    { name: "세탁기 설치", price: 30000, specialPrice: 25000 },
+                    { name: "냉장고 설치", price: 40000, specialPrice: null },
+                    { name: "TV 벽걸이", price: 60000, specialPrice: 50000 }
+                ],
+                contact: {
+                    phone: "010-3333-4444",
+                    hours: "10:00-18:00"
+                },
+                stats: {
+                    views: 756,
+                    bookmarks: 45,
+                    inquiries: 12,
+                    reviews: 28
+                }
+            },
+            {
+                id: 5,
+                name: "완벽한 인테리어",
+                category: "인테리어",
+                verified: false,
+                cardBg: "card-bg-purple",
+                services: [
+                    { name: "도배/장판", price: 300000, specialPrice: 250000 },
+                    { name: "타일 시공", price: 200000, specialPrice: null },
+                    { name: "몰딩 시공", price: 150000, specialPrice: 120000 }
+                ],
+                contact: {
+                    phone: "010-7777-8888",
+                    hours: "09:00-18:00"
+                },
+                stats: {
+                    views: 1680,
+                    bookmarks: 123,
+                    inquiries: 35,
+                    reviews: 67
+                }
+            },
+            {
+                id: 6,
+                name: "믿을 수 있는 방충망",
+                category: "방충망",
+                verified: true,
+                cardBg: "card-bg-rose",
+                services: [
+                    { name: "방충망 설치", price: 80000, specialPrice: 70000 },
+                    { name: "방충망 교체", price: 60000, specialPrice: null },
+                    { name: "방충망 수리", price: 30000, specialPrice: 25000 }
+                ],
+                contact: {
+                    phone: "010-2222-3333",
+                    hours: "08:00-17:00"
+                },
+                stats: {
+                    views: 432,
+                    bookmarks: 28,
+                    inquiries: 8,
+                    reviews: 15
+                }
+            }
+        ];
+
+        // 카드 렌더링 함수
+        function renderServiceCard(service) {
+            const servicesHtml = service.services.map(item => `
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-700 text-sm">${item.name}</span>
+                    <div class="flex items-center gap-2">
+                        ${item.specialPrice ? `<span class="text-gray-400 line-through text-sm">${item.price.toLocaleString()}원</span>` : ''}
+                        <span class="text-red-500 font-medium text-sm">
+                            ${item.specialPrice ? item.specialPrice.toLocaleString() : item.price.toLocaleString()}원
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="service-card ${service.cardBg} border-2 rounded-lg p-6 cursor-pointer">
+                    <!-- 카테고리와 인증 -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
+                            ${service.category}
+                        </span>
+                        ${service.verified ? '<span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">인증</span>' : ''}
+                    </div>
+
+                    <!-- 업체명 -->
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">${service.name}</h3>
+
+                    <!-- 서비스 목록 -->
+                    <div class="space-y-2 mb-4">
+                        ${servicesHtml}
+                    </div>
+
+                    <!-- 연락처 -->
+                    <div class="flex items-center gap-4 mb-3 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <span class="text-pink-500">📞</span>
+                            <span>${service.contact.phone}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-orange-500">⏰</span>
+                            <span>${service.contact.hours}</span>
+                        </div>
+                    </div>
+
+                    <!-- 통계 -->
+                    <div class="flex items-center justify-between text-sm text-gray-500">
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">
+                                👁️ ${service.stats.views}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                관심 ${service.stats.bookmarks}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                문의 ${service.stats.inquiries}
+                            </span>
+                            <span class="flex items-center gap-1">
+                                후기 ${service.stats.reviews}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 카드 렌더링
+        function renderServices() {
+            const servicesGrid = document.getElementById('servicesGrid');
+            servicesGrid.innerHTML = mockServices.map(service => renderServiceCard(service)).join('');
+        }
+
+        // 초기 렌더링
+        renderServices();
+    </script>
+</body>
+</html>

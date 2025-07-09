@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업체 상세 페이지 - 개선된 디자인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 북마크 버튼 애니메이션 */
+        .bookmark-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .bookmark-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        .bookmark-btn.active {
+            color: #ef4444;
+            animation: bookmarkPulse 0.6s ease-in-out;
+        }
+        
+        @keyframes bookmarkPulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        
+        /* 카드 호버 효과 */
+        .service-card {
+            transition: all 0.3s ease;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 별점 스타일 */
+        .star {
+            color: #fbbf24;
+        }
+        
+        .star.empty {
+            color: #d1d5db;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- 상단 네비게이션 -->
+        <div class="flex items-center justify-between mb-6">
+            <button class="flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors">
+                ← 목록으로
+            </button>
+            <div class="flex items-center gap-3">
+                <!-- 작성자 전용 수정/삭제 버튼 (문의하기, 찜하기 제거) -->
+                <button class="px-4 py-2 border border-blue-500 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors">
+                    ✏️ 수정
+                </button>
+                <button class="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 transition-colors">
+                    🗑️ 삭제
+                </button>
+            </div>
+        </div>
+
+        <!-- 업체명 카드 (우측 상단에 북마크 버튼 추가) -->
+        <div class="service-card bg-green-100 rounded-2xl p-8 mb-8 relative">
+            <!-- 북마크 버튼 - 우측 상단 -->
+            <button class="bookmark-btn absolute top-6 right-6 text-2xl hover:scale-110 transition-transform" 
+                    onclick="toggleBookmark(this)">
+                <span class="bookmark-icon">🔖</span>
+            </button>
+            
+            <div class="text-center">
+                <h1 class="text-3xl font-bold mb-2 text-green-800">깔끔한 이사 서비스</h1>
+                <div class="flex items-center justify-center gap-2 mb-4">
+                    <span class="text-green-700">이사 •</span>
+                    <div class="flex items-center gap-1">
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star empty">⭐</span>
+                        <span class="text-green-700">4.5</span>
+                    </div>
+                </div>
+                
+                <!-- 회사 링크 -->
+                <div class="mb-4">
+                    <a href="https://cleanmove-blog.co.kr" 
+                       target="_blank" 
+                       class="inline-flex items-center gap-2 text-green-700 hover:text-green-800 transition-colors">
+                        <span class="text-sm">🌐</span>
+                        <span class="text-sm underline">회사 블로그</span>
+                    </a>
+                </div>
+                
+                <!-- 통계 표시 (조회수는 이모지, 나머지는 한글) -->
+                <div class="flex items-center justify-center gap-6 mb-4">
+                    <div class="flex items-center gap-1 text-green-700">
+                        <span class="text-sm">👁️</span>
+                        <span class="font-medium">1,250</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-green-700">
+                        <span class="text-sm">관심</span>
+                        <span class="font-medium">89</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-green-700">
+                        <span class="text-sm">문의</span>
+                        <span class="font-medium">23</span>
+                    </div>
+                    <div class="flex items-center gap-1 text-green-700">
+                        <span class="text-sm">후기</span>
+                        <span class="font-medium">45</span>
+                    </div>
+                </div>
+                
+            </div>
+        </div>
+
+        <div class="space-y-8">
+            <!-- 업체 소개 및 서비스 가격 통합 섹션 -->
+            <div class="service-card bg-white rounded-2xl p-6 border border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    🏢 업체 소개 및 서비스
+                </h2>
+                
+                <!-- 업체 소개 -->
+                <div class="text-gray-700 leading-relaxed mb-8">
+                    <p class="mb-4">
+                        <strong>깔끔한 이사 서비스</strong>는 15년 경력의 전문 이사 업체입니다. 
+                        고객의 소중한 물건을 안전하게 운반하는 것을 최우선으로 생각하며, 
+                        체계적인 포장과 운반 시스템을 통해 고객 만족도 98%를 달성하고 있습니다.
+                    </p>
+                    
+                    <div class="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+                        <h4 class="font-semibold text-blue-900 mb-2">🎯 서비스 특징</h4>
+                        <ul class="text-sm text-blue-800 space-y-1">
+                            <li>• 전문 포장재 사용으로 물건 손상 제로</li>
+                            <li>• 숙련된 작업팀의 신속하고 정확한 작업</li>
+                            <li>• 이사 후 청소 서비스 무료 제공</li>
+                            <li>• 물건 분실 및 파손에 대한 100% 보상</li>
+                        </ul>
+                    </div>
+                    
+                    <p class="mb-6">
+                        저희는 단순한 이사가 아닌, 고객의 새로운 시작을 도와드리는 
+                        파트너가 되고자 합니다. 언제든지 편안하게 문의해 주세요.
+                    </p>
+                </div>
+                
+                <!-- 서비스 및 가격 -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                        💰 서비스 및 가격
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="flex justify-between items-start p-4 bg-gray-50 rounded-lg">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 mb-1">원룸 이사</h4>
+                                <p class="text-gray-600 text-sm">원룸 전체 짐 포장 및 이사</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <div class="text-gray-400 line-through text-sm">80,000원</div>
+                                <div class="text-red-500 font-bold text-lg">60,000원</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-start p-4 bg-gray-50 rounded-lg">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 mb-1">투룸 이사</h4>
+                                <p class="text-gray-600 text-sm">투룸 전체 짐 포장 및 이사</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <div class="text-red-500 font-bold text-lg">120,000원</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex justify-between items-start p-4 bg-gray-50 rounded-lg">
+                            <div class="flex-1">
+                                <h4 class="font-medium text-gray-900 mb-1">포장 서비스</h4>
+                                <p class="text-gray-600 text-sm">전문 포장 서비스</p>
+                            </div>
+                            <div class="text-right ml-4">
+                                <div class="text-gray-400 line-through text-sm">50,000원</div>
+                                <div class="text-red-500 font-bold text-lg">40,000원</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                        <p class="text-sm text-yellow-800">💡 정확한 견적은 현장 상담 후 제공됩니다.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 업체 연락처 섹션 (별도 분리) -->
+            <div class="service-card bg-white rounded-2xl p-6 border border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    📞 연락처 정보
+                </h2>
+                
+                <!-- 운영시간과 위치 정보를 상단에 뱃지 형태로 표시 -->
+                <div class="flex flex-wrap items-center gap-3 mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg border border-blue-200">
+                    <div class="flex items-center gap-2">
+                        <span class="text-orange-500">⏰</span>
+                        <span class="text-sm font-medium text-gray-700">운영시간</span>
+                        <span class="px-2 py-1 bg-white rounded-full text-xs font-semibold text-orange-600 border border-orange-200">
+                            09:00~18:00
+                        </span>
+                    </div>
+                    <div class="h-4 w-px bg-gray-300"></div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-red-500">📍</span>
+                        <span class="text-sm font-medium text-gray-700">위치</span>
+                        <span class="px-2 py-1 bg-white rounded-full text-xs font-semibold text-red-600 border border-red-200">
+                            서울시 강남구 테헤란로 123
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- 주요 연락처 정보 (세로 배열) -->
+                <div class="space-y-4">
+                    <!-- 회사 링크 -->
+                    <div class="flex items-center gap-4 p-4 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors">
+                        <div class="flex items-center justify-center w-12 h-12 bg-blue-500 rounded-full">
+                            <span class="text-white text-xl">🌐</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">회사 블로그</div>
+                            <a href="https://cleanmove-blog.co.kr" 
+                               target="_blank" 
+                               class="text-blue-600 hover:text-blue-800 text-sm underline">
+                                https://cleanmove-blog.co.kr
+                            </a>
+                        </div>
+                        <div class="text-blue-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- 전화번호 -->
+                    <div class="flex items-center gap-4 p-4 bg-green-50 rounded-lg hover:bg-green-100 transition-colors">
+                        <div class="flex items-center justify-center w-12 h-12 bg-green-500 rounded-full">
+                            <span class="text-white text-xl">📞</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">전화 문의</div>
+                            <a href="tel:010-1234-5678" 
+                               class="text-green-600 hover:text-green-800 text-lg font-semibold">
+                                010-1234-5678
+                            </a>
+                        </div>
+                        <div class="text-green-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    
+                    <!-- 이메일 -->
+                    <div class="flex items-center gap-4 p-4 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors">
+                        <div class="flex items-center justify-center w-12 h-12 bg-purple-500 rounded-full">
+                            <span class="text-white text-xl">📧</span>
+                        </div>
+                        <div class="flex-1">
+                            <div class="font-medium text-gray-900">이메일 문의</div>
+                            <a href="mailto:contact@cleanmove.co.kr" 
+                               class="text-purple-600 hover:text-purple-800 text-lg font-semibold">
+                                contact@cleanmove.co.kr
+                            </a>
+                        </div>
+                        <div class="text-purple-500">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 하단 안내 문구 -->
+                <div class="mt-6 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <p class="text-sm text-gray-600 text-center">
+                        💡 빠른 상담을 원하시면 전화 문의를, 자세한 문의는 이메일을 이용해 주세요.
+                    </p>
+                </div>
+            </div>
+
+            <!-- 문의 내용과 답변 섹션 -->
+            <div class="service-card bg-white rounded-2xl p-6 border border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    💬 문의 내용
+                </h2>
+                
+                <!-- 기존 문의 목록 -->
+                <div class="space-y-4 mb-6">
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-900">김**님</span>
+                                <span class="text-xs px-2 py-1 rounded bg-green-100 text-green-600">공개</span>
+                            </div>
+                            <span class="text-sm text-gray-500">2024.07.08</span>
+                        </div>
+                        <p class="text-gray-700 text-sm">원룸에서 투룸으로 이사 예정인데, 큰 냉장고와 세탁기도 같이 옮겨주시나요?</p>
+                        
+                        <!-- 답글 -->
+                        <div class="mt-3 ml-4 p-3 bg-blue-50 rounded-lg border-l-4 border-blue-400">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="text-sm font-medium text-blue-700">깔끔한 이사 서비스</span>
+                                <span class="text-xs text-blue-600">업체</span>
+                            </div>
+                            <p class="text-sm text-blue-800">네, 대형 가전제품도 전문 장비를 이용해 안전하게 운반해드립니다. 별도 추가비용은 없으니 걱정하지 마세요!</p>
+                        </div>
+                    </div>
+
+                    <div class="border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center gap-2">
+                                <span class="font-medium text-gray-900">이**님</span>
+                                <span class="text-xs px-2 py-1 rounded bg-red-100 text-red-600">비공개</span>
+                            </div>
+                            <span class="text-sm text-gray-500">2024.07.07</span>
+                        </div>
+                        <p class="text-gray-500 text-sm">[비공개 문의입니다]</p>
+                    </div>
+                </div>
+
+                <!-- 문의하기 버튼 -->
+                <div class="flex justify-center mb-6">
+                    <button 
+                        onclick="toggleInquiryForm()"
+                        class="bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                    >
+                        💬 문의하기
+                    </button>
+                </div>
+                
+                <!-- 문의 작성 폼 (처음에는 숨김) -->
+                <div id="inquiryForm" class="hidden p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h3 class="font-medium text-gray-900 mb-4">문의 작성</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">제목 *</label>
+                            <input
+                                type="text"
+                                placeholder="문의 제목을 입력해주세요"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">내용 *</label>
+                            <textarea
+                                placeholder="문의 내용을 상세히 작성해주세요"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                rows="4"
+                            ></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">연락처 (선택)</label>
+                            <input
+                                type="text"
+                                placeholder="연락받을 전화번호 또는 이메일"
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="inquiryPublic"
+                                checked
+                                class="w-4 h-4 text-blue-600"
+                            />
+                            <label for="inquiryPublic" class="text-sm text-gray-700">
+                                문의 내용을 공개합니다 (다른 사용자들이 볼 수 있습니다)
+                            </label>
+                        </div>
+                        
+                        <button class="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">
+                            문의 등록
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 후기 섹션 -->
+            <div class="service-card bg-white rounded-2xl p-6 border border-gray-200">
+                <h2 class="text-xl font-bold text-gray-900 mb-4">🌟 후기 12개</h2>
+                
+                <!-- 평점 표시 -->
+                <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="text-sm text-gray-600">평점:</span>
+                        <div class="flex items-center gap-1">
+                            <span class="star">⭐</span>
+                            <span class="star">⭐</span>
+                            <span class="star">⭐</span>
+                            <span class="star">⭐</span>
+                            <span class="star empty">⭐</span>
+                        </div>
+                        <span class="text-gray-900 font-medium">(4.5)</span>
+                    </div>
+                </div>
+
+                <!-- 실제 후기 목록 -->
+                <div class="space-y-4 mb-6">
+                    <div class="border-b border-gray-200 pb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="font-medium text-gray-900">박**님</span>
+                            <div class="flex items-center gap-1">
+                                <span class="star text-sm">⭐</span>
+                                <span class="star text-sm">⭐</span>
+                                <span class="star text-sm">⭐</span>
+                                <span class="star text-sm">⭐</span>
+                                <span class="star text-sm">⭐</span>
+                            </div>
+                            <span class="text-sm text-gray-500">2024.07.05</span>
+                        </div>
+                        <p class="text-gray-700">정말 깔끔하고 친절하게 이사해주셨어요! 포장도 꼼꼼히 해주시고, 새 집에서 정리까지 도와주셔서 감사했습니다. 다음에도 꼭 이용하겠습니다.</p>
+                    </div>
+
+                    <div class="border-b border-gray-200 pb-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <span class="font-medium text-gray-900">최**님</span>
+                            <div class="flex items-center gap-1">
+                                <span class="star text-sm">⭐</span>
+                                <span class="star text-sm">⭐</span>
+                                <span class="star text-sm">⭐</span>
+                                <span class="star text-sm">⭐</span>
+                                <span class="star empty text-sm">⭐</span>
+                            </div>
+                            <span class="text-sm text-gray-500">2024.07.03</span>
+                        </div>
+                        <p class="text-gray-700">시간 약속도 잘 지키시고, 가격도 합리적이었어요. 작업하시는 분들도 모두 친절하시고 전문적이었습니다.</p>
+                    </div>
+                </div>
+
+                <!-- 후기 작성 -->
+                <div class="border-t border-gray-200 pt-6">
+                    <h3 class="font-medium text-gray-900 mb-3">후기 작성</h3>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">별점 평가 *</label>
+                            <div class="flex items-center gap-2">
+                                <div class="flex items-center gap-1" id="ratingStars">
+                                    <span class="text-2xl cursor-pointer hover:scale-110 transition-transform" onclick="setRating(1)">⭐</span>
+                                    <span class="text-2xl cursor-pointer hover:scale-110 transition-transform" onclick="setRating(2)">⭐</span>
+                                    <span class="text-2xl cursor-pointer hover:scale-110 transition-transform" onclick="setRating(3)">⭐</span>
+                                    <span class="text-2xl cursor-pointer hover:scale-110 transition-transform" onclick="setRating(4)">⭐</span>
+                                    <span class="text-2xl cursor-pointer hover:scale-110 transition-transform" onclick="setRating(5)">⭐</span>
+                                </div>
+                                <span class="text-sm text-gray-500 ml-2" id="ratingText">(0점)</span>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">후기 내용 *</label>
+                            <textarea
+                                placeholder="서비스 이용 후기를 상세히 작성해주세요..."
+                                class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+                                rows="4"
+                            ></textarea>
+                        </div>
+                        
+                        <button class="bg-green-600 text-white px-6 py-3 rounded-xl font-medium hover:bg-green-700 transition-colors">
+                            후기 등록
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentRating = 0;
+        let isBookmarked = false;
+
+        // 북마크 토글 함수
+        function toggleBookmark(button) {
+            isBookmarked = !isBookmarked;
+            const icon = button.querySelector('.bookmark-icon');
+            
+            if (isBookmarked) {
+                icon.textContent = '🔖';
+                button.classList.add('active');
+            } else {
+                icon.textContent = '🔖';
+                button.classList.remove('active');
+            }
+        }
+
+        // 문의 폼 토글 함수
+        function toggleInquiryForm() {
+            const form = document.getElementById('inquiryForm');
+            form.classList.toggle('hidden');
+        }
+
+        // 별점 설정 함수
+        function setRating(rating) {
+            currentRating = rating;
+            const stars = document.querySelectorAll('#ratingStars span');
+            const ratingText = document.getElementById('ratingText');
+            
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.style.color = '#fbbf24';
+                } else {
+                    star.style.color = '#d1d5db';
+                }
+            });
+            
+            ratingText.textContent = `(${rating}점)`;
+        }
+
+        // 별점 호버 효과
+        document.querySelectorAll('#ratingStars span').forEach((star, index) => {
+            star.addEventListener('mouseenter', () => {
+                const stars = document.querySelectorAll('#ratingStars span');
+                stars.forEach((s, i) => {
+                    if (i <= index) {
+                        s.style.color = '#fbbf24';
+                    } else {
+                        s.style.color = '#d1d5db';
+                    }
+                });
+            });
+            
+            star.addEventListener('mouseleave', () => {
+                setRating(currentRating);
+            });
+        });
+
+        // 초기 별점 설정 (0점으로 시작)
+        setRating(0);
+    </script>
+</body>
+</html>

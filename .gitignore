@@ -86,3 +86,6 @@ logs/
 # Temporary files
 *.tmp
 *.temp
+
+# Google Cloud Service Account Keys
+key.json

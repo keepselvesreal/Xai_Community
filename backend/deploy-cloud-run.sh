@@ -102,14 +102,26 @@ DEPLOY_OUTPUT=$(gcloud run deploy "$SERVICE_NAME" \
     --platform managed \
     --region "$REGION" \
     --allow-unauthenticated \
-    --port 8000 \
+    --port "$PORT" \
     --memory 1Gi \
     --cpu 1 \
     --min-instances 0 \
     --max-instances 10 \
     --concurrency 80 \
     --timeout 300 \
-    --set-env-vars ENVIRONMENT=development 2>&1)
+    --set-env-vars \
+    ENVIRONMENT="$ENVIRONMENT",\
+    MONGODB_URL="$MONGODB_URL",\
+    DATABASE_NAME="$DATABASE_NAME",\
+    SECRET_KEY="$SECRET_KEY",\
+    ALLOWED_ORIGINS="$ALLOWED_ORIGINS",\
+    FRONTEND_URL="$FRONTEND_URL",\
+    PORT="$PORT",\
+    LOG_LEVEL="$LOG_LEVEL",\
+    MAX_COMMENT_DEPTH="$MAX_COMMENT_DEPTH",\
+    ENABLE_DOCS="$ENABLE_DOCS",\
+    ENABLE_CORS="$ENABLE_CORS",\
+    REFRESH_TOKEN_EXPIRE_DAYS="$REFRESH_TOKEN_EXPIRE_DAYS" 2>&1)
 
 DEPLOY_EXIT_CODE=$?
 if [ $DEPLOY_EXIT_CODE -eq 0 ]; then
@@ -121,28 +133,8 @@ else
     exit 1
 fi
 
-# 환경변수 업데이트
-log_info "환경변수 업데이트 중..."
-gcloud run services update "$SERVICE_NAME" \
-    --region "$REGION" \
-    --set-env-vars \
-    MONGODB_URL="$MONGODB_URL",\
-    DATABASE_NAME="$DATABASE_NAME",\
-    SECRET_KEY="$SECRET_KEY",\
-    ALLOWED_ORIGINS="$ALLOWED_ORIGINS",\
-    FRONTEND_URL="$FRONTEND_URL",\
-    LOG_LEVEL="$LOG_LEVEL",\
-    MAX_COMMENT_DEPTH="$MAX_COMMENT_DEPTH",\
-    ENABLE_DOCS="$ENABLE_DOCS",\
-    ENABLE_CORS="$ENABLE_CORS",\
-    REFRESH_TOKEN_EXPIRE_DAYS="$REFRESH_TOKEN_EXPIRE_DAYS"
-
-if [ $? -eq 0 ]; then
-    log_success "환경변수 업데이트 완료!"
-else
-    log_error "환경변수 업데이트 실패!"
-    exit 1
-fi
+# 환경변수는 배포 시 함께 설정되므로 별도 업데이트 불필요
+log_info "환경변수가 배포와 함께 설정되었습니다."
 
 # 서비스 URL 확인
 log_info "서비스 URL 확인 중..."

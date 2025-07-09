@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업체 등록 페이지 - 개선된 디자인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 커스텀 색상 및 스타일 */
+        .service-item {
+            transition: all 0.3s ease;
+        }
+        
+        .service-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+        
+        .service-add-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+            border: none;
+            transition: all 0.3s ease;
+        }
+        
+        .service-add-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+        
+        .service-remove-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .service-remove-btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .input-field {
+            transition: all 0.2s ease;
+        }
+        
+        .input-field:focus {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+        }
+        
+        .service-counter {
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        }
+        
+        .special-price-toggle {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        }
+        
+        .special-price-toggle.active {
+            background: linear-gradient(135deg, #d97706 0%, #92400e 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto p-6">
+        <!-- 헤더 -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">업체 등록</h1>
+            <p class="text-gray-600">아파트 주민들에게 유용한 서비스를 제공하는 업체를 등록해보세요.</p>
+        </div>
+
+        <!-- 업체 등록 폼 -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+            <form class="space-y-8">
+                <!-- 카테고리 선택 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        카테고리 <span class="text-red-500">*</span>
+                    </label>
+                    <select class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="moving">이사</option>
+                        <option value="cleaning">청소</option>
+                        <option value="aircon">에어컨</option>
+                    </select>
+                </div>
+
+                <!-- 업체명 입력 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        업체명 <span class="text-red-500">*</span>
+                    </label>
+                    <input
+                        type="text"
+                        placeholder="업체명을 입력하세요"
+                        class="input-field w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        value="깔끔한 이사 서비스"
+                    />
+                </div>
+
+                <!-- 연락처와 문의 가능시간 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            연락처 <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="tel"
+                            placeholder="연락처를 입력하세요"
+                            class="input-field w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value="010-1234-5678"
+                        />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-3">
+                            문의 가능시간 <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="예: 09:00~18:00"
+                            class="input-field w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            value="09:00~18:00"
+                        />
+                    </div>
+                </div>
+
+                <!-- 서비스 목록 섹션 - 개선된 디자인 -->
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <label class="block text-sm font-medium text-gray-700">
+                            서비스 목록 <span class="text-red-500">*</span>
+                        </label>
+                        <button
+                            type="button"
+                            class="service-add-btn px-4 py-2 text-white rounded-lg text-sm font-medium flex items-center gap-2"
+                            onclick="addService()"
+                        >
+                            <span>➕</span>
+                            <span>서비스 추가</span>
+                        </button>
+                    </div>
+                    
+                    <!-- 서비스 목록 컨테이너 -->
+                    <div id="servicesList" class="space-y-4">
+                        <!-- 서비스 아이템들이 여기에 동적으로 추가됩니다 -->
+                    </div>
+                </div>
+
+                <!-- 업체 소개 -->
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-3">
+                        업체 소개
+                    </label>
+                    <textarea
+                        placeholder="업체 소개를 입력하세요..."
+                        rows="6"
+                        class="input-field w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                    >전문적이고 신뢰할 수 있는 이사 서비스를 제공합니다. 고객 만족을 최우선으로 생각하며, 안전하고 깔끔한 이사를 도와드립니다.</textarea>
+                    <div class="mt-2 text-xs text-gray-500 text-right">
+                        86/1,000자
+                    </div>
+                </div>
+
+                <!-- 등록 가이드라인 -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <h4 class="font-medium text-blue-900 mb-2">📝 업체 등록 가이드라인</h4>
+                    <ul class="text-sm text-blue-800 space-y-1">
+                        <li>• 정확하고 신뢰할 수 있는 업체 정보를 제공해주세요</li>
+                        <li>• 서비스 내용과 가격을 명확하게 기재해주세요</li>
+                        <li>• 연락처와 문의 가능시간을 정확히 입력해주세요</li>
+                        <li>• 아파트 주민들에게 도움이 되는 서비스를 등록해주세요</li>
+                        <li>• 허위 정보나 과장된 내용은 피해주세요</li>
+                    </ul>
+                </div>
+
+                <!-- 버튼 영역 -->
+                <div class="flex justify-end gap-3 pt-6 border-t border-gray-200">
+                    <button
+                        type="button"
+                        class="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200"
+                    >
+                        취소
+                    </button>
+                    <button
+                        type="submit"
+                        class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center gap-2"
+                    >
+                        <span>📝</span>
+                        <span>업체 등록</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        let serviceCount = 0;
+        
+        // 서비스 목록 초기 데이터
+        const initialServices = [
+            {
+                name: "원룸 이사",
+                price: "80000",
+                specialPrice: "60000",
+                hasSpecialPrice: true
+            },
+            {
+                name: "투룸 이사",
+                price: "120000",
+                specialPrice: "",
+                hasSpecialPrice: false
+            },
+            {
+                name: "포장 서비스",
+                price: "50000",
+                specialPrice: "40000",
+                hasSpecialPrice: true
+            }
+        ];
+
+        // 서비스 아이템 HTML 생성
+        function createServiceItem(service, index) {
+            const serviceId = `service-${index}`;
+            const hasSpecialPrice = service.hasSpecialPrice;
+            
+            return `
+                <div class="service-item bg-white border-2 border-gray-200 rounded-xl p-6 relative" data-service-id="${serviceId}">
+                    <!-- 서비스 번호 및 삭제 버튼 -->
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="service-counter flex items-center gap-2 px-3 py-1 rounded-full">
+                            <span class="text-sm font-medium text-gray-700">서비스 ${index + 1}</span>
+                        </div>
+                        ${index > 0 ? `
+                            <button 
+                                type="button" 
+                                class="service-remove-btn text-red-500 hover:text-red-700 text-sm font-medium flex items-center gap-1"
+                                onclick="removeService('${serviceId}')"
+                            >
+                                <span>🗑️</span>
+                                <span>삭제</span>
+                            </button>
+                        ` : ''}
+                    </div>
+
+                    <!-- 서비스 이름 -->
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            서비스 이름
+                        </label>
+                        <input
+                            type="text"
+                            placeholder="서비스 이름을 입력하세요"
+                            class="input-field w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white"
+                            value="${service.name}"
+                        />
+                    </div>
+
+                    <!-- 가격 섹션 -->
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between">
+                            <label class="block text-sm font-medium text-gray-700">
+                                가격 정보
+                            </label>
+                            <button
+                                type="button"
+                                class="special-price-toggle ${hasSpecialPrice ? 'active' : ''} px-3 py-1 text-sm rounded-full border transition-all duration-200"
+                                onclick="toggleSpecialPrice('${serviceId}')"
+                            >
+                                <span class="text-amber-600">${hasSpecialPrice ? '🔥' : '💰'}</span>
+                                <span class="ml-1 font-medium ${hasSpecialPrice ? 'text-white' : 'text-amber-700'}">${hasSpecialPrice ? '특가 적용' : '특가 설정'}</span>
+                            </button>
+                        </div>
+
+                        <div class="grid grid-cols-1 ${hasSpecialPrice ? 'md:grid-cols-2' : ''} gap-4">
+                            <!-- 기본 가격 -->
+                            <div>
+                                <label class="block text-xs font-medium text-gray-600 mb-2">
+                                    ${hasSpecialPrice ? '원래 가격' : '가격'}
+                                </label>
+                                <div class="relative">
+                                    <input
+                                        type="number"
+                                        placeholder="가격을 입력하세요"
+                                        class="input-field w-full px-4 py-3 pr-12 bg-gray-50 border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white"
+                                        value="${service.price}"
+                                        min="0"
+                                    />
+                                    <span class="absolute right-3 top-3 text-gray-500 text-sm">원</span>
+                                </div>
+                            </div>
+
+                            <!-- 특가 (특가 활성화 시에만 표시) -->
+                            ${hasSpecialPrice ? `
+                                <div class="special-price-section">
+                                    <label class="block text-xs font-medium text-amber-700 mb-2">
+                                        특가 가격
+                                    </label>
+                                    <div class="relative">
+                                        <input
+                                            type="number"
+                                            placeholder="특가 가격을 입력하세요"
+                                            class="input-field w-full px-4 py-3 pr-12 bg-amber-50 border border-amber-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white"
+                                            value="${service.specialPrice}"
+                                            min="0"
+                                        />
+                                        <span class="absolute right-3 top-3 text-amber-600 text-sm">원</span>
+                                    </div>
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <!-- 가격 미리보기 -->
+                        ${hasSpecialPrice ? `
+                            <div class="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                                <div class="text-sm text-amber-800">
+                                    <span class="line-through text-gray-500">${parseInt(service.price).toLocaleString()}원</span>
+                                    <span class="mx-2">→</span>
+                                    <span class="font-bold text-amber-700">${parseInt(service.specialPrice).toLocaleString()}원</span>
+                                    <span class="ml-2 text-xs bg-red-100 text-red-600 px-2 py-1 rounded">특가!</span>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 서비스 목록 렌더링
+        function renderServices() {
+            const servicesList = document.getElementById('servicesList');
+            servicesList.innerHTML = initialServices.map((service, index) => createServiceItem(service, index)).join('');
+            serviceCount = initialServices.length;
+        }
+
+        // 서비스 추가
+        function addService() {
+            const servicesList = document.getElementById('servicesList');
+            const newService = {
+                name: "",
+                price: "",
+                specialPrice: "",
+                hasSpecialPrice: false
+            };
+            
+            servicesList.insertAdjacentHTML('beforeend', createServiceItem(newService, serviceCount));
+            serviceCount++;
+        }
+
+        // 서비스 삭제
+        function removeService(serviceId) {
+            const serviceElement = document.querySelector(`[data-service-id="${serviceId}"]`);
+            if (serviceElement) {
+                serviceElement.remove();
+                
+                // 서비스 번호 재정렬
+                const serviceItems = document.querySelectorAll('.service-item');
+                serviceItems.forEach((item, index) => {
+                    const counter = item.querySelector('.service-counter span');
+                    if (counter) {
+                        counter.textContent = `서비스 ${index + 1}`;
+                    }
+                });
+            }
+        }
+
+        // 특가 토글
+        function toggleSpecialPrice(serviceId) {
+            const serviceElement = document.querySelector(`[data-service-id="${serviceId}"]`);
+            const toggleBtn = serviceElement.querySelector('.special-price-toggle');
+            const isActive = toggleBtn.classList.contains('active');
+            
+            if (isActive) {
+                // 특가 비활성화
+                toggleBtn.classList.remove('active');
+                toggleBtn.innerHTML = '<span class="text-amber-600">💰</span><span class="ml-1 font-medium text-amber-700">특가 설정</span>';
+                
+                // 특가 입력 필드 제거
+                const specialPriceSection = serviceElement.querySelector('.special-price-section');
+                if (specialPriceSection) {
+                    specialPriceSection.remove();
+                }
+                
+                // 가격 미리보기 제거
+                const pricePreview = serviceElement.querySelector('.bg-amber-50');
+                if (pricePreview) {
+                    pricePreview.remove();
+                }
+                
+                // 그리드 레이아웃 변경
+                const priceGrid = serviceElement.querySelector('.grid');
+                priceGrid.classList.remove('md:grid-cols-2');
+                
+                // 기본 가격 라벨 변경
+                const priceLabel = serviceElement.querySelector('label');
+                if (priceLabel) {
+                    priceLabel.textContent = '가격';
+                }
+            } else {
+                // 특가 활성화
+                toggleBtn.classList.add('active');
+                toggleBtn.innerHTML = '<span class="text-amber-600">🔥</span><span class="ml-1 font-medium text-white">특가 적용</span>';
+                
+                // 그리드 레이아웃 변경
+                const priceGrid = serviceElement.querySelector('.grid');
+                priceGrid.classList.add('md:grid-cols-2');
+                
+                // 기본 가격 라벨 변경
+                const priceLabel = serviceElement.querySelector('label');
+                if (priceLabel) {
+                    priceLabel.textContent = '원래 가격';
+                }
+                
+                // 특가 입력 필드 추가
+                const priceGrid2 = serviceElement.querySelector('.grid');
+                priceGrid2.insertAdjacentHTML('beforeend', `
+                    <div class="special-price-section">
+                        <label class="block text-xs font-medium text-amber-700 mb-2">
+                            특가 가격
+                        </label>
+                        <div class="relative">
+                            <input
+                                type="number"
+                                placeholder="특가 가격을 입력하세요"
+                                class="input-field w-full px-4 py-3 pr-12 bg-amber-50 border border-amber-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent focus:bg-white"
+                                min="0"
+                            />
+                            <span class="absolute right-3 top-3 text-amber-600 text-sm">원</span>
+                        </div>
+                    </div>
+                `);
+            }
+        }
+
+        // 초기 렌더링
+        renderServices();
+    </script>
+</body>
+</html>
