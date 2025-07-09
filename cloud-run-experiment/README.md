@@ -7,6 +7,8 @@
 - `roles/serviceusage.serviceUsageAdmin` - API 활성화 권한
 - `roles/run.admin` - Cloud Run 관리 권한
 - `roles/cloudbuild.builds.builder` - Cloud Build 빌더 권한
+- `roles/iam.serviceAccountUser` - 서비스 계정 사용자 권한
+- `roles/iam.serviceAccountTokenCreator` - 서비스 계정 토큰 생성자 권한
 
 ## 프로젝트 구조
 ```
