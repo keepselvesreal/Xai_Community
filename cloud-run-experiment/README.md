@@ -3,6 +3,11 @@
 ## 개요
 이 프로젝트는 Cloud Run 배포를 간단하게 테스트하고 디버깅하기 위한 실험용 FastAPI 애플리케이션입니다.
 
+**✅ 서비스 계정 권한 설정 완료**
+- `roles/serviceusage.serviceUsageAdmin` - API 활성화 권한
+- `roles/run.admin` - Cloud Run 관리 권한
+- `roles/cloudbuild.builds.builder` - Cloud Build 빌더 권한
+
 ## 프로젝트 구조
 ```
 cloud-run-experiment/
