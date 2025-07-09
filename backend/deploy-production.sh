@@ -87,6 +87,7 @@ log_success "프로젝트 설정 완료: $GCP_PROJECT_ID"
 log_info "필요한 Google Cloud 서비스들이 활성화되어 있다고 가정합니다..."
 log_info "  - Cloud Build API (cloudbuild.googleapis.com)"
 log_info "  - Cloud Run API (run.googleapis.com)"
+log_info "  - Cloud Resource Manager API (cloudresourcemanager.googleapis.com)"
 log_success "서비스 활성화 확인 완료"
 
 # Dockerfile 확인
