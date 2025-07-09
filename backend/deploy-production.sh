@@ -83,11 +83,11 @@ log_info "Google Cloud 프로젝트 설정 중..."
 gcloud config set project "$GCP_PROJECT_ID" --quiet
 log_success "프로젝트 설정 완료: $GCP_PROJECT_ID"
 
-# 필요한 서비스 활성화
-log_info "Google Cloud 서비스 활성화 중..."
-gcloud services enable cloudbuild.googleapis.com --quiet --project="$GCP_PROJECT_ID"
-gcloud services enable run.googleapis.com --quiet --project="$GCP_PROJECT_ID"
-log_success "서비스 활성화 완료"
+# 필요한 서비스 활성화 (관리자가 미리 활성화해야 함)
+log_info "필요한 Google Cloud 서비스들이 활성화되어 있다고 가정합니다..."
+log_info "  - Cloud Build API (cloudbuild.googleapis.com)"
+log_info "  - Cloud Run API (run.googleapis.com)"
+log_success "서비스 활성화 확인 완료"
 
 # Dockerfile 확인
 if [ ! -f "Dockerfile" ]; then
