@@ -93,12 +93,13 @@ fi
 
 # 1단계: Docker 이미지 빌드
 log_info "=== 1단계: Docker 이미지 빌드 시작 ==="
-log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --verbosity=debug"
+log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --suppress-logs"
 
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
 
-BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --verbosity=debug 2>&1)
+# 로그 스트리밍 문제 해결을 위해 --suppress-logs 사용
+BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --suppress-logs 2>&1)
 BUILD_EXIT_CODE=$?
 
 log_debug "빌드 완료 시간: $(date)"
@@ -109,6 +110,15 @@ if [ $BUILD_EXIT_CODE -ne 0 ]; then
     echo "=== 빌드 에러 로그 ==="
     echo "$BUILD_OUTPUT"
     echo "===================="
+    
+    # 빌드 ID 추출해서 로그 조회 시도
+    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'Build ID: [a-zA-Z0-9-]*' | cut -d' ' -f3)
+    if [ -n "$BUILD_ID" ]; then
+        log_info "빌드 ID: $BUILD_ID"
+        log_info "상세 로그 조회 중..."
+        gcloud builds log "$BUILD_ID" --project="$GCP_PROJECT_ID" || echo "로그 조회 실패"
+    fi
+    
     exit 1
 fi
 
