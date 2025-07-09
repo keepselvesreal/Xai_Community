@@ -203,14 +203,18 @@ if [ -f ".env.staging" ]; then
                 continue
             fi
             
-            # 환경변수 배열에 추가
-            ENV_VARS_ARRAY+=("$var_name=$var_value")
+            # 환경변수 배열에 추가 (쉼표 포함 시 이스케이핑)
+            if [[ "$var_value" == *","* ]]; then
+                ENV_VARS_ARRAY+=("$var_name=\"$var_value\"")
+            else
+                ENV_VARS_ARRAY+=("$var_name=$var_value")
+            fi
             ENV_COUNT=$((ENV_COUNT + 1))
         fi
     done < ".env.staging"
 else
     log_info "CI/CD 환경: GitHub Secrets에서 환경변수 직접 사용"
-    # GitHub Secrets에서 주입된 환경변수들을 배열에 추가
+    # GitHub Secrets에서 주입된 환경변수들을 배열에 추가 (쉼표 포함 시 이스케이핑)
     ENV_VARS_ARRAY=(
         "ENVIRONMENT=$ENVIRONMENT"
         "MONGODB_URL=$MONGODB_URL"
@@ -229,7 +233,7 @@ else
         "ALGORITHM=$ALGORITHM"
         "ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
         "REFRESH_TOKEN_EXPIRE_DAYS=$REFRESH_TOKEN_EXPIRE_DAYS"
-        "ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
+        "ALLOWED_ORIGINS=\"$ALLOWED_ORIGINS\""
         "FRONTEND_URL=$FRONTEND_URL"
         "LOG_LEVEL=$LOG_LEVEL"
         "MAX_COMMENT_DEPTH=$MAX_COMMENT_DEPTH"
