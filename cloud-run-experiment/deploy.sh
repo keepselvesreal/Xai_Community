@@ -60,7 +60,36 @@ fi
 
 # 1단계: Docker 이미지 빌드
 log_info "=== 1단계: Docker 이미지 빌드 ==="
-gcloud builds submit --tag "$IMAGE_NAME" --project="$PROJECT_ID"
+log_info "빌드 시작: $(date)"
+
+# 로그 스트리밍 문제 해결을 위해 --suppress-logs 사용
+BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$PROJECT_ID" --suppress-logs 2>&1)
+BUILD_EXIT_CODE=$?
+
+log_info "빌드 완료: $(date)"
+log_info "빌드 Exit Code: $BUILD_EXIT_CODE"
+
+if [ $BUILD_EXIT_CODE -ne 0 ]; then
+    log_error "Docker 이미지 빌드 실패!"
+    echo "=== 빌드 출력 ==="
+    echo "$BUILD_OUTPUT"
+    echo "==================="
+    
+    # 빌드 ID 추출해서 로그 조회 시도
+    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'builds/[a-zA-Z0-9-]*' | head -1 | cut -d'/' -f2)
+    if [ -n "$BUILD_ID" ]; then
+        log_info "빌드 ID: $BUILD_ID"
+        log_info "상세 로그 조회 중..."
+        gcloud builds log "$BUILD_ID" --project="$PROJECT_ID" 2>&1 || echo "로그 조회 실패"
+    fi
+    
+    exit 1
+fi
+
+log_success "Docker 이미지 빌드 성공!"
+echo "=== 빌드 출력 ==="
+echo "$BUILD_OUTPUT"
+echo "==================="
 
 # 2단계: Cloud Run 배포
 log_info "=== 2단계: Cloud Run 배포 ==="
