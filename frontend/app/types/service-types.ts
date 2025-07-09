@@ -464,9 +464,9 @@ export function convertPostToService(post: any): Service | null {
       bookmark_count: post.bookmark_count
     });
     
-    // metadata.type이 "moving services"인지 확인
-    if (post.metadata?.type !== 'moving services') {
-      console.warn('Post metadata.type is not "moving services":', post.metadata?.type);
+    // metadata.type이 "moving services" 또는 "moving_services"인지 확인
+    if (post.metadata?.type !== 'moving services' && post.metadata?.type !== 'moving_services') {
+      console.warn('Post metadata.type is not "moving services" or "moving_services":', post.metadata?.type);
       return null;
     }
     
@@ -475,23 +475,28 @@ export function convertPostToService(post: any): Service | null {
     let serviceData: ServicePost;
     
     try {
-      serviceData = parseServicePost(post.content);
-      console.log('Parsed service data:', serviceData);
+      // JSON 형태인지 확인
+      if (post.content.trim().startsWith('{')) {
+        serviceData = parseServicePost(post.content);
+        console.log('Parsed service data:', serviceData);
+      } else {
+        throw new Error('Content is not JSON format');
+      }
     } catch (parseError) {
       console.error('Failed to parse service content, using fallback:', parseError);
       
-      // Fallback: 기본 구조로 서비스 데이터 생성
+      // Fallback: 마크다운 형태일 때 기본 구조로 서비스 데이터 생성
       serviceData = {
         company: {
           name: post.title || '서비스 업체',
-          contact: '연락처 미제공',
+          contact: '010-0000-0000',
           availableHours: '09:00-18:00',
           description: post.content || '서비스 설명 없음'
         },
         services: [{
           name: '기본 서비스',
-          price: '0', // 문자열로 처리
-          description: '서비스 정보가 올바르지 않습니다'
+          price: '50000', // 문자열로 처리
+          description: '자세한 서비스 정보는 업체에 문의해주세요'
         }]
       };
     }

@@ -283,6 +283,7 @@ export default function PostDetail() {
           }));
         };
         
+        // API 응답 구조 수정: response.data가 이미 CommentListResponse 구조
         const processedComments = processCommentsRecursive(response.data.comments || []);
         setComments(processedComments);
       }
@@ -393,6 +394,7 @@ export default function PostDetail() {
             }));
           };
           
+          // API 응답 구조 수정: commentsResult.data가 이미 CommentListResponse 구조
           const processedComments = processCommentsRecursive(commentsResult.data.comments || []);
           setComments(processedComments);
         }
