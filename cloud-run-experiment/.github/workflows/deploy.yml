@@ -39,11 +39,11 @@ jobs:
         cd cloud-run-experiment
         uv run python -c "import main; print('✅ FastAPI 앱 임포트 성공')"
 
-  # 실험용 배포 (main 브랜치에서만)
+  # 실험용 배포 (experiment 브랜치에서만)
   experimental-deployment:
     needs: [basic-checks]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/experiment' && github.event_name == 'push'
     
     defaults:
       run:
