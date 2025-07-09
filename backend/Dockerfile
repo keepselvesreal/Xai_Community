@@ -1,5 +1,5 @@
-# Python base image - optimized for Cloud Run
-FROM python:3.11-slim
+# Multi-stage build for uv and Cloud Run optimization
+FROM python:3.11-slim AS base
 
 # Install system dependencies (curl for health check)
 RUN apt-get update && apt-get install -y \
@@ -7,42 +7,54 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Install UV
-RUN pip install --no-cache-dir uv
+# Builder stage
+FROM base AS builder
 
-# Set working directory
+# Copy uv binary from official image
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /bin/uv
+
+# uv environment variables for optimization
+ENV UV_COMPILE_BYTECODE=1
+ENV UV_LINK_MODE=copy
+
 WORKDIR /app
 
-# Copy project files
+# Copy dependency files first for Docker layer caching
 COPY pyproject.toml uv.lock ./
 COPY README.md ./
 
-# Install dependencies
-RUN uv sync --frozen --no-dev
+# Install dependencies (Cloud Build compatible - no cache mount)
+RUN uv sync --frozen --no-install-project --no-dev --verbose
 
 # Copy application code
 COPY . .
 
-# Environment file will be set via Cloud Run environment variables
-# No need to copy .env.prod - using Cloud Run env vars instead
+# Install project itself
+RUN uv sync --frozen --no-dev --verbose
+
+# Production stage
+FROM base
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser -m
 
-# Create uploads directory and set permissions  
-RUN mkdir -p uploads && chown -R appuser:appuser /app
+# Copy application and virtual environment from builder
+COPY --from=builder --chown=appuser:appuser /app /app
 
-# Create UV cache directory and set permissions
-RUN mkdir -p /home/appuser/.cache/uv && chown -R appuser:appuser /home/appuser/.cache
+# Create uploads directory
+RUN mkdir -p /app/uploads && chown -R appuser:appuser /app/uploads
 
 # Switch to non-root user
 USER appuser
+
+WORKDIR /app
 
 # Cloud Run optimized environment variables
 ENV PYTHONPATH="/app"
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV ENVIRONMENT=production
+ENV PATH="/app/.venv/bin:$PATH"
 
 # Expose port
 EXPOSE 8080
@@ -51,5 +63,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Start application with uv run - use PORT environment variable for Cloud Run
-CMD ["sh", "-c", "uv run uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080} --workers 1 --log-level info"]
+# Start application with optimized command
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "info"]

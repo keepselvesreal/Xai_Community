@@ -102,7 +102,7 @@ log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$G
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
 
-BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --quiet 2>&1)
+BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --verbosity=info 2>&1)
 BUILD_EXIT_CODE=$?
 
 log_debug "빌드 완료 시간: $(date)"
@@ -110,7 +110,9 @@ log_debug "빌드 Exit Code: $BUILD_EXIT_CODE"
 
 if [ $BUILD_EXIT_CODE -ne 0 ]; then
     log_error "Docker 이미지 빌드 실패!"
+    echo "=== 빌드 에러 로그 ==="
     echo "$BUILD_OUTPUT"
+    echo "===================="
     exit 1
 fi
 
