@@ -115,6 +115,35 @@ jobs:
         project_id: xai-community
         
     - name: 🚀 스테이징 배포 실행
+      env:
+        ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
+        MONGODB_URL: ${{ secrets.MONGODB_URL }}
+        DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+        USERS_COLLECTION: ${{ secrets.USERS_COLLECTION }}
+        POSTS_COLLECTION: ${{ secrets.POSTS_COLLECTION }}
+        COMMENTS_COLLECTION: ${{ secrets.COMMENTS_COLLECTION }}
+        POST_STATS_COLLECTION: ${{ secrets.POST_STATS_COLLECTION }}
+        USER_REACTIONS_COLLECTION: ${{ secrets.USER_REACTIONS_COLLECTION }}
+        FILES_COLLECTION: ${{ secrets.FILES_COLLECTION }}
+        STATS_COLLECTION: ${{ secrets.STATS_COLLECTION }}
+        API_TITLE: ${{ secrets.API_TITLE }}
+        API_VERSION: ${{ secrets.API_VERSION }}
+        API_DESCRIPTION: ${{ secrets.API_DESCRIPTION }}
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        ALGORITHM: ${{ secrets.ALGORITHM }}
+        ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+        REFRESH_TOKEN_EXPIRE_DAYS: ${{ secrets.REFRESH_TOKEN_EXPIRE_DAYS }}
+        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        PORT: ${{ secrets.PORT }}
+        HOST: ${{ secrets.HOST }}
+        LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+        MAX_COMMENT_DEPTH: ${{ secrets.MAX_COMMENT_DEPTH }}
+        ENABLE_DOCS: ${{ secrets.ENABLE_DOCS }}
+        ENABLE_CORS: ${{ secrets.ENABLE_CORS }}
+        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        GCP_REGION: ${{ secrets.GCP_REGION }}
+        GCP_SERVICE_NAME: xai-community-backend-staging
       run: |
         echo "🎯 스테이징 배포 시작"
         echo "📂 Branch: ${{ github.ref }}"
