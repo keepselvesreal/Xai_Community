@@ -93,7 +93,7 @@ fi
 
 # 1단계: Docker 이미지 빌드
 log_info "=== 1단계: Docker 이미지 빌드 시작 ==="
-log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --quiet"
+log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --verbosity=info"
 
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
