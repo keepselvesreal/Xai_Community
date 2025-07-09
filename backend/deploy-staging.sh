@@ -219,6 +219,13 @@ ENV_VARS=$(IFS=,; echo "${ENV_VARS_ARRAY[*]}")
 log_debug "환경변수 문자열 길이: ${#ENV_VARS}"
 log_debug "환경변수 미리보기: ${ENV_VARS:0:150}..."
 
+# 디버깅을 위한 환경변수 상세 출력
+log_debug "=== 환경변수 상세 정보 ==="
+for i in "${!ENV_VARS_ARRAY[@]}"; do
+    log_debug "[$i] ${ENV_VARS_ARRAY[$i]}"
+done
+log_debug "=== 환경변수 상세 정보 끝 ==="
+
 # 3단계: Cloud Run 배포 (개선된 모니터링)
 log_info "=== 3단계: Cloud Run 배포 시작 ==="
 log_debug "배포 명령어 실행 시작: $(date)"
