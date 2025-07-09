@@ -111,11 +111,13 @@ def create_app() -> FastAPI:
         """동적으로 CORS Origins를 생성하는 함수."""
         origins = []
         
-        if settings.environment == "production":
-            # 프로덕션에서는 설정된 origins 사용
+        if settings.environment in ["production", "staging"]:
+            # 프로덕션과 스테이징에서는 설정된 origins 사용
             if settings.allowed_origins:
                 origins.extend(settings.allowed_origins)
-            logger.info(f"Production CORS origins: {origins}")
+                logger.info(f"{settings.environment.capitalize()} CORS origins from settings: {origins}")
+            else:
+                logger.warning(f"{settings.environment.capitalize()} 환경에서 ALLOWED_ORIGINS가 설정되지 않았습니다!")
         elif settings.environment == "development":
             # Development URLs
             origins.extend([
@@ -134,20 +136,31 @@ def create_app() -> FastAPI:
     
     logger.info(f"CORS Origins: {cors_origins}")
     
-    # 단순화: allow_origin_regex만 사용 (와일드카드 문제 회피)
-    # Production에서는 Vercel 패턴으로 모든 배포 허용
-    if settings.environment == "production":
-        vercel_pattern = r"^https://xai-community.*\.vercel\.app$"
-        app.add_middleware(
-            CORSMiddleware,
-            allow_origin_regex=vercel_pattern,  # 패턴만 사용
-            allow_credentials=True,
-            allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            allow_headers=["*"],
-        )
-        logger.info(f"Production: Using regex pattern only: {vercel_pattern}")
+    # 환경변수 기반 CORS 설정 (GitHub Secrets 사용)
+    if settings.environment in ["production", "staging"]:
+        # 프로덕션/스테이징에서는 환경변수로 설정된 origins 사용
+        if cors_origins:
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=cors_origins,  # GitHub Secrets의 ALLOWED_ORIGINS 사용
+                allow_credentials=True,
+                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                allow_headers=["*"],
+            )
+            logger.info(f"{settings.environment.capitalize()}: Using explicit origins from ALLOWED_ORIGINS: {cors_origins}")
+        else:
+            # 폴백: Vercel 패턴 사용
+            vercel_pattern = r"^https://xai-community[a-zA-Z0-9\-]*\.vercel\.app$"
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origin_regex=vercel_pattern,
+                allow_credentials=True,
+                allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+                allow_headers=["*"],
+            )
+            logger.warning(f"{settings.environment.capitalize()}: ALLOWED_ORIGINS not set, using fallback regex: {vercel_pattern}")
     else:
-        # Development에서는 명시적 origins 사용
+        # Development에서는 로컬 개발용 origins 사용
         app.add_middleware(
             CORSMiddleware,
             allow_origins=cors_origins,
