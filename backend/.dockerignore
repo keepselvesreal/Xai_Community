@@ -1,0 +1,53 @@
+# uv 베스트 프랙티스: 로컬 .venv 제외
+.venv
+.env
+.env.*
+
+# Git 관련
+.git
+.gitignore
+
+# Python 캐시
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache
+
+# IDE 관련
+.vscode
+.idea
+*.swp
+*.swo
+
+# 로그 파일
+*.log
+logs/
+
+# 테스트 관련
+.coverage
+htmlcov/
+coverage/
+.tox
+.nox
+
+# 문서 (README.md는 uv에서 필요하므로 제외하지 않음)
+docs/
+
+# 개발 도구
+.pre-commit-config.yaml
+.editorconfig
+
+# 배포 스크립트
+deploy-*.sh
+*.pid
+
+# 업로드 파일 (개발용)
+uploads/
+
+# 임시 파일
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
