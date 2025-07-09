@@ -99,10 +99,43 @@ log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$G
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
 
-# 로그 스트리밍 문제 해결을 위해 --suppress-logs 제거하고 상세 로그 출력
-log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID"
-BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" 2>&1)
+# 로그 스트리밍 문제 해결을 위해 --async 사용 (실험 결과 적용)
+log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --async"
+BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --async 2>&1)
 BUILD_EXIT_CODE=$?
+
+if [ $BUILD_EXIT_CODE -eq 0 ]; then
+    # 빌드 ID 추출 (실험 결과 적용)
+    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'builds/[a-zA-Z0-9-]*' | head -1 | cut -d'/' -f2)
+    if [ -n "$BUILD_ID" ]; then
+        log_debug "빌드 ID: $BUILD_ID"
+        log_info "빌드 상태 확인 중..."
+        
+        # 빌드 완료까지 대기 (실험 결과 적용)
+        while true; do
+            BUILD_STATUS=$(gcloud builds describe "$BUILD_ID" --project="$GCP_PROJECT_ID" --format="value(status)" 2>/dev/null)
+            case "$BUILD_STATUS" in
+                "SUCCESS")
+                    log_success "빌드 완료!"
+                    break
+                    ;;
+                "FAILURE"|"CANCELLED"|"TIMEOUT")
+                    log_error "빌드 실패: $BUILD_STATUS"
+                    BUILD_EXIT_CODE=1
+                    break
+                    ;;
+                "QUEUED"|"WORKING")
+                    log_debug "빌드 진행 중... ($BUILD_STATUS)"
+                    sleep 10
+                    ;;
+                *)
+                    log_warning "알 수 없는 빌드 상태: $BUILD_STATUS"
+                    sleep 10
+                    ;;
+            esac
+        done
+    fi
+fi
 
 log_debug "빌드 완료 시간: $(date)"
 log_debug "빌드 Exit Code: $BUILD_EXIT_CODE"
@@ -113,12 +146,15 @@ if [ $BUILD_EXIT_CODE -ne 0 ]; then
     echo "$BUILD_OUTPUT"
     echo "===================="
     
-    # 빌드 ID 추출해서 로그 조회 시도
-    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'Build ID: [a-zA-Z0-9-]*' | cut -d' ' -f3)
+    # 빌드 ID 추출해서 상세 정보 조회 시도 (실험 결과 적용)
+    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'builds/[a-zA-Z0-9-]*' | head -1 | cut -d'/' -f2)
     if [ -n "$BUILD_ID" ]; then
         log_info "빌드 ID: $BUILD_ID"
-        log_info "상세 로그 조회 중..."
-        gcloud builds log "$BUILD_ID" --project="$GCP_PROJECT_ID" || echo "로그 조회 실패"
+        log_info "빌드 상세 정보 조회 중..."
+        gcloud builds describe "$BUILD_ID" --project="$GCP_PROJECT_ID" --format="yaml" 2>&1 || echo "빌드 정보 조회 실패"
+        
+        log_info "Google Cloud Console에서 빌드 로그 확인:"
+        log_info "https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$GCP_PROJECT_ID"
     fi
     
     exit 1

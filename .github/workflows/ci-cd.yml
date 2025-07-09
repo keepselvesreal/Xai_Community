@@ -180,8 +180,22 @@ jobs:
         
         # 배포 스크립트 실행 (상세 로그 출력)
         echo "🚀 배포 스크립트 실행 시작: $(date)"
+        echo "📋 파일 존재 확인:"
+        ls -la deploy-staging.sh
+        echo "📋 스크립트 권한 확인:"
+        ls -la deploy-staging.sh | awk '{print $1}'
+        
+        # 스크립트 실행
         ./deploy-staging.sh
+        DEPLOY_EXIT_CODE=$?
+        
         echo "✅ 배포 스크립트 실행 완료: $(date)"
+        echo "📊 배포 결과: Exit Code $DEPLOY_EXIT_CODE"
+        
+        if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
+          echo "❌ 배포 실패 감지"
+          exit $DEPLOY_EXIT_CODE
+        fi
         
     - name: 🔍 스테이징 환경 검증
       run: |
