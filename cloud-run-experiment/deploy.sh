@@ -108,12 +108,15 @@ if [ $BUILD_EXIT_CODE -ne 0 ]; then
     echo "$BUILD_OUTPUT"
     echo "==================="
     
-    # 빌드 ID 추출해서 로그 조회 시도
+    # 빌드 ID 추출해서 상세 정보 조회 시도
     BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'builds/[a-zA-Z0-9-]*' | head -1 | cut -d'/' -f2)
     if [ -n "$BUILD_ID" ]; then
         log_info "빌드 ID: $BUILD_ID"
-        log_info "상세 로그 조회 중..."
-        gcloud builds log "$BUILD_ID" --project="$PROJECT_ID" 2>&1 || echo "로그 조회 실패"
+        log_info "빌드 상세 정보 조회 중..."
+        gcloud builds describe "$BUILD_ID" --project="$PROJECT_ID" --format="yaml" 2>&1 || echo "빌드 정보 조회 실패"
+        
+        log_info "Google Cloud Console에서 빌드 로그 확인:"
+        log_info "https://console.cloud.google.com/cloud-build/builds/$BUILD_ID?project=$PROJECT_ID"
     fi
     
     exit 1
