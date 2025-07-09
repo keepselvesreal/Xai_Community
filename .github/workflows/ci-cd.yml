@@ -7,8 +7,11 @@ on:
     branches: [ main ]
 
 env:
-  PROD_BACKEND_URL: https://xai-community-backend-798170408536.asia-northeast3.run.app
+  PROD_BACKEND_URL: https://xai-community-backend-i7qxo5yw3a-du.a.run.app
   PROD_FRONTEND_URL: https://xai-community.vercel.app
+  # 스테이징 환경 URL (시뮬레이션용)
+  STAGING_BACKEND_URL: https://xai-community-backend-staging-798170408536.asia-northeast3.run.app
+  STAGING_FRONTEND_URL: https://xai-community-staging.vercel.app
 
 jobs:
   # 🔍 백엔드 안전한 검증
@@ -90,6 +93,66 @@ jobs:
       run: |
         npm run build
 
+  # 🎯 스테이징 배포 시뮬레이션 (develop 브랜치에서만)
+  staging-deployment-simulation:
+    needs: [backend-safe-checks, frontend-safe-checks]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - name: 🚀 Staging 배포 시뮬레이션 시작
+      run: |
+        echo "🎯 스테이징 배포 시뮬레이션 시작"
+        echo "📂 Branch: ${{ github.ref }}"
+        echo "🔨 Commit: ${{ github.sha }}"
+        echo "👤 Author: ${{ github.actor }}"
+        echo ""
+        
+    - name: 🔧 백엔드 배포 시뮬레이션
+      run: |
+        echo "🔧 백엔드 스테이징 배포 시뮬레이션"
+        echo "📡 Target URL: $STAGING_BACKEND_URL"
+        echo "🐳 Docker 이미지 빌드 시뮬레이션..."
+        sleep 3
+        echo "✅ Docker 이미지 빌드 완료 (시뮬레이션)"
+        echo "🚀 Cloud Run 배포 시뮬레이션..."
+        sleep 2
+        echo "✅ 백엔드 스테이징 배포 완료 (시뮬레이션)"
+        
+    - name: 🌐 프런트엔드 배포 시뮬레이션
+      run: |
+        echo "🌐 프런트엔드 스테이징 배포 시뮬레이션"
+        echo "📡 Target URL: $STAGING_FRONTEND_URL"
+        echo "🔨 빌드 시뮬레이션..."
+        sleep 2
+        echo "✅ 빌드 완료 (시뮬레이션)"
+        echo "🚀 Vercel 배포 시뮬레이션..."
+        sleep 2
+        echo "✅ 프런트엔드 스테이징 배포 완료 (시뮬레이션)"
+        
+    - name: 🔍 스테이징 환경 검증 시뮬레이션
+      run: |
+        echo "🔍 스테이징 환경 검증 시뮬레이션"
+        echo "⏳ 배포 안정화 대기..."
+        sleep 5
+        
+        echo "🔍 백엔드 헬스체크 시뮬레이션..."
+        echo "  📡 URL: $STAGING_BACKEND_URL/health"
+        echo "  ✅ 상태: 200 OK (시뮬레이션)"
+        echo "  📊 응답시간: 150ms (시뮬레이션)"
+        
+        echo "🔍 프런트엔드 접근성 확인 시뮬레이션..."
+        echo "  📡 URL: $STAGING_FRONTEND_URL"
+        echo "  ✅ 상태: 200 OK (시뮬레이션)"
+        echo "  📊 응답시간: 300ms (시뮬레이션)"
+        
+        echo "🔍 CORS 설정 확인 시뮬레이션..."
+        echo "  📡 Origin: $STAGING_FRONTEND_URL"
+        echo "  📡 Target: $STAGING_BACKEND_URL"
+        echo "  ✅ CORS: 정상 동작 (시뮬레이션)"
+        
+        echo "🎉 스테이징 환경 검증 완료!"
+
   # 🚀 배포 후 검증 (main 브랜치에서만)
   deployment-verification:
     needs: [backend-safe-checks, frontend-safe-checks]
@@ -154,7 +217,7 @@ jobs:
 
   # 📊 결과 알림
   notification:
-    needs: [backend-safe-checks, frontend-safe-checks, deployment-verification]
+    needs: [backend-safe-checks, frontend-safe-checks, deployment-verification, staging-deployment-simulation]
     runs-on: ubuntu-latest
     if: always()
     
@@ -165,8 +228,20 @@ jobs:
         echo "🎉 모든 테스트 통과!"
         echo "✅ 백엔드: ${{ needs.backend-safe-checks.result }}"
         echo "✅ 프런트엔드: ${{ needs.frontend-safe-checks.result }}"
-        echo "🌐 백엔드 URL: $PROD_BACKEND_URL"
-        echo "🌐 프런트엔드 URL: $PROD_FRONTEND_URL"
+        
+        # 스테이징 결과 표시 (develop 브랜치에서만)
+        if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+          echo "🎯 스테이징 시뮬레이션: ${{ needs.staging-deployment-simulation.result }}"
+          echo "🌐 스테이징 백엔드: $STAGING_BACKEND_URL"
+          echo "🌐 스테이징 프런트엔드: $STAGING_FRONTEND_URL"
+        fi
+        
+        # 프로덕션 결과 표시 (main 브랜치에서만)
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "🚀 프로덕션 배포 검증: ${{ needs.deployment-verification.result }}"
+          echo "🌐 프로덕션 백엔드: $PROD_BACKEND_URL"
+          echo "🌐 프로덕션 프런트엔드: $PROD_FRONTEND_URL"
+        fi
         
     - name: ❌ Failure notification
       if: needs.backend-safe-checks.result == 'failure' || needs.frontend-safe-checks.result == 'failure'
@@ -174,4 +249,15 @@ jobs:
         echo "❌ 일부 테스트 실패"
         echo "🔧 백엔드: ${{ needs.backend-safe-checks.result }}"
         echo "🔧 프런트엔드: ${{ needs.frontend-safe-checks.result }}"
+        
+        # 스테이징 실패 확인
+        if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+          echo "🎯 스테이징 시뮬레이션: ${{ needs.staging-deployment-simulation.result }}"
+        fi
+        
+        # 프로덕션 실패 확인
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "🚀 프로덕션 배포 검증: ${{ needs.deployment-verification.result }}"
+        fi
+        
         echo "📝 실패한 단계를 확인하고 수정이 필요합니다"
