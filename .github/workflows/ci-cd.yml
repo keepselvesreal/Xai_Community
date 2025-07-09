@@ -149,11 +149,39 @@ jobs:
         echo "📂 Branch: ${{ github.ref }}"
         echo "🔨 Commit: ${{ github.sha }}"
         echo "👤 Author: ${{ github.actor }}"
+        echo "⏰ 시작 시간: $(date)"
+        echo ""
+        
+        # 환경 정보 출력
+        echo "🔧 환경 정보:"
+        echo "  - GCP Project: $GCP_PROJECT_ID"
+        echo "  - GCP Region: $GCP_REGION"
+        echo "  - Service Name: $GCP_SERVICE_NAME"
+        echo "  - Environment: $ENVIRONMENT"
+        echo ""
+        
+        # gcloud 버전 확인
+        echo "📋 gcloud 버전 정보:"
+        gcloud version
+        echo ""
+        
+        # 인증 상태 확인
+        echo "🔑 인증 상태 확인:"
+        gcloud auth list --filter=status:ACTIVE --format="value(account)"
+        echo ""
+        
+        # 프로젝트 설정 확인
+        echo "📁 현재 프로젝트 설정:"
+        gcloud config get-value project
         echo ""
         
         cd backend
         chmod +x deploy-staging.sh
+        
+        # 배포 스크립트 실행 (상세 로그 출력)
+        echo "🚀 배포 스크립트 실행 시작: $(date)"
         ./deploy-staging.sh
+        echo "✅ 배포 스크립트 실행 완료: $(date)"
         
     - name: 🔍 스테이징 환경 검증
       run: |

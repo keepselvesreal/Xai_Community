@@ -5,6 +5,7 @@
 # 환경: Staging 환경 배포
 
 set -e  # 오류 시 스크립트 중단
+set -x  # 모든 명령어 출력 (디버깅용)
 
 # 색상 정의
 RED='\033[0;31m'
@@ -98,8 +99,9 @@ log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$G
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
 
-# 로그 스트리밍 문제 해결을 위해 --suppress-logs 사용
-BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --suppress-logs 2>&1)
+# 로그 스트리밍 문제 해결을 위해 --suppress-logs 제거하고 상세 로그 출력
+log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID"
+BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" 2>&1)
 BUILD_EXIT_CODE=$?
 
 log_debug "빌드 완료 시간: $(date)"
@@ -248,6 +250,9 @@ log_debug "  - 환경변수 크기: ${ENV_VARS_LENGTH} bytes"
 # 배포 실행 (동기식으로 변경)
 log_info "배포 명령어 실행 중... (최대 10분 소요 예상)"
 
+log_debug "배포 명령어: gcloud run deploy $GCP_SERVICE_NAME --image $IMAGE_NAME --platform managed --region $GCP_REGION --allow-unauthenticated --port 8080 --memory 512Mi --cpu 1 --concurrency 100 --max-instances 10 --timeout 300 --project=$GCP_PROJECT_ID"
+log_debug "환경변수 설정: ${ENV_VARS:0:200}..."
+
 DEPLOY_OUTPUT=$(gcloud run deploy "$GCP_SERVICE_NAME" \
     --image "$IMAGE_NAME" \
     --platform managed \
@@ -292,6 +297,22 @@ if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
     echo "=== 전체 배포 로그 ==="
     echo "$DEPLOY_OUTPUT"
     echo "===================="
+    
+    # 추가 디버깅 정보 수집
+    log_debug "추가 디버깅 정보 수집 중..."
+    log_debug "현재 프로젝트: $(gcloud config get-value project)"
+    log_debug "현재 리전: $GCP_REGION"
+    log_debug "서비스명: $GCP_SERVICE_NAME"
+    log_debug "이미지명: $IMAGE_NAME"
+    
+    # 기존 서비스 상태 확인
+    log_debug "기존 서비스 상태 확인..."
+    gcloud run services describe "$GCP_SERVICE_NAME" --region "$GCP_REGION" --project="$GCP_PROJECT_ID" || echo "서비스가 존재하지 않음"
+    
+    # 이미지 존재 확인
+    log_debug "이미지 존재 확인..."
+    gcloud container images describe "$IMAGE_NAME" --project="$GCP_PROJECT_ID" || echo "이미지가 존재하지 않음"
+    
     exit 1
 fi
 

@@ -1,0 +1,164 @@
+name: 🚀 Cloud Run 실험용 배포
+
+on:
+  push:
+    branches: [ main, experiment ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  PROJECT_ID: xai-community
+  SERVICE_NAME: cloud-run-experiment
+  REGION: asia-northeast3
+
+jobs:
+  # 기본 검증
+  basic-checks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: 🔧 Install uv
+      run: |
+        pip install uv
+    
+    - name: 📦 Install dependencies
+      run: |
+        cd cloud-run-experiment
+        uv sync --frozen
+    
+    - name: 🧪 Test app import
+      run: |
+        cd cloud-run-experiment
+        uv run python -c "import main; print('✅ FastAPI 앱 임포트 성공')"
+
+  # 실험용 배포 (main 브랜치에서만)
+  experimental-deployment:
+    needs: [basic-checks]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    defaults:
+      run:
+        working-directory: ./cloud-run-experiment
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🔑 Setup Google Cloud Authentication
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+    
+    - name: 🔧 Setup Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: ${{ env.PROJECT_ID }}
+    
+    - name: 🚀 실험용 배포 실행
+      run: |
+        echo "🎯 실험용 배포 시작"
+        echo "📂 Branch: ${{ github.ref }}"
+        echo "🔨 Commit: ${{ github.sha }}"
+        echo "👤 Author: ${{ github.actor }}"
+        echo ""
+        
+        # 환경변수 설정
+        export PROJECT_ID=${{ env.PROJECT_ID }}
+        export SERVICE_NAME=${{ env.SERVICE_NAME }}
+        export REGION=${{ env.REGION }}
+        
+        # 배포 스크립트 실행
+        ./deploy.sh
+    
+    - name: 🔍 실험용 서비스 검증
+      run: |
+        echo "🔍 실험용 서비스 검증 시작"
+        echo "⏳ 배포 안정화 대기..."
+        sleep 5
+        
+        # 서비스 URL 가져오기
+        SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region=${{ env.REGION }} --format="value(status.url)")
+        echo "🌐 서비스 URL: $SERVICE_URL"
+        
+        # 헬스체크
+        echo "🔍 헬스체크..."
+        if curl -f -m 30 "$SERVICE_URL/health"; then
+          echo "✅ 헬스체크 성공"
+        else
+          echo "❌ 헬스체크 실패"
+          exit 1
+        fi
+        
+        # 기본 API 테스트
+        echo "🔍 기본 API 테스트..."
+        if curl -f -m 30 "$SERVICE_URL/"; then
+          echo "✅ 기본 API 테스트 성공"
+        else
+          echo "❌ 기본 API 테스트 실패"
+          exit 1
+        fi
+        
+        # 테스트 엔드포인트 확인
+        echo "🔍 테스트 엔드포인트 확인..."
+        if curl -f -m 30 "$SERVICE_URL/test"; then
+          echo "✅ 테스트 엔드포인트 성공"
+        else
+          echo "❌ 테스트 엔드포인트 실패"
+          exit 1
+        fi
+        
+        echo "🎉 실험용 서비스 검증 완료!"
+    
+    - name: 📋 배포 결과 요약
+      run: |
+        SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} --region=${{ env.REGION }} --format="value(status.url)")
+        
+        echo "🎉 실험용 배포 성공!"
+        echo ""
+        echo "📊 배포 정보:"
+        echo "  - 프로젝트: ${{ env.PROJECT_ID }}"
+        echo "  - 서비스: ${{ env.SERVICE_NAME }}"
+        echo "  - 리전: ${{ env.REGION }}"
+        echo "  - URL: $SERVICE_URL"
+        echo ""
+        echo "🔗 테스트 URL들:"
+        echo "  - 메인: $SERVICE_URL"
+        echo "  - 헬스체크: $SERVICE_URL/health"
+        echo "  - 테스트: $SERVICE_URL/test"
+        echo ""
+        echo "🔧 관리 URL:"
+        echo "  - Console: https://console.cloud.google.com/run/detail/${{ env.REGION }}/${{ env.SERVICE_NAME }}/metrics?project=${{ env.PROJECT_ID }}"
+
+  # 결과 알림
+  notification:
+    needs: [basic-checks, experimental-deployment]
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: 🎉 성공 알림
+      if: needs.basic-checks.result == 'success' && (needs.experimental-deployment.result == 'success' || needs.experimental-deployment.result == 'skipped')
+      run: |
+        echo "🎉 실험용 CI/CD 파이프라인 성공!"
+        echo "✅ 기본 검증: ${{ needs.basic-checks.result }}"
+        if [ "${{ needs.experimental-deployment.result }}" != "skipped" ]; then
+          echo "✅ 실험용 배포: ${{ needs.experimental-deployment.result }}"
+        fi
+        
+    - name: ❌ 실패 알림
+      if: needs.basic-checks.result == 'failure' || needs.experimental-deployment.result == 'failure'
+      run: |
+        echo "❌ 실험용 CI/CD 파이프라인 실패"
+        echo "🔧 기본 검증: ${{ needs.basic-checks.result }}"
+        echo "🔧 실험용 배포: ${{ needs.experimental-deployment.result }}"
+        echo "📝 로그를 확인하여 문제를 해결해주세요"

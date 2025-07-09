@@ -1,0 +1,28 @@
+[project]
+name = "cloud-run-experiment"
+version = "1.0.0"
+description = "간단한 FastAPI 앱으로 Cloud Run 배포 실험"
+authors = [
+    {name = "Cloud Run Experiment", email = "experiment@example.com"}
+]
+dependencies = [
+    "fastapi>=0.104.1",
+    "uvicorn[standard]>=0.24.0",
+    "python-multipart>=0.0.6",
+]
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
