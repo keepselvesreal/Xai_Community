@@ -185,6 +185,17 @@ def create_app() -> FastAPI:
     async def health_check():
         return {"status": "healthy", "service": "xai-community-backend"}
     
+    # 버전 정보 엔드포인트
+    @app.get("/version")
+    async def version_info():
+        return {
+            "version": os.getenv("BUILD_VERSION", "unknown"),
+            "commit_hash": os.getenv("COMMIT_HASH", "unknown"),
+            "build_time": os.getenv("BUILD_TIME", "unknown"),
+            "environment": os.getenv("ENVIRONMENT", "unknown"),
+            "service": "xai-community-backend"
+        }
+    
     # 정적 파일 서빙 (프론트엔드용)
     frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend-prototypes")
     if os.path.exists(frontend_path):

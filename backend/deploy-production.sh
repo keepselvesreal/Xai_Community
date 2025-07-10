@@ -162,7 +162,26 @@ while IFS= read -r line; do
     fi
 done < ".env.prod"
 
-log_success "환경변수 처리 완료: $ENV_COUNT개 변수"
+# Git 정보 추가
+log_info "Git 정보 수집 중..."
+BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+COMMIT_HASH=$(git rev-parse HEAD)
+BUILD_VERSION=$(git describe --tags --always 2>/dev/null || echo "v1.0.0")
+
+log_debug "빌드 시간: $BUILD_TIME"
+log_debug "커밋 해시: $COMMIT_HASH"
+log_debug "빌드 버전: $BUILD_VERSION"
+
+# Git 정보를 환경변수에 추가
+if [ -n "$ENV_VARS" ]; then
+    ENV_VARS="$ENV_VARS,BUILD_TIME=$BUILD_TIME,COMMIT_HASH=$COMMIT_HASH,BUILD_VERSION=$BUILD_VERSION"
+else
+    ENV_VARS="BUILD_TIME=$BUILD_TIME,COMMIT_HASH=$COMMIT_HASH,BUILD_VERSION=$BUILD_VERSION"
+fi
+
+ENV_COUNT=$((ENV_COUNT + 3))
+
+log_success "환경변수 처리 완료: $ENV_COUNT개 변수 (Git 정보 포함)"
 log_debug "환경변수 문자열 길이: ${#ENV_VARS}"
 log_debug "환경변수 미리보기: ${ENV_VARS:0:150}..."
 

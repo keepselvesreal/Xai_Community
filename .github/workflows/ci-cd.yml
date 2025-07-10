@@ -377,3 +377,79 @@ jobs:
         fi
         
         echo "📝 실패한 단계를 확인하고 수정이 필요합니다"
+
+  # 🔄 자동 롤백 (배포 실패 시)
+  auto-rollback:
+    needs: [backend-safe-checks, frontend-safe-checks, production-deployment, staging-deployment]
+    runs-on: ubuntu-latest
+    if: failure() && (needs.production-deployment.result == 'failure' || needs.staging-deployment.result == 'failure')
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔑 Setup Google Cloud Authentication
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: 🔧 Setup Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: xai-community
+        
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: 🔄 Install Vercel CLI
+      run: npm install -g vercel
+      
+    - name: 🔑 Configure Vercel
+      run: |
+        echo "${{ secrets.VERCEL_TOKEN }}" | vercel login --stdin || echo "Vercel login failed"
+      
+    - name: 🔄 Execute Auto Rollback
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      run: |
+        echo "🚨 배포 실패 감지 - 자동 롤백 시작"
+        
+        # 환경 결정
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          ENVIRONMENT="production"
+          echo "🎯 프로덕션 환경 자동 롤백"
+        elif [ "${{ github.ref }}" == "refs/heads/staging" ]; then
+          ENVIRONMENT="staging"
+          echo "🎯 스테이징 환경 자동 롤백"
+        else
+          echo "❌ 지원되지 않는 브랜치: ${{ github.ref }}"
+          exit 1
+        fi
+        
+        # 이전 성공한 커밋 해시 찾기
+        PREVIOUS_COMMIT=$(git log --format="%H" --skip=1 -n 1)
+        echo "📍 이전 커밋으로 롤백: $PREVIOUS_COMMIT"
+        
+        # 롤백 스크립트 실행 권한 부여
+        chmod +x ./rollback-full.sh
+        chmod +x ./backend/rollback-backend.sh
+        chmod +x ./frontend/rollback-frontend.sh
+        
+        # 자동 롤백 실행 (검증 건너뛰기)
+        if ./rollback-full.sh -e "$ENVIRONMENT" -s; then
+          echo "✅ 자동 롤백 성공"
+          
+          # 롤백 검증
+          chmod +x ./verify-rollback.sh
+          if ./verify-rollback.sh -e "$ENVIRONMENT" "$PREVIOUS_COMMIT" "$PREVIOUS_COMMIT"; then
+            echo "✅ 롤백 검증 성공"
+          else
+            echo "⚠️ 롤백 검증 실패 - 수동 확인 필요"
+          fi
+        else
+          echo "❌ 자동 롤백 실패 - 수동 개입 필요"
+          exit 1
+        fi

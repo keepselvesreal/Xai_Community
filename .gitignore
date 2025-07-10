@@ -89,3 +89,4 @@ logs/
 
 # Google Cloud Service Account Keys
 key.json
+.vercel

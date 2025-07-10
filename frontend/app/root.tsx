@@ -5,13 +5,23 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
-import type { LinksFunction } from "@remix-run/node";
+import type { LinksFunction, MetaFunction } from "@remix-run/node";
 
 import "./tailwind.css";
 import { AuthProvider } from "~/contexts/AuthContext";
 import { NotificationProvider } from "~/contexts/NotificationContext";
 import { ThemeProvider } from "~/contexts/ThemeContext";
 import ErrorBoundary from "~/components/common/ErrorBoundary";
+
+export const meta: MetaFunction = () => [
+  { title: "XAI 아파트 커뮤니티" },
+  { name: "description", content: "함께 만들어가는 우리 아파트 소통공간" },
+  // 빌드 정보를 메타태그에 포함
+  { name: "build-version", content: process.env.npm_package_version || "unknown" },
+  { name: "build-commit", content: process.env.VERCEL_GIT_COMMIT_SHA || "unknown" },
+  { name: "build-environment", content: process.env.NODE_ENV || "unknown" },
+  { name: "vercel-deployment", content: process.env.VERCEL_DEPLOYMENT_ID || "unknown" },
+];
 
 export const links: LinksFunction = () => [
   { rel: "preconnect", href: "https://cdn.jsdelivr.net" },

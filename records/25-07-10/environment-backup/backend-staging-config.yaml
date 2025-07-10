@@ -1,0 +1,92 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/ingress-status: all
+    run.googleapis.com/urls: '["https://xai-community-backend-staging-798170408536.asia-northeast3.run.app","https://xai-community-backend-staging-i7qxo5yw3a-du.a.run.app"]'
+  labels:
+    cloud.googleapis.com/location: asia-northeast3
+    run.googleapis.com/satisfiesPzs: 'true'
+  name: xai-community-backend-staging
+  namespace: '798170408536'
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/maxScale: '10'
+        run.googleapis.com/client-name: gcloud
+        run.googleapis.com/client-version: 529.0.0
+        run.googleapis.com/startup-cpu-boost: 'true'
+      labels:
+        client.knative.dev/nonce: evokgraoep
+        run.googleapis.com/startupProbeType: Default
+    spec:
+      containerConcurrency: 100
+      containers:
+      - env:
+        - name: ENVIRONMENT
+          value: staging
+        - name: MONGODB_URL
+          value: mongodb+srv://nadle:miQXsXpzayvMQAzE@cluster0.bh7mhfi.mongodb.net/
+        - name: DATABASE_NAME
+          value: xai_community_staging
+        - name: USERS_COLLECTION
+          value: users
+        - name: POSTS_COLLECTION
+          value: posts
+        - name: COMMENTS_COLLECTION
+          value: comments
+        - name: POST_STATS_COLLECTION
+          value: post_stats
+        - name: USER_REACTIONS_COLLECTION
+          value: user_reactions
+        - name: FILES_COLLECTION
+          value: files
+        - name: STATS_COLLECTION
+          value: stats
+        - name: API_TITLE
+          value: Xai Community API - Staging
+        - name: API_VERSION
+          value: 1.0.0
+        - name: API_DESCRIPTION
+          value: API for Xai Community - Staging Environment
+        - name: SECRET_KEY
+          value: staging_84652003587112af53d791e5e02cc4f33e8f0c0da1ca8b60bcc7a00a98031f69
+        - name: ALGORITHM
+          value: HS256
+        - name: ACCESS_TOKEN_EXPIRE_MINUTES
+          value: '30'
+        - name: REFRESH_TOKEN_EXPIRE_DAYS
+          value: '7'
+        - name: ALLOWED_ORIGINS
+          value: https://xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app,https://xai-community-git-*-ktsfrank-navercoms-projects.vercel.app,https://xai-community*.vercel.app,http://localhost:3000,http://localhost:5173
+        - name: FRONTEND_URL
+          value: https://xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app
+        - name: LOG_LEVEL
+          value: DEBUG
+        - name: MAX_COMMENT_DEPTH
+          value: '3'
+        - name: ENABLE_DOCS
+          value: 'true'
+        - name: ENABLE_CORS
+          value: 'true'
+        image: gcr.io/xai-community/xai-community-backend-staging
+        ports:
+        - containerPort: 8080
+          name: http1
+        resources:
+          limits:
+            cpu: '1'
+            memory: 512Mi
+        startupProbe:
+          failureThreshold: 1
+          periodSeconds: 240
+          tcpSocket:
+            port: 8080
+          timeoutSeconds: 240
+      serviceAccountName: 798170408536-compute@developer.gserviceaccount.com
+      timeoutSeconds: 300
+  traffic:
+  - latestRevision: true
+    percent: 100

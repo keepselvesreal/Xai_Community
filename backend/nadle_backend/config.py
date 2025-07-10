@@ -34,6 +34,9 @@ def find_env_file() -> Optional[str]:
     if explicit_path and Path(explicit_path).exists():
         return explicit_path
     
+    # config.py 파일이 위치한 디렉토리 (backend 디렉토리)를 기준으로 .env 파일 검색
+    config_dir = Path(__file__).parent.parent  # nadle_backend의 상위 디렉토리 (backend)
+    
     # 자동 검색 우선순위 (개발 환경에서만)
     env_file_candidates = [
         ".env.dev",        # 개발용 환경변수 파일 (git에서 무시됨)
@@ -41,7 +44,7 @@ def find_env_file() -> Optional[str]:
     ]
     
     for candidate in env_file_candidates:
-        env_path = Path(candidate)
+        env_path = config_dir / candidate
         if env_path.exists():
             return str(env_path)
     

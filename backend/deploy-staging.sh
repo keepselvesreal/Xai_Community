@@ -254,7 +254,25 @@ for required_var in "${REQUIRED_VARS[@]}"; do
     log_debug "필수 변수 확인: $required_var"
 done
 
-log_success "환경변수 처리 완료: $ENV_COUNT개 변수"
+# Git 정보 추가
+log_info "Git 정보 수집 중..."
+BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+COMMIT_HASH=$(git rev-parse HEAD)
+BUILD_VERSION=$(git describe --tags --always 2>/dev/null || echo "v1.0.0")
+
+log_debug "빌드 시간: $BUILD_TIME"
+log_debug "커밋 해시: $COMMIT_HASH"
+log_debug "빌드 버전: $BUILD_VERSION"
+
+# Git 정보를 환경변수 배열에 추가
+ENV_VARS_ARRAY+=(
+    "BUILD_TIME=$BUILD_TIME"
+    "COMMIT_HASH=$COMMIT_HASH"
+    "BUILD_VERSION=$BUILD_VERSION"
+)
+ENV_COUNT=$((ENV_COUNT + 3))
+
+log_success "환경변수 처리 완료: $ENV_COUNT개 변수 (Git 정보 포함)"
 log_debug "필수 환경변수 모두 확인 완료"
 
 # 환경변수를 YAML 파일로 저장 (gcloud --env-vars-file 요구사항에 맞춤)
