@@ -1,0 +1,140 @@
+name: 🔄 Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: '롤백할 환경'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - production
+      backend_only:
+        description: '백엔드만 롤백'
+        required: false
+        default: false
+        type: boolean
+      frontend_only:
+        description: '프론트엔드만 롤백'
+        required: false
+        default: false
+        type: boolean
+      backend_revision:
+        description: '백엔드 특정 리비전 (선택사항)'
+        required: false
+        type: string
+      frontend_deployment:
+        description: '프론트엔드 특정 배포 ID (선택사항)'
+        required: false
+        type: string
+      skip_verification:
+        description: '검증 단계 건너뛰기'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  manual-rollback:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔑 Setup Google Cloud Authentication
+      id: auth
+      uses: google-github-actions/auth@v2
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
+        
+    - name: 🔧 Setup Google Cloud SDK
+      uses: google-github-actions/setup-gcloud@v2
+      with:
+        project_id: xai-community
+        
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        
+    - name: 🔄 Install Vercel CLI
+      run: npm install -g vercel
+      
+    - name: 🔑 Configure Vercel
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      run: |
+        if [ -n "$VERCEL_TOKEN" ]; then
+          echo "$VERCEL_TOKEN" | vercel login --stdin
+        else
+          echo "⚠️ VERCEL_TOKEN이 설정되지 않았습니다"
+        fi
+      
+    - name: 🔄 Execute Manual Rollback
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      run: |
+        echo "🎯 수동 롤백 시작"
+        echo "환경: ${{ github.event.inputs.environment }}"
+        echo "백엔드 전용: ${{ github.event.inputs.backend_only }}"
+        echo "프론트엔드 전용: ${{ github.event.inputs.frontend_only }}"
+        echo "백엔드 리비전: ${{ github.event.inputs.backend_revision }}"
+        echo "프론트엔드 배포: ${{ github.event.inputs.frontend_deployment }}"
+        echo "검증 건너뛰기: ${{ github.event.inputs.skip_verification }}"
+        
+        # 롤백 스크립트 실행 권한 부여
+        chmod +x ./rollback-full.sh
+        chmod +x ./backend/rollback-backend.sh
+        chmod +x ./frontend/rollback-frontend.sh
+        
+        # 롤백 명령어 구성
+        ROLLBACK_CMD="./rollback-full.sh -e ${{ github.event.inputs.environment }}"
+        
+        if [ "${{ github.event.inputs.backend_only }}" = "true" ]; then
+          ROLLBACK_CMD="$ROLLBACK_CMD -b"
+        fi
+        
+        if [ "${{ github.event.inputs.frontend_only }}" = "true" ]; then
+          ROLLBACK_CMD="$ROLLBACK_CMD -f"
+        fi
+        
+        if [ -n "${{ github.event.inputs.backend_revision }}" ]; then
+          ROLLBACK_CMD="$ROLLBACK_CMD -r ${{ github.event.inputs.backend_revision }}"
+        fi
+        
+        if [ -n "${{ github.event.inputs.frontend_deployment }}" ]; then
+          ROLLBACK_CMD="$ROLLBACK_CMD -d ${{ github.event.inputs.frontend_deployment }}"
+        fi
+        
+        if [ "${{ github.event.inputs.skip_verification }}" = "true" ]; then
+          ROLLBACK_CMD="$ROLLBACK_CMD -s"
+        fi
+        
+        echo "🚀 실행할 명령어: $ROLLBACK_CMD"
+        
+        # 자동 승인을 위한 환경 변수 설정
+        echo "y" | $ROLLBACK_CMD
+        
+        echo "✅ 수동 롤백 완료"
+        
+    - name: 📊 Rollback Summary
+      if: always()
+      run: |
+        echo "📋 롤백 요약:"
+        echo "  환경: ${{ github.event.inputs.environment }}"
+        echo "  시작 시간: $(date)"
+        echo "  실행자: ${{ github.actor }}"
+        echo "  워크플로우 ID: ${{ github.run_id }}"
+        echo ""
+        echo "🔗 관련 링크:"
+        if [ "${{ github.event.inputs.environment }}" = "production" ]; then
+          echo "  백엔드: https://xai-community-backend-798170408536.asia-northeast3.run.app"
+          echo "  프론트엔드: https://xai-community.vercel.app"
+        else
+          echo "  백엔드: https://xai-community-backend-staging-798170408536.asia-northeast3.run.app"
+          echo "  프론트엔드: https://xai-community-staging.vercel.app"
+        fi
+        echo "  Google Cloud Console: https://console.cloud.google.com/run"
+        echo "  Vercel Dashboard: https://vercel.com/dashboard"
