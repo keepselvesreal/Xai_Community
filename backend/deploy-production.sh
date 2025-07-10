@@ -143,36 +143,37 @@ else
     exit 1
 fi
 
-# 2단계: 환경변수 처리 시작
+# 2단계: 환경변수 처리 시작 (스테이징 성공 사례 적용)
 log_info "=== 2단계: 환경변수 처리 시작 ==="
 log_debug "GitHub Secrets에서 주입된 환경변수 사용 중..."
 
-# 필요한 환경변수들을 직접 설정 (GitHub Secrets에서 주입됨)
-ENV_VARS="ENVIRONMENT=$ENVIRONMENT"
-ENV_VARS="$ENV_VARS,MONGODB_URL=$MONGODB_URL"
-ENV_VARS="$ENV_VARS,DATABASE_NAME=$DATABASE_NAME"
-ENV_VARS="$ENV_VARS,USERS_COLLECTION=$USERS_COLLECTION"
-ENV_VARS="$ENV_VARS,POSTS_COLLECTION=$POSTS_COLLECTION"
-ENV_VARS="$ENV_VARS,COMMENTS_COLLECTION=$COMMENTS_COLLECTION"
-ENV_VARS="$ENV_VARS,POST_STATS_COLLECTION=$POST_STATS_COLLECTION"
-ENV_VARS="$ENV_VARS,USER_REACTIONS_COLLECTION=$USER_REACTIONS_COLLECTION"
-ENV_VARS="$ENV_VARS,FILES_COLLECTION=$FILES_COLLECTION"
-ENV_VARS="$ENV_VARS,STATS_COLLECTION=$STATS_COLLECTION"
-ENV_VARS="$ENV_VARS,API_TITLE=$API_TITLE"
-ENV_VARS="$ENV_VARS,API_VERSION=$API_VERSION"
-ENV_VARS="$ENV_VARS,API_DESCRIPTION=$API_DESCRIPTION"
-ENV_VARS="$ENV_VARS,SECRET_KEY=$SECRET_KEY"
-ENV_VARS="$ENV_VARS,ALGORITHM=$ALGORITHM"
-ENV_VARS="$ENV_VARS,ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
-ENV_VARS="$ENV_VARS,REFRESH_TOKEN_EXPIRE_DAYS=$REFRESH_TOKEN_EXPIRE_DAYS"
-ENV_VARS="$ENV_VARS,ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
-ENV_VARS="$ENV_VARS,FRONTEND_URL=$FRONTEND_URL"
-ENV_VARS="$ENV_VARS,LOG_LEVEL=$LOG_LEVEL"
-ENV_VARS="$ENV_VARS,MAX_COMMENT_DEPTH=$MAX_COMMENT_DEPTH"
-ENV_VARS="$ENV_VARS,ENABLE_DOCS=$ENABLE_DOCS"
-ENV_VARS="$ENV_VARS,ENABLE_CORS=$ENABLE_CORS"
-
-ENV_COUNT=22
+# 환경변수 배열 생성 (스테이징과 동일한 방식)
+ENV_VARS_ARRAY=(
+    "ENVIRONMENT=$ENVIRONMENT"
+    "MONGODB_URL=$MONGODB_URL"
+    "DATABASE_NAME=$DATABASE_NAME"
+    "USERS_COLLECTION=$USERS_COLLECTION"
+    "POSTS_COLLECTION=$POSTS_COLLECTION"
+    "COMMENTS_COLLECTION=$COMMENTS_COLLECTION"
+    "POST_STATS_COLLECTION=$POST_STATS_COLLECTION"
+    "USER_REACTIONS_COLLECTION=$USER_REACTIONS_COLLECTION"
+    "FILES_COLLECTION=$FILES_COLLECTION"
+    "STATS_COLLECTION=$STATS_COLLECTION"
+    "API_TITLE=$API_TITLE"
+    "API_VERSION=$API_VERSION"
+    "API_DESCRIPTION=$API_DESCRIPTION"
+    "SECRET_KEY=$SECRET_KEY"
+    "ALGORITHM=$ALGORITHM"
+    "ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
+    "REFRESH_TOKEN_EXPIRE_DAYS=$REFRESH_TOKEN_EXPIRE_DAYS"
+    "ALLOWED_ORIGINS=\"$ALLOWED_ORIGINS\""
+    "FRONTEND_URL=$FRONTEND_URL"
+    "LOG_LEVEL=$LOG_LEVEL"
+    "MAX_COMMENT_DEPTH=$MAX_COMMENT_DEPTH"
+    "ENABLE_DOCS=$ENABLE_DOCS"
+    "ENABLE_CORS=$ENABLE_CORS"
+)
+ENV_COUNT=${#ENV_VARS_ARRAY[@]}
 
 # Git 정보 추가
 log_info "Git 정보 수집 중..."
@@ -184,29 +185,58 @@ log_debug "빌드 시간: $BUILD_TIME"
 log_debug "커밋 해시: $COMMIT_HASH"
 log_debug "빌드 버전: $BUILD_VERSION"
 
-# Git 정보를 환경변수에 추가
-if [ -n "$ENV_VARS" ]; then
-    ENV_VARS="$ENV_VARS,BUILD_TIME=$BUILD_TIME,COMMIT_HASH=$COMMIT_HASH,BUILD_VERSION=$BUILD_VERSION"
-else
-    ENV_VARS="BUILD_TIME=$BUILD_TIME,COMMIT_HASH=$COMMIT_HASH,BUILD_VERSION=$BUILD_VERSION"
-fi
-
+# Git 정보를 환경변수 배열에 추가
+ENV_VARS_ARRAY+=(
+    "BUILD_TIME=$BUILD_TIME"
+    "COMMIT_HASH=$COMMIT_HASH"
+    "BUILD_VERSION=$BUILD_VERSION"
+)
 ENV_COUNT=$((ENV_COUNT + 3))
 
 log_success "환경변수 처리 완료: $ENV_COUNT개 변수 (Git 정보 포함)"
-log_debug "환경변수 문자열 길이: ${#ENV_VARS}"
-log_debug "환경변수 미리보기: ${ENV_VARS:0:150}..."
 
-# 3단계: Cloud Run 배포 (실시간 모니터링 강화)
+# 환경변수를 YAML 파일로 저장 (스테이징과 동일한 방식)
+ENV_VARS_FILE="/tmp/env_vars_production.yaml"
+log_debug "환경변수 파일 생성: $ENV_VARS_FILE"
+
+# YAML 형식으로 환경변수 파일 작성
+> "$ENV_VARS_FILE"  # 파일 초기화
+for env_var in "${ENV_VARS_ARRAY[@]}"; do
+    # KEY=VALUE 형식을 YAML 형식으로 변환
+    var_name=$(echo "$env_var" | cut -d'=' -f1)
+    var_value=$(echo "$env_var" | cut -d'=' -f2- | sed 's/^"//' | sed 's/"$//')
+    # YAML 형식으로 출력 (값을 따옴표로 감싸기)
+    echo "$var_name: \"$var_value\"" >> "$ENV_VARS_FILE"
+done
+
+log_debug "환경변수 파일 내용 확인:"
+head -10 "$ENV_VARS_FILE"
+log_debug "환경변수 파일 크기: $(wc -l < "$ENV_VARS_FILE") 줄"
+
+# 3단계: Cloud Run 배포 (스테이징 성공 사례 완전 적용)
 log_info "=== 3단계: Cloud Run 배포 시작 ==="
 log_debug "배포 명령어 실행 시작: $(date)"
 
+# 환경변수 파일 크기 확인 (Cloud Run 제한: 32KB)
+ENV_VARS_FILE_SIZE=$(wc -c < "$ENV_VARS_FILE")
+if [ $ENV_VARS_FILE_SIZE -gt 30000 ]; then
+    log_error "환경변수 파일이 너무 큽니다: ${ENV_VARS_FILE_SIZE} bytes"
+    exit 1
+fi
+
 # 배포 명령어 출력 (디버깅용)
-DEPLOY_COMMAND="gcloud run deploy $GCP_SERVICE_NAME --image $IMAGE_NAME --platform managed --region $GCP_REGION --allow-unauthenticated --port 8080 --memory 512Mi --cpu 1 --concurrency 100 --max-instances 10 --timeout 300 --set-env-vars=\"$ENV_VARS\" --project=$GCP_PROJECT_ID --quiet"
-log_debug "실행할 배포 명령어: $DEPLOY_COMMAND"
+log_debug "배포 설정:"
+log_debug "  - 서비스명: $GCP_SERVICE_NAME"
+log_debug "  - 이미지: $IMAGE_NAME"
+log_debug "  - 리전: $GCP_REGION"
+log_debug "  - 환경변수 개수: $ENV_COUNT"
+log_debug "  - 환경변수 크기: ${ENV_VARS_FILE_SIZE} bytes"
 
 # 배포 실행 (동기식으로 변경 - 스테이징 성공 사례 적용)
 log_info "배포 명령어 실행 중... (최대 10분 소요 예상)"
+
+log_debug "배포 명령어: gcloud run deploy $GCP_SERVICE_NAME --image $IMAGE_NAME --platform managed --region $GCP_REGION --allow-unauthenticated --port 8080 --memory 512Mi --cpu 1 --concurrency 100 --max-instances 10 --timeout 300 --project=$GCP_PROJECT_ID"
+log_debug "환경변수 파일: $ENV_VARS_FILE"
 
 DEPLOY_OUTPUT=$(gcloud run deploy "$GCP_SERVICE_NAME" \
     --image "$IMAGE_NAME" \
@@ -219,7 +249,7 @@ DEPLOY_OUTPUT=$(gcloud run deploy "$GCP_SERVICE_NAME" \
     --concurrency 100 \
     --max-instances 10 \
     --timeout 300 \
-    --set-env-vars="$ENV_VARS" \
+    --env-vars-file="$ENV_VARS_FILE" \
     --project="$GCP_PROJECT_ID" 2>&1)
 
 DEPLOY_EXIT_CODE=$?
