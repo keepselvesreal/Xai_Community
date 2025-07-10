@@ -36,19 +36,24 @@ log_debug() {
 
 log_info "=== XAI Community Backend Production Cloud Run 배포 시작 ==="
 
-# 환경변수 확인 (GitHub Secrets에서 주입됨)
-log_info "환경변수 확인 중..."
-if [ -f ".env.prod" ]; then
-    log_info ".env.prod 파일 발견 - 로컬 개발 환경"
-    # Windows 줄바꿈 문제 해결
-    sed -i 's/\r$//' .env.prod 2>/dev/null || true
-    # 파일에서 환경변수 로드
-    set -a
-    source .env.prod
-    set +a
-else
-    log_info "환경변수는 GitHub Secrets에서 주입됨 - CI/CD 환경"
+# .env.prod 파일 확인
+if [ ! -f ".env.prod" ]; then
+    log_error ".env.prod 파일이 없습니다!"
+    exit 1
 fi
+
+log_success ".env.prod 파일 확인 완료"
+
+# Windows 줄바꿈 문제 해결
+log_info "Windows 줄바꿈 문제 해결 중..."
+sed -i 's/\r$//' .env.prod 2>/dev/null || true
+log_success "줄바꿈 문제 해결 완료"
+
+# .env.prod 파일에서 환경변수 로드
+log_info ".env.prod 파일에서 환경변수 로드 중..."
+set -a
+source .env.prod
+set +a
 
 # GCP 설정 변수 확인
 if [ -z "$GCP_PROJECT_ID" ] || [ -z "$GCP_REGION" ] || [ -z "$GCP_SERVICE_NAME" ]; then
@@ -143,37 +148,49 @@ else
     exit 1
 fi
 
-# 2단계: 환경변수 처리 시작 (스테이징 성공 사례 적용)
+# 2단계: .env.prod 파일에서 환경변수 자동 변환
 log_info "=== 2단계: 환경변수 처리 시작 ==="
-log_debug "GitHub Secrets에서 주입된 환경변수 사용 중..."
+log_debug ".env.prod 파일에서 환경변수 읽기 중..."
 
-# 환경변수 배열 생성 (스테이징과 동일한 방식)
-ENV_VARS_ARRAY=(
-    "ENVIRONMENT=$ENVIRONMENT"
-    "MONGODB_URL=$MONGODB_URL"
-    "DATABASE_NAME=$DATABASE_NAME"
-    "USERS_COLLECTION=$USERS_COLLECTION"
-    "POSTS_COLLECTION=$POSTS_COLLECTION"
-    "COMMENTS_COLLECTION=$COMMENTS_COLLECTION"
-    "POST_STATS_COLLECTION=$POST_STATS_COLLECTION"
-    "USER_REACTIONS_COLLECTION=$USER_REACTIONS_COLLECTION"
-    "FILES_COLLECTION=$FILES_COLLECTION"
-    "STATS_COLLECTION=$STATS_COLLECTION"
-    "API_TITLE=$API_TITLE"
-    "API_VERSION=$API_VERSION"
-    "API_DESCRIPTION=$API_DESCRIPTION"
-    "SECRET_KEY=$SECRET_KEY"
-    "ALGORITHM=$ALGORITHM"
-    "ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
-    "REFRESH_TOKEN_EXPIRE_DAYS=$REFRESH_TOKEN_EXPIRE_DAYS"
-    "ALLOWED_ORIGINS=\"$ALLOWED_ORIGINS\""
-    "FRONTEND_URL=$FRONTEND_URL"
-    "LOG_LEVEL=$LOG_LEVEL"
-    "MAX_COMMENT_DEPTH=$MAX_COMMENT_DEPTH"
-    "ENABLE_DOCS=$ENABLE_DOCS"
-    "ENABLE_CORS=$ENABLE_CORS"
-)
-ENV_COUNT=${#ENV_VARS_ARRAY[@]}
+ENV_VARS_ARRAY=()
+ENV_COUNT=0
+
+while IFS= read -r line; do
+    # 주석과 빈 줄 건너뛰기
+    if [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]] && [[ "$line" =~ ^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*= ]]; then
+        var_name=$(echo "$line" | cut -d'=' -f1 | xargs)
+        var_value=$(echo "$line" | cut -d'=' -f2- | xargs)
+        
+        log_debug "처리 중인 변수: $var_name"
+        
+        # PORT 변수는 Cloud Run에서 자동 설정되므로 제외
+        if [ "$var_name" = "PORT" ]; then
+            log_debug "PORT 변수 제외 (Cloud Run 시스템 예약)"
+            continue
+        fi
+        
+        # HOST 변수도 Cloud Run에서 자동 설정
+        if [ "$var_name" = "HOST" ]; then
+            log_debug "HOST 변수 제외 (Cloud Run 시스템 예약)"
+            continue
+        fi
+        
+        # GCP 설정 변수들은 배포용이므로 제외
+        if [[ "$var_name" =~ ^GCP_.* ]]; then
+            log_debug "GCP 설정 변수 제외: $var_name"
+            continue
+        fi
+        
+        # 환경변수 배열에 추가 (쉼표 포함 시 이스케이핑)
+        if [[ "$var_value" == *","* ]] || [[ "$var_value" == *"="* ]] || [[ "$var_value" == *" "* ]]; then
+            # 특수문자가 포함된 경우 따옴표로 감싸기
+            ENV_VARS_ARRAY+=("$var_name=\"$var_value\"")
+        else
+            ENV_VARS_ARRAY+=("$var_name=$var_value")
+        fi
+        ENV_COUNT=$((ENV_COUNT + 1))
+    fi
+done < ".env.prod"
 
 # Git 정보 추가
 log_info "Git 정보 수집 중..."
