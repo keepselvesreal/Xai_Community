@@ -35,19 +35,19 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, className = "" }: 
 
   // CommentItem 핸들러들
   const handleReply = async (parentId: string, content: string) => {
-    return await submitReply(parentId, content);
+    await submitReply(parentId, content);
   };
 
   const handleEdit = async (commentId: string, content: string) => {
-    return await editComment(commentId, content);
+    await editComment(commentId, content);
   };
 
   const handleDelete = async (commentId: string) => {
-    return await deleteComment(commentId);
+    await deleteComment(commentId);
   };
 
   const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
-    return await reactToComment(commentId, type);
+    await reactToComment(commentId, type);
   };
 
   const formatDate = (dateString: string) => {
@@ -63,7 +63,14 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, className = "" }: 
   };
 
   // 디버깅용 로그
-  console.log('CommentSection 렌더링:', { postSlug, commentsCount: comments?.length, hasComments: !!comments });
+  console.log('CommentSection 렌더링:', { 
+    postSlug, 
+    commentsCount: comments?.length, 
+    hasComments: !!comments,
+    commentsData: comments,
+    commentsType: typeof comments,
+    isArray: Array.isArray(comments)
+  });
 
   return (
     <div className={`space-y-6 ${className}`}>

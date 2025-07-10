@@ -104,6 +104,17 @@ class CommentsService:
             max_depth=settings.max_comment_depth
         )
         
+        # 🔍 디버깅: 댓글 구조 확인
+        print(f"🔍 [DEBUG] 댓글 조회 - post_slug: {post_slug}")
+        print(f"🔍 [DEBUG] comments_with_replies 수: {len(comments_with_replies)}")
+        for i, item in enumerate(comments_with_replies):
+            comment = item["comment"]
+            replies = item["replies"]
+            print(f"🔍 [DEBUG] 댓글 {i+1}: id={comment.id}, content={comment.content[:30]}..., replies={len(replies)}")
+            for j, reply_item in enumerate(replies):
+                reply_comment = reply_item["comment"]
+                print(f"    답글 {j+1}: id={reply_comment.id}, content={reply_comment.content[:30]}...")
+        
         # Convert to comment details with user reactions
         comment_details = []
         all_comment_ids = []
@@ -206,11 +217,13 @@ class CommentsService:
         )
         
         # Create reply
+        print(f"🔍 [DEBUG] 답글 생성: parent_comment_id={parent_comment_id}, content={comment_data.content[:30]}...")
         reply = await self.comment_repo.create(
             comment_data=reply_data,
             author_id=str(current_user.id),
             parent_id=str(post.id)
         )
+        print(f"🔍 [DEBUG] 답글 생성 완료: reply_id={reply.id}, parent_comment_id={reply.parent_comment_id}")
         
         # Increment parent comment reply count
         await self.comment_repo.increment_reply_count(parent_comment_id)

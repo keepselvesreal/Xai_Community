@@ -177,7 +177,12 @@ class CommentRepository:
             "status": status
         }
         
+        print(f"🔍 [DEBUG] get_replies 쿼리: parent_comment_id={parent_comment_id}, status={status}")
         replies = await Comment.find(query).sort("created_at").to_list()
+        print(f"🔍 [DEBUG] get_replies 결과: {len(replies)}개 답글 발견")
+        for reply in replies:
+            print(f"    답글: id={reply.id}, content={reply.content[:30]}..., parent_comment_id={reply.parent_comment_id}")
+        
         return replies
     
     async def get_replies_recursive(self, parent_comment_id: str, status: str = "active", max_depth: int = 3, current_depth: int = 0) -> List[Dict[str, Any]]:

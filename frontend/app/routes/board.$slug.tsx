@@ -273,19 +273,47 @@ export default function PostDetail() {
     if (!slug) return;
     
     try {
+      console.log('🔄 댓글 새로고침 시작 - slug:', slug);
       const response = await apiClient.getComments(slug);
+      console.log('🔍 댓글 새로고침 응답:', {
+        success: response.success,
+        data: response.data,
+        hasComments: !!response.data?.comments,
+        commentsLength: response.data?.comments?.length || 0
+      });
+      
       if (response.success && response.data) {
         const processCommentsRecursive = (comments: any[]): any[] => {
-          return comments.map(comment => ({
-            ...comment,
-            id: comment.id || comment._id,
-            replies: comment.replies ? processCommentsRecursive(comment.replies) : []
-          }));
+          return comments.map(comment => {
+            console.log('🔍 새로고침 댓글 처리:', {
+              id: comment.id || comment._id,
+              content: comment.content?.substring(0, 50) + '...',
+              hasReplies: !!comment.replies,
+              repliesCount: comment.replies?.length || 0,
+              repliesData: comment.replies
+            });
+            
+            return {
+              ...comment,
+              id: comment.id || comment._id,
+              replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+            };
+          });
         };
         
-        // API 응답 구조 수정: response.data가 이미 CommentListResponse 구조
-        const processedComments = processCommentsRecursive(response.data.comments || []);
+        // API 응답 구조 수정: 중첩된 데이터 구조 처리
+        const actualComments = response.data.data?.comments || response.data.comments || [];
+        const processedComments = processCommentsRecursive(actualComments);
+        console.log('🔍 새로고침 처리된 댓글:', {
+          originalComments: response.data.comments,
+          nestedComments: response.data.data?.comments,
+          actualComments,
+          processedComments,
+          processedLength: processedComments.length
+        });
         setComments(processedComments);
+      } else {
+        console.log('❌ 댓글 새로고침 실패:', response);
       }
     } catch (error) {
       console.error('댓글 로드 실패:', error);
@@ -386,17 +414,56 @@ export default function PostDetail() {
         
         // 댓글 처리
         if (commentsResult.success && commentsResult.data) {
+          console.log('🔍 댓글 API 응답 구조 분석:', {
+            success: commentsResult.success,
+            data: commentsResult.data,
+            dataType: typeof commentsResult.data,
+            hasComments: !!commentsResult.data.comments,
+            commentsLength: commentsResult.data.comments?.length || 0,
+            fullResponse: commentsResult,
+            // 중첩된 데이터 구조 확인
+            nestedData: commentsResult.data.data,
+            nestedDataType: typeof commentsResult.data.data,
+            nestedHasComments: !!commentsResult.data.data?.comments,
+            nestedCommentsLength: commentsResult.data.data?.comments?.length || 0
+          });
+          
           const processCommentsRecursive = (comments: any[]): any[] => {
-            return comments.map(comment => ({
-              ...comment,
-              id: comment.id || comment._id,
-              replies: comment.replies ? processCommentsRecursive(comment.replies) : []
-            }));
+            return comments.map(comment => {
+              console.log('🔍 댓글 처리:', {
+                id: comment.id || comment._id,
+                content: comment.content?.substring(0, 50) + '...',
+                hasReplies: !!comment.replies,
+                repliesCount: comment.replies?.length || 0,
+                repliesData: comment.replies
+              });
+              
+              return {
+                ...comment,
+                id: comment.id || comment._id,
+                replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+              };
+            });
           };
           
-          // API 응답 구조 수정: commentsResult.data가 이미 CommentListResponse 구조
-          const processedComments = processCommentsRecursive(commentsResult.data.comments || []);
+          // API 응답 구조 수정: 중첩된 데이터 구조 처리
+          const actualComments = commentsResult.data.data?.comments || commentsResult.data.comments || [];
+          const processedComments = processCommentsRecursive(actualComments);
+          console.log('🔍 처리된 댓글 데이터:', {
+            originalComments: commentsResult.data.comments,
+            nestedComments: commentsResult.data.data?.comments,
+            actualComments,
+            processedComments,
+            processedLength: processedComments.length
+          });
           setComments(processedComments);
+        } else {
+          console.log('❌ 댓글 로딩 실패:', {
+            success: commentsResult.success,
+            error: commentsResult.error,
+            data: commentsResult.data,
+            fullResponse: commentsResult
+          });
         }
       } catch (error) {
         setIsNotFound(true);

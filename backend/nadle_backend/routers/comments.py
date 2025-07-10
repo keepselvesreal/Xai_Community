@@ -39,6 +39,7 @@ async def get_comments(
 ):
     """Get comments for a post."""
     try:
+        print(f"🔍 [DEBUG] Comments Router 호출 - slug: {slug}")
         comments, total = await comments_service.get_comments_with_user_data(
             post_slug=slug,
             page=page,
@@ -46,6 +47,7 @@ async def get_comments(
             sort_by=sort_by,
             current_user=current_user
         )
+        print(f"🔍 [DEBUG] Comments Router 결과 - comments: {len(comments)}, total: {total}")
         
         # Calculate pagination info
         total_pages = (total + page_size - 1) // page_size

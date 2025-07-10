@@ -307,7 +307,7 @@ class Settings(BaseSettings):
     
     # Comment Configuration
     max_comment_depth: int = Field(
-        default=3,
+        default=4,
         ge=1,
         le=10,
         description="Maximum depth for nested comment replies (1-10)"

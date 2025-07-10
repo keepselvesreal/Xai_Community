@@ -1085,7 +1085,7 @@ class PostsService:
         
         # 🚀 Phase 2: 댓글 캐싱 확인
         redis_manager = await get_redis_manager()
-        cache_key = f"comments_batch:{post_slug}"
+        cache_key = f"comments_batch_v2:{post_slug}"  # 캐시 키 버전 업
         
         # 캐시에서 조회 시도
         cached_comments = await redis_manager.get(cache_key)
@@ -1101,46 +1101,68 @@ class PostsService:
         if not post:
             return []
         
-        # 2. 댓글 목록 조회
-        comments, _ = await comment_repository.list_by_post(str(post.id))
+        # 2. 댓글 목록 조회 (답글 포함)
+        from nadle_backend.config import get_settings
+        settings = get_settings()
+        comments_with_replies, _ = await comment_repository.get_comments_with_replies(
+            post_id=str(post.id),
+            page=1,
+            page_size=100,  # 충분히 큰 값으로 설정
+            status="active",
+            max_depth=settings.max_comment_depth
+        )
         
-        if not comments:
+        if not comments_with_replies:
             return []
         
-        # 2. 작성자 ID 목록 추출
-        author_ids = list(set([str(comment.author_id) for comment in comments if comment.author_id]))
+        # 2. 모든 댓글 ID 수집 (최상위 댓글 + 답글들)
+        all_comments = []
+        def collect_all_comments(item):
+            comment = item["comment"]
+            replies = item["replies"]
+            all_comments.append(comment)
+            for reply_item in replies:
+                collect_all_comments(reply_item)
         
-        # 3. 작성자 정보 배치 조회
+        for item in comments_with_replies:
+            collect_all_comments(item)
+        
+        # 3. 작성자 ID 목록 추출
+        author_ids = list(set([str(comment.author_id) for comment in all_comments if comment.author_id]))
+        
+        # 4. 작성자 정보 배치 조회
         authors_info = await self.get_authors_info_batch(author_ids)
         
-        # 4. 댓글에 작성자 정보 결합
-        result = []
-        for comment in comments:
+        # 5. 댓글에 작성자 정보 결합 (재귀적으로 처리)
+        def add_author_info_recursive(item):
+            comment = item["comment"]
+            replies = item["replies"]
+            
+            # 작성자 정보 추가
             comment_dict = {
                 "id": str(comment.id),
                 "content": comment.content,
-                "author_id": str(comment.author_id),
-                "created_at": comment.created_at,
-                "updated_at": comment.updated_at,
-                "replies": comment.replies if hasattr(comment, 'replies') else []
+                "author_id": comment.author_id,
+                "parent_comment_id": comment.parent_comment_id,
+                "created_at": comment.created_at.isoformat(),
+                "updated_at": comment.updated_at.isoformat(),
+                "status": comment.status,
+                "like_count": comment.like_count,
+                "dislike_count": comment.dislike_count,
+                "reply_count": comment.reply_count,
+                "metadata": comment.metadata or {},
+                "author": authors_info.get(str(comment.author_id)),
+                "replies": [add_author_info_recursive(reply_item) for reply_item in replies]
             }
-            
-            # 작성자 정보 추가
-            author_id = str(comment.author_id)
-            if author_id in authors_info:
-                comment_dict["author"] = authors_info[author_id]
-            else:
-                comment_dict["author"] = {
-                    "id": author_id,
-                    "user_handle": "익명",
-                    "display_name": "익명",
-                    "name": "익명",
-                    "email": ""
-                }
-            
-            result.append(comment_dict)
+            return comment_dict
         
-        print(f"📊 배치 조회로 {len(comments)}개 댓글에 {len(authors_info)}명의 작성자 정보 결합 완료")
+        # 6. 최상위 댓글들에 작성자 정보와 답글 구조 결합
+        result = []
+        for item in comments_with_replies:
+            comment_with_author = add_author_info_recursive(item)
+            result.append(comment_with_author)
+        
+        print(f"📊 배치 조회로 {len(all_comments)}개 댓글에 {len(authors_info)}명의 작성자 정보 결합 완료")
         
         # 🚀 Phase 2: 댓글 결과를 캐시에 저장 (TTL: 5분)
         try:
