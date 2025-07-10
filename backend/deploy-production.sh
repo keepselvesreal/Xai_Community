@@ -91,27 +91,57 @@ if [ ! -f "Dockerfile" ]; then
     exit 1
 fi
 
-# 1단계: Docker 이미지 빌드 (성공 사례 기반 분리)
+# 1단계: Docker 이미지 빌드 (스테이징 성공 사례 적용)
 log_info "=== 1단계: Docker 이미지 빌드 시작 ==="
-log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --quiet"
+log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --async"
 
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
 
-BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --quiet 2>&1)
+# 로그 스트리밍 문제 해결을 위해 --async 사용 (스테이징 성공 사례 적용)
+BUILD_OUTPUT=$(gcloud builds submit --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --async 2>&1)
 BUILD_EXIT_CODE=$?
 
-log_debug "빌드 완료 시간: $(date)"
-log_debug "빌드 Exit Code: $BUILD_EXIT_CODE"
-
-if [ $BUILD_EXIT_CODE -ne 0 ]; then
-    log_error "Docker 이미지 빌드 실패!"
+if [ $BUILD_EXIT_CODE -eq 0 ]; then
+    # 빌드 ID 추출 (스테이징 성공 사례 적용)
+    BUILD_ID=$(echo "$BUILD_OUTPUT" | grep -o 'builds/[a-zA-Z0-9-]*' | head -1 | cut -d'/' -f2)
+    if [ -n "$BUILD_ID" ]; then
+        log_debug "빌드 ID: $BUILD_ID"
+        log_info "빌드 상태 확인 중..."
+        
+        # 빌드 완료까지 대기 (스테이징 성공 사례 적용)
+        while true; do
+            BUILD_STATUS=$(gcloud builds describe "$BUILD_ID" --project="$GCP_PROJECT_ID" --format="value(status)" 2>/dev/null)
+            case "$BUILD_STATUS" in
+                "SUCCESS")
+                    log_success "빌드 완료!"
+                    break
+                    ;;
+                "FAILURE"|"CANCELLED"|"TIMEOUT")
+                    log_error "빌드 실패: $BUILD_STATUS"
+                    gcloud builds log "$BUILD_ID" --project="$GCP_PROJECT_ID" || true
+                    exit 1
+                    ;;
+                "WORKING"|"QUEUED")
+                    log_debug "빌드 진행 중... 상태: $BUILD_STATUS"
+                    sleep 10
+                    ;;
+                *)
+                    log_debug "빌드 상태 확인 중... 상태: $BUILD_STATUS"
+                    sleep 5
+                    ;;
+            esac
+        done
+    else
+        log_error "빌드 ID를 추출할 수 없습니다!"
+        echo "$BUILD_OUTPUT"
+        exit 1
+    fi
+else
+    log_error "빌드 시작 실패!"
     echo "$BUILD_OUTPUT"
     exit 1
 fi
-
-log_success "Docker 이미지 빌드 성공!"
-log_debug "빌드 출력 미리보기: ${BUILD_OUTPUT:0:200}..."
 
 # 2단계: 환경변수 처리 시작
 log_info "=== 2단계: 환경변수 처리 시작 ==="
