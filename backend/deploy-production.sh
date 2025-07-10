@@ -205,11 +205,10 @@ log_debug "배포 명령어 실행 시작: $(date)"
 DEPLOY_COMMAND="gcloud run deploy $GCP_SERVICE_NAME --image $IMAGE_NAME --platform managed --region $GCP_REGION --allow-unauthenticated --port 8080 --memory 512Mi --cpu 1 --concurrency 100 --max-instances 10 --timeout 300 --set-env-vars=\"$ENV_VARS\" --project=$GCP_PROJECT_ID --quiet"
 log_debug "실행할 배포 명령어: $DEPLOY_COMMAND"
 
-# 배포 실행 (실시간 진행 상황 모니터링)
+# 배포 실행 (동기식으로 변경 - 스테이징 성공 사례 적용)
 log_info "배포 명령어 실행 중... (최대 10분 소요 예상)"
 
-# 백그라운드에서 배포 실행
-gcloud run deploy "$GCP_SERVICE_NAME" \
+DEPLOY_OUTPUT=$(gcloud run deploy "$GCP_SERVICE_NAME" \
     --image "$IMAGE_NAME" \
     --platform managed \
     --region "$GCP_REGION" \
@@ -221,62 +220,28 @@ gcloud run deploy "$GCP_SERVICE_NAME" \
     --max-instances 10 \
     --timeout 300 \
     --set-env-vars="$ENV_VARS" \
-    --project="$GCP_PROJECT_ID" \
-    --verbosity=info > deploy_output.log 2>&1 &
+    --project="$GCP_PROJECT_ID" 2>&1)
 
-DEPLOY_PID=$!
-log_debug "배포 프로세스 ID: $DEPLOY_PID"
-
-# 배포 진행 상황 모니터링
-MONITOR_COUNT=0
-while kill -0 $DEPLOY_PID 2>/dev/null; do
-    MONITOR_COUNT=$((MONITOR_COUNT + 1))
-    log_debug "배포 진행 중... ($MONITOR_COUNT/60) - $(date)"
-    
-    # 서비스 생성 상태 확인
-    SERVICE_STATUS=$(gcloud run services list --region="$GCP_REGION" --project="$GCP_PROJECT_ID" --format="value(metadata.name)" --filter="metadata.name:$GCP_SERVICE_NAME" 2>/dev/null || echo "")
-    if [ -n "$SERVICE_STATUS" ]; then
-        log_info "서비스 생성 감지됨: $SERVICE_STATUS"
-        break
-    fi
-    
-    # 10분 타임아웃
-    if [ $MONITOR_COUNT -ge 60 ]; then
-        log_error "배포 타임아웃 (10분 초과)"
-        kill $DEPLOY_PID 2>/dev/null
-        break
-    fi
-    
-    sleep 10
-done
-
-# 배포 결과 확인
-wait $DEPLOY_PID
 DEPLOY_EXIT_CODE=$?
 log_debug "배포 명령어 실행 완료: $(date)"
 log_debug "배포 Exit Code: $DEPLOY_EXIT_CODE"
 
 # 배포 출력 내용 확인
-if [ -f "deploy_output.log" ]; then
-    DEPLOY_OUTPUT=$(cat deploy_output.log)
-    log_debug "배포 출력 길이: ${#DEPLOY_OUTPUT}"
-    log_debug "배포 출력 미리보기: ${DEPLOY_OUTPUT:0:300}..."
-    
-    # 에러 패턴 감지
-    if echo "$DEPLOY_OUTPUT" | grep -q "ERROR\|FAILED\|failed"; then
-        log_error "배포 출력에서 에러 감지!"
-        echo "=== 배포 에러 로그 ==="
-        echo "$DEPLOY_OUTPUT" | grep -A 5 -B 5 "ERROR\|FAILED\|failed"
-        echo "===================="
-    fi
-else
-    log_warning "배포 출력 로그 파일이 생성되지 않았습니다."
+log_debug "배포 출력 길이: ${#DEPLOY_OUTPUT}"
+log_debug "배포 출력 미리보기: ${DEPLOY_OUTPUT:0:300}..."
+
+# 에러 패턴 감지
+if echo "$DEPLOY_OUTPUT" | grep -q "ERROR\|FAILED\|failed"; then
+    log_error "배포 출력에서 에러 감지!"
+    echo "=== 배포 에러 로그 ==="
+    echo "$DEPLOY_OUTPUT" | grep -A 5 -B 5 "ERROR\|FAILED\|failed"
+    echo "===================="
 fi
 
 if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
     log_error "Cloud Run 배포 실패! Exit Code: $DEPLOY_EXIT_CODE"
     echo "=== 전체 배포 로그 ==="
-    cat deploy_output.log 2>/dev/null || echo "로그 파일 없음"
+    echo "$DEPLOY_OUTPUT"
     echo "===================="
     exit 1
 fi
