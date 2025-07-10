@@ -43,6 +43,9 @@ usage() {
     echo "  -v, --verify             롤백 후 버전 확인만 수행"
     echo "  -h, --help               도움말 출력"
     echo ""
+    echo "환경변수:"
+    echo "  AUTOMATED_MODE=true      자동화 모드 (확인 절차 생략)"
+    echo ""
     echo "예시:"
     echo "  $0 -e production                          # 프로덕션 이전 배포로 롤백"
     echo "  $0 -e staging -d deployment-id            # 스테이징 특정 배포로 롤백"
@@ -94,8 +97,8 @@ if [ "$ENVIRONMENT" = "production" ]; then
     PROJECT_NAME="xai-community"
     SERVICE_URL="https://xai-community.vercel.app"
 else
-    PROJECT_NAME="xai-community-staging"
-    SERVICE_URL="https://xai-community-staging.vercel.app"
+    PROJECT_NAME="xai-community"
+    SERVICE_URL="https://xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app"
 fi
 
 log_info "프로젝트명: $PROJECT_NAME"
@@ -114,16 +117,8 @@ log_success "Vercel CLI 인증 확인 완료: $VERCEL_USER"
 # 현재 서비스 상태 확인
 log_info "=== 현재 서비스 상태 확인 ==="
 
-# 현재 버전 정보 확인
-log_info "현재 버전 정보 확인 중..."
-CURRENT_VERSION_INFO=$(curl -s "$SERVICE_URL/version" 2>/dev/null || echo '{"error": "version_page_not_available"}')
-if echo "$CURRENT_VERSION_INFO" | grep -q "error"; then
-    log_warning "버전 페이지에 접근할 수 없습니다. HTML 메타태그로 확인을 시도합니다."
-    # HTML 페이지에서 메타태그 정보 추출
-    CURRENT_VERSION_INFO=$(curl -s "$SERVICE_URL" | grep -o '<meta name="build-[^"]*" content="[^"]*"' | sed 's/<meta name="build-/{"/' | sed 's/" content="/": "/' | sed 's/"$/"}/' | tr '\n' ',' | sed 's/,$//' | sed 's/^/[/' | sed 's/$/]/' 2>/dev/null || echo '{"error": "meta_tags_not_available"}')
-fi
-
-log_debug "현재 버전 정보: $CURRENT_VERSION_INFO"
+# 현재 배포 정보만 확인 (버전 정보 접근 시도 제거)
+log_info "현재 배포 정보 확인 중..."
 
 # 검증 모드인 경우 여기서 종료
 if [ "$VERIFY_ONLY" = true ]; then
@@ -161,7 +156,7 @@ done
 # 현재 활성 배포 확인 (첫 번째 배포 URL에서 deployment ID 추출)
 CURRENT_DEPLOYMENT_URL=$(echo "$DEPLOYMENTS_OUTPUT" | grep "https://xai-community-" | head -1 | awk '{print $2}')
 if [ -n "$CURRENT_DEPLOYMENT_URL" ]; then
-    # URL에서 deployment ID 추출 (xai-community-XXXXXXX 형식)
+    # URL에서 deployment ID 추출해서 표시용으로만 사용
     CURRENT_DEPLOYMENT=$(echo "$CURRENT_DEPLOYMENT_URL" | sed -n 's/.*xai-community-\([^-]*\)-.*/\1/p')
     if [ -z "$CURRENT_DEPLOYMENT" ]; then
         # 전체 URL을 deployment ID로 사용
@@ -181,15 +176,10 @@ if [ -n "$TARGET_DEPLOYMENT" ]; then
     fi
     ROLLBACK_DEPLOYMENT="$TARGET_DEPLOYMENT"
 else
-    # 이전 배포 자동 선택 (두 번째 배포 URL에서 ID 추출)
+    # 이전 배포 자동 선택 (두 번째 배포 URL 전체 사용)
     ROLLBACK_DEPLOYMENT_URL=$(echo "$DEPLOYMENTS_OUTPUT" | grep "https://xai-community-" | sed -n '2p' | awk '{print $2}')
     if [ -n "$ROLLBACK_DEPLOYMENT_URL" ]; then
-        # URL에서 deployment ID 추출
-        ROLLBACK_DEPLOYMENT=$(echo "$ROLLBACK_DEPLOYMENT_URL" | sed -n 's/.*xai-community-\([^-]*\)-.*/\1/p')
-        if [ -z "$ROLLBACK_DEPLOYMENT" ]; then
-            # 전체 URL을 사용
-            ROLLBACK_DEPLOYMENT="$ROLLBACK_DEPLOYMENT_URL"
-        fi
+        ROLLBACK_DEPLOYMENT="$ROLLBACK_DEPLOYMENT_URL"
     else
         ROLLBACK_DEPLOYMENT=""
     fi
@@ -208,18 +198,22 @@ log_warning "  - 현재 배포: $CURRENT_DEPLOYMENT"
 log_warning "  - 롤백 대상: $ROLLBACK_DEPLOYMENT"
 log_warning "  - 프로젝트: $PROJECT_NAME ($ENVIRONMENT)"
 
-read -p "계속하시겠습니까? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    log_info "롤백이 취소되었습니다."
-    exit 0
+if [ "$AUTOMATED_MODE" != "true" ]; then
+    read -p "계속하시겠습니까? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_info "롤백이 취소되었습니다."
+        exit 0
+    fi
+else
+    log_info "자동화 모드: 확인 절차를 건너뛰고 롤백을 진행합니다."
 fi
 
 # 롤백 실행
 log_info "=== 롤백 실행 ==="
 log_info "배포 $ROLLBACK_DEPLOYMENT로 롤백 중..."
 
-ROLLBACK_OUTPUT=$(vercel promote "$ROLLBACK_DEPLOYMENT" --yes 2>&1)
+ROLLBACK_OUTPUT=$(vercel alias set "$ROLLBACK_DEPLOYMENT" "${SERVICE_URL#https://}" 2>&1)
 ROLLBACK_EXIT_CODE=$?
 
 if [ $ROLLBACK_EXIT_CODE -ne 0 ]; then
@@ -228,7 +222,7 @@ if [ $ROLLBACK_EXIT_CODE -ne 0 ]; then
     exit 1
 fi
 
-log_success "배포 롤백 완료!"
+log_success "배포 alias 설정 완료!"
 
 # 롤백 검증
 log_info "=== 롤백 검증 ==="

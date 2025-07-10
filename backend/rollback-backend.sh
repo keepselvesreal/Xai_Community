@@ -43,10 +43,14 @@ usage() {
     echo "  -v, --verify             롤백 후 버전 확인만 수행"
     echo "  -h, --help               도움말 출력"
     echo ""
+    echo "환경변수:"
+    echo "  AUTOMATED_MODE=true      자동화 모드 (확인 절차 생략)"
+    echo ""
     echo "예시:"
     echo "  $0 -e production                          # 프로덕션 이전 리비전으로 롤백"
     echo "  $0 -e staging -r revision-name            # 스테이징 특정 리비전으로 롤백"
     echo "  $0 -e production -v                       # 프로덕션 현재 버전만 확인"
+    echo "  $0 -e staging -f                          # 스테이징 강제 롤백 (확인 없음)"
     exit 1
 }
 
@@ -188,11 +192,15 @@ log_info "롤백 대상 리비전: $ROLLBACK_REVISION"
 if [ "$CURRENT_REVISION" = "$ROLLBACK_REVISION" ]; then
     log_warning "현재 리비전과 롤백 대상 리비전이 동일합니다!"
     log_warning "이미 해당 리비전이 활성화되어 있습니다."
-    read -p "그래도 계속하시겠습니까? (y/N): " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        log_info "작업이 취소되었습니다."
-        exit 0
+    if [ "$AUTOMATED_MODE" != "true" ]; then
+        read -p "그래도 계속하시겠습니까? (y/N): " -n 1 -r
+        echo
+        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+            log_info "작업이 취소되었습니다."
+            exit 0
+        fi
+    else
+        log_info "자동화 모드: 동일한 리비전이지만 계속 진행합니다."
     fi
 fi
 
@@ -202,11 +210,15 @@ log_warning "  - 현재 리비전: $CURRENT_REVISION"
 log_warning "  - 롤백 대상: $ROLLBACK_REVISION"
 log_warning "  - 서비스: $SERVICE_NAME ($ENVIRONMENT)"
 
-read -p "계속하시겠습니까? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    log_info "롤백이 취소되었습니다."
-    exit 0
+if [ "$AUTOMATED_MODE" != "true" ]; then
+    read -p "계속하시겠습니까? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        log_info "롤백이 취소되었습니다."
+        exit 0
+    fi
+else
+    log_info "자동화 모드: 확인 절차를 건너뛰고 롤백을 진행합니다."
 fi
 
 # 롤백 실행
