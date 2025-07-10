@@ -231,6 +231,7 @@ jobs:
   production-deployment:
     needs: [backend-safe-checks, frontend-safe-checks]
     runs-on: ubuntu-latest
+    environment: production
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
@@ -250,8 +251,7 @@ jobs:
         
     - name: 🚀 프로덕션 배포 실행
       env:
-        # 공통 환경변수 (스테이징과 동일)
-        ENVIRONMENT: production
+        # 공통 환경변수 (Repository Secrets)
         MONGODB_URL: ${{ secrets.MONGODB_URL }}
         DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
         USERS_COLLECTION: ${{ secrets.USERS_COLLECTION }}
@@ -274,11 +274,12 @@ jobs:
         ENABLE_CORS: ${{ secrets.ENABLE_CORS }}
         GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         GCP_REGION: ${{ secrets.GCP_REGION }}
-        # 프로덕션 전용 환경변수
-        FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
-        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS_PROD }}
-        LOG_LEVEL: ${{ secrets.LOG_LEVEL_PROD }}
-        ENABLE_DOCS: ${{ secrets.ENABLE_DOCS_PROD }}
+        # 프로덕션 환경별 고유값 (Production Environment Secrets)
+        ENVIRONMENT: ${{ secrets.ENVIRONMENT }}
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL }}
+        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
+        LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
+        ENABLE_DOCS: ${{ secrets.ENABLE_DOCS }}
         GCP_SERVICE_NAME: xai-community-backend
       run: |
         echo "🎯 프로덕션 배포 시작"
