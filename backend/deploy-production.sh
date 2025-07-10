@@ -36,28 +36,23 @@ log_debug() {
 
 log_info "=== XAI Community Backend Production Cloud Run 배포 시작 ==="
 
-# .env.prod 파일 확인
-if [ ! -f ".env.prod" ]; then
-    log_error ".env.prod 파일이 없습니다!"
-    exit 1
+# 환경변수 확인 (GitHub Secrets에서 주입됨)
+log_info "환경변수 확인 중..."
+if [ -f ".env.prod" ]; then
+    log_info ".env.prod 파일 발견 - 로컬 개발 환경"
+    # Windows 줄바꿈 문제 해결
+    sed -i 's/\r$//' .env.prod 2>/dev/null || true
+    # 파일에서 환경변수 로드
+    set -a
+    source .env.prod
+    set +a
+else
+    log_info "환경변수는 GitHub Secrets에서 주입됨 - CI/CD 환경"
 fi
-
-log_success ".env.prod 파일 확인 완료"
-
-# Windows 줄바꿈 문제 해결 (성공 사례 기반)
-log_info "Windows 줄바꿈 문제 해결 중..."
-sed -i 's/\r$//' .env.prod 2>/dev/null || true
-log_success "줄바꿈 문제 해결 완료"
-
-# .env.prod 파일에서 GCP 설정 로드
-log_info ".env.prod 파일에서 GCP 설정 로드 중..."
-set -a
-source .env.prod
-set +a
 
 # GCP 설정 변수 확인
 if [ -z "$GCP_PROJECT_ID" ] || [ -z "$GCP_REGION" ] || [ -z "$GCP_SERVICE_NAME" ]; then
-    log_error "GCP 설정이 .env.prod 파일에 없습니다!"
+    log_error "GCP 설정이 환경변수에 없습니다!"
     log_error "필요한 변수: GCP_PROJECT_ID, GCP_REGION, GCP_SERVICE_NAME"
     exit 1
 fi
