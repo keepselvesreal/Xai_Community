@@ -11,8 +11,11 @@ from pymongo import ASCENDING, DESCENDING
 import sys
 import os
 
-# FastAPI 앱 경로 추가
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# 프로젝트 루트의 backend 디렉토리를 Python 경로에 추가
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(script_dir, '../../..'))
+backend_path = os.path.join(project_root, 'backend')
+sys.path.insert(0, backend_path)
 
 from nadle_backend.config import settings
 

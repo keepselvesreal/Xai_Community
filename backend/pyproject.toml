@@ -43,6 +43,7 @@ dependencies = [
     "aiohttp>=3.12.13",
     "requests>=2.32.4",
     "redis>=5.0.0",
+    "locust>=2.37.12",
 ]
 
 [project.optional-dependencies]

@@ -11,8 +11,10 @@ import os
 from pathlib import Path
 
 # 프로젝트 루트 디렉토리를 Python 경로에 추가
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+script_dir = Path(__file__).parent
+project_root = script_dir.parent.parent.parent.parent
+backend_path = project_root / "backend"
+sys.path.insert(0, str(backend_path))
 
 from scripts.info_content.content_types import ContentType, InfoCategory
 from scripts.info_content.base_creator import ContentGenerator

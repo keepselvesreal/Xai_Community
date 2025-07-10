@@ -6,7 +6,9 @@ import sys
 from pathlib import Path
 
 # Add backend to path
-backend_path = Path(__file__).parent
+script_dir = Path(__file__).parent
+project_root = script_dir.parent.parent.parent
+backend_path = project_root / "backend"
 sys.path.insert(0, str(backend_path))
 
 from motor.motor_asyncio import AsyncIOMotorClient

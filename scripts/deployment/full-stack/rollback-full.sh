@@ -103,8 +103,8 @@ log_info "프론트엔드 URL: $FRONTEND_URL"
 
 # 스크립트 경로 설정
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-BACKEND_SCRIPT="$SCRIPT_DIR/backend/rollback-backend.sh"
-FRONTEND_SCRIPT="$SCRIPT_DIR/frontend/rollback-frontend.sh"
+BACKEND_SCRIPT="$SCRIPT_DIR/../backend/rollback-backend.sh"
+FRONTEND_SCRIPT="$SCRIPT_DIR/../frontend/rollback-frontend.sh"
 
 # 스크립트 존재 확인
 if [ ! -f "$BACKEND_SCRIPT" ]; then
