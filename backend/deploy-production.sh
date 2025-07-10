@@ -93,7 +93,7 @@ fi
 
 # 1단계: Docker 이미지 빌드 (성공 사례 기반 분리)
 log_info "=== 1단계: Docker 이미지 빌드 시작 ==="
-log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$PROJECT_ID --quiet"
+log_debug "빌드 명령어: gcloud builds submit --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --quiet"
 
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
@@ -113,49 +113,36 @@ fi
 log_success "Docker 이미지 빌드 성공!"
 log_debug "빌드 출력 미리보기: ${BUILD_OUTPUT:0:200}..."
 
-# 2단계: .env.prod 파일에서 환경변수 자동 변환 (성공 사례 로직)
+# 2단계: 환경변수 처리 시작
 log_info "=== 2단계: 환경변수 처리 시작 ==="
-log_debug ".env.prod 파일에서 환경변수 읽기 중..."
+log_debug "GitHub Secrets에서 주입된 환경변수 사용 중..."
 
-ENV_VARS=""
-ENV_COUNT=0
+# 필요한 환경변수들을 직접 설정 (GitHub Secrets에서 주입됨)
+ENV_VARS="ENVIRONMENT=$ENVIRONMENT"
+ENV_VARS="$ENV_VARS,MONGODB_URL=$MONGODB_URL"
+ENV_VARS="$ENV_VARS,DATABASE_NAME=$DATABASE_NAME"
+ENV_VARS="$ENV_VARS,USERS_COLLECTION=$USERS_COLLECTION"
+ENV_VARS="$ENV_VARS,POSTS_COLLECTION=$POSTS_COLLECTION"
+ENV_VARS="$ENV_VARS,COMMENTS_COLLECTION=$COMMENTS_COLLECTION"
+ENV_VARS="$ENV_VARS,POST_STATS_COLLECTION=$POST_STATS_COLLECTION"
+ENV_VARS="$ENV_VARS,USER_REACTIONS_COLLECTION=$USER_REACTIONS_COLLECTION"
+ENV_VARS="$ENV_VARS,FILES_COLLECTION=$FILES_COLLECTION"
+ENV_VARS="$ENV_VARS,STATS_COLLECTION=$STATS_COLLECTION"
+ENV_VARS="$ENV_VARS,API_TITLE=$API_TITLE"
+ENV_VARS="$ENV_VARS,API_VERSION=$API_VERSION"
+ENV_VARS="$ENV_VARS,API_DESCRIPTION=$API_DESCRIPTION"
+ENV_VARS="$ENV_VARS,SECRET_KEY=$SECRET_KEY"
+ENV_VARS="$ENV_VARS,ALGORITHM=$ALGORITHM"
+ENV_VARS="$ENV_VARS,ACCESS_TOKEN_EXPIRE_MINUTES=$ACCESS_TOKEN_EXPIRE_MINUTES"
+ENV_VARS="$ENV_VARS,REFRESH_TOKEN_EXPIRE_DAYS=$REFRESH_TOKEN_EXPIRE_DAYS"
+ENV_VARS="$ENV_VARS,ALLOWED_ORIGINS=$ALLOWED_ORIGINS"
+ENV_VARS="$ENV_VARS,FRONTEND_URL=$FRONTEND_URL"
+ENV_VARS="$ENV_VARS,LOG_LEVEL=$LOG_LEVEL"
+ENV_VARS="$ENV_VARS,MAX_COMMENT_DEPTH=$MAX_COMMENT_DEPTH"
+ENV_VARS="$ENV_VARS,ENABLE_DOCS=$ENABLE_DOCS"
+ENV_VARS="$ENV_VARS,ENABLE_CORS=$ENABLE_CORS"
 
-while IFS= read -r line; do
-    # 주석과 빈 줄 건너뛰기
-    if [[ ! "$line" =~ ^[[:space:]]*# ]] && [[ ! "$line" =~ ^[[:space:]]*$ ]] && [[ "$line" =~ ^[[:space:]]*[A-Za-z_][A-Za-z0-9_]*= ]]; then
-        var_name=$(echo "$line" | cut -d'=' -f1 | xargs)
-        var_value=$(echo "$line" | cut -d'=' -f2- | xargs)
-        
-        log_debug "처리 중인 변수: $var_name"
-        
-        # PORT 변수는 Cloud Run에서 자동 설정되므로 제외 (성공 사례 핵심)
-        if [ "$var_name" = "PORT" ]; then
-            log_debug "PORT 변수 제외 (Cloud Run 시스템 예약)"
-            continue
-        fi
-        
-        # HOST 변수도 Cloud Run에서 자동 설정
-        if [ "$var_name" = "HOST" ]; then
-            log_debug "HOST 변수 제외 (Cloud Run 시스템 예약)"
-            continue
-        fi
-        
-        # GCP 설정 변수들은 배포용이므로 제외
-        if [[ "$var_name" =~ ^GCP_.* ]]; then
-            log_debug "GCP 설정 변수 제외: $var_name"
-            continue
-        fi
-        
-        # ENV_VARS 문자열 구성
-        if [ -n "$ENV_VARS" ]; then
-            ENV_VARS="$ENV_VARS,$var_name=$var_value"
-        else
-            ENV_VARS="$var_name=$var_value"
-        fi
-        
-        ENV_COUNT=$((ENV_COUNT + 1))
-    fi
-done < ".env.prod"
+ENV_COUNT=22
 
 # Git 정보 추가
 log_info "Git 정보 수집 중..."
