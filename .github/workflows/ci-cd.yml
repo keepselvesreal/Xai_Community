@@ -249,6 +249,37 @@ jobs:
         project_id: xai-community
         
     - name: 🚀 프로덕션 배포 실행
+      env:
+        # 공통 환경변수 (스테이징과 동일)
+        ENVIRONMENT: production
+        MONGODB_URL: ${{ secrets.MONGODB_URL }}
+        DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+        USERS_COLLECTION: ${{ secrets.USERS_COLLECTION }}
+        POSTS_COLLECTION: ${{ secrets.POSTS_COLLECTION }}
+        COMMENTS_COLLECTION: ${{ secrets.COMMENTS_COLLECTION }}
+        POST_STATS_COLLECTION: ${{ secrets.POST_STATS_COLLECTION }}
+        USER_REACTIONS_COLLECTION: ${{ secrets.USER_REACTIONS_COLLECTION }}
+        FILES_COLLECTION: ${{ secrets.FILES_COLLECTION }}
+        STATS_COLLECTION: ${{ secrets.STATS_COLLECTION }}
+        API_TITLE: "Xai Community API - Production"
+        API_VERSION: ${{ secrets.API_VERSION }}
+        API_DESCRIPTION: "API for Xai Community - Production Environment"
+        SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        ALGORITHM: ${{ secrets.ALGORITHM }}
+        ACCESS_TOKEN_EXPIRE_MINUTES: ${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
+        REFRESH_TOKEN_EXPIRE_DAYS: ${{ secrets.REFRESH_TOKEN_EXPIRE_DAYS }}
+        PORT: ${{ secrets.PORT }}
+        HOST: ${{ secrets.HOST }}
+        MAX_COMMENT_DEPTH: ${{ secrets.MAX_COMMENT_DEPTH }}
+        ENABLE_CORS: ${{ secrets.ENABLE_CORS }}
+        GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        GCP_REGION: ${{ secrets.GCP_REGION }}
+        # 프로덕션 전용 환경변수
+        FRONTEND_URL: ${{ secrets.FRONTEND_URL_PROD }}
+        ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS_PROD }}
+        LOG_LEVEL: ${{ secrets.LOG_LEVEL_PROD }}
+        ENABLE_DOCS: ${{ secrets.ENABLE_DOCS_PROD }}
+        GCP_SERVICE_NAME: xai-community-backend
       run: |
         echo "🎯 프로덕션 배포 시작"
         echo "📂 Branch: ${{ github.ref }}"
