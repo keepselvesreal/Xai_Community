@@ -492,6 +492,31 @@ else
     log_warning "기본 API 테스트 실패. 수동으로 확인해주세요."
 fi
 
+# 7단계: 트래픽을 최신 리비전으로 전환
+log_info "=== 7단계: 트래픽을 최신 리비전으로 전환 ==="
+log_info "배포된 서비스의 트래픽을 최신 리비전으로 자동 전환 중..."
+
+TRAFFIC_UPDATE_OUTPUT=$(gcloud run services update-traffic "$GCP_SERVICE_NAME" \
+    --to-latest \
+    --region="$GCP_REGION" \
+    --project="$GCP_PROJECT_ID" 2>&1)
+
+TRAFFIC_UPDATE_EXIT_CODE=$?
+
+if [ $TRAFFIC_UPDATE_EXIT_CODE -eq 0 ]; then
+    log_success "트래픽이 최신 리비전으로 전환되었습니다!"
+    
+    # 트래픽 전환 확인
+    ACTIVE_REVISION=$(gcloud run services describe "$GCP_SERVICE_NAME" --region="$GCP_REGION" --format="value(status.traffic[0].revisionName)" --project="$GCP_PROJECT_ID" 2>/dev/null)
+    TRAFFIC_PERCENT=$(gcloud run services describe "$GCP_SERVICE_NAME" --region="$GCP_REGION" --format="value(status.traffic[0].percent)" --project="$GCP_PROJECT_ID" 2>/dev/null)
+    
+    log_success "활성 리비전: $ACTIVE_REVISION (트래픽: $TRAFFIC_PERCENT%)"
+else
+    log_warning "트래픽 전환 실패 (배포는 성공):"
+    echo "$TRAFFIC_UPDATE_OUTPUT"
+    log_warning "수동으로 트래픽을 전환해주세요: gcloud run services update-traffic $GCP_SERVICE_NAME --to-latest --region=$GCP_REGION"
+fi
+
 # 배포 완료 정보
 echo ""
 echo -e "${BLUE}=== 🎉 XAI Community Backend Staging 배포 완료 ===${NC}"
