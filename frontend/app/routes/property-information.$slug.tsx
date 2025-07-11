@@ -17,10 +17,11 @@ interface LoaderData {
 }
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  // Hybrid 방식에서는 loader가 의도적으로 null을 반환하므로 기본 메타데이터 제공
   if (!data?.infoItem) {
     return [
-      { title: "정보를 찾을 수 없습니다 | XAI 아파트 커뮤니티" },
-      { name: "description", content: "요청하신 정보를 찾을 수 없습니다." },
+      { title: "부동산 정보 | XAI 아파트 커뮤니티" },
+      { name: "description", content: "XAI 아파트 커뮤니티의 부동산 정보를 확인하세요." },
     ];
   }
 

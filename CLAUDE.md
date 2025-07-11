@@ -4,49 +4,150 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-This is a full-stack web application with FastAPI backend and HTML-based frontend. The backend follows Domain-Driven Design principles with MongoDB and Motor for async database operations. The project implements TDD practices and task-driven development.
+이것은 FastAPI 백엔드와 Remix React 프론트엔드를 가진 풀스택 웹 애플리케이션입니다. 백엔드는 Domain-Driven Design 원칙을 따르며 MongoDB와 Motor를 사용한 비동기 데이터베이스 운영을 합니다. 프로젝트는 TDD 관행과 태스크 기반 개발을 구현합니다.
 
-### Overall Project Structure
+### 전체 프로젝트 구조
 
 ```
 v5/
-├── backend/               # FastAPI backend application
-├── frontend/              # Remix React app (main production UI)
-├── frontend-prototypes/   # HTML UI for API integration
-│   └── UI.html           # Complete dashboard interface with API testing
-├── docs/                  # Documentation files
-├── tasks/                 # Task management system
-├── records/               # Project records and logs
-└── references/            # Reference materials
+├── backend/               # FastAPI 백엔드 애플리케이션 (nadle_backend 패키지)
+│   ├── nadle_backend/     # 메인 백엔드 소스 코드
+│   ├── tests/             # 종합적인 테스트 스위트 (unit/integration/e2e/performance)
+│   ├── deploy/            # 배포 설정 (Cloud Run, VM)
+│   ├── uploads/           # 파일 업로드 저장소
+│   └── main.py           # FastAPI 애플리케이션 진입점
+├── frontend/              # Remix React 앱 (메인 프로덕션 UI)
+│   ├── app/              # Remix 애플리케이션 소스
+│   ├── tests/            # 프론트엔드 테스트 (unit/integration/e2e/performance)
+│   └── deploy/           # 프론트엔드 배포 설정
+├── frontend-prototypes/   # HTML UI (API 통합 및 테스트용)
+│   └── UI.html           # 완성된 대시보드 인터페이스 (API 테스트용)
+├── scripts/              # 자동화 스크립트
+│   ├── deployment/       # 배포 스크립트 (staging/production)
+│   ├── database/         # 데이터베이스 관리 스크립트
+│   ├── development/      # 개발용 스크립트 및 데이터 생성
+│   └── monitoring/       # 모니터링 및 헬스체크
+├── deploy/               # 글로벌 배포 설정
+├── docs/                 # 문서 파일들
+├── tasks/                # 태스크 관리 시스템
+├── records/              # 프로젝트 기록 및 로그
+├── references/           # 참고 자료
+└── design-prototype/     # UI/UX 프로토타입
 ```
 
-### Backend Architecture Layers
+### 백엔드 아키텍처 계층
 
-**API Layer** (`routers/`) → **Service Layer** (`services/`) → **Repository Layer** (`repositories/`) → **Model Layer** (`models/`) → **Database** (MongoDB)
+**API 계층** (`routers/`) → **서비스 계층** (`services/`) → **레포지토리 계층** (`repositories/`) → **모델 계층** (`models/`) → **데이터베이스** (MongoDB)
 
-- Dependencies flow downward only (no circular dependencies)
-- Each layer has single responsibility
-- Business logic is contained in the service layer
-- Data access is abstracted through repositories
+- 의존성은 아래 방향으로만 흐름 (순환 의존성 없음)
+- 각 계층은 단일 책임을 가짐
+- 비즈니스 로직은 서비스 계층에 포함
+- 데이터 접근은 레포지토리를 통해 추상화
+- Redis를 통한 캐싱 시스템 구현
 
-### Frontend Strategy
+### 프론트엔드 전략
 
-- **Primary UI**: `@frontend/` (Remix React) - Main production UI application currently in development
-- **API Development Tool**: `frontend-prototypes/UI.html` - HTML dashboard for API testing and development
-- **Frontend Architecture**: Full-featured Remix React application with TypeScript, Tailwind CSS, and comprehensive testing
-- **Development Status**: Active UI development for production service using @frontend/ workspace
-- **API Integration**: Frontend integrates with FastAPI backend through comprehensive API layer
+- **메인 UI**: `frontend/` (Remix React) - 메인 프로덕션 UI 애플리케이션
+- **API 개발 도구**: `frontend-prototypes/UI.html` - API 테스트 및 개발용 HTML 대시보드
+- **프론트엔드 아키텍처**: TypeScript, Tailwind CSS, Vitest를 사용한 완전한 기능의 Remix React 애플리케이션
+- **개발 상태**: `frontend/` 워크스페이스를 사용한 활발한 프로덕션 서비스 UI 개발
+- **API 통합**: 종합적인 API 계층을 통한 FastAPI 백엔드 통합
 
-### Current Implementation Status
+### 현재 구현 상태
 
-- ✅ **Infrastructure Layer**: Database connection, models, configuration, indexes
-- ✅ **API Layer**: Complete REST API with 5 routers (auth, posts, comments, files, content)
-- ✅ **Service Layer**: Full business logic implementation across all domains
-- ✅ **Repository Layer**: Complete data access layer with CRUD operations
-- ✅ **File Management**: Complete file upload/processing system with validation
-- ✅ **Rich Text Editor**: TDD-based editor with content processing pipeline
-- ✅ **HTML UI**: Complete dashboard interface with API testing capabilities
-- ✅ **Remix Frontend**: Main production UI with comprehensive component library and routing system
+- ✅ **인프라 계층**: 데이터베이스 연결, 모델, 설정, 인덱스
+- ✅ **API 계층**: 7개 라우터를 가진 완전한 REST API (auth, posts, comments, files, content, users, health)
+- ✅ **서비스 계층**: 모든 도메인에 걸친 완전한 비즈니스 로직 구현
+- ✅ **레포지토리 계층**: CRUD 작업을 가진 완전한 데이터 접근 계층
+- ✅ **파일 관리**: 검증을 포함한 완전한 파일 업로드/처리 시스템
+- ✅ **리치 텍스트 에디터**: 콘텐츠 처리 파이프라인을 가진 TDD 기반 에디터
+- ✅ **HTML UI**: API 테스트 기능을 가진 완전한 대시보드 인터페이스
+- ✅ **Remix 프론트엔드**: 종합적인 컴포넌트 라이브러리와 라우팅 시스템을 가진 메인 프로덕션 UI
+- ✅ **캐싱 시스템**: Redis 기반 스마트 캐싱 (인기 게시글, 통계 등)
+- ✅ **배포 시스템**: Cloud Run 자동배포, VM 배포, 롤백 시스템
+- ✅ **테스트 시스템**: 유닛/통합/E2E/성능 테스트 포괄적 구현
+- ✅ **모니터링**: 성능 모니터링, 헬스체크, 로그 시스템
+
+### 기술 스택 및 도구
+
+#### 백엔드 (nadle_backend)
+- **Framework**: FastAPI (v0.115.12+)
+- **데이터베이스**: MongoDB with Motor (비동기 ODM)
+- **ODM**: Beanie (v1.27.0+)
+- **인증**: JWT (python-jose) + bcrypt password hashing
+- **캐싱**: Redis (v5.0.0+)
+- **파일 처리**: Pillow, python-multipart
+- **콘텐츠 처리**: Markdown, BeautifulSoup4, bleach
+- **테스팅**: pytest, pytest-asyncio, pytest-cov
+- **성능 테스트**: Locust
+- **브라우저 테스트**: Playwright
+
+#### 프론트엔드 (xai-community-frontend)
+- **Framework**: Remix React (v2.16.8)
+- **타입스크립트**: TypeScript (v5.1.6+)
+- **스타일링**: Tailwind CSS (v3.4.4+)
+- **상태 관리**: React Context API
+- **테스팅**: Vitest (v3.2.4), Testing Library
+- **빌드 도구**: Vite (v6.0.0+)
+- **보안**: isomorphic-dompurify (XSS 방지)
+
+#### 배포 및 인프라
+- **프로덕션 배포**: Google Cloud Run (자동배포)
+- **스테이징 배포**: Google Cloud Run (Preview Environment)
+- **VM 배포**: Google Compute Engine (대체 배포)
+- **CI/CD**: GitHub Actions (자동배포, 롤백 시스템)
+- **모니터링**: 커스텀 헬스체크, 성능 모니터링
+
+### Frontend Workspace
+- 현재 작업하는 UI 프로젝트 폴더는 `frontend/`
+- API 테스트 및 개발용 도구: `frontend-prototypes/UI.html`
+
+### 개발 명령어
+
+#### 백엔드
+```bash
+# 종속성 설치
+cd backend && uv sync
+
+# 개발 서버 실행
+cd backend && uv run python main.py
+
+# 테스트 실행
+cd backend && uv run pytest
+
+# 커버리지 포함 테스트
+cd backend && uv run pytest --cov=nadle_backend
+
+# 성능 테스트
+cd backend && uv run python -m pytest tests/performance/
+
+# 코드 포맷팅
+cd backend && uv run black nadle_backend
+
+# 린팅
+cd backend && uv run flake8 nadle_backend
+```
+
+#### 프론트엔드
+```bash
+# 종속성 설치
+cd frontend && npm install
+
+# 개발 서버 실행
+cd frontend && npm run dev
+
+# 빌드
+cd frontend && npm run build
+
+# 테스트 실행
+cd frontend && npm test
+
+# 타입 체크
+cd frontend && npm run typecheck
+
+# 린팅
+cd frontend && npm run lint
+```
 
 ## Custom rules
 ### Communication 
@@ -64,6 +165,3 @@ v5/
 - 폴더나 파일을 만들 때는 기존 프로젝트 구조의 체계를 반영한다.
 - 타입 검사를 활용하여 런타임 이전에 감지 가능한 오류를 사전에 방지한다.
 - 오류 발생 가능성이 있는 부분에는 디버깅을 위한 코드 또는 로깅을 적절히 삽입한다.
-
-### Frontend Workspace
-- 현재 작업하는 UI 프로젝트 폴더는 @frontend/

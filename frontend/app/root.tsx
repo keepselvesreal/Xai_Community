@@ -81,7 +81,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  const { buildInfo } = useLoaderData<typeof loader>();
+  const data = useLoaderData<typeof loader>();
+  const buildInfo = data?.buildInfo;
   
   return (
     <ErrorBoundary>
@@ -91,7 +92,7 @@ export default function App() {
             <NotificationProvider>
               <Outlet />
               {/* 개발 환경에서만 빌드 정보 표시 */}
-              {buildInfo.environment === "development" && (
+              {buildInfo?.environment === "development" && (
                 <div 
                   id="build-info-dev" 
                   style={{
@@ -109,10 +110,10 @@ export default function App() {
                   }}
                 >
                   <div><strong>Build Info:</strong></div>
-                  <div>Version: {buildInfo.version}</div>
-                  <div>Commit: {buildInfo.commit.slice(0, 8)}</div>
-                  <div>Environment: {buildInfo.environment}</div>
-                  <div>Deployment: {buildInfo.deploymentId.slice(0, 12)}</div>
+                  <div>Version: {buildInfo?.version || "unknown"}</div>
+                  <div>Commit: {buildInfo?.commit?.slice(0, 8) || "unknown"}</div>
+                  <div>Environment: {buildInfo?.environment || "unknown"}</div>
+                  <div>Deployment: {buildInfo?.deploymentId?.slice(0, 12) || "unknown"}</div>
                 </div>
               )}
             </NotificationProvider>

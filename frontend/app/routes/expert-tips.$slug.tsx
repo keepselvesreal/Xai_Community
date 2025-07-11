@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link, useLoaderData } from '@remix-run/react';
-import { json, type LoaderFunction } from '@remix-run/node';
+import { json, type LoaderFunction, type MetaFunction } from '@remix-run/node';
 import AppLayout from '~/components/layout/AppLayout';
 import CommentSection from '~/components/comment/CommentSection';
 import { useAuth } from '~/contexts/AuthContext';
@@ -15,6 +15,24 @@ interface LoaderData {
   comments: Comment[];
   error?: string;
 }
+
+export const meta: MetaFunction<typeof loader> = ({ data }) => {
+  if (!data?.post) {
+    return [
+      { title: "전문가 꿀정보 | XAI 아파트 커뮤니티" },
+      { name: "description", content: "XAI 아파트 커뮤니티의 전문가 꿀정보를 확인하세요." },
+    ];
+  }
+
+  const { post } = data;
+  return [
+    { title: `${post.title} | XAI 아파트 커뮤니티` },
+    { name: "description", content: post.metadata?.summary || post.title },
+    { property: "og:title", content: post.title },
+    { property: "og:description", content: post.metadata?.summary || post.title },
+    { property: "og:type", content: "article" },
+  ];
+};
 
 // 🚀 SSR 방식: 서버에서 데이터를 미리 로드하여 깜빡임 방지
 export const loader: LoaderFunction = async ({ params }) => {
@@ -94,10 +112,10 @@ export default function ExpertTipDetail() {
   
   // ⚡ SSR: 서버에서 로드된 데이터를 초기값으로 사용
   const [tip, setTip] = useState<Tip | null>(null);
-  const [post, setPost] = useState<Post | null>(loaderData.post);
-  const [comments, setComments] = useState<Comment[]>(loaderData.comments || []);
+  const [post, setPost] = useState<Post | null>(loaderData?.post || null);
+  const [comments, setComments] = useState<Comment[]>(loaderData?.comments || []);
   const [isLoading, setIsLoading] = useState(false); // SSR 데이터가 있으면 로딩 불필요
-  const [isNotFound, setIsNotFound] = useState(!!loaderData.error);
+  const [isNotFound, setIsNotFound] = useState(!!loaderData?.error);
   const [isLiked, setIsLiked] = useState(false);
   const [isDisliked, setIsDisliked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
