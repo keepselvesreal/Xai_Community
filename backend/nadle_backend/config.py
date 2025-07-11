@@ -365,6 +365,31 @@ class Settings(BaseSettings):
         description="Sentry에 개인정보 전송 여부"
     )
     
+    # === 보안 설정 ===
+    security_headers_enabled: bool = Field(
+        default=True,
+        description="보안 헤더 미들웨어 활성화 여부"
+    )
+    hsts_max_age: int = Field(
+        default=31536000,  # 1년
+        gt=0,
+        description="HSTS 헤더 max-age 값 (초 단위)"
+    )
+    csp_report_uri: Optional[str] = Field(
+        default=None,
+        description="CSP 위반 보고서 수집 URI"
+    )
+    
+    # === 환경변수 보안 설정 ===
+    mask_sensitive_logs: bool = Field(
+        default=True,
+        description="로그에서 민감한 정보 마스킹 여부"
+    )
+    environment_security_check: bool = Field(
+        default=True,
+        description="시작시 환경변수 보안 검증 여부"
+    )
+    
     
     # === 디스코드 웹훅 설정 ===
     discord_webhook_url: Optional[str] = Field(
@@ -444,6 +469,11 @@ class Settings(BaseSettings):
         """간단한 환경변수 기반 설정으로 초기화합니다."""
         super().__init__(**kwargs)
         self._setup_cors_origins()
+        
+        # 환경변수 보안 검증 (활성화된 경우)
+        if self.environment_security_check:
+            self._perform_security_check()
+        
         if os.getenv("ENVIRONMENT") == "production":
             self.validate_production_settings()
     
@@ -481,6 +511,54 @@ class Settings(BaseSettings):
         
         print(f"최종 CORS origins: {self.allowed_origins}")
         print("=== CORS 설정 완료 ===")
+    
+    def _perform_security_check(self):
+        """환경변수 보안 검증 수행"""
+        try:
+            from nadle_backend.utils.security import verify_environment_security, mask_sensitive_data
+            
+            security_results = verify_environment_security()
+            
+            if security_results["overall_status"] != "secure":
+                print("⚠️  보안 검증 경고:")
+                
+                for violation in security_results.get("environment_variables", []):
+                    print(f"   - {violation['message']}")
+                
+                for issue in security_results.get("file_permissions", []):
+                    print(f"   - {issue['message']}")
+                
+                if self.environment == "production":
+                    raise ValueError("프로덕션 환경에서 보안 위험이 감지되었습니다.")
+            else:
+                print("✅ 환경변수 보안 검증 통과")
+                
+        except ImportError:
+            print("ℹ️  보안 유틸리티를 찾을 수 없어 보안 검증을 건너뜁니다.")
+        except Exception as e:
+            print(f"⚠️  보안 검증 중 오류 발생: {e}")
+            if self.environment == "production":
+                raise
+    
+    def get_masked_config(self) -> dict:
+        """민감한 정보가 마스킹된 설정 반환"""
+        try:
+            from nadle_backend.utils.security import mask_sensitive_data
+            return mask_sensitive_data(self.__dict__.copy())
+        except ImportError:
+            # 폴백: 간단한 마스킹
+            config = self.__dict__.copy()
+            sensitive_keys = ['secret_key', 'mongodb_url', 'smtp_password', 'sentry_dsn']
+            
+            for key in sensitive_keys:
+                if key in config and config[key]:
+                    value = str(config[key])
+                    if len(value) > 8:
+                        config[key] = value[:4] + "*" * (len(value) - 8) + value[-4:]
+                    else:
+                        config[key] = "*" * len(value)
+            
+            return config
     
     def validate_production_settings(self):
         """프로덕션 환경에서 중요 설정들을 검증합니다."""

@@ -16,6 +16,10 @@ import type {
   ApiTestRequest,
   ApiTestResponse,
   UserActivityResponse,
+  EmailVerificationRequest,
+  EmailVerificationResponse,
+  EmailVerificationCodeRequest,
+  EmailVerificationCodeResponse,
 } from "~/types";
 import { validateJWTFormat, decodeJWTPayload, isTokenExpired } from './jwt-utils';
 import { 
@@ -899,6 +903,21 @@ class ApiClient {
     return this.request<Comment>(`/api/posts/${postSlug}/comments/review`, {
       method: 'POST',
       body: JSON.stringify(reviewData),
+    });
+  }
+
+  // 이메일 인증 API
+  async sendVerificationEmail(request: EmailVerificationRequest): Promise<ApiResponse<EmailVerificationResponse>> {
+    return this.request<EmailVerificationResponse>('/api/auth/send-verification-email', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  async verifyEmailCode(request: EmailVerificationCodeRequest): Promise<ApiResponse<EmailVerificationCodeResponse>> {
+    return this.request<EmailVerificationCodeResponse>('/api/auth/verify-email-code', {
+      method: 'POST',
+      body: JSON.stringify(request),
     });
   }
 

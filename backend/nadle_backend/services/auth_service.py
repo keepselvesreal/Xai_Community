@@ -656,3 +656,240 @@ class AuthService:
         except Exception as e:
             logger.error(f"사용자 세션 조회 오류: {e}")
             return []
+    
+    # === 보안 쿠키 기반 인증 메서드 ===
+    
+    async def login_with_secure_cookies(
+        self, 
+        response, 
+        user_data: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """보안 쿠키를 사용한 로그인 응답 생성
+        
+        Args:
+            response: FastAPI Response 객체
+            user_data: 사용자 데이터
+            
+        Returns:
+            로그인 응답 (토큰은 쿠키에만 저장)
+        """
+        try:
+            from nadle_backend.utils.token_security import create_secure_token_response, CSRFProtectionManager
+            
+            # 사용자 객체 가져오기
+            if isinstance(user_data, dict):
+                user_id = user_data.get("user_id") or user_data.get("id")
+            else:
+                user_id = str(user_data.id)
+            
+            user = await self.user_repository.get_by_id(user_id)
+            
+            # 토큰 생성
+            access_token = await self.create_access_token(user)
+            refresh_token = await self.create_refresh_token(user)
+            
+            # CSRF 토큰 생성 (세션 기반)
+            csrf_manager = CSRFProtectionManager()
+            session_id = f"session_{user.id}_{datetime.now().timestamp()}"
+            csrf_token = csrf_manager.generate_csrf_token(session_id)
+            
+            # 보안 쿠키 응답 생성
+            token_response = create_secure_token_response(
+                response=response,
+                access_token=access_token,
+                refresh_token=refresh_token,
+                csrf_token=csrf_token
+            )
+            
+            # 사용자 정보와 함께 반환 (토큰은 제외)
+            return {
+                **token_response,
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "user_handle": user.user_handle,
+                    "display_name": user.display_name,
+                    "role": user.role
+                }
+            }
+            
+        except Exception as e:
+            logger.error(f"보안 쿠키 로그인 실패: {e}")
+            raise
+    
+    async def verify_token_from_cookie(self, request) -> Optional[Dict[str, Any]]:
+        """쿠키에서 토큰을 추출하여 검증
+        
+        Args:
+            request: FastAPI Request 객체
+            
+        Returns:
+            검증된 사용자 데이터 또는 None
+        """
+        try:
+            from nadle_backend.utils.token_security import SecureTokenManager
+            
+            token_manager = SecureTokenManager()
+            token = token_manager.extract_token_from_cookie(request)
+            
+            if not token:
+                return None
+            
+            # 토큰 유효성 검증
+            if not await self.verify_token_validity(token):
+                return None
+            
+            # 토큰에서 사용자 정보 추출
+            payload = self.jwt_manager.verify_token(token, TokenType.ACCESS)
+            user_id = payload.get("sub")
+            
+            if not user_id:
+                return None
+            
+            # 사용자 정보 조회
+            user = await self.get_user_profile(user_id)
+            
+            return {
+                "user_id": str(user.id),
+                "email": user.email,
+                "user_handle": user.user_handle,
+                "role": user.role
+            }
+            
+        except Exception as e:
+            logger.debug(f"쿠키 토큰 검증 실패: {e}")
+            return None
+    
+    async def verify_csrf_token(self, request) -> bool:
+        """CSRF 토큰 검증
+        
+        Args:
+            request: FastAPI Request 객체
+            
+        Returns:
+            CSRF 토큰이 유효한지 여부
+        """
+        try:
+            from nadle_backend.utils.token_security import CSRFProtectionManager
+            
+            # CSRF 토큰 추출 (헤더 또는 폼 데이터에서)
+            csrf_token = request.headers.get("X-CSRF-Token")
+            if not csrf_token:
+                # 폼 데이터에서 확인
+                if hasattr(request, 'form'):
+                    form_data = await request.form()
+                    csrf_token = form_data.get("csrf_token")
+            
+            if not csrf_token:
+                return False
+            
+            # 세션 ID 추출 (쿠키 토큰에서)
+            user_data = await self.verify_token_from_cookie(request)
+            if not user_data:
+                return False
+            
+            session_id = f"session_{user_data['user_id']}"
+            
+            # CSRF 토큰 검증
+            csrf_manager = CSRFProtectionManager()
+            return csrf_manager.verify_csrf_token(csrf_token, session_id)
+            
+        except Exception as e:
+            logger.debug(f"CSRF 토큰 검증 실패: {e}")
+            return False
+    
+    async def logout_with_secure_cookies(self, request, response) -> Dict[str, Any]:
+        """보안 쿠키를 사용한 로그아웃
+        
+        Args:
+            request: FastAPI Request 객체
+            response: FastAPI Response 객체
+            
+        Returns:
+            로그아웃 결과
+        """
+        try:
+            from nadle_backend.utils.token_security import SecureTokenManager
+            
+            token_manager = SecureTokenManager()
+            
+            # 현재 토큰들 추출
+            access_token = token_manager.extract_token_from_cookie(request, "access_token")
+            refresh_token = token_manager.extract_token_from_cookie(request, "refresh_token")
+            
+            # 토큰들을 블랙리스트에 추가
+            if access_token:
+                blacklist_service = await get_token_blacklist_service()
+                await blacklist_service.add_to_blacklist(access_token, "access_token_logout")
+            
+            if refresh_token:
+                blacklist_service = await get_token_blacklist_service()
+                await blacklist_service.add_to_blacklist(refresh_token, "refresh_token_logout")
+            
+            # 쿠키 삭제
+            token_manager.clear_secure_cookie(response, "access_token")
+            token_manager.clear_secure_cookie(response, "refresh_token")
+            token_manager.clear_secure_cookie(response, "csrf_token")
+            
+            return {
+                "message": "로그아웃 성공",
+                "authentication": "cookies_cleared"
+            }
+            
+        except Exception as e:
+            logger.error(f"보안 쿠키 로그아웃 실패: {e}")
+            return {
+                "message": "로그아웃 중 오류 발생",
+                "error": str(e)
+            }
+    
+    async def refresh_token_with_secure_cookies(self, request, response) -> Dict[str, Any]:
+        """보안 쿠키를 사용한 토큰 갱신
+        
+        Args:
+            request: FastAPI Request 객체
+            response: FastAPI Response 객체
+            
+        Returns:
+            토큰 갱신 결과
+        """
+        try:
+            from nadle_backend.utils.token_security import SecureTokenManager
+            
+            token_manager = SecureTokenManager()
+            
+            # Refresh Token 추출
+            refresh_token = token_manager.extract_token_from_cookie(request, "refresh_token")
+            if not refresh_token:
+                raise InvalidCredentialsError("Refresh token not found")
+            
+            # 기존 Access Token 추출 (블랙리스트 추가용)
+            old_access_token = token_manager.extract_token_from_cookie(request, "access_token")
+            
+            # 토큰 갱신
+            token_data = await self.refresh_access_token(refresh_token)
+            new_access_token = token_data["access_token"]
+            
+            # 토큰 로테이션
+            if old_access_token:
+                token_manager.rotate_token(
+                    response=response,
+                    old_token=old_access_token,
+                    new_token=new_access_token,
+                    cookie_name="access_token"
+                )
+            else:
+                token_manager.set_secure_cookie(
+                    response=response,
+                    token=new_access_token,
+                    cookie_name="access_token"
+                )
+            
+            return {
+                "message": "토큰 갱신 성공",
+                "authentication": "secure_cookies"
+            }
+            
+        except Exception as e:
+            logger.error(f"보안 쿠키 토큰 갱신 실패: {e}")
+            raise

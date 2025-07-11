@@ -186,6 +186,29 @@ export default function Dashboard() {
             </Card.Content>
           </Card>
         </div>
+
+        {/* 관리자 도구 섹션 */}
+        {user && (user.is_admin === true || user.email === "admin@example.com" || user.role === "admin") && (
+          <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">🔧 관리자 도구</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/monitoring')}>
+                <Card.Content className="text-center py-4">
+                  <div className="text-3xl mb-2">📊</div>
+                  <div className="font-semibold text-gray-900">모니터링 대시보드</div>
+                  <div className="text-sm text-gray-500 mt-1">시스템 성능 및 에러 추적</div>
+                </Card.Content>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/alerts')}>
+                <Card.Content className="text-center py-4">
+                  <div className="text-3xl mb-2">🚨</div>
+                  <div className="font-semibold text-gray-900">알림 관리</div>
+                  <div className="text-sm text-gray-500 mt-1">지능형 알림 시스템 설정</div>
+                </Card.Content>
+              </Card>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 최근 게시글 섹션 */}

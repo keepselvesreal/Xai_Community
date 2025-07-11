@@ -132,7 +132,7 @@ HEALTH_CHECK_COUNT=0
 MAX_HEALTH_CHECKS=12  # 1분 대기
 
 while [ $HEALTH_CHECK_COUNT -lt $MAX_HEALTH_CHECKS ]; do
-    if curl -s --max-time 5 "http://$VM_IP:8080/health" > /dev/null 2>&1; then
+    if curl -s --max-time 5 "http://$VM_IP:8080/status" > /dev/null 2>&1; then
         log_success "애플리케이션이 정상적으로 복구되었습니다!"
         break
     elif curl -s --max-time 5 "http://$VM_IP:8080/" > /dev/null 2>&1; then

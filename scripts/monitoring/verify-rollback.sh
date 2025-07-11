@@ -178,9 +178,9 @@ verify_backend_version() {
         
         if echo "$BACKEND_VERSION_INFO" | grep -q "error"; then
             if [ "$JSON_OUTPUT" != true ]; then
-                log_warning "백엔드 /version API 접근 실패, /health로 재시도"
+                log_warning "백엔드 /version API 접근 실패, /status로 재시도"
             fi
-            BACKEND_VERSION_INFO=$(curl -s --max-time 30 "$BACKEND_URL/health" 2>/dev/null || echo '{"error": "health_failed"}')
+            BACKEND_VERSION_INFO=$(curl -s --max-time 30 "$BACKEND_URL/status" 2>/dev/null || echo '{"error": "status_failed"}')
         fi
         
         if ! echo "$BACKEND_VERSION_INFO" | grep -q "error"; then
@@ -301,7 +301,7 @@ verify_integration() {
         log_info "CORS 연결 테스트 중..."
     fi
     
-    if curl -f -s --max-time 30 -H "Origin: $FRONTEND_URL" "$BACKEND_URL/health" > /dev/null 2>&1; then
+    if curl -f -s --max-time 30 -H "Origin: $FRONTEND_URL" "$BACKEND_URL/status" > /dev/null 2>&1; then
         INTEGRATION_OK=true
         if [ "$JSON_OUTPUT" != true ]; then
             log_success "CORS 연결 테스트 성공"
@@ -318,7 +318,7 @@ verify_integration() {
         log_info "API 엔드포인트 테스트 중..."
     fi
     
-    if curl -f -s --max-time 30 "$BACKEND_URL/health" > /dev/null 2>&1; then
+    if curl -f -s --max-time 30 "$BACKEND_URL/status" > /dev/null 2>&1; then
         if [ "$JSON_OUTPUT" != true ]; then
             log_success "API 엔드포인트 테스트 성공"
         fi

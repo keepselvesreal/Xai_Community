@@ -75,7 +75,7 @@ check_server() {
     echo -e "${YELLOW}서버 상태 확인 중...${NC}"
     
     # 헬스 체크
-    if curl -s -o /dev/null -w "%{http_code}" "$HOST/health" | grep -q "200"; then
+    if curl -s -o /dev/null -w "%{http_code}" "$HOST/status" | grep -q "200"; then
         echo -e "${GREEN}✅ 서버가 정상적으로 동작 중입니다.${NC}"
         return 0
     else

@@ -138,7 +138,7 @@ log_info "현재 버전 정보 확인 중..."
 CURRENT_VERSION_INFO=$(curl -s "$SERVICE_URL/version" 2>/dev/null || echo '{"error": "version_api_not_available"}')
 if echo "$CURRENT_VERSION_INFO" | grep -q "error"; then
     log_warning "버전 API에 접근할 수 없습니다. 기본 헬스체크로 대체합니다."
-    CURRENT_VERSION_INFO=$(curl -s "$SERVICE_URL/health" 2>/dev/null || echo '{"error": "service_not_available"}')
+    CURRENT_VERSION_INFO=$(curl -s "$SERVICE_URL/status" 2>/dev/null || echo '{"error": "service_not_available"}')
 fi
 
 log_debug "현재 버전 정보: $CURRENT_VERSION_INFO"
@@ -271,9 +271,9 @@ log_success "리비전 전환 확인: $ACTIVE_REVISION (트래픽: $TRAFFIC_PERC
 log_info "헬스체크 수행 중..."
 HEALTH_CHECK_SUCCESS=false
 for i in {1..12}; do
-    log_debug "헬스체크 시도 $i/12: $SERVICE_URL/health"
+    log_debug "상태체크 시도 $i/12: $SERVICE_URL/status"
     
-    if curl -f -s "$SERVICE_URL/health" > /dev/null 2>&1; then
+    if curl -f -s "$SERVICE_URL/status" > /dev/null 2>&1; then
         log_success "헬스체크 성공!"
         HEALTH_CHECK_SUCCESS=true
         break
@@ -293,7 +293,7 @@ log_info "롤백된 버전 정보 확인 중..."
 NEW_VERSION_INFO=$(curl -s "$SERVICE_URL/version" 2>/dev/null || echo '{"error": "version_api_not_available"}')
 if echo "$NEW_VERSION_INFO" | grep -q "error"; then
     log_warning "버전 API에 접근할 수 없습니다. 기본 헬스체크로 대체합니다."
-    NEW_VERSION_INFO=$(curl -s "$SERVICE_URL/health" 2>/dev/null || echo '{"error": "service_not_available"}')
+    NEW_VERSION_INFO=$(curl -s "$SERVICE_URL/status" 2>/dev/null || echo '{"error": "service_not_available"}')
 fi
 
 # 롤백 완료 정보

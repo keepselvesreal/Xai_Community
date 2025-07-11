@@ -79,7 +79,7 @@ check_app_health() {
     local health_status="DOWN"
     
     if [ -n "$vm_ip" ]; then
-        if curl -s --max-time 5 "http://$vm_ip:8080/health" > /dev/null 2>&1; then
+        if curl -s --max-time 5 "http://$vm_ip:8080/status" > /dev/null 2>&1; then
             health_status="UP"
         elif curl -s --max-time 5 "http://$vm_ip:8080/" > /dev/null 2>&1; then
             health_status="PARTIAL"

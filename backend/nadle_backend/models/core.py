@@ -334,6 +334,8 @@ class UserResponse(UserBase):
     """Model for user API responses."""
     id: str = Field(alias="_id")
     status: UserStatus
+    is_admin: bool = False
+    email_verified: bool = False
     created_at: datetime
     updated_at: datetime
     

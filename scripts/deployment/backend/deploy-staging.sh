@@ -433,14 +433,14 @@ fi
 
 # 5단계: 헬스체크 (개선된 버전)
 log_info "=== 5단계: 헬스체크 진행 ==="
-log_debug "헬스체크 URL: $SERVICE_URL/health"
+log_debug "상태체크 URL: $SERVICE_URL/status"
 
 HEALTH_CHECK_SUCCESS=false
 for i in {1..12}; do
     log_debug "헬스체크 시도 $i/12: $(date)"
     
     # 헬스체크 응답 확인
-    HEALTH_RESPONSE=$(curl -f -s "$SERVICE_URL/health" 2>/dev/null)
+    HEALTH_RESPONSE=$(curl -f -s "$SERVICE_URL/status" 2>/dev/null)
     CURL_EXIT_CODE=$?
     
     if [ $CURL_EXIT_CODE -eq 0 ] && [ -n "$HEALTH_RESPONSE" ]; then
@@ -453,7 +453,7 @@ for i in {1..12}; do
     if [ $i -eq 12 ]; then
         log_error "헬스체크 실패. 서비스가 정상적으로 시작되지 않았습니다."
         log_debug "마지막 curl 종료 코드: $CURL_EXIT_CODE"
-        log_info "수동 확인 URL: $SERVICE_URL/health"
+        log_info "수동 확인 URL: $SERVICE_URL/status"
         
         # 서비스 로그 확인 링크 제공
         log_info "서비스 로그 확인: https://console.cloud.google.com/logs/viewer?project=$GCP_PROJECT_ID&resource=cloud_run_revision/service_name/$GCP_SERVICE_NAME"
@@ -530,7 +530,7 @@ echo -e "  환경변수: $ENV_COUNT개 설정"
 echo ""
 echo -e "${GREEN}✅ 서비스 URL${NC}"
 echo -e "  메인: $SERVICE_URL"
-echo -e "  헬스체크: $SERVICE_URL/health"
+echo -e "  상태체크: $SERVICE_URL/status"
 echo -e "  API 문서: $SERVICE_URL/docs"
 echo ""
 echo -e "${GREEN}✅ 관리 URL${NC}"

@@ -183,14 +183,14 @@ log_info "서비스 헬스체크 시작..."
 log_info "서비스 준비 상태 확인 중 (최대 60초 대기)..."
 
 for i in {1..12}; do
-    if curl -s -f "$SERVICE_URL/health" >/dev/null 2>&1; then
+    if curl -s -f "$SERVICE_URL/status" >/dev/null 2>&1; then
         log_success "서비스가 준비되었습니다!"
         break
     fi
     
     if [ $i -eq 12 ]; then
         log_warning "헬스체크 타임아웃 - 서비스가 아직 준비되지 않았을 수 있습니다."
-        log_info "수동으로 확인해주세요: $SERVICE_URL/health"
+        log_info "수동으로 확인해주세요: $SERVICE_URL/status"
     else
         log_info "서비스 준비 중... ($i/12) - 5초 후 재시도"
         sleep 5
@@ -209,13 +209,13 @@ fi
 echo -e "\n${BLUE}=== 배포 완료 ===\n"
 echo -e "${GREEN}서비스 URL:${NC} $SERVICE_URL"
 echo -e "${GREEN}API 문서:${NC} $SERVICE_URL/docs"
-echo -e "${GREEN}헬스체크:${NC} $SERVICE_URL/health"
+echo -e "${GREEN}상태체크:${NC} $SERVICE_URL/status"
 echo -e "${GREEN}Google Cloud Console:${NC} https://console.cloud.google.com/run/detail/$REGION/$SERVICE_NAME/metrics?project=$PROJECT_ID"
 
 echo -e "\n${YELLOW}테스트 가능한 엔드포인트:${NC}"
 echo -e "- 기본: $SERVICE_URL/"
-echo -e "- 헬스체크: $SERVICE_URL/health"
-echo -e "- 전체 헬스체크: $SERVICE_URL/health/full"
+echo -e "- 상태체크: $SERVICE_URL/status"
+echo -e "- 상세 상태체크: $SERVICE_URL/health/detailed"
 echo -e "- API 문서: $SERVICE_URL/docs"
 
 echo -e "\n${YELLOW}로그 확인 명령어:${NC}"

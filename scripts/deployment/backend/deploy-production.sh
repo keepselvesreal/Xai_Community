@@ -322,16 +322,16 @@ fi
 # 5단계: 헬스체크 (성공 사례 기반)
 log_info "=== 5단계: 헬스체크 진행 ==="
 for i in {1..12}; do
-    log_debug "헬스체크 시도 $i/12: $SERVICE_URL/health"
+    log_debug "상태체크 시도 $i/12: $SERVICE_URL/status"
     
-    if curl -f -s "$SERVICE_URL/health" > /dev/null 2>&1; then
-        log_success "헬스체크 성공! 서비스가 정상적으로 응답합니다."
+    if curl -f -s "$SERVICE_URL/status" > /dev/null 2>&1; then
+        log_success "상태체크 성공! 서비스가 정상적으로 응답합니다."
         break
     fi
     
     if [ $i -eq 12 ]; then
-        log_warning "헬스체크 실패. 수동으로 확인해주세요."
-        log_info "수동 확인 URL: $SERVICE_URL/health"
+        log_warning "상태체크 실패. 수동으로 확인해주세요."
+        log_info "수동 확인 URL: $SERVICE_URL/status"
         break
     else
         log_debug "서비스 준비 중... 5초 후 재시도"
@@ -387,7 +387,7 @@ echo -e "  환경변수: $ENV_COUNT개 설정"
 echo ""
 echo -e "${GREEN}✅ 서비스 URL${NC}"
 echo -e "  메인: $SERVICE_URL"
-echo -e "  헬스체크: $SERVICE_URL/health"
+echo -e "  상태체크: $SERVICE_URL/status"
 echo -e "  API 문서: $SERVICE_URL/docs"
 echo ""
 echo -e "${GREEN}✅ 관리 URL${NC}"

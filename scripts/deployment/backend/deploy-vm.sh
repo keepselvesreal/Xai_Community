@@ -67,7 +67,7 @@ wait_for_app() {
     log_info "애플리케이션 시작 대기 중..."
     
     while [ $count -lt $max_wait ]; do
-        if curl -s --max-time 5 "http://$vm_ip:8080/health" > /dev/null 2>&1; then
+        if curl -s --max-time 5 "http://$vm_ip:8080/status" > /dev/null 2>&1; then
             log_success "애플리케이션이 정상적으로 시작되었습니다"
             return 0
         elif curl -s --max-time 5 "http://$vm_ip:8080/" > /dev/null 2>&1; then

@@ -206,7 +206,7 @@ sleep 20
 
 # 백엔드 헬스체크
 log_info "백엔드 헬스체크 중..."
-if curl -f -s "$BACKEND_URL/health" > /dev/null 2>&1; then
+if curl -f -s "$BACKEND_URL/status" > /dev/null 2>&1; then
     log_success "백엔드 헬스체크 성공"
     BACKEND_HEALTH=true
 else

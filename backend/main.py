@@ -190,6 +190,14 @@ def create_app() -> FastAPI:
     
     logger.info("✅ FastAPI CORSMiddleware configured successfully")
     
+    # 보안 미들웨어 등록 (모든 환경에 적용)
+    try:
+        from nadle_backend.middleware.security import SecurityHeadersMiddleware
+        app.add_middleware(SecurityHeadersMiddleware, environment=settings.environment)
+        logger.info("✅ Security headers middleware enabled")
+    except Exception as e:
+        logger.error(f"Failed to load security middleware: {e}")
+    
     # 모니터링 미들웨어 등록 (개발/테스트 환경에서만)
     if settings.environment in ["development", "test"]:
         try:
@@ -234,7 +242,7 @@ def create_app() -> FastAPI:
         # 4. 내부 메트릭 (API 프리픽스 - 개발팀용)
         app.include_router(monitoring.router, prefix="/api/internal", tags=["Internal-Metrics"])
         
-        # 5. 지능형 알림 시스템
+        # 5. 지능형 알림 시스템 (라우터에 이미 프리픽스 포함)
         app.include_router(intelligent_alerting.router, tags=["Intelligent-Alerting"])
         
         logger.info("Routers loaded successfully with industry standard structure!")

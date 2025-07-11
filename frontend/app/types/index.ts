@@ -10,6 +10,9 @@ export interface User {
   bio?: string;  // 백엔드 UserResponse 호환
   avatar_url?: string;  // 백엔드 UserResponse 호환
   status?: "active" | "inactive" | "suspended";  // 백엔드 UserResponse 호환
+  is_admin?: boolean;  // 관리자 권한 (백엔드 UserResponse 호환)
+  email_verified?: boolean;  // 이메일 인증 상태 (백엔드 UserResponse 호환)
+  role?: string;  // 역할 (추가 호환성)
   created_at: string;
   updated_at: string;
 }
@@ -616,4 +619,29 @@ export interface UserActivityResponse {
       has_more: boolean;
     };
   };
+}
+
+// Email verification types
+export interface EmailVerificationRequest {
+  email: string;
+}
+
+export interface EmailVerificationResponse {
+  email: string;
+  code_sent: boolean;
+  expires_in_minutes: number;
+  can_resend: boolean;
+  message: string;
+}
+
+export interface EmailVerificationCodeRequest {
+  email: string;
+  code: string;
+}
+
+export interface EmailVerificationCodeResponse {
+  email: string;
+  verified: boolean;
+  can_proceed: boolean;
+  message: string;
 }

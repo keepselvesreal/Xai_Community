@@ -22,7 +22,7 @@ fi
 VM_NAME="${1:-${VM_NAME:-xai-community-vm}}"
 VM_ZONE="${2:-${VM_ZONE:-asia-northeast3-a}}"
 
-echo -e "${BLUE}=== 빠른 헬스체크 $(date '+%Y-%m-%d %H:%M:%S') ===${NC}"
+echo -e "${BLUE}=== 빠른 상태체크 $(date '+%Y-%m-%d %H:%M:%S') ===${NC}"
 
 # VM 상태 확인
 echo -n "VM 상태 확인... "
@@ -37,7 +37,7 @@ if [ "$VM_STATUS" = "RUNNING" ]; then
     
     # 애플리케이션 헬스체크
     echo -n "애플리케이션 상태 확인... "
-    if curl -s --max-time 5 "http://$VM_IP:8080/health" > /dev/null 2>&1; then
+    if curl -s --max-time 5 "http://$VM_IP:8080/status" > /dev/null 2>&1; then
         echo -e "${GREEN}정상${NC}"
         
         # API 응답 테스트
@@ -49,7 +49,7 @@ if [ "$VM_STATUS" = "RUNNING" ]; then
         fi
         
     elif curl -s --max-time 5 "http://$VM_IP:8080/" > /dev/null 2>&1; then
-        echo -e "${YELLOW}부분적 (헬스체크 엔드포인트 없음)${NC}"
+        echo -e "${YELLOW}부분적 (상태체크 엔드포인트 없음)${NC}"
     else
         echo -e "${RED}실패${NC}"
         
@@ -77,4 +77,4 @@ if [ "$VM_STATUS" = "RUNNING" ]; then
     gcloud compute ssh "$VM_NAME" --zone="$VM_ZONE" --command="sudo docker logs --tail 5 xai-backend" 2>/dev/null || echo "로그를 가져올 수 없습니다"
 fi
 
-echo -e "\n${BLUE}=== 헬스체크 완료 ===${NC}"
+echo -e "\n${BLUE}=== 상태체크 완료 ===${NC}"
