@@ -293,16 +293,21 @@ class Settings(BaseSettings):
     )
     
     # Email Verification Settings
-    email_verification_expire_hours: int = Field(
-        default=24,
+    email_verification_expire_minutes: int = Field(
+        default=5,
         gt=0,
-        description="Email verification token expiration time in hours"
+        description="Email verification token expiration time in minutes"
     )
     email_verification_code_length: int = Field(
         default=6,
         ge=4,
         le=8,
         description="Length of email verification code"
+    )
+    email_verification_max_attempts: int = Field(
+        default=5,
+        gt=0,
+        description="Maximum verification attempts before blocking"
     )
     
     # Comment Configuration
@@ -338,6 +343,39 @@ class Settings(BaseSettings):
     cache_enabled: bool = Field(
         default=True,
         description="Redis 캐시 활성화 여부"
+    )
+    
+    # === Sentry 모니터링 설정 ===
+    sentry_dsn: Optional[str] = Field(
+        default=None,
+        description="Sentry DSN (에러 추적 및 성능 모니터링) - 환경변수 SENTRY_DSN"
+    )
+    sentry_environment: Optional[str] = Field(
+        default=None,
+        description="Sentry 환경 설정 (자동으로 ENVIRONMENT 값 사용)"
+    )
+    sentry_traces_sample_rate: float = Field(
+        default=1.0,
+        ge=0.0,
+        le=1.0,
+        description="Sentry 성능 추적 샘플링 비율 (0.0-1.0)"
+    )
+    sentry_send_default_pii: bool = Field(
+        default=True,
+        description="Sentry에 개인정보 전송 여부"
+    )
+    
+    
+    # === 디스코드 웹훅 설정 ===
+    discord_webhook_url: Optional[str] = Field(
+        default=None,
+        description="디스코드 웹훅 URL"
+    )
+    
+    # === 업타임 모니터링 설정 ===
+    uptimerobot_api_key: Optional[str] = Field(
+        default=None,
+        description="UptimeRobot API 키"
     )
     
     @field_validator("secret_key")

@@ -16,14 +16,32 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     # 시작 시
     logger.info("Application starting...")
+    
+    # Sentry 초기화
+    try:
+        from nadle_backend.monitoring.sentry_config import init_sentry_for_fastapi
+        if settings.sentry_dsn:
+            init_sentry_for_fastapi(
+                app=app,
+                dsn=settings.sentry_dsn,
+                environment=settings.sentry_environment or settings.environment
+            )
+            logger.info(f"Sentry monitoring initialized successfully for environment: {settings.environment}")
+        else:
+            logger.info("Sentry DSN not configured, skipping monitoring setup")
+    except Exception as e:
+        logger.error(f"Sentry initialization failed: {e}")
+        # Sentry 실패해도 서버는 시작되도록 함
+    
     try:
         # 데이터베이스 연결 시도
         from nadle_backend.database.connection import database
         from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
+        from nadle_backend.models.email_verification import EmailVerification
         
         await database.connect()
         # 모든 Document 모델 초기화
-        document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord]
+        document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
         logger.info(f"Initializing Beanie with models: {[model.__name__ for model in document_models]}")
         await database.init_beanie_models(document_models)
         logger.info("Database connected and Beanie initialized successfully!")
@@ -172,7 +190,16 @@ def create_app() -> FastAPI:
     
     logger.info("✅ FastAPI CORSMiddleware configured successfully")
     
-    # 🎯 커스텀 미들웨어 제거 - CORS 문제 해결 및 성능 향상
+    # 모니터링 미들웨어 등록 (개발/테스트 환경에서만)
+    if settings.environment in ["development", "test"]:
+        try:
+            from nadle_backend.middleware.monitoring import MonitoringMiddleware
+            app.add_middleware(MonitoringMiddleware)
+            logger.info("✅ Monitoring middleware enabled for development/test environment")
+        except Exception as e:
+            logger.warning(f"Failed to load monitoring middleware: {e}")
+    
+    # 🎯 기타 커스텀 미들웨어는 제거 - CORS 문제 해결 및 성능 향상
     # FastAPI는 이미 기본 요청 로깅을 제공하므로 별도 미들웨어 불필요
     
     # 기본 라우트
@@ -186,17 +213,31 @@ def create_app() -> FastAPI:
         app.mount("/static", StaticFiles(directory=frontend_path), name="static")
         logger.info(f"Static files mounted from: {frontend_path}")
     
-    # 라우터 등록 (안전하게)
+    # 라우터 등록 (현업 표준 구조)
     try:
-        from nadle_backend.routers import auth, posts, comments, file_upload, content, users, health
-        app.include_router(health.router, tags=["Health"])
+        from nadle_backend.routers import auth, posts, comments, file_upload, content, users, health, monitoring, uptime_monitoring, intelligent_alerting
+        
+        # 1. 외부 헬스체크 (최상위 경로 - UptimeRobot, Load Balancer용)
+        app.include_router(health.router, tags=["Health"])  # /health
+        
+        # 2. 업타임 모니터링 (루트 레벨 - 표준 경로)
+        app.include_router(uptime_monitoring.router, tags=["uptime-monitoring"])  # /monitoring/*
+        
+        # 3. 비즈니스 API (API 프리픽스)
         app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
         app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
         app.include_router(comments.router, prefix="/api/posts", tags=["Comments"])
         app.include_router(file_upload.router, prefix="/api/files", tags=["Files"])
         app.include_router(content.router, prefix="/api/content", tags=["Content"])
         app.include_router(users.router, prefix="/api/users", tags=["Users"])
-        logger.info("Routers loaded successfully!")
+        
+        # 4. 내부 메트릭 (API 프리픽스 - 개발팀용)
+        app.include_router(monitoring.router, prefix="/api/internal", tags=["Internal-Metrics"])
+        
+        # 5. 지능형 알림 시스템
+        app.include_router(intelligent_alerting.router, tags=["Intelligent-Alerting"])
+        
+        logger.info("Routers loaded successfully with industry standard structure!")
     except Exception as e:
         logger.error(f"Failed to load routers: {e}")
         # 라우터 로드 실패해도 서버는 시작
@@ -237,6 +278,26 @@ def create_app() -> FastAPI:
             }
         except Exception as e:
             return {"error": str(e)}
+    
+    # Sentry 테스트 엔드포인트
+    @app.get("/debug/sentry-test")
+    async def sentry_test():
+        """Sentry 에러 추적 테스트용 엔드포인트"""
+        try:
+            # 의도적으로 에러 발생
+            raise ValueError("Sentry 테스트용 에러입니다!")
+        except Exception as e:
+            # Sentry에 수동으로 캡처
+            from nadle_backend.monitoring.sentry_config import capture_error
+            capture_error(e, user_id="test_user_123", endpoint="/debug/sentry-test")
+            return {"message": "에러가 Sentry에 전송되었습니다!", "error": str(e)}
+    
+    @app.get("/debug/sentry-unhandled")
+    async def sentry_unhandled():
+        """Sentry 처리되지 않은 에러 테스트"""
+        # 처리되지 않은 에러 (FastAPI가 자동으로 Sentry에 전송)
+        division_by_zero = 1 / 0
+        return {"message": "이 메시지는 나오지 않습니다"}
     
     return app
 

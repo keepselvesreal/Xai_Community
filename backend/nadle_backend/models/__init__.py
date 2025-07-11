@@ -18,6 +18,15 @@ from .core import (
     PostListResponse, CommentListResponse
 )
 
+from .email_verification import (
+    EmailVerification,
+    EmailVerificationData,
+    EmailVerificationCreate,
+    EmailVerificationResponse,
+    EmailVerificationCodeRequest,
+    EmailVerificationCodeResponse
+)
+
 __all__ = [
     # Enums and Types
     "ServiceType", "PostStatus", "UserStatus", "CommentStatus", "TargetType",
@@ -35,5 +44,9 @@ __all__ = [
     
     # Pagination Models
     "PaginationParams", "PaginatedResponse", "PaginationInfo",
-    "PostListResponse", "CommentListResponse"
+    "PostListResponse", "CommentListResponse",
+    
+    # Email Verification Models
+    "EmailVerification", "EmailVerificationData", "EmailVerificationCreate", "EmailVerificationResponse",
+    "EmailVerificationCodeRequest", "EmailVerificationCodeResponse"
 ]

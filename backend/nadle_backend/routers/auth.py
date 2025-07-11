@@ -5,7 +5,15 @@ from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from nadle_backend.models.core import User, UserCreate, UserUpdate, UserResponse
+from nadle_backend.models.email_verification import (
+    EmailVerificationCreate,
+    EmailVerificationResponse,
+    EmailVerificationCodeRequest,
+    EmailVerificationCodeResponse
+)
 from nadle_backend.services.auth_service import AuthService
+from nadle_backend.services.email_verification_service import EmailVerificationService
+from nadle_backend.repositories.email_verification_repository import EmailVerificationRepository
 from nadle_backend.dependencies.auth import (
     CurrentActiveUser, 
     AdminUser,
@@ -332,86 +340,86 @@ async def deactivate_account(
         )
 
 
-# Email verification endpoints
-@router.post("/send-verification-email", response_model=EmailVerificationResponse)
-async def send_verification_email(
-    request: EmailVerificationRequest,
-    auth_service: AuthService = Depends(get_auth_service)
-):
-    """Send email verification code.
-    
-    Args:
-        request: Email verification request
-        auth_service: Authentication service
-        
-    Returns:
-        Success status and message
-        
-    Raises:
-        HTTPException: If email sending fails
-    """
-    try:
-        success, message = await auth_service.send_verification_email(request.email)
-        return EmailVerificationResponse(success=success, message=message)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send verification email: {str(e)}"
-        )
+# Email verification endpoints (old version - using auth service)
+# @router.post("/send-verification-email", response_model=EmailVerificationResponse)
+# async def send_verification_email_old(
+#     request: EmailVerificationRequest,
+#     auth_service: AuthService = Depends(get_auth_service)
+# ):
+#     """Send email verification code.
+#     
+#     Args:
+#         request: Email verification request
+#         auth_service: Authentication service
+#         
+#     Returns:
+#         Success status and message
+#         
+#     Raises:
+#         HTTPException: If email sending fails
+#     """
+#     try:
+#         success, message = await auth_service.send_verification_email(request.email)
+#         return EmailVerificationResponse(success=success, message=message)
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to send verification email: {str(e)}"
+#         )
 
 
-@router.post("/verify-email", response_model=EmailVerificationResponse)
-async def verify_email(
-    request: EmailVerificationCodeRequest,
-    auth_service: AuthService = Depends(get_auth_service)
-):
-    """Verify email with verification code.
-    
-    Args:
-        request: Email verification code request
-        auth_service: Authentication service
-        
-    Returns:
-        Success status and message
-        
-    Raises:
-        HTTPException: If verification fails
-    """
-    try:
-        success, message = await auth_service.verify_email_code(request.email, request.code)
-        return EmailVerificationResponse(success=success, message=message)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to verify email: {str(e)}"
-        )
+# @router.post("/verify-email", response_model=EmailVerificationResponse)
+# async def verify_email_old(
+#     request: EmailVerificationCodeRequest,
+#     auth_service: AuthService = Depends(get_auth_service)
+# ):
+#     """Verify email with verification code.
+#     
+#     Args:
+#         request: Email verification code request
+#         auth_service: Authentication service
+#         
+#     Returns:
+#         Success status and message
+#         
+#     Raises:
+#         HTTPException: If verification fails
+#     """
+#     try:
+#         success, message = await auth_service.verify_email_code(request.email, request.code)
+#         return EmailVerificationResponse(success=success, message=message)
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to verify email: {str(e)}"
+#         )
 
 
-@router.post("/resend-verification-email", response_model=EmailVerificationResponse)
-async def resend_verification_email(
-    request: EmailVerificationRequest,
-    auth_service: AuthService = Depends(get_auth_service)
-):
-    """Resend email verification code.
-    
-    Args:
-        request: Email verification request
-        auth_service: Authentication service
-        
-    Returns:
-        Success status and message
-        
-    Raises:
-        HTTPException: If email sending fails
-    """
-    try:
-        success, message = await auth_service.resend_verification_email(request.email)
-        return EmailVerificationResponse(success=success, message=message)
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to resend verification email: {str(e)}"
-        )
+# @router.post("/resend-verification-email", response_model=EmailVerificationResponse)
+# async def resend_verification_email_old(
+#     request: EmailVerificationRequest,
+#     auth_service: AuthService = Depends(get_auth_service)
+# ):
+#     """Resend email verification code.
+#     
+#     Args:
+#         request: Email verification request
+#         auth_service: Authentication service
+#         
+#     Returns:
+#         Success status and message
+#         
+#     Raises:
+#         HTTPException: If email sending fails
+#     """
+#     try:
+#         success, message = await auth_service.resend_verification_email(request.email)
+#         return EmailVerificationResponse(success=success, message=message)
+#     except Exception as e:
+#         raise HTTPException(
+#             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+#             detail=f"Failed to resend verification email: {str(e)}"
+#         )
 
 
 # Admin endpoints
@@ -623,6 +631,76 @@ async def get_user_sessions(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get sessions: {str(e)}"
+        )
+
+
+# Dependency injection functions
+async def get_email_verification_repository() -> EmailVerificationRepository:
+    """Get email verification repository instance."""
+    return EmailVerificationRepository()
+
+
+async def get_email_verification_service(
+    repository: EmailVerificationRepository = Depends(get_email_verification_repository)
+) -> EmailVerificationService:
+    """Get email verification service instance."""
+    return EmailVerificationService(repository=repository)
+
+
+# Email verification endpoints
+@router.post("/send-verification-email", response_model=EmailVerificationResponse)
+async def send_verification_email(
+    request: EmailVerificationCreate,
+    service: EmailVerificationService = Depends(get_email_verification_service)
+):
+    """Send verification email for signup process."""
+    try:
+        result = await service.send_verification_email(request)
+        
+        if not result.code_sent:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": result.message,
+                    "email": result.email,
+                    "can_resend": result.can_resend
+                }
+            )
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send verification email: {str(e)}"
+        )
+
+
+@router.post("/verify-email-code", response_model=EmailVerificationCodeResponse)
+async def verify_email_code(
+    request: EmailVerificationCodeRequest,
+    service: EmailVerificationService = Depends(get_email_verification_service)
+):
+    """Verify email verification code."""
+    try:
+        result = await service.verify_email_code(request)
+        
+        if not result.verified:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "message": result.message,
+                    "email": result.email,
+                    "can_proceed": result.can_proceed
+                }
+            )
+        
+        return result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify email code: {str(e)}"
         )
 
 

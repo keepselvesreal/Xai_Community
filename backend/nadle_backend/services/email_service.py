@@ -44,7 +44,7 @@ class EmailService:
                     <span style="font-size: 32px; font-weight: bold; color: #007bff; letter-spacing: 5px;">{verification_code}</span>
                 </div>
                 <p style="color: #666; margin-top: 20px; font-size: 14px;">
-                    이 코드는 {settings.email_verification_expire_hours}시간 후에 만료됩니다.
+                    이 코드는 {settings.email_verification_expire_minutes}분 후에 만료됩니다.
                 </p>
             </div>
             
@@ -73,7 +73,7 @@ class EmailService:
             verification_code = self.generate_verification_code()
             
             # Calculate expiration time
-            expires_at = datetime.utcnow() + timedelta(hours=settings.email_verification_expire_hours)
+            expires_at = datetime.utcnow() + timedelta(minutes=settings.email_verification_expire_minutes)
             
             # Update user with verification code
             user = await self.user_repository.get_user_by_email(email)
