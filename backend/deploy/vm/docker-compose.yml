@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   backend:
-    build: .
+    build: ../../
     container_name: xai-backend
     restart: unless-stopped
     ports:
@@ -30,8 +30,8 @@ services:
       - FILES_COLLECTION=${FILES_COLLECTION:-files}
       - STATS_COLLECTION=${STATS_COLLECTION:-stats}
     volumes:
-      - ./uploads:/app/uploads
-      - ./logs:/app/logs
+      - ../../uploads:/app/uploads
+      - ../../logs:/app/logs
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/"]
       interval: 30s
@@ -51,7 +51,7 @@ services:
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
+      - ../../ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
     networks:

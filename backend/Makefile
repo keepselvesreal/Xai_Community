@@ -1,4 +1,4 @@
-.PHONY: help install dev start test test-unit test-integration test-cov lint format format-check clean
+.PHONY: help install dev start test test-unit test-integration test-cov lint format format-check clean docker-build-cloud docker-deploy-vm
 
 help:  ## 도움말 표시
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -38,3 +38,9 @@ clean:  ## 캐시 및 임시 파일 정리
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	rm -rf .coverage htmlcov/ .pytest_cache/ 
+
+docker-build-cloud:  ## Cloud Run용 Docker 이미지 빌드
+	cd deploy/cloud-run && docker build -t xai-backend-cloud -f Dockerfile ../..
+
+docker-deploy-vm:  ## VM용 Docker Compose 배포
+	cd deploy/vm && docker-compose up -d

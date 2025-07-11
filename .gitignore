@@ -87,6 +87,13 @@ logs/
 *.tmp
 *.temp
 
-# Google Cloud Service Account Keys
+# Security and Secrets
+.secrets/
+*.json
 key.json
+*-key.json
+service-account-*.json
+credentials.json
+
+# Google Cloud Service Account Keys
 .vercel
