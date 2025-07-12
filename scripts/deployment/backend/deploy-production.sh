@@ -90,13 +90,13 @@ log_success "Dockerfile 발견: $DOCKERFILE_PATH"
 
 # 1단계: Docker 이미지 빌드 (스테이징 성공 사례 적용)
 log_info "=== 1단계: Docker 이미지 빌드 시작 ==="
-log_debug "빌드 명령어: gcloud builds submit --file=$DOCKERFILE_PATH --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --async"
+log_debug "빌드 명령어: gcloud builds submit --dockerfile=$DOCKERFILE_PATH --tag $IMAGE_NAME --project=$GCP_PROJECT_ID --async"
 
 BUILD_START_TIME=$(date)
 log_debug "빌드 시작 시간: $BUILD_START_TIME"
 
 # 로그 스트리밍 문제 해결을 위해 --async 사용 (스테이징 성공 사례 적용)
-BUILD_OUTPUT=$(gcloud builds submit --file="$DOCKERFILE_PATH" --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --async 2>&1)
+BUILD_OUTPUT=$(gcloud builds submit --dockerfile="$DOCKERFILE_PATH" --tag "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --async 2>&1)
 BUILD_EXIT_CODE=$?
 
 if [ $BUILD_EXIT_CODE -eq 0 ]; then
