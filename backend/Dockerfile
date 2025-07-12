@@ -63,8 +63,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Set executable permission for startup script
-RUN chmod +x /app/start.sh
-
-# Start application with Cloud Run compatible command
-CMD ["/app/start.sh"]
+# Start application with optimized command
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "info"]
