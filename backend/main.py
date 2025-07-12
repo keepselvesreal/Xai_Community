@@ -40,20 +40,22 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutting down...")
 
 def create_app() -> FastAPI:
-    # Sentry 초기화 (앱 생성 시점에서 처리)
-    try:
-        from nadle_backend.monitoring.sentry_config import init_sentry
-        if settings.sentry_dsn:
-            init_sentry(
-                dsn=settings.sentry_dsn,
-                environment=settings.sentry_environment or settings.environment
-            )
-            logger.info(f"Sentry monitoring initialized successfully for environment: {settings.environment}")
-        else:
-            logger.info("Sentry DSN not configured, skipping monitoring setup")
-    except Exception as e:
-        logger.error(f"Sentry initialization failed: {e}")
-        # Sentry 실패해도 서버는 시작되도록 함
+    logger.info("🚀 Creating FastAPI app...")
+    
+    # 임시로 Sentry 초기화도 비활성화
+    # try:
+    #     from nadle_backend.monitoring.sentry_config import init_sentry
+    #     if settings.sentry_dsn:
+    #         init_sentry(
+    #             dsn=settings.sentry_dsn,
+    #             environment=settings.sentry_environment or settings.environment
+    #         )
+    #         logger.info(f"Sentry monitoring initialized successfully for environment: {settings.environment}")
+    #     else:
+    #         logger.info("Sentry DSN not configured, skipping monitoring setup")
+    # except Exception as e:
+    #     logger.error(f"Sentry initialization failed: {e}")
+    #     # Sentry 실패해도 서버는 시작되도록 함
     
     # Swagger UI 설정 - 환경별 제어
     docs_url = "/docs" if settings.enable_docs and settings.environment != "production" else None
@@ -184,22 +186,25 @@ def create_app() -> FastAPI:
     
     logger.info("✅ FastAPI CORSMiddleware configured successfully")
     
+    # 임시로 모든 미들웨어 비활성화 - 디버깅용
+    logger.info("⚠️ All custom middlewares temporarily disabled for debugging")
+    
     # 보안 미들웨어 등록 (모든 환경에 적용)
-    try:
-        from nadle_backend.middleware.security import SecurityHeadersMiddleware
-        app.add_middleware(SecurityHeadersMiddleware, environment=settings.environment)
-        logger.info("✅ Security headers middleware enabled")
-    except Exception as e:
-        logger.error(f"Failed to load security middleware: {e}")
+    # try:
+    #     from nadle_backend.middleware.security import SecurityHeadersMiddleware
+    #     app.add_middleware(SecurityHeadersMiddleware, environment=settings.environment)
+    #     logger.info("✅ Security headers middleware enabled")
+    # except Exception as e:
+    #     logger.error(f"Failed to load security middleware: {e}")
     
     # 모니터링 미들웨어 등록 (개발/테스트 환경에서만)
-    if settings.environment in ["development", "test"]:
-        try:
-            from nadle_backend.middleware.monitoring import MonitoringMiddleware
-            app.add_middleware(MonitoringMiddleware)
-            logger.info("✅ Monitoring middleware enabled for development/test environment")
-        except Exception as e:
-            logger.warning(f"Failed to load monitoring middleware: {e}")
+    # if settings.environment in ["development", "test"]:
+    #     try:
+    #         from nadle_backend.middleware.monitoring import MonitoringMiddleware
+    #         app.add_middleware(MonitoringMiddleware)
+    #         logger.info("✅ Monitoring middleware enabled for development/test environment")
+    #     except Exception as e:
+    #         logger.warning(f"Failed to load monitoring middleware: {e}")
     
     # 🎯 기타 커스텀 미들웨어는 제거 - CORS 문제 해결 및 성능 향상
     # FastAPI는 이미 기본 요청 로깅을 제공하므로 별도 미들웨어 불필요
@@ -215,31 +220,27 @@ def create_app() -> FastAPI:
         app.mount("/static", StaticFiles(directory=frontend_path), name="static")
         logger.info(f"Static files mounted from: {frontend_path}")
     
-    # 라우터 등록 (현업 표준 구조)
+    # 라우터 등록 - 임시로 필수만 남기고 비활성화
     try:
-        from nadle_backend.routers import auth, posts, comments, file_upload, content, users, health, monitoring, uptime_monitoring, intelligent_alerting
+        from nadle_backend.routers import health
         
-        # 1. 외부 헬스체크 (최상위 경로 - UptimeRobot, Load Balancer용)
+        # 필수 헬스체크만 등록
         app.include_router(health.router, tags=["Health"])  # /health
         
-        # 2. 업타임 모니터링 (루트 레벨 - 표준 경로)
-        app.include_router(uptime_monitoring.router, tags=["uptime-monitoring"])  # /monitoring/*
+        logger.info("⚠️ Only health router loaded for debugging")
         
-        # 3. 비즈니스 API (API 프리픽스)
-        app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-        app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
-        app.include_router(comments.router, prefix="/api/posts", tags=["Comments"])
-        app.include_router(file_upload.router, prefix="/api/files", tags=["Files"])
-        app.include_router(content.router, prefix="/api/content", tags=["Content"])
-        app.include_router(users.router, prefix="/api/users", tags=["Users"])
+        # 모든 다른 라우터들 임시 비활성화
+        # from nadle_backend.routers import auth, posts, comments, file_upload, content, users, monitoring, uptime_monitoring, intelligent_alerting
+        # app.include_router(uptime_monitoring.router, tags=["uptime-monitoring"])
+        # app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+        # app.include_router(posts.router, prefix="/api/posts", tags=["Posts"])
+        # app.include_router(comments.router, prefix="/api/posts", tags=["Comments"])
+        # app.include_router(file_upload.router, prefix="/api/files", tags=["Files"])
+        # app.include_router(content.router, prefix="/api/content", tags=["Content"])
+        # app.include_router(users.router, prefix="/api/users", tags=["Users"])
+        # app.include_router(monitoring.router, prefix="/api/internal", tags=["Internal-Metrics"])
+        # app.include_router(intelligent_alerting.router, tags=["Intelligent-Alerting"])
         
-        # 4. 내부 메트릭 (API 프리픽스 - 개발팀용)
-        app.include_router(monitoring.router, prefix="/api/internal", tags=["Internal-Metrics"])
-        
-        # 5. 지능형 알림 시스템 (라우터에 이미 프리픽스 포함)
-        app.include_router(intelligent_alerting.router, tags=["Intelligent-Alerting"])
-        
-        logger.info("Routers loaded successfully with industry standard structure!")
     except Exception as e:
         logger.error(f"Failed to load routers: {e}")
         # 라우터 로드 실패해도 서버는 시작
@@ -309,4 +310,7 @@ app = create_app()
 
 if __name__ == "__main__":
     import uvicorn
+    logger.info("🐍 Starting uvicorn server...")
+    logger.info(f"📊 Environment: {settings.environment}")
+    logger.info(f"🌐 Host: 0.0.0.0, Port: 8000")
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

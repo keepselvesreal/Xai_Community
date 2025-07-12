@@ -63,5 +63,5 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:${PORT:-8080}/health || exit 1
 
-# Start application with optimized command
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "info"]
+# Start application with minimal app for debugging
+CMD ["uvicorn", "main_minimal:app", "--host", "0.0.0.0", "--port", "8080", "--workers", "1", "--log-level", "info"]
