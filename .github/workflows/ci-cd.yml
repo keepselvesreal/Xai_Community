@@ -179,18 +179,16 @@ jobs:
         gcloud config get-value project
         echo ""
         
-        cd backend
-        chmod +x deploy-staging.sh
-        
         # 배포 스크립트 실행 (상세 로그 출력)
         echo "🚀 배포 스크립트 실행 시작: $(date)"
         echo "📋 파일 존재 확인:"
-        ls -la deploy-staging.sh
+        ls -la scripts/deployment/backend/deploy-staging.sh
         echo "📋 스크립트 권한 확인:"
-        ls -la deploy-staging.sh | awk '{print $1}'
+        ls -la scripts/deployment/backend/deploy-staging.sh | awk '{print $1}'
         
-        # 스크립트 실행
-        ./deploy-staging.sh
+        # 스크립트 실행 권한 부여 및 실행
+        chmod +x scripts/deployment/backend/deploy-staging.sh
+        ./scripts/deployment/backend/deploy-staging.sh
         DEPLOY_EXIT_CODE=$?
         
         echo "✅ 배포 스크립트 실행 완료: $(date)"
@@ -300,9 +298,9 @@ jobs:
         echo "  - Environment: $ENVIRONMENT"
         echo ""
         
-        cd backend
-        chmod +x deploy-production.sh
-        ./deploy-production.sh
+        # 프로덕션 배포 스크립트 실행
+        chmod +x scripts/deployment/backend/deploy-production.sh
+        ./scripts/deployment/backend/deploy-production.sh
         
     - name: 🔍 프로덕션 환경 검증
       run: |
@@ -478,17 +476,17 @@ jobs:
         echo "📍 이전 커밋으로 롤백: $PREVIOUS_COMMIT"
         
         # 롤백 스크립트 실행 권한 부여
-        chmod +x ./rollback-full.sh
-        chmod +x ./backend/rollback-backend.sh
-        chmod +x ./frontend/rollback-frontend.sh
+        chmod +x ./scripts/deployment/full-stack/rollback-full.sh
+        chmod +x ./scripts/deployment/backend/rollback-backend.sh
+        chmod +x ./scripts/deployment/frontend/rollback-frontend.sh
         
         # 자동 롤백 실행 (검증 건너뛰기)
-        if ./rollback-full.sh -e "$ENVIRONMENT" -s; then
+        if ./scripts/deployment/full-stack/rollback-full.sh -e "$ENVIRONMENT" -s; then
           echo "✅ 자동 롤백 성공"
           
           # 롤백 검증
-          chmod +x ./verify-rollback.sh
-          if ./verify-rollback.sh -e "$ENVIRONMENT" "$PREVIOUS_COMMIT" "$PREVIOUS_COMMIT"; then
+          chmod +x ./scripts/monitoring/verify-rollback.sh
+          if ./scripts/monitoring/verify-rollback.sh -e "$ENVIRONMENT" "$PREVIOUS_COMMIT" "$PREVIOUS_COMMIT"; then
             echo "✅ 롤백 검증 성공"
           else
             echo "⚠️ 롤백 검증 실패 - 수동 확인 필요"
