@@ -11,37 +11,32 @@ from nadle_backend.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Lifespan 이벤트 핸들러 (새로운 FastAPI 표준)
+# Lifespan 이벤트 핸들러 (새로운 FastAPI 표준) - 임시로 DB 연결 제거
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 시작 시
-    logger.info("Application starting...")
+    logger.info("Application starting... (DB connection temporarily disabled)")
     
-    try:
-        # 데이터베이스 연결 시도
-        from nadle_backend.database.connection import database
-        from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
-        from nadle_backend.models.email_verification import EmailVerification
-        
-        await database.connect()
-        # 모든 Document 모델 초기화
-        document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
-        logger.info(f"Initializing Beanie with models: {[model.__name__ for model in document_models]}")
-        await database.init_beanie_models(document_models)
-        logger.info("Database connected and Beanie initialized successfully!")
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        # 데이터베이스 없이도 서버는 시작되도록 함
+    # 임시로 DB 연결을 주석 처리하여 컨테이너 시작 문제 디버깅
+    # try:
+    #     # 데이터베이스 연결 시도
+    #     from nadle_backend.database.connection import database
+    #     from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
+    #     from nadle_backend.models.email_verification import EmailVerification
+    #     
+    #     await database.connect()
+    #     # 모든 Document 모델 초기화
+    #     document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
+    #     logger.info(f"Initializing Beanie with models: {[model.__name__ for model in document_models]}")
+    #     await database.init_beanie_models(document_models)
+    #     logger.info("Database connected and Beanie initialized successfully!")
+    # except Exception as e:
+    #     logger.error(f"Database connection failed: {e}")
+    #     # 데이터베이스 없이도 서버는 시작되도록 함
     
     yield
     
     # 종료 시
-    try:
-        from nadle_backend.database.connection import database
-        await database.disconnect()
-        logger.info("Database disconnected")
-    except:
-        pass
     logger.info("Application shutting down...")
 
 def create_app() -> FastAPI:
