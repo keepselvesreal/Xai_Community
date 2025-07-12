@@ -17,22 +17,6 @@ async def lifespan(app: FastAPI):
     # 시작 시
     logger.info("Application starting...")
     
-    # Sentry 초기화
-    try:
-        from nadle_backend.monitoring.sentry_config import init_sentry_for_fastapi
-        if settings.sentry_dsn:
-            init_sentry_for_fastapi(
-                app=app,
-                dsn=settings.sentry_dsn,
-                environment=settings.sentry_environment or settings.environment
-            )
-            logger.info(f"Sentry monitoring initialized successfully for environment: {settings.environment}")
-        else:
-            logger.info("Sentry DSN not configured, skipping monitoring setup")
-    except Exception as e:
-        logger.error(f"Sentry initialization failed: {e}")
-        # Sentry 실패해도 서버는 시작되도록 함
-    
     try:
         # 데이터베이스 연결 시도
         from nadle_backend.database.connection import database
@@ -61,6 +45,21 @@ async def lifespan(app: FastAPI):
     logger.info("Application shutting down...")
 
 def create_app() -> FastAPI:
+    # Sentry 초기화 (앱 생성 시점에서 처리)
+    try:
+        from nadle_backend.monitoring.sentry_config import init_sentry
+        if settings.sentry_dsn:
+            init_sentry(
+                dsn=settings.sentry_dsn,
+                environment=settings.sentry_environment or settings.environment
+            )
+            logger.info(f"Sentry monitoring initialized successfully for environment: {settings.environment}")
+        else:
+            logger.info("Sentry DSN not configured, skipping monitoring setup")
+    except Exception as e:
+        logger.error(f"Sentry initialization failed: {e}")
+        # Sentry 실패해도 서버는 시작되도록 함
+    
     # Swagger UI 설정 - 환경별 제어
     docs_url = "/docs" if settings.enable_docs and settings.environment != "production" else None
     redoc_url = "/redoc" if settings.enable_docs and settings.environment != "production" else None

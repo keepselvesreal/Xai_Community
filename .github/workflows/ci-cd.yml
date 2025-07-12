@@ -147,6 +147,14 @@ jobs:
         ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
         LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
         ENABLE_DOCS: ${{ secrets.ENABLE_DOCS }}
+        # Sentry Configuration (공통 DSN, 환경별 태그)
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        SENTRY_ENVIRONMENT: staging
+        SENTRY_TRACES_SAMPLE_RATE: 0.1
+        SENTRY_SEND_DEFAULT_PII: false
+        # Redis Configuration (스테이징)
+        UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+        UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
         GCP_SERVICE_NAME: xai-community-backend-staging
       run: |
         echo "🎯 스테이징 배포 시작"
@@ -283,6 +291,14 @@ jobs:
         ALLOWED_ORIGINS: ${{ secrets.ALLOWED_ORIGINS }}
         LOG_LEVEL: ${{ secrets.LOG_LEVEL }}
         ENABLE_DOCS: ${{ secrets.ENABLE_DOCS }}
+        # Sentry Configuration (공통 DSN, 환경별 태그)
+        SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+        SENTRY_ENVIRONMENT: production
+        SENTRY_TRACES_SAMPLE_RATE: 0.1
+        SENTRY_SEND_DEFAULT_PII: false
+        # Redis Configuration (프로덕션)
+        UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+        UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
         GCP_SERVICE_NAME: xai-community-backend
       run: |
         echo "🎯 프로덕션 배포 시작"
