@@ -186,9 +186,10 @@ jobs:
         echo "📋 스크립트 권한 확인:"
         ls -la scripts/deployment/backend/deploy-staging.sh | awk '{print $1}'
         
-        # 스크립트 실행 권한 부여 및 실행
-        chmod +x scripts/deployment/backend/deploy-staging.sh
-        ./scripts/deployment/backend/deploy-staging.sh
+        # backend 디렉토리로 이동하여 스크립트 실행
+        cd backend
+        chmod +x ../scripts/deployment/backend/deploy-staging.sh
+        ../scripts/deployment/backend/deploy-staging.sh
         DEPLOY_EXIT_CODE=$?
         
         echo "✅ 배포 스크립트 실행 완료: $(date)"
@@ -298,9 +299,10 @@ jobs:
         echo "  - Environment: $ENVIRONMENT"
         echo ""
         
-        # 프로덕션 배포 스크립트 실행
-        chmod +x scripts/deployment/backend/deploy-production.sh
-        ./scripts/deployment/backend/deploy-production.sh
+        # 프로덕션 배포 스크립트 실행 (backend 디렉토리에서)
+        cd backend
+        chmod +x ../scripts/deployment/backend/deploy-production.sh
+        ../scripts/deployment/backend/deploy-production.sh
         
     - name: 🔍 프로덕션 환경 검증
       run: |
