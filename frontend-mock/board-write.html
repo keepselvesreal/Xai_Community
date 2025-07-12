@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>글쓰기 | XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--var-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .tag-input {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding: 0.75rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            min-height: 3rem;
+        }
+        .tag-input:focus-within {
+            border-color: var(--var-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .tag-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background-color: #e5e7eb;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        .tag-remove {
+            cursor: pointer;
+            color: #6b7280;
+        }
+        .tag-remove:hover {
+            color: #ef4444;
+        }
+        #tagInput {
+            border: none;
+            outline: none;
+            flex: 1;
+            min-width: 100px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 사이드바 -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+        <div class="flex items-center justify-center h-16 bg-blue-600">
+            <span class="text-white text-xl font-bold">🏠 XAI 아파트</span>
+        </div>
+        <nav class="mt-5 px-2">
+            <a href="index.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏠</span>
+                홈
+            </a>
+            <a href="board-index.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-white bg-blue-600">
+                <span class="mr-3">📝</span>
+                게시판
+            </a>
+            <a href="info.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">ℹ️</span>
+                정보
+            </a>
+            <a href="services.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏢</span>
+                입주 업체 서비스
+            </a>
+            <a href="tips.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">💡</span>
+                전문가 꿀정보
+            </a>
+            <div class="mt-8 pt-8 border-t border-gray-200">
+                <a href="mypage.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">👤</span>
+                    마이페이지
+                </a>
+                <a href="auth-login.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">🚪</span>
+                    로그아웃
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="lg:pl-64">
+        <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 뒤로가기 버튼 -->
+            <div class="mb-6">
+                <a href="board-index.html" class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900">
+                    <span>←</span>
+                    <span>게시판으로 돌아가기</span>
+                </a>
+            </div>
+
+            <!-- 페이지 헤더 -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">✏️ 새 게시글 작성</h1>
+                <p class="text-gray-600 mt-2">이웃들과 소통해보세요</p>
+            </div>
+
+            <!-- 글쓰기 폼 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <form id="postForm">
+                    <!-- 카테고리 선택 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            카테고리 <span class="text-red-500">*</span>
+                        </label>
+                        <select 
+                            id="category" 
+                            name="category" 
+                            required 
+                            class="form-input"
+                        >
+                            <option value="">카테고리를 선택하세요</option>
+                            <option value="info">입주 정보</option>
+                            <option value="life">생활 정보</option>
+                            <option value="story">이야기</option>
+                        </select>
+                        <p class="text-red-500 text-sm mt-1 hidden" id="categoryError"></p>
+                    </div>
+
+                    <!-- 제목 입력 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            제목 <span class="text-red-500">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="title"
+                            name="title"
+                            placeholder="제목을 입력하세요"
+                            required
+                            maxlength="100"
+                            class="form-input"
+                        />
+                        <div class="flex justify-between items-center mt-1">
+                            <p class="text-red-500 text-sm hidden" id="titleError"></p>
+                            <span class="text-sm text-gray-500">
+                                <span id="titleCount">0</span>/100
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 내용 입력 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            내용 <span class="text-red-500">*</span>
+                        </label>
+                        <textarea 
+                            id="content"
+                            name="content"
+                            rows="12"
+                            placeholder="내용을 입력하세요&#10;&#10;• 이웃들과 소통할 내용을 자유롭게 작성해주세요&#10;• 서로 존중하는 마음으로 작성해주세요&#10;• 개인정보나 민감한 정보는 피해주세요"
+                            required
+                            class="form-input resize-none"
+                        ></textarea>
+                        <div class="flex justify-between items-center mt-1">
+                            <p class="text-red-500 text-sm hidden" id="contentError"></p>
+                            <span class="text-sm text-gray-500">
+                                <span id="contentCount">0</span>자
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- 태그 입력 -->
+                    <div class="mb-6">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            태그
+                        </label>
+                        <div class="tag-input" id="tagContainer">
+                            <input 
+                                type="text" 
+                                id="tagInput"
+                                placeholder="태그를 입력하고 Enter를 누르세요"
+                            />
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1">
+                            Enter 키로 태그를 추가하세요. 최대 5개까지 가능합니다.
+                        </p>
+                        <p class="text-red-500 text-sm mt-1 hidden" id="tagError"></p>
+                    </div>
+
+                    <!-- 파일 첨부 (선택) -->
+                    <div class="mb-8">
+                        <label class="block text-sm font-medium text-gray-700 mb-2">
+                            파일 첨부
+                        </label>
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                            <input 
+                                type="file" 
+                                id="fileInput"
+                                multiple
+                                accept="image/*,.pdf,.doc,.docx"
+                                class="hidden"
+                            />
+                            <div class="cursor-pointer" onclick="document.getElementById('fileInput').click()">
+                                <div class="text-gray-400 mb-2">📎</div>
+                                <p class="text-sm text-gray-600">
+                                    파일을 선택하거나 여기로 드래그하세요
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
+                                    이미지, PDF, Word 문서 지원 (최대 10MB)
+                                </p>
+                            </div>
+                        </div>
+                        <div id="fileList" class="mt-2 space-y-2"></div>
+                    </div>
+
+                    <!-- 버튼 -->
+                    <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+                        <button 
+                            type="button"
+                            onclick="saveDraft()"
+                            class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                            임시저장
+                        </button>
+                        
+                        <div class="flex gap-3">
+                            <button 
+                                type="button"
+                                onclick="location.href='board-index.html'"
+                                class="px-6 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                                취소
+                            </button>
+                            <button 
+                                type="submit"
+                                id="submitBtn"
+                                class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            >
+                                게시글 작성
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let tags = [];
+        let selectedFiles = [];
+
+        // 글자수 카운터
+        document.getElementById('title').addEventListener('input', function() {
+            const count = this.value.length;
+            document.getElementById('titleCount').textContent = count;
+        });
+
+        document.getElementById('content').addEventListener('input', function() {
+            const count = this.value.length;
+            document.getElementById('contentCount').textContent = count;
+        });
+
+        // 태그 입력 처리
+        document.getElementById('tagInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addTag(this.value.trim());
+                this.value = '';
+            }
+        });
+
+        function addTag(tagText) {
+            if (!tagText) return;
+            
+            if (tags.length >= 5) {
+                showTagError('태그는 최대 5개까지만 추가할 수 있습니다.');
+                return;
+            }
+            
+            if (tags.includes(tagText)) {
+                showTagError('이미 추가된 태그입니다.');
+                return;
+            }
+            
+            tags.push(tagText);
+            renderTags();
+            clearTagError();
+        }
+
+        function removeTag(index) {
+            tags.splice(index, 1);
+            renderTags();
+        }
+
+        function renderTags() {
+            const container = document.getElementById('tagContainer');
+            const input = document.getElementById('tagInput');
+            
+            // 기존 태그들 제거
+            const existingTags = container.querySelectorAll('.tag-item');
+            existingTags.forEach(tag => tag.remove());
+            
+            // 새 태그들 추가
+            tags.forEach((tag, index) => {
+                const tagElement = document.createElement('div');
+                tagElement.className = 'tag-item';
+                tagElement.innerHTML = `
+                    <span>${tag}</span>
+                    <span class="tag-remove" onclick="removeTag(${index})">×</span>
+                `;
+                container.insertBefore(tagElement, input);
+            });
+        }
+
+        function showTagError(message) {
+            const errorElement = document.getElementById('tagError');
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+
+        function clearTagError() {
+            document.getElementById('tagError').classList.add('hidden');
+        }
+
+        // 파일 선택 처리
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (file.size > 10 * 1024 * 1024) { // 10MB 제한
+                    alert(`${file.name}은 10MB를 초과합니다.`);
+                    return;
+                }
+                selectedFiles.push(file);
+            });
+            renderFileList();
+        });
+
+        function renderFileList() {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            
+            selectedFiles.forEach((file, index) => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'flex items-center justify-between p-2 bg-gray-50 rounded border';
+                fileItem.innerHTML = `
+                    <span class="text-sm text-gray-700">${file.name}</span>
+                    <button 
+                        type="button"
+                        onclick="removeFile(${index})"
+                        class="text-red-500 hover:text-red-700 text-sm"
+                    >
+                        삭제
+                    </button>
+                `;
+                fileList.appendChild(fileItem);
+            });
+        }
+
+        function removeFile(index) {
+            selectedFiles.splice(index, 1);
+            renderFileList();
+        }
+
+        // 폼 제출 처리
+        document.getElementById('postForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // 유효성 검사
+            clearErrors();
+            let hasError = false;
+            
+            const category = document.getElementById('category').value;
+            const title = document.getElementById('title').value.trim();
+            const content = document.getElementById('content').value.trim();
+            
+            if (!category) {
+                showFieldError('categoryError', '카테고리를 선택해주세요.');
+                hasError = true;
+            }
+            
+            if (!title) {
+                showFieldError('titleError', '제목을 입력해주세요.');
+                hasError = true;
+            } else if (title.length < 5) {
+                showFieldError('titleError', '제목은 5자 이상 입력해주세요.');
+                hasError = true;
+            }
+            
+            if (!content) {
+                showFieldError('contentError', '내용을 입력해주세요.');
+                hasError = true;
+            } else if (content.length < 10) {
+                showFieldError('contentError', '내용은 10자 이상 입력해주세요.');
+                hasError = true;
+            }
+            
+            if (hasError) return;
+            
+            // 게시글 작성 진행
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = '작성 중...';
+            
+            // Mock 작성 완료
+            setTimeout(() => {
+                alert('게시글이 성공적으로 작성되었습니다!');
+                location.href = 'board-index.html';
+            }, 1500);
+        });
+
+        function clearErrors() {
+            const errorElements = ['categoryError', 'titleError', 'contentError'];
+            errorElements.forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+        }
+
+        function showFieldError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+
+        function saveDraft() {
+            // Mock 임시저장
+            alert('게시글이 임시저장되었습니다.');
+        }
+    </script>
+</body>
+</html>

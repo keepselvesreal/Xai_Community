@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>회원가입 | XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+            --accent-primary: #3b82f6;
+            --accent-hover: #2563eb;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--var-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .form-input:disabled {
+            background-color: #f9fafb;
+            color: #6b7280;
+        }
+        .btn-auth {
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            background-color: var(--var-primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .btn-auth:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+        .btn-auth:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-blue-600">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+        <!-- 헤더 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">XAI 아파트 커뮤니티</h1>
+            <p class="text-blue-100">함께 만들어가는 우리 아파트 소통공간</p>
+        </div>
+
+        <!-- 회원가입 폼 -->
+        <div class="max-w-md mx-auto">
+            <div class="bg-white rounded-2xl shadow-xl border p-12">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">회원가입</h2>
+                    <p class="text-gray-600 text-sm">새 계정을 만드세요</p>
+                </div>
+
+                <form id="registerForm">
+                    <div class="space-y-5">
+                        <!-- 이메일 입력 -->
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 text-sm">
+                                이메일
+                            </label>
+                            <input
+                                type="email"
+                                name="email"
+                                id="email"
+                                placeholder="이메일을 입력하세요"
+                                required
+                                class="form-input"
+                            />
+                            <p class="text-red-500 text-sm mt-1 hidden" id="emailError"></p>
+                        </div>
+
+                        <!-- 아이디 입력 -->
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 text-sm">
+                                아이디
+                            </label>
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    name="user_handle"
+                                    id="userHandle"
+                                    placeholder="아이디 (영문, 숫자, _)"
+                                    required
+                                    disabled
+                                    class="form-input flex-1"
+                                />
+                                <button
+                                    type="button"
+                                    id="editHandleBtn"
+                                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-sm whitespace-nowrap"
+                                >
+                                    수정
+                                </button>
+                            </div>
+                            <p class="text-red-500 text-sm mt-1 hidden" id="userHandleError"></p>
+                            <p class="text-xs text-gray-500 mt-1" id="handleHint">
+                                기본값으로 이메일에서 추출한 아이디가 설정되었습니다. 수정 버튼을 눌러 변경할 수 있습니다.
+                            </p>
+                            <p class="text-xs text-gray-500 mt-1">
+                                영문자, 숫자, 언더스코어(_)만 사용 가능합니다.
+                            </p>
+                        </div>
+
+                        <!-- 비밀번호 입력 -->
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 text-sm">
+                                비밀번호
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                id="password"
+                                placeholder="비밀번호를 입력하세요"
+                                required
+                                class="form-input"
+                            />
+                            <p class="text-red-500 text-sm mt-1 hidden" id="passwordError"></p>
+                        </div>
+
+                        <!-- 비밀번호 확인 -->
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 text-sm">
+                                비밀번호 확인
+                            </label>
+                            <input
+                                type="password"
+                                name="confirm_password"
+                                id="confirmPassword"
+                                placeholder="비밀번호를 다시 입력하세요"
+                                required
+                                class="form-input"
+                            />
+                            <p class="text-red-500 text-sm mt-1 hidden" id="confirmPasswordError"></p>
+                        </div>
+
+                        <!-- 회원가입 버튼 -->
+                        <button
+                            type="submit"
+                            class="btn-auth"
+                            id="submitBtn"
+                        >
+                            회원가입
+                        </button>
+                    </div>
+                </form>
+
+                <!-- 로그인 링크 -->
+                <div class="text-center text-gray-500 text-sm border-t border-gray-200 pt-6 mt-6">
+                    <span>이미 계정이 있으신가요? </span>
+                    <a href="auth-login.html" class="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                        로그인
+                    </a>
+                </div>
+
+                <!-- 비밀번호 요구사항 안내 -->
+                <div class="mt-6 p-4 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-600">
+                    <strong class="text-blue-600">비밀번호 요구사항:</strong>
+                    <ul class="mt-2 space-y-1">
+                        <li>• 최소 8자 이상</li>
+                        <li>• 대문자, 소문자, 숫자 포함</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 토스트 -->
+    <div id="toast" class="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        let isHandleEditing = false;
+
+        // 이메일 입력 시 아이디 자동 설정
+        document.getElementById('email').addEventListener('input', function(e) {
+            const email = e.target.value;
+            const userHandleInput = document.getElementById('userHandle');
+            
+            if (email && !isHandleEditing) {
+                // 이메일에서 @ 앞부분만 추출하고 유효한 문자만 남김
+                const emailPart = email.split('@')[0];
+                const validHandle = emailPart.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
+                userHandleInput.value = validHandle;
+            }
+        });
+
+        // 아이디 수정 버튼
+        document.getElementById('editHandleBtn').addEventListener('click', function() {
+            const userHandleInput = document.getElementById('userHandle');
+            const hintText = document.getElementById('handleHint');
+            
+            isHandleEditing = !isHandleEditing;
+            userHandleInput.disabled = !isHandleEditing;
+            
+            if (isHandleEditing) {
+                this.textContent = '완료';
+                userHandleInput.focus();
+                hintText.style.display = 'none';
+            } else {
+                this.textContent = '수정';
+                hintText.style.display = 'block';
+            }
+        });
+
+        // 폼 제출 처리
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const userHandle = document.getElementById('userHandle').value;
+            const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 에러 메시지 초기화
+            clearErrors();
+            
+            let hasError = false;
+            
+            // 이메일 유효성 검사
+            if (!email) {
+                showFieldError('emailError', '이메일을 입력해주세요.');
+                hasError = true;
+            } else if (!validateEmail(email)) {
+                showFieldError('emailError', '올바른 이메일 주소를 입력해주세요.');
+                hasError = true;
+            }
+            
+            // 아이디 유효성 검사
+            if (!userHandle) {
+                showFieldError('userHandleError', '아이디를 입력해주세요.');
+                hasError = true;
+            } else if (!validateUserHandle(userHandle)) {
+                showFieldError('userHandleError', '아이디는 3-20자의 영문, 숫자, 언더스코어만 사용할 수 있습니다.');
+                hasError = true;
+            }
+            
+            // 비밀번호 유효성 검사
+            if (!password) {
+                showFieldError('passwordError', '비밀번호를 입력해주세요.');
+                hasError = true;
+            } else if (!validatePassword(password)) {
+                showFieldError('passwordError', '비밀번호는 최소 8자 이상이며, 대문자, 소문자, 숫자를 포함해야 합니다.');
+                hasError = true;
+            }
+            
+            // 비밀번호 확인
+            if (!confirmPassword) {
+                showFieldError('confirmPasswordError', '비밀번호 확인을 입력해주세요.');
+                hasError = true;
+            } else if (password !== confirmPassword) {
+                showFieldError('confirmPasswordError', '비밀번호가 일치하지 않습니다.');
+                hasError = true;
+            }
+            
+            if (hasError) {
+                return;
+            }
+            
+            // 회원가입 진행
+            submitBtn.disabled = true;
+            submitBtn.textContent = '가입 중...';
+            
+            // 실제 환경에서는 API 호출
+            setTimeout(() => {
+                // Mock 회원가입 성공
+                showToast('회원가입이 완료되었습니다!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'auth-login.html';
+                }, 1500);
+            }, 2000);
+        });
+        
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        function validateUserHandle(handle) {
+            const handleRegex = /^[a-zA-Z0-9_]{3,20}$/;
+            return handleRegex.test(handle);
+        }
+        
+        function validatePassword(password) {
+            if (password.length < 8) return false;
+            
+            const hasUpper = /[A-Z]/.test(password);
+            const hasLower = /[a-z]/.test(password);
+            const hasNumber = /\d/.test(password);
+            
+            return hasUpper && hasLower && hasNumber;
+        }
+        
+        function clearErrors() {
+            const errorElements = ['emailError', 'userHandleError', 'passwordError', 'confirmPasswordError'];
+            errorElements.forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+        }
+        
+        function showFieldError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+        
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            
+            // 타입에 따른 색상 변경
+            toast.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transform transition-transform duration-300 z-50';
+            if (type === 'success') {
+                toast.classList.add('bg-green-500', 'text-white');
+            } else if (type === 'warning') {
+                toast.classList.add('bg-yellow-500', 'text-white');
+            } else {
+                toast.classList.add('bg-red-500', 'text-white');
+            }
+            
+            // 토스트 표시
+            toast.classList.remove('translate-x-full');
+            
+            // 3초 후 자동 숨김
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

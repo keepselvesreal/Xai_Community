@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>로그인 | XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+            --accent-primary: #3b82f6;
+            --accent-hover: #2563eb;
+        }
+        .form-input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.5rem;
+            transition: border-color 0.2s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--var-primary);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .btn-auth {
+            width: 100%;
+            padding: 0.875rem 1.5rem;
+            background-color: var(--var-primary);
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            cursor: pointer;
+        }
+        .btn-auth:hover:not(:disabled) {
+            background-color: #2563eb;
+        }
+        .btn-auth:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-blue-600">
+    <div class="max-w-6xl mx-auto px-6 py-8">
+        <!-- 헤더 -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-white mb-2">XAI 아파트 커뮤니티</h1>
+            <p class="text-blue-100">함께 만들어가는 우리 아파트 소통공간</p>
+        </div>
+
+        <!-- 로그인 폼 -->
+        <div class="max-w-md mx-auto">
+            <div class="bg-white rounded-2xl shadow-xl border p-12">
+                <div class="text-center mb-8">
+                    <h2 class="text-3xl font-bold text-gray-900 mb-2">로그인</h2>
+                    <p class="text-gray-600 text-sm">커뮤니티에 참여하세요</p>
+                </div>
+
+                <form id="loginForm">
+                    <div class="space-y-5">
+                        <!-- 이메일 입력 -->
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 text-sm">
+                                이메일
+                            </label>
+                            <input
+                                type="email"
+                                name="email"
+                                id="email"
+                                placeholder="이메일을 입력하세요"
+                                required
+                                class="form-input"
+                            />
+                            <p class="text-red-500 text-sm mt-1 hidden" id="emailError"></p>
+                        </div>
+
+                        <!-- 비밀번호 입력 -->
+                        <div>
+                            <label class="block text-gray-700 font-medium mb-2 text-sm">
+                                비밀번호
+                            </label>
+                            <input
+                                type="password"
+                                name="password"
+                                id="password"
+                                placeholder="비밀번호를 입력하세요"
+                                required
+                                class="form-input"
+                            />
+                            <p class="text-red-500 text-sm mt-1 hidden" id="passwordError"></p>
+                        </div>
+
+                        <!-- 로그인 상태 유지 -->
+                        <div class="flex items-center gap-2 mb-6">
+                            <input
+                                type="checkbox"
+                                id="remember"
+                                class="w-4 h-4 accent-blue-600"
+                            />
+                            <label for="remember" class="text-gray-600 text-sm cursor-pointer">
+                                로그인 상태 유지
+                            </label>
+                        </div>
+
+                        <!-- 로그인 버튼 -->
+                        <button
+                            type="submit"
+                            class="btn-auth"
+                            id="submitBtn"
+                        >
+                            로그인
+                        </button>
+                    </div>
+                </form>
+
+                <!-- 회원가입 링크 -->
+                <div class="text-center text-gray-500 text-sm border-t border-gray-200 pt-6 mt-6">
+                    <span>계정이 없으신가요? </span>
+                    <a href="auth-register.html" class="text-blue-600 hover:text-blue-800 font-medium transition-colors">
+                        회원가입
+                    </a>
+                </div>
+
+                <!-- 비밀번호 찾기 링크 -->
+                <div class="text-center mt-4">
+                    <a href="#" class="text-gray-500 hover:text-blue-600 text-sm transition-colors">
+                        비밀번호를 잊으셨나요?
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 알림 토스트 -->
+    <div id="toast" class="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg transform translate-x-full transition-transform duration-300 z-50">
+        <span id="toastMessage"></span>
+    </div>
+
+    <script>
+        // 간단한 폼 유효성 검사 및 제출 처리
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const submitBtn = document.getElementById('submitBtn');
+            
+            // 에러 메시지 초기화
+            document.getElementById('emailError').classList.add('hidden');
+            document.getElementById('passwordError').classList.add('hidden');
+            
+            let hasError = false;
+            
+            // 이메일 유효성 검사
+            if (!email) {
+                showFieldError('emailError', '이메일을 입력해주세요.');
+                hasError = true;
+            } else if (!validateEmail(email)) {
+                showFieldError('emailError', '올바른 이메일 주소를 입력해주세요.');
+                hasError = true;
+            }
+            
+            // 비밀번호 유효성 검사
+            if (!password) {
+                showFieldError('passwordError', '비밀번호를 입력해주세요.');
+                hasError = true;
+            }
+            
+            if (hasError) {
+                return;
+            }
+            
+            // 로그인 진행
+            submitBtn.disabled = true;
+            submitBtn.textContent = '로그인 중...';
+            
+            // 실제 환경에서는 API 호출
+            setTimeout(() => {
+                // Mock 로그인 성공
+                showToast('로그인 성공!', 'success');
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 1000);
+            }, 1500);
+        });
+        
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email);
+        }
+        
+        function showFieldError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+        }
+        
+        function showToast(message, type = 'error') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.textContent = message;
+            
+            // 타입에 따른 색상 변경
+            toast.className = 'fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg transform transition-transform duration-300 z-50';
+            if (type === 'success') {
+                toast.classList.add('bg-green-500', 'text-white');
+            } else if (type === 'warning') {
+                toast.classList.add('bg-yellow-500', 'text-white');
+            } else {
+                toast.classList.add('bg-red-500', 'text-white');
+            }
+            
+            // 토스트 표시
+            toast.classList.remove('translate-x-full');
+            
+            // 3초 후 자동 숨김
+            setTimeout(() => {
+                toast.classList.add('translate-x-full');
+            }, 3000);
+        }
+        
+        // URL 파라미터에서 로그아웃 사유 확인 (mock)
+        const urlParams = new URLSearchParams(window.location.search);
+        const logoutReason = urlParams.get('logout_reason');
+        if (logoutReason) {
+            const messages = {
+                'session_expired': '세션이 만료되었습니다. 다시 로그인해주세요.',
+                'token_invalid': '로그인 정보가 유효하지 않습니다.',
+                'forced_logout': '보안상의 이유로 로그아웃되었습니다.'
+            };
+            
+            const message = messages[logoutReason] || '로그아웃되었습니다.';
+            setTimeout(() => {
+                showToast(message, 'warning');
+            }, 500);
+        }
+    </script>
+</body>
+</html>

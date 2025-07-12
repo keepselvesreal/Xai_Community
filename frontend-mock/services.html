@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입주 업체 서비스 | XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+        }
+        .category-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            color: #6b7280;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .category-btn:hover {
+            background-color: #f3f4f6;
+        }
+        .category-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 사이드바 -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+        <div class="flex items-center justify-center h-16 bg-blue-600">
+            <span class="text-white text-xl font-bold">🏠 XAI 아파트</span>
+        </div>
+        <nav class="mt-5 px-2">
+            <a href="index.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏠</span>
+                홈
+            </a>
+            <a href="board-index.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">📝</span>
+                게시판
+            </a>
+            <a href="info.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">ℹ️</span>
+                정보
+            </a>
+            <a href="#" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-white bg-blue-600">
+                <span class="mr-3">🏢</span>
+                입주 업체 서비스
+            </a>
+            <a href="tips.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">💡</span>
+                전문가 꿀정보
+            </a>
+            <div class="mt-8 pt-8 border-t border-gray-200">
+                <a href="mypage.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">👤</span>
+                    마이페이지
+                </a>
+                <a href="auth-login.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">🚪</span>
+                    로그아웃
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="lg:pl-64">
+        <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 페이지 헤더 -->
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">🏢 입주 업체 서비스</h1>
+                    <p class="text-gray-600 mt-2">우리 아파트 업체 소개</p>
+                </div>
+                <a href="services-write.html" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    📝 업체 등록
+                </a>
+            </div>
+
+            <!-- 검색 및 필터 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <!-- 카테고리 필터 -->
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="text-sm font-medium text-gray-700">카테고리:</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="category-btn active" data-category="all">전체</button>
+                        <button class="category-btn" data-category="moving">이사</button>
+                        <button class="category-btn" data-category="cleaning">청소</button>
+                        <button class="category-btn" data-category="aircon">에어컨</button>
+                    </div>
+                </div>
+
+                <!-- 검색 및 정렬 -->
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <input 
+                            type="text" 
+                            placeholder="서비스 검색..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <div class="flex gap-2">
+                        <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="latest">최신순</option>
+                            <option value="views">조회수</option>
+                            <option value="saves">저장수</option>
+                            <option value="reviews">후기수</option>
+                            <option value="inquiries">문의수</option>
+                        </select>
+                        <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            검색
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 서비스 카드 그리드 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 서비스 카드 1 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                    <!-- 카테고리와 인증 -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-medium">
+                            이사
+                        </span>
+                        <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                            인증
+                        </span>
+                    </div>
+
+                    <!-- 업체명 -->
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">깔끔한 이사</h3>
+
+                    <!-- 서비스 목록 -->
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">원룸 이사</span>
+                            <span class="text-red-500 font-medium text-sm">150,000원</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">투룸 이사</span>
+                            <div class="flex items-center gap-2">
+                                <span class="text-gray-400 line-through text-sm">300,000원</span>
+                                <span class="text-red-500 font-medium text-sm">250,000원</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">쓰리룸 이사</span>
+                            <span class="text-red-500 font-medium text-sm">400,000원</span>
+                        </div>
+                    </div>
+
+                    <!-- 연락처 -->
+                    <div class="flex items-center gap-4 mb-3 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <span class="text-pink-500">📞</span>
+                            <span>010-1234-5678</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-orange-500">⏰</span>
+                            <span>09:00-18:00</span>
+                        </div>
+                    </div>
+
+                    <!-- 통계 -->
+                    <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">👁️ 245</span>
+                            <span class="flex items-center gap-1">관심 32</span>
+                            <span class="flex items-center gap-1">문의 18</span>
+                            <span class="flex items-center gap-1">후기 15</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 서비스 카드 2 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+                            청소
+                        </span>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">깨끗한 청소</h3>
+
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">일반 청소</span>
+                            <span class="text-red-500 font-medium text-sm">80,000원</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">입주 청소</span>
+                            <span class="text-red-500 font-medium text-sm">120,000원</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">이사 청소</span>
+                            <span class="text-red-500 font-medium text-sm">150,000원</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 mb-3 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <span class="text-pink-500">📞</span>
+                            <span>010-9876-5432</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-orange-500">⏰</span>
+                            <span>08:00-20:00</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">👁️ 189</span>
+                            <span class="flex items-center gap-1">관심 28</span>
+                            <span class="flex items-center gap-1">문의 12</span>
+                            <span class="flex items-center gap-1">후기 9</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 서비스 카드 3 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="bg-purple-100 text-purple-600 px-3 py-1 rounded-full text-sm font-medium">
+                            에어컨
+                        </span>
+                        <span class="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                            인증
+                        </span>
+                    </div>
+
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">시원한 에어컨</h3>
+
+                    <div class="space-y-2 mb-4">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">에어컨 청소</span>
+                            <span class="text-red-500 font-medium text-sm">50,000원</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">에어컨 설치</span>
+                            <span class="text-red-500 font-medium text-sm">100,000원</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-700 text-sm">에어컨 수리</span>
+                            <span class="text-red-500 font-medium text-sm">70,000원</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-4 mb-3 text-sm text-gray-600">
+                        <div class="flex items-center gap-1">
+                            <span class="text-pink-500">📞</span>
+                            <span>010-5555-7777</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-orange-500">⏰</span>
+                            <span>24시간</span>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between text-sm text-gray-500 mb-3">
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">👁️ 312</span>
+                            <span class="flex items-center gap-1">관심 45</span>
+                            <span class="flex items-center gap-1">문의 23</span>
+                            <span class="flex items-center gap-1">후기 18</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="flex items-center justify-center mt-8">
+                <nav class="flex items-center gap-2">
+                    <button class="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        이전
+                    </button>
+                    <button class="px-4 py-2 rounded-lg bg-blue-600 text-white">1</button>
+                    <button class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">2</button>
+                    <button class="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+                        다음
+                    </button>
+                </nav>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 카테고리 필터 기능
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const category = this.dataset.category;
+                console.log('Filtering services by category:', category);
+            });
+        });
+    </script>
+</body>
+</html>

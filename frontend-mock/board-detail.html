@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>새로 이사온 가족입니다. 인사드려요! | XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+        }
+        .reaction-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .reaction-btn:hover {
+            background-color: #f3f4f6;
+        }
+        .reaction-btn.active {
+            background-color: var(--var-primary);
+            color: white;
+            border-color: var(--var-primary);
+        }
+        .reaction-btn.like.active {
+            background-color: var(--var-success);
+            border-color: var(--var-success);
+        }
+        .reaction-btn.dislike.active {
+            background-color: var(--var-error);
+            border-color: var(--var-error);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 사이드바 -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+        <div class="flex items-center justify-center h-16 bg-blue-600">
+            <span class="text-white text-xl font-bold">🏠 XAI 아파트</span>
+        </div>
+        <nav class="mt-5 px-2">
+            <a href="index.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏠</span>
+                홈
+            </a>
+            <a href="board-index.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-white bg-blue-600">
+                <span class="mr-3">📝</span>
+                게시판
+            </a>
+            <a href="info.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">ℹ️</span>
+                정보
+            </a>
+            <a href="services.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏢</span>
+                입주 업체 서비스
+            </a>
+            <a href="tips.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">💡</span>
+                전문가 꿀정보
+            </a>
+            <div class="mt-8 pt-8 border-t border-gray-200">
+                <a href="mypage.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">👤</span>
+                    마이페이지
+                </a>
+                <a href="auth-login.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">🚪</span>
+                    로그아웃
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="lg:pl-64">
+        <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 뒤로가기 버튼 -->
+            <div class="mb-6">
+                <a href="board-index.html" class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900">
+                    <span>←</span>
+                    <span>게시판으로 돌아가기</span>
+                </a>
+            </div>
+
+            <!-- 게시글 헤더 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <!-- 카테고리와 작성시간 -->
+                <div class="flex items-center gap-2 mb-4">
+                    <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">입주 정보</span>
+                    <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">NEW</span>
+                    <span class="text-gray-500 text-sm ml-auto">방금 전</span>
+                </div>
+
+                <!-- 제목 -->
+                <h1 class="text-2xl font-bold text-gray-900 mb-4">
+                    새로 이사온 가족입니다. 인사드려요!
+                </h1>
+
+                <!-- 작성자 정보 -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-medium">
+                            김
+                        </div>
+                        <div>
+                            <div class="font-medium text-gray-900">김민수</div>
+                            <div class="text-sm text-gray-500">2024-07-12 14:30</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 수정/삭제 버튼 (작성자인 경우만) -->
+                    <div class="flex items-center gap-2">
+                        <button class="text-gray-600 hover:text-blue-600 text-sm">수정</button>
+                        <button class="text-gray-600 hover:text-red-600 text-sm">삭제</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 게시글 내용 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="prose max-w-none">
+                    <p class="mb-4">
+                        안녕하세요! 지난주에 101동 1507호로 이사왔습니다. 
+                    </p>
+                    <p class="mb-4">
+                        아직 이 아파트 생활에 적응하는 중이라 궁금한 것들이 많습니다. 
+                        특히 주차장 이용 시간이나 택배 보관함 사용법, 그리고 분리수거는 어떻게 하는지 알고 싶어요.
+                    </p>
+                    <p class="mb-4">
+                        저희는 5살 딸아이가 있는 3인 가족이고, 아이가 놀 수 있는 놀이터나 키즈카페 같은 곳이 근처에 있는지도 궁금합니다.
+                    </p>
+                    <p>
+                        앞으로 이웃분들과 좋은 관계 맺고 싶습니다. 잘 부탁드려요! 😊
+                    </p>
+                </div>
+
+                <!-- 태그 -->
+                <div class="flex flex-wrap gap-2 mt-6 pt-4 border-t border-gray-200">
+                    <span class="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 text-sm rounded-md border border-green-200">
+                        #인사
+                    </span>
+                    <span class="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 text-sm rounded-md border border-green-200">
+                        #새이사
+                    </span>
+                    <span class="inline-flex items-center px-2 py-1 bg-green-50 text-green-700 text-sm rounded-md border border-green-200">
+                        #101동
+                    </span>
+                </div>
+            </div>
+
+            <!-- 반응 버튼 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button class="reaction-btn like" onclick="toggleReaction(this, 'like')">
+                            <span>👍</span>
+                            <span>좋아요</span>
+                            <span class="count">3</span>
+                        </button>
+                        <button class="reaction-btn dislike" onclick="toggleReaction(this, 'dislike')">
+                            <span>👎</span>
+                            <span>싫어요</span>
+                            <span class="count">0</span>
+                        </button>
+                        <button class="reaction-btn bookmark" onclick="toggleReaction(this, 'bookmark')">
+                            <span>🔖</span>
+                            <span>북마크</span>
+                            <span class="count">2</span>
+                        </button>
+                    </div>
+                    <div class="text-sm text-gray-500">
+                        조회수 12회
+                    </div>
+                </div>
+            </div>
+
+            <!-- 댓글 섹션 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">
+                    댓글 <span class="text-gray-500">(5)</span>
+                </h3>
+
+                <!-- 댓글 작성 -->
+                <div class="mb-6">
+                    <textarea 
+                        id="commentText"
+                        rows="3" 
+                        placeholder="댓글을 작성해주세요..."
+                        class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    ></textarea>
+                    <div class="flex justify-end mt-2">
+                        <button 
+                            onclick="addComment()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                            댓글 작성
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 댓글 목록 -->
+                <div class="space-y-4" id="commentsList">
+                    <!-- 댓글 1 -->
+                    <div class="border-b border-gray-100 pb-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                박
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-medium text-gray-900">박영희</span>
+                                    <span class="text-xs text-gray-500">방금 전</span>
+                                </div>
+                                <p class="text-gray-700 text-sm">
+                                    환영합니다! 저도 101동에 살고 있어요. 주차장은 24시간 이용 가능하고, 
+                                    택배보관함은 1층 로비에 있습니다. 궁금한 게 있으면 언제든 물어보세요!
+                                </p>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <button class="text-xs text-gray-500 hover:text-blue-600">답글</button>
+                                    <button class="text-xs text-gray-500 hover:text-green-600">👍 2</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 댓글 2 -->
+                    <div class="border-b border-gray-100 pb-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-purple-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                이
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-medium text-gray-900">이철수</span>
+                                    <span class="text-xs text-gray-500">5분 전</span>
+                                </div>
+                                <p class="text-gray-700 text-sm">
+                                    반갑습니다! 근처에 키즈카페는 단지 상가 2층에 있어요. 
+                                    아이들이 놀기 좋더라구요. 분리수거는 각 동 뒤편에 분리수거함이 있습니다.
+                                </p>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <button class="text-xs text-gray-500 hover:text-blue-600">답글</button>
+                                    <button class="text-xs text-gray-500 hover:text-green-600">👍 1</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 댓글 3 -->
+                    <div class="border-b border-gray-100 pb-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 bg-yellow-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                                관
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center gap-2 mb-1">
+                                    <span class="font-medium text-gray-900">관리사무소</span>
+                                    <span class="bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full text-xs">관리자</span>
+                                    <span class="text-xs text-gray-500">3분 전</span>
+                                </div>
+                                <p class="text-gray-700 text-sm">
+                                    안녕하세요! 입주를 환영합니다. 생활편의시설 이용 안내서를 별도로 전달드릴게요. 
+                                    궁금한 사항이 있으시면 관리사무소(1층)로 언제든 방문해주세요.
+                                </p>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <button class="text-xs text-gray-500 hover:text-blue-600">답글</button>
+                                    <button class="text-xs text-gray-500 hover:text-green-600">👍 5</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function toggleReaction(button, type) {
+            const isActive = button.classList.contains('active');
+            const countElement = button.querySelector('.count');
+            let currentCount = parseInt(countElement.textContent);
+            
+            if (isActive) {
+                button.classList.remove('active');
+                countElement.textContent = currentCount - 1;
+            } else {
+                // 다른 반응 버튼들 비활성화 (좋아요/싫어요는 상호 배타적)
+                if (type === 'like' || type === 'dislike') {
+                    document.querySelectorAll('.reaction-btn.like, .reaction-btn.dislike').forEach(btn => {
+                        if (btn !== button && btn.classList.contains('active')) {
+                            btn.classList.remove('active');
+                            const otherCount = btn.querySelector('.count');
+                            otherCount.textContent = parseInt(otherCount.textContent) - 1;
+                        }
+                    });
+                }
+                
+                button.classList.add('active');
+                countElement.textContent = currentCount + 1;
+            }
+        }
+
+        function addComment() {
+            const textarea = document.getElementById('commentText');
+            const commentText = textarea.value.trim();
+            
+            if (!commentText) {
+                alert('댓글 내용을 입력해주세요.');
+                return;
+            }
+            
+            // Mock 댓글 추가
+            const commentsList = document.getElementById('commentsList');
+            const newComment = document.createElement('div');
+            newComment.className = 'border-b border-gray-100 pb-4';
+            newComment.innerHTML = `
+                <div class="flex items-start gap-3">
+                    <div class="w-8 h-8 bg-gray-500 rounded-full flex items-center justify-center text-white text-sm font-medium">
+                        나
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="font-medium text-gray-900">나</span>
+                            <span class="text-xs text-gray-500">방금 전</span>
+                        </div>
+                        <p class="text-gray-700 text-sm">
+                            ${commentText}
+                        </p>
+                        <div class="flex items-center gap-2 mt-2">
+                            <button class="text-xs text-gray-500 hover:text-blue-600">답글</button>
+                            <button class="text-xs text-gray-500 hover:text-green-600">👍 0</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            commentsList.appendChild(newComment);
+            textarea.value = '';
+            
+            // 댓글 수 업데이트
+            const commentTitle = document.querySelector('h3');
+            const currentCount = parseInt(commentTitle.textContent.match(/\d+/)[0]);
+            commentTitle.innerHTML = `댓글 <span class="text-gray-500">(${currentCount + 1})</span>`;
+        }
+    </script>
+</body>
+</html>

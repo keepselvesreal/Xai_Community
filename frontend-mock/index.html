@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 사이드바 -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+        <div class="flex items-center justify-center h-16 bg-blue-600">
+            <span class="text-white text-xl font-bold">🏠 XAI 아파트</span>
+        </div>
+        <nav class="mt-5 px-2">
+            <a href="index.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-white bg-blue-600">
+                <span class="mr-3">🏠</span>
+                홈
+            </a>
+            <a href="board-index.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">📝</span>
+                게시판
+            </a>
+            <a href="info.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">ℹ️</span>
+                정보
+            </a>
+            <a href="services.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏢</span>
+                입주 업체 서비스
+            </a>
+            <a href="tips.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">💡</span>
+                전문가 꿀정보
+            </a>
+            <div class="mt-8 pt-8 border-t border-gray-200">
+                <a href="mypage.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">👤</span>
+                    마이페이지
+                </a>
+                <a href="auth-login.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">🚪</span>
+                    로그아웃
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="lg:pl-64">
+        <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 환영 메시지 -->
+            <div class="text-center mb-12">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">
+                    🏠 XAI 아파트 커뮤니티에 오신 것을 환영합니다
+                </h1>
+                <p class="text-xl text-gray-600">
+                    우리 아파트의 모든 정보와 소통이 한 곳에
+                </p>
+            </div>
+
+            <!-- 주요 서비스 -->
+            <div class="mb-12">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">📋 주요 서비스</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <a href="#" class="block p-6 rounded-xl border-2 border-transparent transition-all duration-200 bg-blue-50 hover:bg-blue-100 hover:border-gray-200 hover:shadow-lg">
+                        <div class="text-center">
+                            <div class="text-4xl mb-3">ℹ️</div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">정보</h3>
+                            <p class="text-gray-600">아파트 관련 유용한 정보</p>
+                        </div>
+                    </a>
+                    <a href="#" class="block p-6 rounded-xl border-2 border-transparent transition-all duration-200 bg-green-50 hover:bg-green-100 hover:border-gray-200 hover:shadow-lg">
+                        <div class="text-center">
+                            <div class="text-4xl mb-3">🏢</div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">입주 업체 서비스</h3>
+                            <p class="text-gray-600">우리 아파트 업체 소개</p>
+                        </div>
+                    </a>
+                    <a href="#" class="block p-6 rounded-xl border-2 border-transparent transition-all duration-200 bg-yellow-50 hover:bg-yellow-100 hover:border-gray-200 hover:shadow-lg">
+                        <div class="text-center">
+                            <div class="text-4xl mb-3">💡</div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">전문가 꿀정보</h3>
+                            <p class="text-gray-600">검증된 생활 팁</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 최근 게시글 -->
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl font-bold text-gray-900">📝 최근 게시글</h2>
+                    <a href="#" class="text-blue-600 hover:text-blue-800 font-medium">
+                        모든 게시글 보기 →
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 게시글 카드 1 -->
+                    <a href="#" class="block">
+                        <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                            <h3 class="font-semibold text-gray-900 mb-2 line-clamp-2">
+                                새로 이사온 가족입니다. 인사드려요!
+                            </h3>
+                            <p class="text-gray-600 text-sm mb-3 line-clamp-2">
+                                안녕하세요! 지난주에 101동 1507호로 이사왔습니다. 궁금한 것들이 많은데 잘 부탁드립니다.
+                            </p>
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <span>김민수</span>
+                                <span>2024-07-12</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 게시글 카드 2 -->
+                    <a href="#" class="block">
+                        <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                            <h3 class="font-semibold text-gray-900 mb-2 line-clamp-2">
+                                주차장 이용 시간 문의드려요
+                            </h3>
+                            <p class="text-gray-600 text-sm mb-3 line-clamp-2">
+                                혹시 주차장 출입 시간이 따로 있나요? 새벽에 출근해야 하는데 걱정이 되네요.
+                            </p>
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <span>박영희</span>
+                                <span>2024-07-11</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 게시글 카드 3 -->
+                    <a href="#" class="block">
+                        <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                            <h3 class="font-semibold text-gray-900 mb-2 line-clamp-2">
+                                아파트 관리비 내역서 관련 질문
+                            </h3>
+                            <p class="text-gray-600 text-sm mb-3 line-clamp-2">
+                                이번 달 관리비가 평소보다 높게 나왔는데, 혹시 무슨 공사가 있었나요?
+                            </p>
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <span>이철수</span>
+                                <span>2024-07-10</span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 게시글 카드 4 -->
+                    <a href="#" class="block">
+                        <div class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                            <h3 class="font-semibold text-gray-900 mb-2 line-clamp-2">
+                                단지 내 운동시설 이용 안내
+                            </h3>
+                            <p class="text-gray-600 text-sm mb-3 line-clamp-2">
+                                헬스장과 수영장 이용 시간과 예약 방법을 알려드립니다.
+                            </p>
+                            <div class="flex items-center justify-between text-xs text-gray-500">
+                                <span>관리사무소</span>
+                                <span>2024-07-09</span>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            </div>
+
+            <!-- 커뮤니티 정보 -->
+            <div class="bg-gray-50 rounded-xl p-6 text-center">
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">
+                    💬 함께 소통해요
+                </h3>
+                <p class="text-gray-600">
+                    궁금한 것이 있으시면 언제든지 게시판에 올려주세요. 
+                    이웃들이 친절하게 답변해드릴게요!
+                </p>
+            </div>
+        </main>
+    </div>
+
+    <!-- 모바일 메뉴 토글 -->
+    <script>
+        // 모바일 사이드바 토글 기능 (필요시 추가)
+        function toggleSidebar() {
+            const sidebar = document.querySelector('.fixed');
+            sidebar.classList.toggle('-translate-x-full');
+        }
+    </script>
+</body>
+</html>

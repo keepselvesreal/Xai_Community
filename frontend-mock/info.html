@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>정보 | XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+        }
+        .category-btn {
+            padding: 0.5rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background-color: white;
+            color: #6b7280;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .category-btn:hover {
+            background-color: #f3f4f6;
+        }
+        .category-btn.active {
+            background-color: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 사이드바 -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+        <div class="flex items-center justify-center h-16 bg-blue-600">
+            <span class="text-white text-xl font-bold">🏠 XAI 아파트</span>
+        </div>
+        <nav class="mt-5 px-2">
+            <a href="index.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏠</span>
+                홈
+            </a>
+            <a href="board-index.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">📝</span>
+                게시판
+            </a>
+            <a href="#" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-white bg-blue-600">
+                <span class="mr-3">ℹ️</span>
+                정보
+            </a>
+            <a href="services.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏢</span>
+                입주 업체 서비스
+            </a>
+            <a href="tips.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">💡</span>
+                전문가 꿀정보
+            </a>
+            <div class="mt-8 pt-8 border-t border-gray-200">
+                <a href="mypage.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">👤</span>
+                    마이페이지
+                </a>
+                <a href="auth-login.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">🚪</span>
+                    로그아웃
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="lg:pl-64">
+        <main class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 페이지 헤더 -->
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-900">ℹ️ 정보</h1>
+                    <p class="text-gray-600 mt-2">아파트 관련 유용한 정보</p>
+                </div>
+            </div>
+
+            <!-- 검색 및 필터 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <!-- 카테고리 필터 -->
+                <div class="flex items-center gap-4 mb-4">
+                    <span class="text-sm font-medium text-gray-700">카테고리:</span>
+                    <div class="flex flex-wrap gap-2">
+                        <button class="category-btn active" data-category="all">전체</button>
+                        <button class="category-btn" data-category="market_analysis">시세분석</button>
+                        <button class="category-btn" data-category="legal_info">법률정보</button>
+                        <button class="category-btn" data-category="move_in_guide">입주가이드</button>
+                        <button class="category-btn" data-category="investment_trend">투자동향</button>
+                    </div>
+                </div>
+
+                <!-- 검색 및 정렬 -->
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <input 
+                            type="text" 
+                            placeholder="정보 검색..."
+                            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                    </div>
+                    <div class="flex gap-2">
+                        <select class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="latest">최신순</option>
+                            <option value="views">조회수</option>
+                            <option value="likes">추천수</option>
+                            <option value="comments">댓글수</option>
+                            <option value="saves">저장수</option>
+                        </select>
+                        <button class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                            검색
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 정보 카드 그리드 -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- 정보 카드 1 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow h-full cursor-pointer">
+                    <!-- 상단: 콘텐츠 타입 배지 -->
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-green-100 text-green-700 border-green-200">
+                            AI 생성 글
+                        </span>
+                        <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+                            시세분석
+                        </span>
+                        <span class="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+                            NEW
+                        </span>
+                    </div>
+
+                    <!-- 제목 -->
+                    <h3 class="text-blue-600 font-bold text-lg mb-3 line-clamp-2">
+                        XAI 아파트 단지 7월 시세 분석 리포트
+                    </h3>
+
+                    <!-- 데이터 소스 정보 -->
+                    <div class="mb-3">
+                        <span class="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            📊 부동산 114, 직방 데이터
+                        </span>
+                    </div>
+
+                    <!-- 요약 -->
+                    <p class="text-gray-700 text-sm mb-4 line-clamp-2">
+                        최근 한 달간 XAI 아파트 단지의 매매 및 전세 가격 동향을 분석한 결과, 
+                        전년 동기 대비 매매가 3.2% 상승했습니다.
+                    </p>
+
+                    <!-- 태그 -->
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #시세분석
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #매매가격
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #전세가격
+                        </span>
+                    </div>
+
+                    <!-- 하단: 통계 및 날짜 -->
+                    <div class="flex items-center justify-between text-gray-600 text-sm mt-auto">
+                        <span class="text-gray-700 font-medium">
+                            2일 전
+                        </span>
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">👁️ 289</span>
+                            <span class="flex items-center gap-1">👍 45</span>
+                            <span class="flex items-center gap-1">💬 12</span>
+                            <span class="flex items-center gap-1">🔖 28</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 정보 카드 2 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow h-full cursor-pointer">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-purple-100 text-purple-700 border-purple-200">
+                            데이터 시각화
+                        </span>
+                        <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+                            법률정보
+                        </span>
+                    </div>
+
+                    <h3 class="text-blue-600 font-bold text-lg mb-3 line-clamp-2">
+                        아파트 관리비 분쟁 대응 가이드
+                    </h3>
+
+                    <div class="mb-3">
+                        <span class="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            📊 법무부, 국토교통부 자료
+                        </span>
+                    </div>
+
+                    <p class="text-gray-700 text-sm mb-4 line-clamp-2">
+                        관리비 고지서 항목별 설명과 부당한 관리비 부과 시 대응 방법을 
+                        단계별로 안내합니다.
+                    </p>
+
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #관리비
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #법률상담
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #분쟁해결
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between text-gray-600 text-sm mt-auto">
+                        <span class="text-gray-700 font-medium">1주 전</span>
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">👁️ 156</span>
+                            <span class="flex items-center gap-1">👍 23</span>
+                            <span class="flex items-center gap-1">💬 8</span>
+                            <span class="flex items-center gap-1">🔖 15</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 정보 카드 3 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow h-full cursor-pointer">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-blue-100 text-blue-700 border-blue-200">
+                            인터렉티브 차트
+                        </span>
+                        <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+                            입주가이드
+                        </span>
+                    </div>
+
+                    <h3 class="text-blue-600 font-bold text-lg mb-3 line-clamp-2">
+                        XAI 아파트 입주 체크리스트 및 편의시설 안내
+                    </h3>
+
+                    <div class="mb-3">
+                        <span class="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            📊 관리사무소 제공 자료
+                        </span>
+                    </div>
+
+                    <p class="text-gray-700 text-sm mb-4 line-clamp-2">
+                        입주 전 준비사항부터 단지 내 편의시설 이용 방법까지 
+                        신규 입주민을 위한 종합 안내서입니다.
+                    </p>
+
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #입주가이드
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #편의시설
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #체크리스트
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between text-gray-600 text-sm mt-auto">
+                        <span class="text-gray-700 font-medium">2주 전</span>
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">👁️ 412</span>
+                            <span class="flex items-center gap-1">👍 67</span>
+                            <span class="flex items-center gap-1">💬 25</span>
+                            <span class="flex items-center gap-1">🔖 58</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 정보 카드 4 -->
+                <div class="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow h-full cursor-pointer">
+                    <div class="flex items-center gap-2 mb-3">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border bg-orange-100 text-orange-700 border-orange-200">
+                            혼합 콘텐츠
+                        </span>
+                        <span class="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
+                            투자동향
+                        </span>
+                    </div>
+
+                    <h3 class="text-blue-600 font-bold text-lg mb-3 line-clamp-2">
+                        2024년 하반기 부동산 투자 전망
+                    </h3>
+
+                    <div class="mb-3">
+                        <span class="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                            📊 한국부동산원, 금융연구원
+                        </span>
+                    </div>
+
+                    <p class="text-gray-700 text-sm mb-4 line-clamp-2">
+                        금리 변동과 정부 정책을 고려한 하반기 부동산 시장 전망과 
+                        투자 전략을 분석했습니다.
+                    </p>
+
+                    <div class="flex flex-wrap gap-2 mb-4">
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #부동산투자
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #시장전망
+                        </span>
+                        <span class="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
+                            #투자전략
+                        </span>
+                    </div>
+
+                    <div class="flex items-center justify-between text-gray-600 text-sm mt-auto">
+                        <span class="text-gray-700 font-medium">3주 전</span>
+                        <div class="flex items-center gap-3">
+                            <span class="flex items-center gap-1">👁️ 198</span>
+                            <span class="flex items-center gap-1">👍 34</span>
+                            <span class="flex items-center gap-1">💬 16</span>
+                            <span class="flex items-center gap-1">🔖 21</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 페이지네이션 -->
+            <div class="flex items-center justify-center mt-8">
+                <nav class="flex items-center gap-2">
+                    <button class="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                        이전
+                    </button>
+                    <button class="px-4 py-2 rounded-lg bg-blue-600 text-white">1</button>
+                    <button class="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">2</button>
+                    <button class="px-3 py-2 rounded-lg border border-gray-300 hover:bg-gray-50">
+                        다음
+                    </button>
+                </nav>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // 카테고리 필터 기능
+        document.querySelectorAll('.category-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.category-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const category = this.dataset.category;
+                console.log('Filtering info by category:', category);
+            });
+        });
+    </script>
+</body>
+</html>

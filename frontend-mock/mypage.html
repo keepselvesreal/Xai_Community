@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>마이페이지 | XAI 아파트 커뮤니티</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --var-primary: #3b82f6;
+            --var-secondary: #6b7280;
+            --var-success: #10b981;
+            --var-warning: #f59e0b;
+            --var-error: #ef4444;
+        }
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border-bottom: 2px solid transparent;
+            color: #6b7280;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .tab-btn:hover {
+            color: #3b82f6;
+        }
+        .tab-btn.active {
+            color: #3b82f6;
+            border-bottom-color: #3b82f6;
+        }
+        .activity-item {
+            padding: 1rem;
+            border-bottom: 1px solid #e5e7eb;
+            transition: background-color 0.2s;
+        }
+        .activity-item:hover {
+            background-color: #f9fafb;
+        }
+        .activity-item:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 사이드바 -->
+    <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+        <div class="flex items-center justify-center h-16 bg-blue-600">
+            <span class="text-white text-xl font-bold">🏠 XAI 아파트</span>
+        </div>
+        <nav class="mt-5 px-2">
+            <a href="index.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏠</span>
+                홈
+            </a>
+            <a href="board-index.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">📝</span>
+                게시판
+            </a>
+            <a href="info.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">ℹ️</span>
+                정보
+            </a>
+            <a href="services.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">🏢</span>
+                입주 업체 서비스
+            </a>
+            <a href="tips.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                <span class="mr-3">💡</span>
+                전문가 꿀정보
+            </a>
+            <div class="mt-8 pt-8 border-t border-gray-200">
+                <a href="index.html" class="group flex items-center px-2 py-2 text-base font-medium rounded-md text-white bg-blue-600">
+                    <span class="mr-3">👤</span>
+                    마이페이지
+                </a>
+                <a href="auth-login.html" class="mt-1 group flex items-center px-2 py-2 text-base font-medium rounded-md text-gray-600 hover:bg-gray-50 hover:text-gray-900">
+                    <span class="mr-3">🚪</span>
+                    로그아웃
+                </a>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 메인 콘텐츠 -->
+    <div class="lg:pl-64">
+        <main class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- 페이지 헤더 -->
+            <div class="mb-8">
+                <h1 class="text-3xl font-bold text-gray-900">👤 마이페이지</h1>
+                <p class="text-gray-600 mt-2">내 활동 내역을 확인하세요</p>
+            </div>
+
+            <!-- 사용자 정보 카드 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+                <div class="flex items-center gap-4">
+                    <!-- 프로필 이미지 -->
+                    <div class="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                        김
+                    </div>
+                    
+                    <!-- 사용자 정보 -->
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-1">
+                            <h2 class="text-xl font-bold text-gray-900">김민수</h2>
+                            <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs font-medium">
+                                일반 회원
+                            </span>
+                        </div>
+                        <p class="text-gray-600">kim.minsu@email.com</p>
+                        <p class="text-sm text-gray-500">가입일: 2024-07-01</p>
+                    </div>
+                    
+                    <!-- 편집 버튼 -->
+                    <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors">
+                        프로필 편집
+                    </button>
+                </div>
+
+                <!-- 활동 통계 -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6 pt-6 border-t border-gray-200">
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-blue-600">5</div>
+                        <div class="text-sm text-gray-600">작성한 게시글</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-green-600">12</div>
+                        <div class="text-sm text-gray-600">작성한 댓글</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-purple-600">8</div>
+                        <div class="text-sm text-gray-600">받은 좋아요</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl font-bold text-orange-600">3</div>
+                        <div class="text-sm text-gray-600">북마크</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 활동 내역 탭 -->
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
+                <!-- 탭 헤더 -->
+                <div class="border-b border-gray-200">
+                    <nav class="flex">
+                        <button class="tab-btn active" data-tab="posts" onclick="switchTab('posts')">
+                            작성 활동
+                        </button>
+                        <button class="tab-btn" data-tab="reactions" onclick="switchTab('reactions')">
+                            반응 활동
+                        </button>
+                    </nav>
+                </div>
+
+                <!-- 작성 활동 탭 -->
+                <div id="posts-tab" class="tab-content">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">최근 작성한 글</h3>
+                        
+                        <!-- 활동 아이템 1 -->
+                        <div class="activity-item cursor-pointer" onclick="location.href='board-detail.html'">
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-blue-100 text-blue-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            게시글
+                                        </span>
+                                        <span class="bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            입주 정보
+                                        </span>
+                                        <span class="text-xs text-gray-500">방금 전</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">
+                                        새로 이사온 가족입니다. 인사드려요!
+                                    </h4>
+                                    <p class="text-sm text-gray-600 mb-2">
+                                        안녕하세요! 지난주에 101동 1507호로 이사왔습니다. 궁금한 것들이 많은데...
+                                    </p>
+                                    <div class="flex items-center gap-4 text-xs text-gray-500">
+                                        <span>👁️ 12</span>
+                                        <span>👍 3</span>
+                                        <span>💬 5</span>
+                                        <span>🔖 2</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 활동 아이템 2 -->
+                        <div class="activity-item cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-green-100 text-green-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            댓글
+                                        </span>
+                                        <span class="text-xs text-gray-500">2시간 전</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">
+                                        "주차장 이용 시간 문의드려요"에 댓글 작성
+                                    </h4>
+                                    <p class="text-sm text-gray-600 mb-2">
+                                        주차장은 24시간 이용 가능합니다! 저도 새벽에 출근하는데 문제없어요.
+                                    </p>
+                                    <div class="flex items-center gap-4 text-xs text-gray-500">
+                                        <span>👍 2</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 활동 아이템 3 -->
+                        <div class="activity-item cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-purple-100 text-purple-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            서비스 등록
+                                        </span>
+                                        <span class="text-xs text-gray-500">1일 전</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">
+                                        "깔끔한 이사" 업체 정보 등록
+                                    </h4>
+                                    <p class="text-sm text-gray-600 mb-2">
+                                        이사 서비스 업체 정보를 등록했습니다. 합리적인 가격으로 서비스해드립니다.
+                                    </p>
+                                    <div class="flex items-center gap-4 text-xs text-gray-500">
+                                        <span>👁️ 45</span>
+                                        <span>관심 8</span>
+                                        <span>문의 3</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 반응 활동 탭 -->
+                <div id="reactions-tab" class="tab-content hidden">
+                    <div class="p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4">최근 반응한 글</h3>
+                        
+                        <!-- 반응 활동 아이템 1 -->
+                        <div class="activity-item cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-red-100 text-red-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            👍 좋아요
+                                        </span>
+                                        <span class="text-xs text-gray-500">1시간 전</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">
+                                        "아파트 관리비 내역서 관련 질문"
+                                    </h4>
+                                    <p class="text-sm text-gray-600">
+                                        이철수님의 게시글에 좋아요를 눌렀습니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 반응 활동 아이템 2 -->
+                        <div class="activity-item cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-yellow-100 text-yellow-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            🔖 북마크
+                                        </span>
+                                        <span class="text-xs text-gray-500">3시간 전</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">
+                                        "화장실 곰팡이 완전 제거하는 꿀팁"
+                                    </h4>
+                                    <p class="text-sm text-gray-600">
+                                        전문가의 꿀정보를 북마크했습니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 반응 활동 아이템 3 -->
+                        <div class="activity-item cursor-pointer">
+                            <div class="flex items-start gap-3">
+                                <div class="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="bg-orange-100 text-orange-600 px-2 py-1 rounded-full text-xs font-medium">
+                                            ⭐ 관심
+                                        </span>
+                                        <span class="text-xs text-gray-500">1일 전</span>
+                                    </div>
+                                    <h4 class="font-medium text-gray-900 mb-1">
+                                        "깨끗한 청소" 서비스
+                                    </h4>
+                                    <p class="text-sm text-gray-600">
+                                        청소 서비스를 관심 목록에 추가했습니다.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function switchTab(tabName) {
+            // 모든 탭 버튼 비활성화
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 모든 탭 콘텐츠 숨기기
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // 선택된 탭 버튼 활성화
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // 선택된 탭 콘텐츠 보이기
+            document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>
