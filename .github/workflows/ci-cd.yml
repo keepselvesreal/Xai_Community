@@ -77,13 +77,14 @@ jobs:
     - name: 📦 Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
+        node-version: '20.x'
         
-    - name: 📦 Install dependencies
+    - name: 🧹 Clean install dependencies
       run: |
-        npm ci --no-audit --no-fund
+        # node_modules와 package-lock.json 완전 정리
+        rm -rf node_modules package-lock.json
+        # 클린 설치
+        npm install --no-audit --no-fund
         
     - name: 🧪 Run basic type tests
       run: |
