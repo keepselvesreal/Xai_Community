@@ -58,30 +58,65 @@ def create_app() -> FastAPI:
         version="1.0.0-db-test"
     )
     
-    # Database 연결 테스트 (가장 의심스러운 원인)
+    # 1. Database 연결 테스트
     db_status = "not_tested"
     db_error = None
     
     logger.info("🗄️ Database 연결 테스트 시작...")
     try:
-        # Database import 및 연결 테스트
         from nadle_backend.database.connection import database
         logger.info("✅ Database module import 성공")
-        
-        # 실제 연결은 async이므로 여기서는 import만 테스트
         db_status = "imported"
-        logger.info("✅ Database import 완료 - 실제 연결은 첫 API 요청 시 테스트")
-        
     except Exception as e:
         logger.error(f"❌ Database import 실패: {e}")
-        logger.error(f"🔍 DB 에러 타입: {type(e).__name__}")
-        logger.error(f"🔍 DB 에러 메시지: {str(e)}")
         db_status = "import_failed"
         db_error = str(e)
     
-    # Database 연결 정보를 전역 변수로 저장
+    # 2. Models import 테스트  
+    models_status = "not_tested"
+    models_error = None
+    
+    logger.info("📝 Models import 테스트 시작...")
+    try:
+        from nadle_backend.models.user import User
+        from nadle_backend.models.post import Post
+        from nadle_backend.models.comment import Comment
+        from nadle_backend.models.file import File
+        from nadle_backend.models.user_reaction import UserReaction
+        from nadle_backend.models.post_stats import PostStats
+        from nadle_backend.models.stats import Stats
+        logger.info("✅ Models import 성공")
+        models_status = "imported"
+    except Exception as e:
+        logger.error(f"❌ Models import 실패: {e}")
+        models_status = "import_failed" 
+        models_error = str(e)
+    
+    # 3. Repository/Service 계층 테스트
+    services_status = "not_tested"
+    services_error = None
+    
+    logger.info("🔧 Repository/Service 계층 테스트 시작...")
+    try:
+        from nadle_backend.repositories.user_repository import UserRepository
+        from nadle_backend.repositories.post_repository import PostRepository
+        from nadle_backend.services.user_service import UserService
+        from nadle_backend.services.post_service import PostService
+        from nadle_backend.services.auth_service import AuthService
+        logger.info("✅ Repository/Service 계층 import 성공")
+        services_status = "imported"
+    except Exception as e:
+        logger.error(f"❌ Repository/Service import 실패: {e}")
+        services_status = "import_failed"
+        services_error = str(e)
+    
+    # 상태 정보를 앱에 저장
     app.state.db_status = db_status
     app.state.db_error = db_error
+    app.state.models_status = models_status
+    app.state.models_error = models_error
+    app.state.services_status = services_status
+    app.state.services_error = services_error
     
     @app.get("/")
     async def root():
@@ -134,9 +169,19 @@ def create_app() -> FastAPI:
                 "port": PORT,
                 "environment": ENVIRONMENT
             },
-            "database_status": {
-                "import_status": app.state.db_status,
-                "error": app.state.db_error
+            "component_status": {
+                "database": {
+                    "import_status": app.state.db_status,
+                    "error": app.state.db_error
+                },
+                "models": {
+                    "import_status": app.state.models_status,
+                    "error": app.state.models_error
+                },
+                "services": {
+                    "import_status": app.state.services_status,
+                    "error": app.state.services_error
+                }
             },
             "status": "debug_mode_active"
         }
