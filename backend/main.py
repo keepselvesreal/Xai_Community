@@ -212,6 +212,7 @@ def create_app() -> FastAPI:
     try:
         # CORS 설정 추가
         from fastapi.middleware.cors import CORSMiddleware
+        from nadle_backend.config import settings
         
         app.add_middleware(
             CORSMiddleware,
