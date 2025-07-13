@@ -80,9 +80,9 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         validate_assignment=True,
-        extra="forbid",
-        # 환경변수에서 제외할 필드 없음 (단순화됨)
-        env_ignore=set()
+        extra="ignore",  # forbid -> ignore로 변경 (알 수 없는 환경변수 무시)
+        # Cloud Run에서 문제되는 환경변수들 무시
+        env_ignore={"google_application_credentials", "GOOGLE_APPLICATION_CREDENTIALS"}
     )
     
     # === 데이터베이스 설정 ===
@@ -272,6 +272,14 @@ class Settings(BaseSettings):
         default=587,
         description="SMTP server port (587 for TLS, 465 for SSL)"
     )
+    
+    @field_validator('smtp_port', mode='before')
+    @classmethod
+    def parse_smtp_port(cls, v):
+        """SMTP 포트 파싱 - 빈 문자열 처리"""
+        if v == '' or v is None:
+            return 587  # 기본값
+        return int(v)
     smtp_username: str = Field(
         default="",
         description="SMTP username for authentication"
@@ -284,6 +292,16 @@ class Settings(BaseSettings):
         default=True,
         description="Use TLS for SMTP connection"
     )
+    
+    @field_validator('smtp_use_tls', mode='before')
+    @classmethod
+    def parse_smtp_use_tls(cls, v):
+        """SMTP TLS 설정 파싱 - 빈 문자열 처리"""
+        if v == '' or v is None:
+            return True  # 기본값
+        if isinstance(v, str):
+            return v.lower() in ('true', '1', 'yes', 'on')
+        return bool(v)
     from_email: str = Field(
         default="noreply@example.com",
         description="Email address for sending emails"
