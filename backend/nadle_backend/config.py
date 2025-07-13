@@ -82,7 +82,7 @@ class Settings(BaseSettings):
         validate_assignment=True,
         extra="forbid",  # 알 수 없는 환경변수 금지
         # Cloud Run에서 문제되는 환경변수들 무시
-        env_ignore={"google_application_credentials", "GOOGLE_APPLICATION_CREDENTIALS"}
+        env_ignore={"google_application_credentials", "GOOGLE_APPLICATION_CREDENTIALS", "GOOGLE_CLOUD_PROJECT", "K_SERVICE", "K_REVISION", "K_CONFIGURATION"}
     )
     
     # === 데이터베이스 설정 ===
