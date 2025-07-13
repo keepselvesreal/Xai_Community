@@ -114,7 +114,7 @@ def create_app() -> FastAPI:
         # API 라우터들 추가
         app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
         app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
-        app.include_router(comments.router, prefix="/api/comments", tags=["comments"])
+        app.include_router(comments.router, prefix="/api/posts", tags=["comments"])
         app.include_router(users.router, prefix="/api/users", tags=["users"])
         app.include_router(file_upload.router, prefix="/api/files", tags=["files"])
         app.include_router(content.router, prefix="/api/content", tags=["content"])

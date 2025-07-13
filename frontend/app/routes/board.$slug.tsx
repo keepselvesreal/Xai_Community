@@ -274,7 +274,7 @@ export default function PostDetail() {
     
     try {
       console.log('🔄 댓글 새로고침 시작 - slug:', slug);
-      const response = await apiClient.getComments(slug);
+      const response = await apiClient.getCommentsBatch(slug);
       console.log('🔍 댓글 새로고침 응답:', {
         success: response.success,
         data: response.data,
@@ -392,7 +392,7 @@ export default function PostDetail() {
         // 🚀 병렬 로딩: 게시글과 댓글을 동시에 호출
         const [postResult, commentsResult] = await Promise.all([
           apiClient.getPost(slug),
-          apiClient.getComments(slug)
+          apiClient.getCommentsBatch(slug)
         ]);
         
         // 게시글 처리
