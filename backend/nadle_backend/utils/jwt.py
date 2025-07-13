@@ -277,3 +277,25 @@ class JWTManager:
             
         except Exception:
             return None
+
+
+# 전역 JWT 매니저를 위한 편의 함수들
+def decode_token(token: str) -> Optional[Dict[str, Any]]:
+    """
+    JWT 토큰을 디코딩하는 편의 함수 (테스트용)
+    
+    Args:
+        token: JWT 토큰 문자열
+        
+    Returns:
+        디코딩된 토큰 데이터 또는 None
+    """
+    try:
+        from nadle_backend.config import settings
+        manager = JWTManager(
+            secret_key=settings.secret_key,
+            algorithm=settings.algorithm
+        )
+        return manager.verify_token(token)
+    except Exception:
+        return None

@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import hashlib
 import json
 import logging
-from ..database.redis import get_redis_manager
+from ..database.redis_factory import get_redis_manager, get_prefixed_key
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -13,13 +13,29 @@ class TokenBlacklistService:
     
     def __init__(self):
         self.settings = get_settings()
-        self.blacklist_prefix = "blacklist:token:"
-        self.jti_blacklist_prefix = "blacklist:jti:"
-        self.user_blacklist_prefix = "blacklist:user:"
+        # 기본 키들 (환경별 프리픽스는 property에서 적용)
+        self._blacklist_prefix = "blacklist:token:"
+        self._jti_blacklist_prefix = "blacklist:jti:"
+        self._user_blacklist_prefix = "blacklist:user:"
         
     def _get_token_hash(self, token: str) -> str:
         """토큰을 해시로 변환 (보안 및 저장 효율성)"""
         return hashlib.sha256(token.encode()).hexdigest()
+    
+    @property
+    def blacklist_prefix(self) -> str:
+        """토큰 블랙리스트 키 프리픽스 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._blacklist_prefix)
+    
+    @property
+    def jti_blacklist_prefix(self) -> str:
+        """JTI 블랙리스트 키 프리픽스 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._jti_blacklist_prefix)
+    
+    @property
+    def user_blacklist_prefix(self) -> str:
+        """사용자별 블랙리스트 키 프리픽스 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._user_blacklist_prefix)
     
     def _get_token_key(self, token: str) -> str:
         """토큰 블랙리스트 Redis 키 생성"""

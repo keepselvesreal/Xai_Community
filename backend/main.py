@@ -11,31 +11,50 @@ from nadle_backend.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Lifespan 이벤트 핸들러 - DB 연결을 안전하게 처리
+# Lifespan 이벤트 핸들러 - 빠른 시작을 위해 DB 연결을 백그라운드로 이동
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 시작 시
-    logger.info("Application starting...")
+    # 시작 시 - 빠른 시작을 위해 필수가 아닌 작업은 백그라운드로
+    logger.info("Application starting... (fast startup mode)")
     
-    # DB 연결을 백그라운드 태스크로 처리하여 시작 시간 단축
-    try:
-        # 데이터베이스 연결 시도 (타임아웃 설정)
-        from nadle_backend.database.connection import database
-        from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
-        from nadle_backend.models.email_verification import EmailVerification
-        
-        logger.info("Attempting database connection...")
-        await database.connect()
-        
-        # 모든 Document 모델 초기화
-        document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
-        logger.info(f"Initializing Beanie with models: {[model.__name__ for model in document_models]}")
-        await database.init_beanie_models(document_models)
-        logger.info("Database connected and Beanie initialized successfully!")
-    except Exception as e:
-        logger.error(f"Database connection failed: {e}")
-        logger.info("Application will continue without database connection")
-        # 데이터베이스 없이도 서버는 시작되도록 함
+    # Cloud Run에서 빠른 시작을 위해 DB 연결을 백그라운드 태스크로 처리
+    import asyncio
+    
+    async def background_db_init():
+        """백그라운드에서 DB 초기화"""
+        try:
+            await asyncio.sleep(2)  # 앱 시작 후 2초 대기
+            from nadle_backend.database.connection import database
+            from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
+            from nadle_backend.models.email_verification import EmailVerification
+            
+            logger.info("Starting background database connection...")
+            await database.connect()
+            
+            document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
+            logger.info(f"Initializing Beanie with models: {[model.__name__ for model in document_models]}")
+            await database.init_beanie_models(document_models)
+            logger.info("✅ Background database connection completed!")
+        except Exception as e:
+            logger.error(f"❌ Background database connection failed: {e}")
+    
+    # 백그라운드 태스크 시작 (앱 시작을 블로킹하지 않음)
+    if settings.environment in ["staging", "production"]:
+        asyncio.create_task(background_db_init())
+        logger.info("⚡ Database connection scheduled for background (Cloud Run mode)")
+    else:
+        # 개발환경에서는 즉시 연결
+        try:
+            from nadle_backend.database.connection import database
+            from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
+            from nadle_backend.models.email_verification import EmailVerification
+            
+            await database.connect()
+            document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
+            await database.init_beanie_models(document_models)
+            logger.info("✅ Development database connection completed!")
+        except Exception as e:
+            logger.error(f"❌ Development database connection failed: {e}")
     
     yield
     
@@ -51,7 +70,7 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     logger.info("🚀 Creating FastAPI app...")
     
-    # Sentry 초기화 (안전하게 처리)
+    # Sentry 초기화
     try:
         from nadle_backend.monitoring.sentry_config import init_sentry
         if settings.sentry_dsn:
@@ -195,27 +214,21 @@ def create_app() -> FastAPI:
     
     logger.info("✅ FastAPI CORSMiddleware configured successfully")
     
-    # 보안 미들웨어 등록 (안전하게 처리)
+    # 커스텀 미들웨어 등록
     try:
-        from nadle_backend.middleware.security import SecurityHeadersMiddleware
-        app.add_middleware(SecurityHeadersMiddleware, environment=settings.environment)
-        logger.info("✅ Security headers middleware enabled")
+        from nadle_backend.middleware import MonitoringMiddleware, SentryRequestMiddleware
+        
+        # Sentry 요청 미들웨어 추가 (Sentry가 초기화된 경우에만)
+        if settings.sentry_dsn:
+            app.add_middleware(SentryRequestMiddleware)
+            logger.info("✅ SentryRequestMiddleware added successfully")
+        
+        # MonitoringMiddleware는 Redis 설정 후 별도로 추가
+        logger.info("✅ Custom middlewares configured successfully")
+        
     except Exception as e:
-        logger.error(f"Failed to load security middleware: {e}")
-    
-    # 모니터링 미들웨어는 개발환경에서만 (문제 발생 가능성 때문에 제한)
-    if settings.environment == "development":
-        try:
-            from nadle_backend.middleware.monitoring import MonitoringMiddleware
-            app.add_middleware(MonitoringMiddleware)
-            logger.info("✅ Monitoring middleware enabled for development environment")
-        except Exception as e:
-            logger.warning(f"Failed to load monitoring middleware: {e}")
-    else:
-        logger.info("⚠️ Monitoring middleware disabled for staging/production")
-    
-    # 🎯 기타 커스텀 미들웨어는 제거 - CORS 문제 해결 및 성능 향상
-    # FastAPI는 이미 기본 요청 로깅을 제공하므로 별도 미들웨어 불필요
+        logger.warning(f"Failed to add custom middlewares: {e}")
+        logger.info("Continuing without custom middlewares")
     
     # 기본 라우트
     @app.get("/")
@@ -255,15 +268,16 @@ def create_app() -> FastAPI:
         
         logger.info("✅ Core routers loaded successfully")
         
-        # 3. 추가 모니터링 라우터들 (안전하게 처리)
-        try:
-            from nadle_backend.routers import uptime_monitoring, monitoring, intelligent_alerting
-            app.include_router(uptime_monitoring.router, tags=["uptime-monitoring"])
-            app.include_router(monitoring.router, prefix="/api/internal", tags=["Internal-Metrics"])
-            app.include_router(intelligent_alerting.router, tags=["Intelligent-Alerting"])
-            logger.info("✅ Monitoring routers loaded successfully")
-        except Exception as e:
-            logger.warning(f"Failed to load monitoring routers: {e}")
+        # 3. 추가 모니터링 라우터들 제거 - 새로 추가된 라우터로 시작 시간 영향 가능성
+        # try:
+        #     from nadle_backend.routers import uptime_monitoring, monitoring, intelligent_alerting
+        #     app.include_router(uptime_monitoring.router, tags=["uptime-monitoring"])
+        #     app.include_router(monitoring.router, prefix="/api/internal", tags=["Internal-Metrics"])
+        #     app.include_router(intelligent_alerting.router, tags=["Intelligent-Alerting"])
+        #     logger.info("✅ Monitoring routers loaded successfully")
+        # except Exception as e:
+        #     logger.warning(f"Failed to load monitoring routers: {e}")
+        logger.info("⚠️ Monitoring routers disabled for faster startup")
         
     except Exception as e:
         logger.error(f"Failed to load core routers: {e}")
@@ -307,24 +321,6 @@ def create_app() -> FastAPI:
             return {"error": str(e)}
     
     # Sentry 테스트 엔드포인트
-    @app.get("/debug/sentry-test")
-    async def sentry_test():
-        """Sentry 에러 추적 테스트용 엔드포인트"""
-        try:
-            # 의도적으로 에러 발생
-            raise ValueError("Sentry 테스트용 에러입니다!")
-        except Exception as e:
-            # Sentry에 수동으로 캡처
-            from nadle_backend.monitoring.sentry_config import capture_error
-            capture_error(e, user_id="test_user_123", endpoint="/debug/sentry-test")
-            return {"message": "에러가 Sentry에 전송되었습니다!", "error": str(e)}
-    
-    @app.get("/debug/sentry-unhandled")
-    async def sentry_unhandled():
-        """Sentry 처리되지 않은 에러 테스트"""
-        # 처리되지 않은 에러 (FastAPI가 자동으로 Sentry에 전송)
-        division_by_zero = 1 / 0
-        return {"message": "이 메시지는 나오지 않습니다"}
     
     return app
 

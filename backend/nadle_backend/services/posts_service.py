@@ -6,6 +6,7 @@ from nadle_backend.repositories.post_repository import PostRepository
 from nadle_backend.repositories.comment_repository import CommentRepository
 from nadle_backend.exceptions.post import PostNotFoundError, PostPermissionError
 from nadle_backend.utils.permissions import check_post_permission
+from nadle_backend.database.redis_factory import get_prefixed_key
 
 
 class PostsService:
@@ -20,6 +21,22 @@ class PostsService:
         """
         self.post_repository = post_repository or PostRepository()
         self.comment_repository = comment_repository or CommentRepository()
+    
+    def _get_post_detail_key(self, slug_or_id: str) -> str:
+        """게시글 상세 캐시 키 생성 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(f"post_detail:{slug_or_id}")
+    
+    def _get_author_info_key(self, author_id: str) -> str:
+        """작성자 정보 캐시 키 생성 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(f"author_info:{author_id}")
+    
+    def _get_user_reaction_key(self, user_id: str, post_id: str) -> str:
+        """사용자 반응 캐시 키 생성 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(f"user_reaction:{user_id}:{post_id}")
+    
+    def _get_comments_batch_key(self, post_slug: str) -> str:
+        """댓글 배치 캐시 키 생성 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(f"comments_batch_v2:{post_slug}")
     
     async def create_post(self, post_data: PostCreate, current_user: User) -> Post:
         """Create a new post.
@@ -57,10 +74,10 @@ class PostsService:
             PostNotFoundError: If post not found
         """
         # 🚀 Redis 캐시 확인
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         redis_manager = await get_redis_manager()
         
-        cache_key = f"post_detail:{slug_or_id}"
+        cache_key = self._get_post_detail_key(slug_or_id)
         cached_post = await redis_manager.get(cache_key)
         
         if cached_post:
@@ -781,11 +798,11 @@ class PostsService:
         Returns:
             작성자 정보 딕셔너리 또는 None
         """
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         from nadle_backend.models.core import User
         
         redis_manager = await get_redis_manager()
-        cache_key = f"author_info:{author_id}"
+        cache_key = self._get_author_info_key(author_id)
         
         # 캐시에서 조회
         cached_author = await redis_manager.get(cache_key)
@@ -838,11 +855,11 @@ class PostsService:
         Returns:
             사용자 반응 정보 딕셔너리 또는 None
         """
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         from nadle_backend.models.core import UserReaction
         
         redis_manager = await get_redis_manager()
-        cache_key = f"user_reaction:{user_id}:{post_id}"
+        cache_key = self._get_user_reaction_key(user_id, post_id)
         
         # 캐시에서 조회
         cached_reaction = await redis_manager.get(cache_key)
@@ -890,10 +907,10 @@ class PostsService:
         Args:
             author_id: 작성자 ID
         """
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         
         redis_manager = await get_redis_manager()
-        cache_key = f"author_info:{author_id}"
+        cache_key = self._get_author_info_key(author_id)
         
         await redis_manager.delete(cache_key)
         print(f"🗑️ 작성자 정보 캐시 무효화 - {author_id}")
@@ -905,10 +922,10 @@ class PostsService:
             user_id: 사용자 ID
             post_id: 게시글 ID
         """
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         
         redis_manager = await get_redis_manager()
-        cache_key = f"user_reaction:{user_id}:{post_id}"
+        cache_key = self._get_user_reaction_key(user_id, post_id)
         
         await redis_manager.delete(cache_key)
         print(f"🗑️ 사용자 반응 캐시 무효화 - {user_id}:{post_id}")
@@ -926,7 +943,7 @@ class PostsService:
         Returns:
             {author_id: author_info} 딕셔너리
         """
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         from nadle_backend.models.core import User
         from bson import ObjectId
         
@@ -936,7 +953,7 @@ class PostsService:
         
         # 1. 캐시에서 먼저 조회
         for author_id in author_ids:
-            cache_key = f"author_info:{author_id}"
+            cache_key = self._get_author_info_key(author_id)
             cached_author = await redis_manager.get(cache_key)
             
             if cached_author:
@@ -977,7 +994,7 @@ class PostsService:
                         result[author_id] = author_info
                         
                         # 개별 캐싱 (TTL: 1시간)
-                        cache_key = f"author_info:{author_id}"
+                        cache_key = self._get_author_info_key(author_id)
                         await redis_manager.set(cache_key, author_info, ttl=3600)
                         print(f"💾 작성자 정보 캐시 저장 - {author_id}")
                 
@@ -996,7 +1013,7 @@ class PostsService:
         Returns:
             {post_id: reaction_info} 딕셔너리
         """
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         from nadle_backend.models.core import UserReaction
         
         redis_manager = await get_redis_manager()
@@ -1005,7 +1022,7 @@ class PostsService:
         
         # 1. 캐시에서 먼저 조회
         for post_id in post_ids:
-            cache_key = f"user_reaction:{user_id}:{post_id}"
+            cache_key = self._get_user_reaction_key(user_id, post_id)
             cached_reaction = await redis_manager.get(cache_key)
             
             if cached_reaction:
@@ -1040,7 +1057,7 @@ class PostsService:
                     found_post_ids.add(post_id)
                     
                     # 캐싱 (TTL: 30분)
-                    cache_key = f"user_reaction:{user_id}:{post_id}"
+                    cache_key = self._get_user_reaction_key(user_id, post_id)
                     await redis_manager.set(cache_key, reaction_info, ttl=1800)
                     print(f"💾 사용자 반응 캐시 저장 - {user_id}:{post_id}")
                 
@@ -1055,7 +1072,7 @@ class PostsService:
                         result[post_id] = default_reaction
                         
                         # 기본값도 캐싱 (TTL: 30분)
-                        cache_key = f"user_reaction:{user_id}:{post_id}"
+                        cache_key = self._get_user_reaction_key(user_id, post_id)
                         await redis_manager.set(cache_key, default_reaction, ttl=1800)
                         print(f"💾 기본 사용자 반응 캐시 저장 - {user_id}:{post_id}")
                 
@@ -1081,11 +1098,11 @@ class PostsService:
             작성자 정보가 포함된 댓글 목록
         """
         from nadle_backend.repositories.comment_repository import CommentRepository
-        from nadle_backend.database.redis import get_redis_manager
+        from nadle_backend.database.redis_factory import get_redis_manager
         
         # 🚀 Phase 2: 댓글 캐싱 확인
         redis_manager = await get_redis_manager()
-        cache_key = f"comments_batch_v2:{post_slug}"  # 캐시 키 버전 업
+        cache_key = self._get_comments_batch_key(post_slug)  # 캐시 키 버전 업
         
         # 캐시에서 조회 시도
         cached_comments = await redis_manager.get(cache_key)

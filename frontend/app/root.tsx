@@ -5,8 +5,10 @@ import {
   Scripts,
   ScrollRestoration,
   useLoaderData,
+  useLocation,
 } from "@remix-run/react";
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
+import { useEffect } from "react";
 
 import "./tailwind.css";
 import { AuthProvider } from "~/contexts/AuthContext";
@@ -32,6 +34,14 @@ export async function loader() {
   };
   
   return { buildInfo };
+}
+
+// Google Analytics 초기화 함수
+declare global {
+  interface Window {
+    gtag: (...args: any[]) => void;
+    dataLayer: any[];
+  }
 }
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => [
@@ -63,6 +73,10 @@ export const links: LinksFunction = () => [
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  const GA_MEASUREMENT_ID = typeof window !== "undefined" 
+    ? import.meta.env.VITE_GA_MEASUREMENT_ID 
+    : process.env.VITE_GA_MEASUREMENT_ID;
+
   return (
     <html lang="ko">
       <head>
@@ -70,6 +84,29 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        
+        {/* Google Analytics */}
+        {GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-XXXXXXXXX" && (
+          <>
+            <script
+              async
+              src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+            />
+            <script
+              dangerouslySetInnerHTML={{
+                __html: `
+                  window.dataLayer = window.dataLayer || [];
+                  function gtag(){dataLayer.push(arguments);}
+                  gtag('js', new Date());
+                  gtag('config', '${GA_MEASUREMENT_ID}', {
+                    page_title: document.title,
+                    page_location: window.location.href,
+                  });
+                `,
+              }}
+            />
+          </>
+        )}
       </head>
       <body>
         {children}
@@ -83,6 +120,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   const data = useLoaderData<typeof loader>();
   const buildInfo = data?.buildInfo;
+  const location = useLocation();
+  
+  // Google Analytics 페이지 변경 추적
+  useEffect(() => {
+    const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
+    
+    if (typeof window !== "undefined" && window.gtag && GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-XXXXXXXXX") {
+      window.gtag("config", GA_MEASUREMENT_ID, {
+        page_title: document.title,
+        page_location: window.location.href,
+      });
+      
+      // 페이지뷰 이벤트 전송
+      window.gtag("event", "page_view", {
+        page_title: document.title,
+        page_location: window.location.href,
+        page_path: location.pathname,
+      });
+    }
+  }, [location]);
   
   return (
     <ErrorBoundary>

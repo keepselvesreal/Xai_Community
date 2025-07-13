@@ -1,6 +1,6 @@
 from typing import Optional, Dict, Any
 import logging
-from ..database.redis import get_redis_manager
+from ..database.redis_factory import get_redis_manager, get_prefixed_key
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -14,7 +14,7 @@ class CacheService:
     async def get_user_cache(self, user_id: str) -> Optional[Dict[str, Any]]:
         """사용자 정보를 캐시에서 가져오기"""
         redis_manager = await get_redis_manager()
-        cache_key = f"user:{user_id}"
+        cache_key = get_prefixed_key(f"user:{user_id}")
         
         try:
             cached_data = await redis_manager.get(cache_key)
@@ -32,7 +32,7 @@ class CacheService:
     async def set_user_cache(self, user_id: str, user_data: Dict[str, Any]) -> bool:
         """사용자 정보를 캐시에 저장"""
         redis_manager = await get_redis_manager()
-        cache_key = f"user:{user_id}"
+        cache_key = get_prefixed_key(f"user:{user_id}")
         
         try:
             # 민감한 정보는 캐시에서 제외
@@ -66,7 +66,7 @@ class CacheService:
     async def delete_user_cache(self, user_id: str) -> bool:
         """사용자 캐시 삭제"""
         redis_manager = await get_redis_manager()
-        cache_key = f"user:{user_id}"
+        cache_key = get_prefixed_key(f"user:{user_id}")
         
         try:
             result = await redis_manager.delete(cache_key)

@@ -24,13 +24,13 @@ COPY pyproject.toml uv.lock ./
 COPY README.md ./
 
 # Install dependencies (Cloud Build compatible - no cache mount)
-RUN uv sync --frozen --no-install-project --no-dev --verbose
+RUN uv sync --frozen --no-install-project --no-dev
 
 # Copy application code
 COPY . .
 
 # Install project itself
-RUN uv sync --frozen --no-dev --verbose
+RUN uv sync --frozen --no-dev
 
 # Production stage
 FROM base

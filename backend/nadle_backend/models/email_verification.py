@@ -105,11 +105,24 @@ class EmailVerificationCodeResponse(BaseModel):
     message: str = Field(..., description="User-friendly message")
 
 
-class EmailVerification(Document, EmailVerificationData):
+class EmailVerification(Document):
     """Email verification document for temporary storage during signup."""
     
-    # Core fields (inheriting from EmailVerificationData but with Document-specific types)
+    # Core fields
     email: Indexed(str, unique=True) = Field(..., description="Email address being verified")
+    code: str = Field(..., min_length=6, max_length=6, description="6-digit verification code")
+    
+    # Timing fields
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="When verification was created")
+    expires_at: datetime = Field(..., description="When verification expires")
+    
+    # Rate limiting and security
+    attempt_count: int = Field(default=0, description="Number of verification attempts")
+    is_verified: bool = Field(default=False, description="Whether email has been verified")
+    last_attempt_at: Optional[datetime] = Field(default=None, description="Last verification attempt time")
+    
+    # IP tracking for security (optional)
+    created_ip: Optional[str] = Field(default=None, description="IP address that created verification")
     
     class Settings:
         """Beanie document settings."""
@@ -119,6 +132,32 @@ class EmailVerification(Document, EmailVerificationData):
             [("expires_at", ASCENDING)],  # For TTL index
             [("created_at", ASCENDING)],
         ]
+    
+    def is_expired(self) -> bool:
+        """Check if verification code has expired."""
+        return datetime.utcnow() > self.expires_at
+    
+    def can_attempt(self) -> bool:
+        """Check if user can still attempt verification (rate limiting)."""
+        max_attempts = getattr(settings, 'email_verification_max_attempts', 5)
+        return self.attempt_count < max_attempts
+    
+    def increment_attempt(self) -> None:
+        """Increment attempt count and update last attempt time."""
+        self.attempt_count += 1
+        self.last_attempt_at = datetime.utcnow()
+    
+    def mark_verified(self) -> None:
+        """Mark email as verified."""
+        self.is_verified = True
+        self.last_attempt_at = datetime.utcnow()
+    
+    def time_until_expiry(self) -> int:
+        """Get minutes until expiry."""
+        if self.is_expired():
+            return 0
+        delta = self.expires_at - datetime.utcnow()
+        return max(0, int(delta.total_seconds() / 60))
     
     @classmethod
     def create_verification(

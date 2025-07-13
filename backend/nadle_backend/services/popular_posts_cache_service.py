@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 import json
 import logging
-from ..database.redis import get_redis_manager
+from ..database.redis_factory import get_redis_manager, get_prefixed_key
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -42,17 +42,44 @@ class PopularPostsCacheService:
     
     def __init__(self):
         self.settings = get_settings()
-        self.popular_views_key = "popular:views"
-        self.popular_likes_key = "popular:likes"
-        self.popular_service_prefix = "popular:service:"
-        self.hot_posts_key = "hot:realtime"
-        self.trending_weekly_key = "trending:weekly"
-        self.popular_authors_key = "popular:authors"
+        # 기본 키들 (환경별 프리픽스는 property에서 적용)
+        self._popular_views_key = "popular:views"
+        self._popular_likes_key = "popular:likes"
+        self._popular_service_prefix = "popular:service:"
+        self._hot_posts_key = "hot:realtime"
+        self._trending_weekly_key = "trending:weekly"
+        self._popular_authors_key = "popular:authors"
         self.default_ttl = 1800  # 30분
     
+    @property
+    def popular_views_key(self) -> str:
+        """조회수 기준 인기 게시글 키 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._popular_views_key)
+    
+    @property
+    def popular_likes_key(self) -> str:
+        """좋아요 기준 인기 게시글 키 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._popular_likes_key)
+    
+    @property
+    def hot_posts_key(self) -> str:
+        """실시간 인기 게시글 키 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._hot_posts_key)
+    
+    @property
+    def trending_weekly_key(self) -> str:
+        """주간 트렌딩 게시글 키 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._trending_weekly_key)
+    
+    @property
+    def popular_authors_key(self) -> str:
+        """인기 작성자 키 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._popular_authors_key)
+    
     def _get_service_key(self, service_type: str) -> str:
-        """서비스별 인기 게시글 키 생성"""
-        return f"{self.popular_service_prefix}{service_type}"
+        """서비스별 인기 게시글 키 생성 (환경별 프리픽스 적용)"""
+        key = f"{self._popular_service_prefix}{service_type}"
+        return get_prefixed_key(key)
     
     async def cache_popular_posts_by_views(self, posts: List[PopularPostData], ttl: Optional[int] = None) -> bool:
         """조회수 기준 인기 게시글 캐싱"""

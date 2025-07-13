@@ -106,7 +106,7 @@ class SentryUserMiddleware(BaseHTTPMiddleware):
                 if user_info:
                     # Sentry에 사용자 정보 설정
                     set_user_context(
-                        user_id=user_info.get("user_id"),
+                        user_id=user_info.get("sub") or user_info.get("user_id"),
                         email=user_info.get("email")
                     )
                     
@@ -177,25 +177,16 @@ async def async_sentry_context(user_id: Optional[str] = None, **context_data):
         user_id: 사용자 ID
         **context_data: 추가 컨텍스트 데이터
     """
-    # 기존 컨텍스트 백업
-    original_user = sentry_sdk.get_current_scope().user
-    original_extras = {}
-    
-    try:
-        if user_id:
-            sentry_sdk.set_user({"id": user_id})
-        
-        for key, value in context_data.items():
-            sentry_sdk.set_extra(key, value)
-            original_extras[key] = None  # 나중에 정리용
-        
-        yield None
-    finally:
-        # 원래 컨텍스트 복원
-        if original_user:
-            sentry_sdk.set_user(original_user)
-        else:
-            sentry_sdk.set_user({})
-        
-        # 추가한 extras 정리 (실제로는 scope가 자동으로 관리됨)
-        pass
+    # Sentry Hub를 사용한 격리된 스코프 생성
+    with sentry_sdk.push_scope() as scope:
+        try:
+            if user_id:
+                sentry_sdk.set_user({"id": user_id})
+            
+            for key, value in context_data.items():
+                sentry_sdk.set_extra(key, value)
+            
+            yield scope
+        finally:
+            # push_scope 컨텍스트에서 자동으로 정리됨
+            pass

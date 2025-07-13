@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from pydantic import BaseModel, Field
 import json
 import logging
-from ..database.redis import get_redis_manager
+from ..database.redis_factory import get_redis_manager, get_prefixed_key
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -24,10 +24,26 @@ class PostStatsCacheService:
     
     def __init__(self):
         self.settings = get_settings()
-        self.stats_prefix = "post_stats:"
-        self.popular_views_key = "popular:views"
-        self.popular_likes_key = "popular:likes"
+        # 기본 키들 (환경별 프리픽스는 property에서 적용)
+        self._stats_prefix = "post_stats:"
+        self._popular_views_key = "popular:views"
+        self._popular_likes_key = "popular:likes"
         self.default_ttl = 1800  # 30분
+    
+    @property
+    def stats_prefix(self) -> str:
+        """게시글 통계 키 프리픽스 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._stats_prefix)
+    
+    @property
+    def popular_views_key(self) -> str:
+        """조회수 기준 인기 게시글 키 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._popular_views_key)
+    
+    @property
+    def popular_likes_key(self) -> str:
+        """좋아요 기준 인기 게시글 키 (환경별 프리픽스 적용)"""
+        return get_prefixed_key(self._popular_likes_key)
     
     def _get_stats_key(self, post_id: str) -> str:
         """게시글 통계 Redis 키 생성"""

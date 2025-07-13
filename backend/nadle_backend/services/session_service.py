@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 import uuid
 import json
 import logging
-from ..database.redis import get_redis_manager
+from ..database.redis_factory import get_redis_manager, get_prefixed_key
 from ..config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -35,11 +35,11 @@ class SessionService:
     
     def _get_session_key(self, session_id: str) -> str:
         """세션 Redis 키 생성"""
-        return f"{self.session_prefix}{session_id}"
+        return get_prefixed_key(f"{self.session_prefix}{session_id}")
     
     def _get_user_sessions_key(self, user_id: str) -> str:
         """사용자 세션 목록 Redis 키 생성"""
-        return f"{self.user_sessions_prefix}{user_id}"
+        return get_prefixed_key(f"{self.user_sessions_prefix}{user_id}")
     
     async def create_session(
         self, 

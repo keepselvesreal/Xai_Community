@@ -321,7 +321,7 @@ class Settings(BaseSettings):
     # === Redis 설정 ===
     redis_url: str = Field(
         default="redis://localhost:6379",
-        description="Redis 연결 URL (redis://host:port 형식)"
+        description="Redis 연결 URL (redis://host:port 형식) - 개발환경용"
     )
     redis_db: int = Field(
         default=0,
@@ -334,6 +334,16 @@ class Settings(BaseSettings):
         description="Redis 비밀번호 (설정된 경우)"
     )
     
+    # === Upstash Redis 설정 (staging/production) ===
+    upstash_redis_rest_url: Optional[str] = Field(
+        default=None,
+        description="Upstash Redis REST API URL - staging/production환경용"
+    )
+    upstash_redis_rest_token: Optional[str] = Field(
+        default=None,
+        description="Upstash Redis REST API 토큰 - staging/production환경용"
+    )
+    
     # Redis 캐시 설정
     cache_ttl_user: int = Field(
         default=3600,
@@ -344,6 +354,31 @@ class Settings(BaseSettings):
         default=True,
         description="Redis 캐시 활성화 여부"
     )
+    
+    @property
+    def use_upstash_redis(self) -> bool:
+        """Upstash Redis 사용 여부 결정"""
+        # staging 또는 production 환경에서 Upstash 설정이 있으면 사용
+        return (
+            self.environment in ["staging", "production"] and
+            self.upstash_redis_rest_url is not None and
+            self.upstash_redis_rest_token is not None
+        )
+    
+    @property
+    def redis_key_prefix(self) -> str:
+        """환경별 Redis 키 프리픽스 반환"""
+        if self.environment == "staging":
+            return "stage:"
+        elif self.environment == "production":
+            return "prod:"
+        elif self.environment == "development":
+            return "dev:"
+        elif self.environment == "test":
+            return "test:"
+        else:
+            # 알 수 없는 환경은 기본값
+            return "unknown:"
     
     # === Sentry 모니터링 설정 ===
     sentry_dsn: Optional[str] = Field(

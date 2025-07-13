@@ -156,5 +156,8 @@ class RedisManager:
 redis_manager = RedisManager()
 
 async def get_redis_manager() -> RedisManager:
-    """Redis 매니저 인스턴스 반환"""
+    """Redis 매니저 인스턴스 반환 (로컬 Redis 전용)
+    
+    환경별 자동 선택을 원한다면 redis_factory.get_redis_manager()를 사용하세요.
+    """
     return redis_manager

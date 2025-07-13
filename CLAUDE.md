@@ -43,7 +43,7 @@ v5/
 - 각 계층은 단일 책임을 가짐
 - 비즈니스 로직은 서비스 계층에 포함
 - 데이터 접근은 레포지토리를 통해 추상화
-- Redis를 통한 캐싱 시스템 구현
+- Redis를 통한 캐싱 시스템 구현 (환경별 분리된 키 네임스페이싱)
 
 ### 프론트엔드 전략
 
@@ -63,7 +63,7 @@ v5/
 - ✅ **리치 텍스트 에디터**: 콘텐츠 처리 파이프라인을 가진 TDD 기반 에디터
 - ✅ **HTML UI**: API 테스트 기능을 가진 완전한 대시보드 인터페이스
 - ✅ **Remix 프론트엔드**: 종합적인 컴포넌트 라이브러리와 라우팅 시스템을 가진 메인 프로덕션 UI
-- ✅ **캐싱 시스템**: Redis 기반 스마트 캐싱 (인기 게시글, 통계 등)
+- ✅ **캐싱 시스템**: 하이브리드 Redis 아키텍처 (로컬 + Upstash 클라우드, 환경별 키 네임스페이싱)
 - ✅ **배포 시스템**: Cloud Run 자동배포, VM 배포, 롤백 시스템
 - ✅ **테스트 시스템**: 유닛/통합/E2E/성능 테스트 포괄적 구현
 - ✅ **모니터링**: 성능 모니터링, 헬스체크, 로그 시스템
@@ -75,7 +75,7 @@ v5/
 - **데이터베이스**: MongoDB with Motor (비동기 ODM)
 - **ODM**: Beanie (v1.27.0+)
 - **인증**: JWT (python-jose) + bcrypt password hashing
-- **캐싱**: Redis (v5.0.0+)
+- **캐싱**: 하이브리드 Redis 시스템 (로컬 Redis + Upstash Cloud Redis)
 - **파일 처리**: Pillow, python-multipart
 - **콘텐츠 처리**: Markdown, BeautifulSoup4, bleach
 - **테스팅**: pytest, pytest-asyncio, pytest-cov
@@ -97,6 +97,37 @@ v5/
 - **VM 배포**: Google Compute Engine (대체 배포)
 - **CI/CD**: GitHub Actions (자동배포, 롤백 시스템)
 - **모니터링**: 커스텀 헬스체크, 성능 모니터링
+
+### Redis 캐싱 아키텍처
+
+#### 하이브리드 Redis 시스템
+프로젝트는 환경에 따라 다른 Redis 전략을 사용합니다:
+
+**환경별 Redis 사용 전략:**
+- **개발환경** (`development`): 로컬 Redis + `dev:` 키 프리픽스
+- **테스트환경** (`test`): 로컬 Redis + `test:` 키 프리픽스
+- **스테이징환경** (`staging`): Upstash Cloud Redis + `stage:` 키 프리픽스
+- **프로덕션환경** (`production`): Upstash Cloud Redis + `prod:` 키 프리픽스
+
+#### 키 네임스페이싱 시스템
+모든 Redis 키는 환경별 프리픽스를 사용하여 데이터 분리:
+```
+개발: dev:cache:user:123
+스테이징: stage:cache:user:123
+프로덕션: prod:cache:user:123
+```
+
+#### 팩토리 패턴 구현
+- `RedisFactory`: 환경에 따른 자동 Redis 클라이언트 선택
+- `UpstashRedisManager`: REST API 기반 Upstash Redis 클라이언트
+- `RedisManager`: 로컬 Redis 클라이언트 (기존)
+
+#### 캐싱 서비스들
+- `CacheService`: 기본 캐싱 작업
+- `SessionService`: 사용자 세션 관리
+- `PopularPostsCacheService`: 인기 게시글 캐싱
+- `PostStatsCacheService`: 게시글 통계 캐싱
+- `TokenBlacklistService`: JWT 토큰 블랙리스트
 
 ### Frontend Workspace
 - 현재 작업하는 UI 프로젝트 폴더는 `frontend/`
@@ -120,6 +151,9 @@ cd backend && uv run pytest --cov=nadle_backend
 
 # 성능 테스트
 cd backend && uv run python -m pytest tests/performance/
+
+# Redis 통합 테스트
+cd backend && uv run python tests/integration/test_simple_namespacing.py
 
 # 코드 포맷팅
 cd backend && uv run black nadle_backend
@@ -147,6 +181,38 @@ cd frontend && npm run typecheck
 
 # 린팅
 cd frontend && npm run lint
+```
+
+### 환경 설정
+
+#### Redis 환경변수 설정
+
+**로컬 Redis (개발/테스트)**
+```bash
+# .env.dev 또는 .env.test
+REDIS_URL=redis://localhost:6379
+CACHE_ENABLED=true
+```
+
+**Upstash Redis (스테이징/프로덕션)**
+```bash
+# .env.staging 또는 .env.prod
+UPSTASH_REDIS_REST_URL=https://your-upstash-endpoint.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
+CACHE_ENABLED=true
+```
+
+#### 환경별 설정 파일
+- `.env.dev`: 개발환경 설정
+- `.env.staging`: 스테이징환경 설정  
+- `.env.prod`: 프로덕션환경 설정
+- `.env.test`: 테스트환경 설정
+
+#### Redis 연결 확인
+```bash
+# Redis 상태 확인 API 엔드포인트
+GET /health
+# 응답에서 redis_type과 key_prefix 확인
 ```
 
 ## Custom rules
