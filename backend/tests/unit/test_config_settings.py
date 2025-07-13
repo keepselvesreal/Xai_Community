@@ -290,18 +290,20 @@ PORT=9000
                 log_level="INVALID"
             )
     
-    def test_extra_fields_forbidden(self):
-        """Test that extra fields are not allowed."""
-        with pytest.raises(ValidationError) as exc_info:
-            Settings(
-                mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
-                secret_key="test-secret-key-for-extra-validation-32chars",
-                unknown_field="value"
-            )
+    def test_extra_fields_ignored(self):
+        """Test that extra fields are ignored (not forbidden)."""
+        # extra="ignore"이므로 ValidationError가 발생하지 않고 정상 생성되어야 함
+        settings = Settings(
+            mongodb_url="mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb",
+            secret_key="test-secret-key-for-extra-validation-32chars",
+            unknown_field="value"  # 이 필드는 무시됨
+        )
         
-        errors = exc_info.value.errors()
-        assert len(errors) == 1
-        assert "extra_forbidden" in errors[0]["type"]
+        # unknown_field는 settings 객체에 포함되지 않음
+        assert not hasattr(settings, 'unknown_field')
+        # 하지만 기본 필드들은 정상적으로 설정됨
+        assert settings.mongodb_url == "mongodb+srv://testuser:testpass@cluster0.mongodb.net/testdb"
+        assert settings.secret_key == "test-secret-key-for-extra-validation-32chars"
     
     def test_real_mongodb_atlas_connection(self):
         """Test with real MongoDB Atlas connection string from environment."""
