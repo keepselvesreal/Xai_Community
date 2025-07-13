@@ -77,6 +77,7 @@ const ReactionButtons = ({ post, onReactionChange }: ReactionButtonsProps) => {
 
 
 export default function PostDetailComplete() {
+  console.log('🌟🌟🌟 ROUTE DEBUG - board.$slug.COMPLETE.tsx 실행됨! API 확인 필요! 시간:', new Date().toISOString());
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();

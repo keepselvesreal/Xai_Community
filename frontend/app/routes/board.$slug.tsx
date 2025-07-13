@@ -414,7 +414,7 @@ export default function PostDetail() {
         
         // 댓글 처리
         if (commentsResult.success && commentsResult.data) {
-          console.log('🔥 CACHE DEBUG - board.$slug.tsx 최신 코드 실행됨! 시간:', new Date().toISOString());
+          console.log('🔥🔥🔥 ROUTE DEBUG - board.$slug.tsx (기본) 실행됨! getCommentsBatch 사용! 시간:', new Date().toISOString());
           console.log('🔍 댓글 API 응답 구조 분석:', {
             success: commentsResult.success,
             data: commentsResult.data,

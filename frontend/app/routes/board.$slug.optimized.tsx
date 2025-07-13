@@ -257,6 +257,7 @@ const PostContent = memo(({ content, tags }: PostContentProps) => (
 ));
 
 export default function PostDetailOptimized() {
+  console.log('⚠️⚠️⚠️ ROUTE DEBUG - board.$slug.OPTIMIZED.tsx 실행됨! 이제 getCommentsBatch 사용! 시간:', new Date().toISOString());
   const { slug } = useParams();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -310,7 +311,7 @@ export default function PostDetailOptimized() {
         console.time('병렬 API 호출');
         const [postResult, commentsResult] = await Promise.all([
           apiClient.getPost(slug),
-          apiClient.getComments(slug)
+          apiClient.getCommentsBatch(slug)
         ]);
         console.timeEnd('병렬 API 호출');
         
@@ -318,7 +319,9 @@ export default function PostDetailOptimized() {
           setPost(postResult.data);
           
           if (commentsResult.success && commentsResult.data) {
-            const processedComments = processCommentsRecursive(commentsResult.data.comments || []);
+            // getCommentsBatch 응답 구조 처리
+            const actualComments = commentsResult.data.data?.comments || commentsResult.data.comments || [];
+            const processedComments = processCommentsRecursive(actualComments);
             setComments(processedComments);
           }
           
@@ -396,9 +399,11 @@ export default function PostDetailOptimized() {
     if (!slug) return;
     
     try {
-      const response = await apiClient.getComments(slug);
+      const response = await apiClient.getCommentsBatch(slug);
       if (response.success && response.data) {
-        const processedComments = processCommentsRecursive(response.data.comments || []);
+        // getCommentsBatch 응답 구조 처리
+        const actualComments = response.data.data?.comments || response.data.comments || [];
+        const processedComments = processCommentsRecursive(actualComments);
         setComments(processedComments);
       }
     } catch (error) {
