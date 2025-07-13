@@ -92,11 +92,15 @@ logs/
 
 # Security and Secrets
 .secrets/
-*.json
+# Security-related JSON files only
 key.json
 *-key.json
 service-account-*.json
 credentials.json
+# Allow deploy config files
+!frontend/deploy/**/*.json
 
 # Google Cloud Service Account Keys
-.vercel
+# Vercel local project settings only
+.vercel/
+frontend/.vercel/
