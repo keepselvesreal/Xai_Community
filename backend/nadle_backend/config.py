@@ -80,7 +80,7 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         case_sensitive=False,
         validate_assignment=True,
-        extra="ignore",  # forbid -> ignore로 변경 (알 수 없는 환경변수 무시)
+        extra="forbid",  # 알 수 없는 환경변수 금지
         # Cloud Run에서 문제되는 환경변수들 무시
         env_ignore={"google_application_credentials", "GOOGLE_APPLICATION_CREDENTIALS"}
     )
