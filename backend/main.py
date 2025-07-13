@@ -11,79 +11,67 @@ from nadle_backend.config import settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Lifespan 이벤트 핸들러 - 빠른 시작을 위해 DB 연결을 백그라운드로 이동
+# 간소화된 Lifespan 이벤트 핸들러 - Cloud Run 빠른 시작 최적화
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # 시작 시 - 빠른 시작을 위해 필수가 아닌 작업은 백그라운드로
-    logger.info("Application starting... (fast startup mode)")
+    # 시작 시 - 최소한의 작업만 수행
+    logger.info("🚀 Application starting... (Cloud Run optimized)")
+    logger.info(f"📊 Environment: {settings.environment}")
+    logger.info(f"🔌 Listening on port: {settings.port}")
     
-    # Cloud Run에서 빠른 시작을 위해 DB 연결을 백그라운드 태스크로 처리
-    import asyncio
-    
-    async def background_db_init():
-        """백그라운드에서 DB 초기화"""
-        try:
-            await asyncio.sleep(2)  # 앱 시작 후 2초 대기
-            from nadle_backend.database.connection import database
-            from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
-            from nadle_backend.models.email_verification import EmailVerification
-            
-            logger.info("Starting background database connection...")
-            await database.connect()
-            
-            document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
-            logger.info(f"Initializing Beanie with models: {[model.__name__ for model in document_models]}")
-            await database.init_beanie_models(document_models)
-            logger.info("✅ Background database connection completed!")
-        except Exception as e:
-            logger.error(f"❌ Background database connection failed: {e}")
-    
-    # 백그라운드 태스크 시작 (앱 시작을 블로킹하지 않음)
+    # Cloud Run에서는 DB 연결을 아예 건너뛰고 시작 (헬스체크 통과 우선)
     if settings.environment in ["staging", "production"]:
-        asyncio.create_task(background_db_init())
-        logger.info("⚡ Database connection scheduled for background (Cloud Run mode)")
+        logger.info("⚡ Cloud Run mode: DB connection deferred for fast startup")
+        logger.info("🔗 Database will connect on first API request")
     else:
-        # 개발환경에서는 즉시 연결
+        # 개발환경에서만 즉시 DB 연결 시도
+        logger.info("🛠️ Development mode: attempting immediate DB connection")
         try:
             from nadle_backend.database.connection import database
-            from nadle_backend.models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
-            from nadle_backend.models.email_verification import EmailVerification
-            
             await database.connect()
-            document_models = [User, Post, Comment, PostStats, UserReaction, Stats, FileRecord, EmailVerification]
-            await database.init_beanie_models(document_models)
             logger.info("✅ Development database connection completed!")
         except Exception as e:
-            logger.error(f"❌ Development database connection failed: {e}")
+            logger.error(f"⚠️ Development database connection failed: {e}")
+            logger.info("🔄 Will retry on first API request")
     
     yield
     
-    # 종료 시
+    # 종료 시 - 안전하게 정리
+    logger.info("🔄 Application shutting down...")
     try:
         from nadle_backend.database.connection import database
-        await database.disconnect()
-        logger.info("Database disconnected")
-    except:
-        pass
-    logger.info("Application shutting down...")
+        if hasattr(database, 'client') and database.client:
+            await database.disconnect()
+            logger.info("📦 Database disconnected")
+    except Exception as e:
+        logger.warning(f"⚠️ Database disconnect warning: {e}")
+    logger.info("✅ Application shutdown complete")
 
 def create_app() -> FastAPI:
     logger.info("🚀 Creating FastAPI app...")
     
-    # Sentry 초기화
-    try:
-        from nadle_backend.monitoring.sentry_config import init_sentry
-        if settings.sentry_dsn:
+    # Sentry 초기화 (조건부 및 안전)
+    sentry_initialized = False
+    if settings.sentry_dsn:
+        try:
+            from nadle_backend.monitoring.sentry_config import init_sentry
             init_sentry(
                 dsn=settings.sentry_dsn,
                 environment=settings.sentry_environment or settings.environment
             )
-            logger.info(f"Sentry monitoring initialized successfully for environment: {settings.environment}")
-        else:
-            logger.info("Sentry DSN not configured, skipping monitoring setup")
-    except Exception as e:
-        logger.error(f"Sentry initialization failed: {e}")
-        # Sentry 실패해도 서버는 시작되도록 함
+            sentry_initialized = True
+            logger.info(f"✅ Sentry monitoring initialized for environment: {settings.environment}")
+        except ImportError as e:
+            logger.warning(f"⚠️ Sentry module not found: {e}")
+        except Exception as e:
+            logger.warning(f"⚠️ Sentry initialization failed: {e}")
+    
+    if not sentry_initialized:
+        logger.info("ℹ️ Sentry monitoring disabled (DSN not configured or initialization failed)")
+    
+    # Cloud Run 환경에서는 추가 모니터링 건너뛰기
+    if settings.environment in ["staging", "production"]:
+        logger.info("⚡ Cloud Run mode: Minimal monitoring for fast startup")
     
     # Swagger UI 설정 - 환경별 제어
     docs_url = "/docs" if settings.enable_docs and settings.environment != "production" else None
@@ -214,21 +202,25 @@ def create_app() -> FastAPI:
     
     logger.info("✅ FastAPI CORSMiddleware configured successfully")
     
-    # 커스텀 미들웨어 등록
-    try:
-        from nadle_backend.middleware import MonitoringMiddleware, SentryRequestMiddleware
-        
-        # Sentry 요청 미들웨어 추가 (Sentry가 초기화된 경우에만)
-        if settings.sentry_dsn:
+    # 커스텀 미들웨어 등록 (Cloud Run 최적화 - 선택적 로드)
+    middleware_count = 0
+    
+    # Sentry 미들웨어 (조건부)
+    if settings.sentry_dsn:
+        try:
+            from nadle_backend.middleware import SentryRequestMiddleware
             app.add_middleware(SentryRequestMiddleware)
-            logger.info("✅ SentryRequestMiddleware added successfully")
-        
-        # MonitoringMiddleware는 Redis 설정 후 별도로 추가
-        logger.info("✅ Custom middlewares configured successfully")
-        
-    except Exception as e:
-        logger.warning(f"Failed to add custom middlewares: {e}")
-        logger.info("Continuing without custom middlewares")
+            middleware_count += 1
+            logger.info("✅ SentryRequestMiddleware added")
+        except Exception as e:
+            logger.warning(f"⚠️ SentryRequestMiddleware failed: {e}")
+    else:
+        logger.info("ℹ️ Sentry DSN not configured, skipping SentryRequestMiddleware")
+    
+    # 기타 커스텀 미들웨어들은 Cloud Run 빠른 시작을 위해 비활성화
+    # MonitoringMiddleware 등은 Redis 연결이 필요하므로 제외
+    logger.info(f"📊 Middleware loading complete: {middleware_count} custom middlewares loaded")
+    logger.info("⚡ Heavy middlewares disabled for faster Cloud Run startup")
     
     # 기본 라우트
     @app.get("/")
@@ -251,37 +243,50 @@ def create_app() -> FastAPI:
         app.mount("/static", StaticFiles(directory=frontend_path), name="static")
         logger.info(f"Static files mounted from: {frontend_path}")
     
-    # 라우터 등록 (안전하게 처리)
+    # 라우터 등록 (단계별 안전 처리)
+    router_count = 0
+    
+    # 1. 필수 헬스체크 라우터 (최우선, 실패하면 앱 시작 중단)
     try:
-        from nadle_backend.routers import health, auth, posts, comments, file_upload, content, users
-        
-        # 1. 필수 헬스체크 (최우선)
+        from nadle_backend.routers import health
         app.include_router(health.router, tags=["Health"])
-        
-        # 2. 기본 API 라우터들
-        app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-        app.include_router(posts.router, prefix="/api/posts", tags=["Posts"]) 
-        app.include_router(comments.router, prefix="/api/posts", tags=["Comments"])
-        app.include_router(file_upload.router, prefix="/api/files", tags=["Files"])
-        app.include_router(content.router, prefix="/api/content", tags=["Content"])
-        app.include_router(users.router, prefix="/api/users", tags=["Users"])
-        
-        logger.info("✅ Core routers loaded successfully")
-        
-        # 3. 추가 모니터링 라우터들 제거 - 새로 추가된 라우터로 시작 시간 영향 가능성
-        # try:
-        #     from nadle_backend.routers import uptime_monitoring, monitoring, intelligent_alerting
-        #     app.include_router(uptime_monitoring.router, tags=["uptime-monitoring"])
-        #     app.include_router(monitoring.router, prefix="/api/internal", tags=["Internal-Metrics"])
-        #     app.include_router(intelligent_alerting.router, tags=["Intelligent-Alerting"])
-        #     logger.info("✅ Monitoring routers loaded successfully")
-        # except Exception as e:
-        #     logger.warning(f"Failed to load monitoring routers: {e}")
-        logger.info("⚠️ Monitoring routers disabled for faster startup")
-        
+        router_count += 1
+        logger.info("✅ Health router loaded")
     except Exception as e:
-        logger.error(f"Failed to load core routers: {e}")
-        # 라우터 로드 실패해도 서버는 시작
+        logger.error(f"❌ Critical: Health router failed: {e}")
+        raise e  # 헬스체크는 필수이므로 실패시 앱 시작 중단
+    
+    # 2. 기본 API 라우터들 (개별적으로 안전하게 로드)
+    optional_routers = [
+        ("auth", "/api/auth", "Authentication"),
+        ("posts", "/api/posts", "Posts"),
+        ("comments", "/api/posts", "Comments"), 
+        ("file_upload", "/api/files", "Files"),
+        ("content", "/api/content", "Content"),
+        ("users", "/api/users", "Users")
+    ]
+    
+    for router_name, prefix, tag in optional_routers:
+        try:
+            router_module = __import__(f"nadle_backend.routers.{router_name}", fromlist=[router_name])
+            app.include_router(router_module.router, prefix=prefix, tags=[tag])
+            router_count += 1
+            logger.info(f"✅ {router_name} router loaded")
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to load {router_name} router: {e}")
+            # 개별 라우터 실패는 앱 시작을 막지 않음
+    
+    logger.info(f"📊 Router loading complete: {router_count}/7 routers loaded")
+    
+    if router_count == 0:
+        logger.error("❌ No routers loaded! App may not function properly")
+    elif router_count < 7:
+        logger.warning(f"⚠️ Some routers failed to load ({router_count}/7)")
+    else:
+        logger.info("🎉 All routers loaded successfully!")
+    
+    # 모니터링 라우터들은 Cloud Run 빠른 시작을 위해 비활성화
+    logger.info("⚡ Monitoring routers disabled for faster Cloud Run startup")
     
     # 디버그 엔드포인트들
     @app.get("/debug/users")
