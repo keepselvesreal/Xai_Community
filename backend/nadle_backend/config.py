@@ -236,10 +236,11 @@ class Settings(BaseSettings):
     
     # === 서버 설정 ===
     port: int = Field(
-        default=8000,
+        default=8080,  # Cloud Run 기본 포트
         ge=1,
         le=65535,
-        description="서버 청취 포트 번호 (1-65535)"
+        description="서버 청취 포트 번호 (1-65535) - Cloud Run에서는 PORT 환경변수로 자동 설정",
+        env="PORT"  # 명시적으로 PORT 환경변수 사용
     )
     host: str = Field(
         default="0.0.0.0",

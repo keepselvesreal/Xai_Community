@@ -332,5 +332,29 @@ if __name__ == "__main__":
     import uvicorn
     logger.info("🐍 Starting uvicorn server...")
     logger.info(f"📊 Environment: {settings.environment}")
-    logger.info(f"🌐 Host: 0.0.0.0, Port: 8000")
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    logger.info(f"🌐 Host: {settings.host}, Port: {settings.port}")
+    logger.info(f"🔌 PORT 환경변수: {os.getenv('PORT', 'Not set')}")
+    
+    # Environment에 따른 uvicorn 설정
+    if settings.environment in ["staging", "production"]:
+        # Production/Staging: 최적화된 설정
+        logger.info("🚀 Production/Staging mode: reload=False, workers=1")
+        uvicorn.run(
+            "main:app",
+            host=settings.host,
+            port=settings.port,
+            reload=False,
+            workers=1,
+            log_level=settings.log_level.lower(),
+            access_log=True
+        )
+    else:
+        # Development: 개발자 친화적 설정
+        logger.info("🛠️ Development mode: reload=True")
+        uvicorn.run(
+            "main:app",
+            host=settings.host,
+            port=settings.port,
+            reload=True,
+            log_level=settings.log_level.lower()
+        )
