@@ -59,6 +59,7 @@ out/
 .env.production.local
 .env.dev
 .env.prod
+backend/.env.staging
 
 # IDE
 .vscode/

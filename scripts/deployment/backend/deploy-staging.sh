@@ -348,12 +348,37 @@ if [ -n "$DEPLOY_OUTPUT" ]; then
     log_debug "배포 출력 길이: ${#DEPLOY_OUTPUT}"
     log_debug "배포 출력 미리보기: ${DEPLOY_OUTPUT:0:300}..."
     
-    # 에러 패턴 감지
-    if echo "$DEPLOY_OUTPUT" | grep -q "ERROR\|FAILED\|failed\|Deployment failed"; then
+    # 에러 패턴 감지 (timeout 포함)
+    if echo "$DEPLOY_OUTPUT" | grep -q "ERROR\|FAILED\|failed\|Deployment failed\|timeout\|Timeout\|TIMEOUT"; then
         log_error "배포 출력에서 에러 감지!"
         echo "=== 배포 에러 로그 ==="
-        echo "$DEPLOY_OUTPUT" | grep -A 5 -B 5 "ERROR\|FAILED\|failed\|Deployment failed"
+        echo "$DEPLOY_OUTPUT" | grep -A 5 -B 5 "ERROR\|FAILED\|failed\|Deployment failed\|timeout\|Timeout\|TIMEOUT"
         echo "===================="
+        
+        # Container 시작 실패 관련 상세 로깅
+        if echo "$DEPLOY_OUTPUT" | grep -q "failed to start and listen\|container failed to start\|timeout.*container"; then
+            log_error "🚨 컨테이너 시작 실패 감지!"
+            log_error "📝 가능한 원인:"
+            log_error "   1. 애플리케이션이 PORT 환경변수(8080)에서 리스닝하지 않음"
+            log_error "   2. 애플리케이션 시작 시간이 너무 오래 걸림 (300초 초과)"
+            log_error "   3. 환경변수 설정 오류로 인한 애플리케이션 크래시"
+            log_error "   4. 의존성 패키지 설치 실패"
+            log_error "🔍 로그 확인 필요: Cloud Console에서 상세 로그 확인"
+            
+            # 애플리케이션 설정 확인
+            log_debug "🔧 현재 배포 설정 확인:"
+            log_debug "   - PORT: 8080 (고정)"
+            log_debug "   - TIMEOUT: 300초"
+            log_debug "   - MEMORY: 512Mi"
+            log_debug "   - CPU: 1"
+            log_debug "   - 환경변수 개수: $(echo "$DEPLOY_OUTPUT" | grep -o "환경변수.*개" || echo "미확인")"
+        fi
+        
+        # Logs URL 추출 및 강조
+        if echo "$DEPLOY_OUTPUT" | grep -q "Logs URL:"; then
+            LOGS_URL=$(echo "$DEPLOY_OUTPUT" | grep "Logs URL:" | sed 's/.*Logs URL: //')
+            log_error "🔗 상세 로그 확인: $LOGS_URL"
+        fi
     fi
     
     # 성공 메시지 확인
@@ -383,11 +408,41 @@ if [ $DEPLOY_EXIT_CODE -ne 0 ]; then
     
     # 기존 서비스 상태 확인
     log_debug "기존 서비스 상태 확인..."
-    gcloud run services describe "$GCP_SERVICE_NAME" --region "$GCP_REGION" --project="$GCP_PROJECT_ID" || echo "서비스가 존재하지 않음"
+    if gcloud run services describe "$GCP_SERVICE_NAME" --region "$GCP_REGION" --project="$GCP_PROJECT_ID" 2>/dev/null; then
+        log_debug "기존 서비스 발견됨"
+        
+        # 최신 revision 상태 확인
+        log_debug "최신 revision 상태 확인..."
+        LATEST_REVISION=$(gcloud run services describe "$GCP_SERVICE_NAME" --region "$GCP_REGION" --project="$GCP_PROJECT_ID" --format="value(status.latestReadyRevisionName)" 2>/dev/null)
+        if [ -n "$LATEST_REVISION" ]; then
+            log_debug "최신 ready revision: $LATEST_REVISION"
+            
+            # Revision 로그 확인 (최근 10분)
+            log_debug "최근 10분간 revision 로그 확인 중..."
+            gcloud logging read "resource.type=cloud_run_revision AND resource.labels.service_name=$GCP_SERVICE_NAME AND resource.labels.revision_name=$LATEST_REVISION" --limit=20 --format="value(timestamp,severity,textPayload)" --project="$GCP_PROJECT_ID" || echo "로그 조회 실패"
+        fi
+    else
+        echo "서비스가 존재하지 않음"
+    fi
     
     # 이미지 존재 확인
     log_debug "이미지 존재 확인..."
-    gcloud container images describe "$IMAGE_NAME" --project="$GCP_PROJECT_ID" || echo "이미지가 존재하지 않음"
+    if gcloud container images describe "$IMAGE_NAME" --project="$GCP_PROJECT_ID" 2>/dev/null; then
+        log_debug "이미지 확인됨"
+        # 이미지 메타데이터 확인
+        gcloud container images describe "$IMAGE_NAME" --project="$GCP_PROJECT_ID" --format="value(image_summary.digest,image_summary.fully_qualified_digest)" 2>/dev/null || echo "이미지 메타데이터 조회 실패"
+    else
+        echo "이미지가 존재하지 않음"
+    fi
+    
+    # 환경변수 파일 내용 확인
+    if [ -f "$ENV_VARS_FILE" ]; then
+        log_debug "환경변수 파일 내용 확인:"
+        log_debug "파일 크기: $(wc -c < "$ENV_VARS_FILE") bytes"
+        log_debug "환경변수 개수: $(grep -c ":" "$ENV_VARS_FILE" 2>/dev/null || echo "0")"
+        log_debug "환경변수 샘플 (처음 5개):"
+        head -5 "$ENV_VARS_FILE" 2>/dev/null || echo "파일 읽기 실패"
+    fi
     
     exit 1
 fi
