@@ -49,14 +49,39 @@ logger.info(f"📊 Environment: {ENVIRONMENT}")
 logger.info(f"🐍 Python path: {os.getenv('PYTHONPATH', 'Not set')}")
 
 def create_app() -> FastAPI:
-    """최소한의 FastAPI 앱 생성"""
-    logger.info("🚀 Creating minimal FastAPI app...")
+    """Database 연결 테스트를 포함한 FastAPI 앱 생성"""
+    logger.info("🚀 Creating FastAPI app with Database test...")
     
     app = FastAPI(
-        title="XAI Community Backend - Debug Mode",
-        description="Minimal FastAPI app for Cloud Run troubleshooting",
-        version="1.0.0-debug"
+        title="XAI Community Backend - Database Test Mode",
+        description="FastAPI app testing Database connection",
+        version="1.0.0-db-test"
     )
+    
+    # Database 연결 테스트 (가장 의심스러운 원인)
+    db_status = "not_tested"
+    db_error = None
+    
+    logger.info("🗄️ Database 연결 테스트 시작...")
+    try:
+        # Database import 및 연결 테스트
+        from nadle_backend.database.connection import database
+        logger.info("✅ Database module import 성공")
+        
+        # 실제 연결은 async이므로 여기서는 import만 테스트
+        db_status = "imported"
+        logger.info("✅ Database import 완료 - 실제 연결은 첫 API 요청 시 테스트")
+        
+    except Exception as e:
+        logger.error(f"❌ Database import 실패: {e}")
+        logger.error(f"🔍 DB 에러 타입: {type(e).__name__}")
+        logger.error(f"🔍 DB 에러 메시지: {str(e)}")
+        db_status = "import_failed"
+        db_error = str(e)
+    
+    # Database 연결 정보를 전역 변수로 저장
+    app.state.db_status = db_status
+    app.state.db_error = db_error
     
     @app.get("/")
     async def root():
@@ -109,8 +134,49 @@ def create_app() -> FastAPI:
                 "port": PORT,
                 "environment": ENVIRONMENT
             },
+            "database_status": {
+                "import_status": app.state.db_status,
+                "error": app.state.db_error
+            },
             "status": "debug_mode_active"
         }
+    
+    @app.get("/test-db")
+    async def test_database():
+        """실제 Database 연결 테스트"""
+        logger.info("🗄️ 실제 Database 연결 테스트 시작...")
+        
+        if app.state.db_status == "import_failed":
+            return {
+                "status": "failed",
+                "message": "Database import failed",
+                "error": app.state.db_error
+            }
+        
+        try:
+            # 실제 Database 연결 시도
+            from nadle_backend.database.connection import database
+            await database.connect()
+            logger.info("✅ Database 연결 성공!")
+            
+            # 연결 해제
+            await database.disconnect()
+            logger.info("✅ Database 연결 해제 완료")
+            
+            return {
+                "status": "success",
+                "message": "Database connection test passed",
+                "connection_url": "***masked***"
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Database 연결 실패: {e}")
+            return {
+                "status": "failed", 
+                "message": "Database connection failed",
+                "error": str(e),
+                "error_type": type(e).__name__
+            }
     
     logger.info("✅ Minimal FastAPI app created with debug endpoints")
     return app
