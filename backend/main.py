@@ -212,15 +212,24 @@ def create_app() -> FastAPI:
     try:
         # CORS 설정 추가
         from fastapi.middleware.cors import CORSMiddleware
+        logger.info("📦 CORSMiddleware import 성공")
+        
         from nadle_backend.config import settings
+        logger.info("⚙️ Settings 재import 성공")
+        
+        # 현재 설정된 origins 확인
+        origins = settings.allowed_origins or ["*"]
+        logger.info(f"🌐 CORS allowed_origins: {origins}")
+        logger.info(f"🔧 Settings environment: {settings.environment}")
         
         app.add_middleware(
             CORSMiddleware,
-            allow_origins=settings.allowed_origins or ["*"],
+            allow_origins=origins,
             allow_credentials=True,
             allow_methods=["*"],
             allow_headers=["*"],
         )
+        logger.info("✅ CORS 미들웨어 추가 완료!")
         
         # 앱 메타데이터 업데이트 (완전 복원됨을 표시)
         app.title = "XAI Community Backend - Full Restore"
@@ -232,6 +241,10 @@ def create_app() -> FastAPI:
         final_setup_status = "completed"
     except Exception as e:
         logger.error(f"❌ 최종 설정 실패: {e}")
+        logger.error(f"🔍 에러 타입: {type(e).__name__}")
+        logger.error(f"🔍 에러 메시지: {str(e)}")
+        import traceback
+        logger.error(f"🔍 Full traceback: {traceback.format_exc()}")
         final_setup_status = "failed"
         final_setup_error = str(e)
     
