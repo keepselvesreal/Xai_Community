@@ -17,10 +17,32 @@ logger = logging.getLogger(__name__)
 
 logger.info("🔍 Cloud Run 디버그 모드 시작")
 
-# 환경변수에서 포트 설정 (Cloud Run 최적화)
-PORT = int(os.getenv("PORT", "8080"))
-HOST = os.getenv("HOST", "0.0.0.0")
-ENVIRONMENT = os.getenv("ENVIRONMENT", "staging")
+# Config 클래스 import 테스트 (가장 문제 발생 가능성 높음)
+logger.info("📥 Config 클래스 import 시도 중...")
+try:
+    from nadle_backend.config import settings
+    logger.info("✅ Config 클래스 import 성공!")
+    logger.info(f"📊 Settings environment: {settings.environment}")
+    logger.info(f"🔌 Settings port: {settings.port}")
+    logger.info(f"🏠 Settings host: {settings.host}")
+    
+    # settings 사용
+    PORT = settings.port
+    HOST = settings.host
+    ENVIRONMENT = settings.environment
+    
+    logger.info("✅ Config 기반 설정 완료")
+    
+except Exception as e:
+    logger.error(f"❌ Config 클래스 import 실패: {e}")
+    logger.error(f"🔍 에러 타입: {type(e).__name__}")
+    logger.error(f"🔍 에러 메시지: {str(e)}")
+    logger.info("🔄 환경변수 폴백 사용")
+    
+    # 폴백: 환경변수 직접 사용
+    PORT = int(os.getenv("PORT", "8080"))
+    HOST = os.getenv("HOST", "0.0.0.0")
+    ENVIRONMENT = os.getenv("ENVIRONMENT", "staging")
 
 logger.info(f"🔌 Server configuration: {HOST}:{PORT}")
 logger.info(f"📊 Environment: {ENVIRONMENT}")
@@ -58,6 +80,18 @@ def create_app() -> FastAPI:
             "environment": ENVIRONMENT,
             "port": PORT,
             "message": "Container started successfully!"
+        }
+    
+    @app.get("/status")
+    async def status():
+        logger.info("📊 Status check accessed")
+        return {
+            "status": "running",
+            "message": "XAI Community Backend is healthy",
+            "environment": ENVIRONMENT,
+            "version": "1.0.0-debug",
+            "port": PORT,
+            "service": "xai-community-backend-debug"
         }
     
     @app.get("/debug")
