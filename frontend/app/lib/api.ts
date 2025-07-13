@@ -699,7 +699,7 @@ class ApiClient {
     if (filters.size) queryParams.append('size', filters.size.toString());
 
     const query = queryParams.toString();
-    const endpoint = `/api/posts/${query ? `?${query}` : ''}`;
+    const endpoint = `/api/posts${query ? `?${query}` : ''}`;
     
     console.log('📡 API 요청 - endpoint:', endpoint);
 

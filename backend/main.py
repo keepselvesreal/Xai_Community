@@ -78,13 +78,7 @@ def create_app() -> FastAPI:
     
     logger.info("📝 Models import 테스트 시작...")
     try:
-        from nadle_backend.models.user import User
-        from nadle_backend.models.post import Post
-        from nadle_backend.models.comment import Comment
-        from nadle_backend.models.file import File
-        from nadle_backend.models.user_reaction import UserReaction
-        from nadle_backend.models.post_stats import PostStats
-        from nadle_backend.models.stats import Stats
+        from nadle_backend.models.core import User, Post, Comment, FileRecord, UserReaction, PostStats, Stats
         logger.info("✅ Models import 성공")
         models_status = "imported"
     except Exception as e:
@@ -100,8 +94,7 @@ def create_app() -> FastAPI:
     try:
         from nadle_backend.repositories.user_repository import UserRepository
         from nadle_backend.repositories.post_repository import PostRepository
-        from nadle_backend.services.user_service import UserService
-        from nadle_backend.services.post_service import PostService
+        from nadle_backend.services.posts_service import PostsService
         from nadle_backend.services.auth_service import AuthService
         logger.info("✅ Repository/Service 계층 import 성공")
         services_status = "imported"
@@ -119,12 +112,12 @@ def create_app() -> FastAPI:
         from nadle_backend.routers import auth, posts, comments, users, file_upload, content, health
         
         # API 라우터들 추가
-        app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
-        app.include_router(posts.router, prefix="/api/v1", tags=["posts"])
-        app.include_router(comments.router, prefix="/api/v1", tags=["comments"])
-        app.include_router(users.router, prefix="/api/v1", tags=["users"])
-        app.include_router(file_upload.router, prefix="/api/v1", tags=["files"])
-        app.include_router(content.router, prefix="/api/v1", tags=["content"])
+        app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+        app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+        app.include_router(comments.router, prefix="/api/comments", tags=["comments"])
+        app.include_router(users.router, prefix="/api/users", tags=["users"])
+        app.include_router(file_upload.router, prefix="/api/files", tags=["files"])
+        app.include_router(content.router, prefix="/api/content", tags=["content"])
         app.include_router(health.router, tags=["health"])
         
         logger.info("✅ Routers 추가 성공")
@@ -145,10 +138,18 @@ def create_app() -> FastAPI:
             logger.info("🚀 App startup - Database 연결 시작...")
             try:
                 from nadle_backend.database.connection import database
+                from nadle_backend.models.core import User, Post, Comment, FileRecord, UserReaction, PostStats, Stats
+                
                 await database.connect()
                 logger.info("✅ Database 연결 성공!")
+                
+                # Beanie 모델 초기화
+                await database.init_beanie_models([
+                    User, Post, Comment, FileRecord, UserReaction, PostStats, Stats
+                ])
+                logger.info("✅ Beanie 모델 초기화 성공!")
             except Exception as e:
-                logger.error(f"❌ Database 연결 실패: {e}")
+                logger.error(f"❌ Database 연결 또는 모델 초기화 실패: {e}")
                 # 연결 실패해도 앱은 계속 실행 (디버깅 목적)
         
         @app.on_event("shutdown")
