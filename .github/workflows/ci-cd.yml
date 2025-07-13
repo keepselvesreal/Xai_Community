@@ -7,11 +7,11 @@ on:
     branches: [ main ]
 
 env:
-  PROD_BACKEND_URL: https://xai-community-backend-i7qxo5yw3a-du.a.run.app
+  PROD_BACKEND_URL: https://xai-community-backend-798170408536.asia-northeast3.run.app
   PROD_FRONTEND_URL: https://xai-community.vercel.app
   # 스테이징 환경 URL (시뮬레이션용)
   STAGING_BACKEND_URL: https://xai-community-backend-staging-798170408536.asia-northeast3.run.app
-  STAGING_FRONTEND_URL: https://xai-community-staging.vercel.app
+  STAGING_FRONTEND_URL: https://xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app
 
 jobs:
   # 🔍 백엔드 안전한 검증
