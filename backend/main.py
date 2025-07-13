@@ -116,14 +116,14 @@ def create_app() -> FastAPI:
     
     logger.info("🛣️ Routers 추가 테스트 시작...")
     try:
-        from nadle_backend.routers import auth, posts, comments, users, files, content, health
+        from nadle_backend.routers import auth, posts, comments, users, file_upload, content, health
         
         # API 라우터들 추가
         app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
         app.include_router(posts.router, prefix="/api/v1", tags=["posts"])
         app.include_router(comments.router, prefix="/api/v1", tags=["comments"])
         app.include_router(users.router, prefix="/api/v1", tags=["users"])
-        app.include_router(files.router, prefix="/api/v1", tags=["files"])
+        app.include_router(file_upload.router, prefix="/api/v1", tags=["files"])
         app.include_router(content.router, prefix="/api/v1", tags=["content"])
         app.include_router(health.router, tags=["health"])
         
