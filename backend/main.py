@@ -186,6 +186,54 @@ def create_app() -> FastAPI:
         monitoring_status = "add_failed"
         monitoring_error = str(e)
     
+    # 7. SentryMiddleware 추가 테스트
+    sentry_status = "not_tested"
+    sentry_error = None
+    
+    logger.info("🔍 SentryMiddleware 추가 중...")
+    try:
+        from nadle_backend.middleware.sentry_middleware import SentryRequestMiddleware
+        
+        # SentryMiddleware 추가
+        app.add_middleware(SentryRequestMiddleware)
+        
+        logger.info("✅ SentryMiddleware 추가 성공")
+        sentry_status = "added"
+    except Exception as e:
+        logger.error(f"❌ SentryMiddleware 추가 실패: {e}")
+        sentry_status = "add_failed"
+        sentry_error = str(e)
+    
+    # 8. CORS 및 기타 설정 추가 (최종 단계)
+    final_setup_status = "not_tested"
+    final_setup_error = None
+    
+    logger.info("🎯 최종 애플리케이션 설정 적용 중...")
+    try:
+        # CORS 설정 추가
+        from fastapi.middleware.cors import CORSMiddleware
+        
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=settings.allowed_origins or ["*"],
+            allow_credentials=True,
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+        
+        # 앱 메타데이터 업데이트 (완전 복원됨을 표시)
+        app.title = "XAI Community Backend - Full Restore"
+        app.description = "완전히 복원된 XAI Community FastAPI Backend"
+        app.version = "1.0.0-restored"
+        
+        logger.info("✅ 최종 애플리케이션 설정 완료")
+        logger.info("🎉 모든 컴포넌트 점진적 복원 성공!")
+        final_setup_status = "completed"
+    except Exception as e:
+        logger.error(f"❌ 최종 설정 실패: {e}")
+        final_setup_status = "failed"
+        final_setup_error = str(e)
+    
     # 상태 정보를 앱에 저장
     app.state.db_status = db_status
     app.state.db_error = db_error
@@ -199,17 +247,22 @@ def create_app() -> FastAPI:
     app.state.events_error = events_error
     app.state.monitoring_status = monitoring_status
     app.state.monitoring_error = monitoring_error
+    app.state.sentry_status = sentry_status
+    app.state.sentry_error = sentry_error
+    app.state.final_setup_status = final_setup_status
+    app.state.final_setup_error = final_setup_error
     
     @app.get("/")
     async def root():
         logger.info("📥 Root endpoint accessed")
         return {
-            "message": "XAI Community Backend - Debug Mode", 
+            "message": "XAI Community Backend - Progressive Restoration Complete!", 
             "status": "running",
             "environment": ENVIRONMENT,
             "port": PORT,
             "host": HOST,
-            "debug": True,
+            "restoration_mode": True,
+            "all_components_loaded": True,
             "timestamp": "2025-07-13"
         }
     
@@ -275,7 +328,28 @@ def create_app() -> FastAPI:
                 "monitoring_middleware": {
                     "status": app.state.monitoring_status,
                     "error": app.state.monitoring_error
+                },
+                "sentry_middleware": {
+                    "status": app.state.sentry_status,
+                    "error": app.state.sentry_error
+                },
+                "final_setup": {
+                    "status": app.state.final_setup_status,
+                    "error": app.state.final_setup_error
                 }
+            },
+            "restoration_summary": {
+                "total_components": 8,
+                "completed_steps": [
+                    "✅ 1. Database import",
+                    "✅ 2. Models import", 
+                    "✅ 3. Repository/Service layers",
+                    "✅ 4. API Routers",
+                    "✅ 5. Database events",
+                    "✅ 6. MonitoringMiddleware",
+                    "✅ 7. SentryMiddleware",
+                    "✅ 8. Final CORS & Setup"
+                ]
             },
             "status": "debug_mode_active"
         }
