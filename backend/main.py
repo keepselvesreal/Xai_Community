@@ -49,13 +49,13 @@ logger.info(f"📊 Environment: {ENVIRONMENT}")
 logger.info(f"🐍 Python path: {os.getenv('PYTHONPATH', 'Not set')}")
 
 def create_app() -> FastAPI:
-    """Database 연결 테스트를 포함한 FastAPI 앱 생성"""
-    logger.info("🚀 Creating FastAPI app with Database test...")
+    """Routers와 Database 연결을 포함한 FastAPI 앱 생성"""
+    logger.info("🚀 Creating FastAPI app with Routers and Database...")
     
     app = FastAPI(
-        title="XAI Community Backend - Database Test Mode",
-        description="FastAPI app testing Database connection",
-        version="1.0.0-db-test"
+        title="XAI Community Backend - Progressive Restore Mode",
+        description="FastAPI app testing Routers and Database connection",
+        version="1.0.0-progressive"
     )
     
     # 1. Database 연결 테스트
@@ -110,6 +110,82 @@ def create_app() -> FastAPI:
         services_status = "import_failed"
         services_error = str(e)
     
+    # 4. Routers 추가 테스트
+    routers_status = "not_tested"
+    routers_error = None
+    
+    logger.info("🛣️ Routers 추가 테스트 시작...")
+    try:
+        from nadle_backend.routers import auth, posts, comments, users, files, content, health
+        
+        # API 라우터들 추가
+        app.include_router(auth.router, prefix="/api/v1", tags=["auth"])
+        app.include_router(posts.router, prefix="/api/v1", tags=["posts"])
+        app.include_router(comments.router, prefix="/api/v1", tags=["comments"])
+        app.include_router(users.router, prefix="/api/v1", tags=["users"])
+        app.include_router(files.router, prefix="/api/v1", tags=["files"])
+        app.include_router(content.router, prefix="/api/v1", tags=["content"])
+        app.include_router(health.router, tags=["health"])
+        
+        logger.info("✅ Routers 추가 성공")
+        routers_status = "added"
+    except Exception as e:
+        logger.error(f"❌ Routers 추가 실패: {e}")
+        routers_status = "add_failed"
+        routers_error = str(e)
+    
+    # 5. Database 연결 이벤트 추가
+    events_status = "not_tested"
+    events_error = None
+    
+    logger.info("⚡ Database 연결 이벤트 추가 중...")
+    try:
+        @app.on_event("startup")
+        async def startup_event():
+            logger.info("🚀 App startup - Database 연결 시작...")
+            try:
+                from nadle_backend.database.connection import database
+                await database.connect()
+                logger.info("✅ Database 연결 성공!")
+            except Exception as e:
+                logger.error(f"❌ Database 연결 실패: {e}")
+                # 연결 실패해도 앱은 계속 실행 (디버깅 목적)
+        
+        @app.on_event("shutdown")
+        async def shutdown_event():
+            logger.info("🔌 App shutdown - Database 연결 해제 중...")
+            try:
+                from nadle_backend.database.connection import database
+                await database.disconnect()
+                logger.info("✅ Database 연결 해제 완료")
+            except Exception as e:
+                logger.error(f"❌ Database 연결 해제 실패: {e}")
+        
+        logger.info("✅ Database 이벤트 등록 성공")
+        events_status = "registered"
+    except Exception as e:
+        logger.error(f"❌ Database 이벤트 등록 실패: {e}")
+        events_status = "register_failed"
+        events_error = str(e)
+    
+    # 6. MonitoringMiddleware 추가 테스트
+    monitoring_status = "not_tested"
+    monitoring_error = None
+    
+    logger.info("📊 MonitoringMiddleware 추가 중...")
+    try:
+        from nadle_backend.middleware.monitoring import MonitoringMiddleware
+        
+        # MonitoringMiddleware 추가 (Redis 연결 필요)
+        app.add_middleware(MonitoringMiddleware)
+        
+        logger.info("✅ MonitoringMiddleware 추가 성공")
+        monitoring_status = "added"
+    except Exception as e:
+        logger.error(f"❌ MonitoringMiddleware 추가 실패: {e}")
+        monitoring_status = "add_failed"
+        monitoring_error = str(e)
+    
     # 상태 정보를 앱에 저장
     app.state.db_status = db_status
     app.state.db_error = db_error
@@ -117,6 +193,12 @@ def create_app() -> FastAPI:
     app.state.models_error = models_error
     app.state.services_status = services_status
     app.state.services_error = services_error
+    app.state.routers_status = routers_status
+    app.state.routers_error = routers_error
+    app.state.events_status = events_status
+    app.state.events_error = events_error
+    app.state.monitoring_status = monitoring_status
+    app.state.monitoring_error = monitoring_error
     
     @app.get("/")
     async def root():
@@ -181,6 +263,18 @@ def create_app() -> FastAPI:
                 "services": {
                     "import_status": app.state.services_status,
                     "error": app.state.services_error
+                },
+                "routers": {
+                    "status": app.state.routers_status,
+                    "error": app.state.routers_error
+                },
+                "database_events": {
+                    "status": app.state.events_status,
+                    "error": app.state.events_error
+                },
+                "monitoring_middleware": {
+                    "status": app.state.monitoring_status,
+                    "error": app.state.monitoring_error
                 }
             },
             "status": "debug_mode_active"
