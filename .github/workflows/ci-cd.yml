@@ -289,8 +289,8 @@ jobs:
         # Vercel 프로젝트 연결
         vercel link --yes --token=$VERCEL_TOKEN
         
-        # Staging 환경으로 배포
-        DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --env NODE_ENV=staging)
+        # Staging 환경으로 배포 (환경변수 명시적 설정)
+        DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --env NODE_ENV=staging --env VITE_API_URL=https://xai-community-backend-staging-798170408536.asia-northeast3.run.app)
         echo "📦 새로운 배포 URL: $DEPLOYMENT_URL"
         
         # Git 스테이징 URL에 alias 설정
