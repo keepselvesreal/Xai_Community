@@ -74,29 +74,6 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, className = "" }: 
 
   return (
     <div className={`space-y-6 ${className}`}>
-      {/* 🔍 STAGING DEBUG: 강제 디버깅 정보 표시 */}
-      <div style={{
-        background: '#ff0000',
-        color: 'white',
-        padding: '10px',
-        borderRadius: '5px',
-        fontSize: '12px',
-        fontFamily: 'monospace',
-        border: '3px solid #ffffff',
-        zIndex: 9999,
-        position: 'relative'
-      }}>
-        <div><strong>🔍 STAGING DEBUG INFO:</strong></div>
-        <div>PostSlug: {postSlug}</div>
-        <div>Comments Count: {comments?.length || 0}</div>
-        <div>Comments Type: {typeof comments}</div>
-        <div>Is Array: {Array.isArray(comments) ? 'YES' : 'NO'}</div>
-        <div>Comments Data: {JSON.stringify(comments?.slice(0, 2))}</div>
-        <div>Environment: {typeof window !== 'undefined' ? (import.meta.env.MODE || 'unknown') : 'server'}</div>
-        <div>VITE_API_URL: {typeof window !== 'undefined' ? (import.meta.env.VITE_API_URL || 'undefined') : 'server'}</div>
-        <div>Timestamp: {new Date().toISOString()}</div>
-      </div>
-      
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-semibold">
           댓글 <span className="text-blue-600">{comments?.length || 0}</span>개

@@ -254,7 +254,7 @@ jobs:
 
   # 🌐 프론트엔드 스테이징 배포 및 Git URL 연결
   frontend-staging-deployment:
-    needs: [backend-safe-checks, frontend-safe-checks, staging-deployment]
+    needs: [frontend-safe-checks]
     runs-on: ubuntu-latest
     environment: preview
     if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
@@ -273,7 +273,7 @@ jobs:
       
     - name: 🔑 Configure Vercel Authentication
       run: |
-        echo "${{ secrets.VERCEL_TOKEN }}" | vercel login --stdin
+        echo "Vercel CLI will use token from environment variable"
       env:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         
@@ -289,8 +289,8 @@ jobs:
         # Vercel 프로젝트 연결
         vercel link --yes --token=$VERCEL_TOKEN
         
-        # Preview 환경으로 배포
-        DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --env NODE_ENV=development --env VERCEL_ENV=preview)
+        # Staging 환경으로 배포
+        DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --env NODE_ENV=staging)
         echo "📦 새로운 배포 URL: $DEPLOYMENT_URL"
         
         # Git 스테이징 URL에 alias 설정
