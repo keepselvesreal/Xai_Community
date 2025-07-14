@@ -8,7 +8,7 @@ import {
   useLocation,
 } from "@remix-run/react";
 import type { LinksFunction, MetaFunction } from "@remix-run/node";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import "./tailwind.css";
 import { AuthProvider } from "~/contexts/AuthContext";
@@ -139,13 +139,17 @@ export default function App() {
   const buildInfo = data?.buildInfo;
   const location = useLocation();
   
-  // 클라이언트사이드에서 올바른 환경 판단
-  const clientEnvironment = typeof window !== "undefined" 
-    ? import.meta.env.VITE_NODE_ENV || 'development'
-    : buildInfo?.environment || 'development';
+  // Hydration 불일치 방지를 위해 상태로 관리
+  const [clientEnvironment, setClientEnvironment] = useState(buildInfo?.environment || 'development');
   
   // 환경정보 콘솔 출력 및 Google Analytics 페이지 변경 추적
   useEffect(() => {
+    // 클라이언트에서 올바른 환경 설정 (hydration 불일치 방지)
+    if (typeof window !== "undefined") {
+      const actualEnvironment = import.meta.env.VITE_NODE_ENV || 'development';
+      setClientEnvironment(actualEnvironment);
+    }
+    
     // 환경정보 콘솔 출력 (클라이언트 사이드)
     if (buildInfo && typeof window !== "undefined") {
       console.log("=== 클라이언트 환경 정보 ===");
