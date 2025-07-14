@@ -278,13 +278,15 @@ jobs:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         
     - name: 🌐 Deploy Frontend to Vercel (Staging)
-      working-directory: ./frontend
       env:
         VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
         VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
         VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
       run: |
         echo "🚀 프론트엔드 스테이징 배포 시작"
+        
+        # frontend 디렉터리로 이동
+        cd frontend
         
         # Vercel 프로젝트 연결
         vercel link --yes --token=$VERCEL_TOKEN
