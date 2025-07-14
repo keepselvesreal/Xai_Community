@@ -3,6 +3,24 @@
   "outputDirectory": "build/client",
   "installCommand": "npm ci",
   "framework": "remix",
+  "env": {
+    "VITE_NODE_ENV": "VERCEL_ENV",
+    "VITE_VERCEL_URL": "VERCEL_URL"
+  },
+  "git": {
+    "deploymentEnabled": {
+      "staging": true
+    }
+  },
+  "github": {
+    "autoAlias": true
+  },
+  "alias": [
+    {
+      "domain": "xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app",
+      "branch": "staging"
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",

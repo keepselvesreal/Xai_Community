@@ -29,14 +29,35 @@ import {
   SESSION_MESSAGES
 } from './constants';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
+// Vercel 환경에 따른 동적 API URL 설정
+function getApiBaseUrl(): string {
+  // 환경변수로 명시적으로 설정된 경우 우선 사용
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // Vercel 환경에 따른 자동 설정
+  const vercelEnv = import.meta.env.VITE_NODE_ENV || import.meta.env.MODE;
+  
+  switch (vercelEnv) {
+    case 'preview':
+      return 'https://xai-community-backend-staging-798170408536.asia-northeast3.run.app';
+    case 'production':
+      return 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
+    case 'development':
+    default:
+      return 'http://localhost:8000';
+  }
+}
+
+const API_BASE_URL = getApiBaseUrl();
 
 // ✅ 환경변수 디버깅 (올바른 Vite 환경변수 접근)
 console.log('🔍 API_BASE_URL 설정값:', API_BASE_URL);
 console.log('🔍 VITE_API_URL 환경변수:', import.meta.env.VITE_API_URL);
 console.log('🔍 Environment Mode:', import.meta.env.MODE);
 console.log('✅ VITE_NODE_ENV:', import.meta.env.VITE_NODE_ENV || 'undefined (추가 필요)');
-console.log('✅ VITE_VERCEL_ENV:', import.meta.env.VITE_VERCEL_ENV || 'undefined (추가 필요)');
+console.log('✅ VITE_VERCEL_URL:', import.meta.env.VITE_VERCEL_URL || 'undefined');
 console.log('✅ PROD:', import.meta.env.PROD);
 console.log('✅ DEV:', import.meta.env.DEV);
 console.log('✅ BASE_URL:', import.meta.env.BASE_URL);
