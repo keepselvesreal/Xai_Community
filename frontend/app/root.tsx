@@ -20,6 +20,10 @@ import ErrorBoundary from "~/components/common/ErrorBoundary";
 interface BuildInfo {
   version: string;
   environment: string;
+  deploymentId?: string;
+  commitSha?: string;
+  deploymentUrl?: string;
+  gitBranch?: string;
 }
 
 // 서버 사이드에서 환경변수를 안전하게 로드
@@ -30,6 +34,10 @@ export async function loader() {
   const buildInfo: BuildInfo = {
     version: process.env.npm_package_version || "unknown",
     environment: environment,
+    deploymentId: process.env.VERCEL_DEPLOYMENT_ID,
+    commitSha: process.env.VERCEL_GIT_COMMIT_SHA,
+    deploymentUrl: process.env.VERCEL_URL,
+    gitBranch: process.env.VERCEL_GIT_COMMIT_REF,
   };
   
   // Vercel 환경변수 콘솔 출력 (staging, production에서)
@@ -139,7 +147,13 @@ export default function App() {
       console.log("Environment:", buildInfo.environment);
       console.log("Version:", buildInfo.version);
       console.log("Current URL:", window.location.href);
-      console.log("User Agent:", navigator.userAgent);
+      if (buildInfo.deploymentId) {
+        console.log("=== Vercel 배포 정보 ===");
+        console.log("Deployment ID:", buildInfo.deploymentId);
+        console.log("Commit SHA:", buildInfo.commitSha);
+        console.log("Git Branch:", buildInfo.gitBranch);
+        console.log("Deployment URL:", buildInfo.deploymentUrl);
+      }
       console.log("========================");
     }
     
@@ -198,6 +212,27 @@ export default function App() {
                   <div><strong>환경 정보:</strong></div>
                   <div>Environment: <strong>{buildInfo.environment || "unknown"}</strong></div>
                   <div>Version: {buildInfo.version || "unknown"}</div>
+                  
+                  {/* Vercel 배포 정보 표시 */}
+                  {buildInfo.deploymentId && (
+                    <>
+                      <div style={{ marginTop: "8px", borderTop: "1px solid rgba(255,255,255,0.3)", paddingTop: "8px" }}>
+                        <strong>Vercel 배포:</strong>
+                      </div>
+                      <div>Deploy ID: {buildInfo.deploymentId.slice(0, 12)}...</div>
+                      {buildInfo.commitSha && (
+                        <div>Commit: {buildInfo.commitSha.slice(0, 8)}</div>
+                      )}
+                      {buildInfo.gitBranch && (
+                        <div>Branch: {buildInfo.gitBranch}</div>
+                      )}
+                      {buildInfo.deploymentUrl && (
+                        <div style={{ fontSize: "10px", marginTop: "4px", wordBreak: "break-all" }}>
+                          URL: {buildInfo.deploymentUrl}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
             </NotificationProvider>
