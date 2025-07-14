@@ -139,6 +139,11 @@ export default function App() {
   const buildInfo = data?.buildInfo;
   const location = useLocation();
   
+  // 클라이언트사이드에서 올바른 환경 판단
+  const clientEnvironment = typeof window !== "undefined" 
+    ? import.meta.env.VITE_NODE_ENV || 'development'
+    : buildInfo?.environment || 'development';
+  
   // 환경정보 콘솔 출력 및 Google Analytics 페이지 변경 추적
   useEffect(() => {
     // 환경정보 콘솔 출력 (클라이언트 사이드)
@@ -190,9 +195,9 @@ export default function App() {
                     position: "fixed",
                     bottom: "10px",
                     right: "10px", 
-                    background: buildInfo.environment === "production" 
+                    background: clientEnvironment === "production" 
                       ? "rgba(220, 38, 38, 0.9)" 
-                      : buildInfo.environment === "staging" 
+                      : clientEnvironment === "staging" 
                       ? "rgba(245, 158, 11, 0.9)" 
                       : "rgba(0, 0, 0, 0.8)",
                     color: "white",
@@ -202,15 +207,15 @@ export default function App() {
                     fontFamily: "monospace",
                     zIndex: 9999,
                     maxWidth: "300px",
-                    border: buildInfo.environment === "production" 
+                    border: clientEnvironment === "production" 
                       ? "2px solid #dc2626" 
-                      : buildInfo.environment === "staging" 
+                      : clientEnvironment === "staging" 
                       ? "2px solid #f59e0b" 
                       : "1px solid #374151"
                   }}
                 >
                   <div><strong>환경 정보:</strong></div>
-                  <div>Environment: <strong>{buildInfo.environment || "unknown"}</strong></div>
+                  <div>Environment: <strong>{clientEnvironment}</strong></div>
                   <div>Version: {buildInfo.version || "unknown"}</div>
                   
                   {/* Vercel 배포 정보 표시 */}

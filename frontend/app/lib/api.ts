@@ -43,16 +43,12 @@ function getApiBaseUrl(): string {
 
 const API_BASE_URL = getApiBaseUrl();
 
-// ✅ 환경변수 디버깅 (올바른 Vite 환경변수 접근)
-console.log('🔍 API_BASE_URL 설정값:', API_BASE_URL);
-console.log('🔍 VITE_API_URL 환경변수:', import.meta.env.VITE_API_URL);
-console.log('🔍 Environment Mode:', import.meta.env.MODE);
-console.log('✅ VITE_NODE_ENV:', import.meta.env.VITE_NODE_ENV || 'undefined (추가 필요)');
-console.log('✅ VITE_VERCEL_URL:', import.meta.env.VITE_VERCEL_URL || 'undefined');
-console.log('✅ PROD:', import.meta.env.PROD);
-console.log('✅ DEV:', import.meta.env.DEV);
-console.log('✅ BASE_URL:', import.meta.env.BASE_URL);
-console.log('✅ SSR:', import.meta.env.SSR);
+// ✅ 환경변수 디버깅
+const nodeEnv = import.meta.env.VITE_NODE_ENV || 'development';
+const isProduction = nodeEnv === 'production';
+
+console.log('✅ VITE_NODE_ENV:', nodeEnv);
+console.log('✅ PROD:', isProduction);
 
 class ApiClient {
   private baseURL: string;
