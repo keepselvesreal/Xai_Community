@@ -19,19 +19,30 @@ import ErrorBoundary from "~/components/common/ErrorBoundary";
 // 빌드 정보 타입 정의
 interface BuildInfo {
   version: string;
-  commit: string;
   environment: string;
-  deploymentId: string;
 }
 
 // 서버 사이드에서 환경변수를 안전하게 로드
 export async function loader() {
+  // 환경변수 우선순위: ENVIRONMENT > NODE_ENV
+  const environment = process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
+  
   const buildInfo: BuildInfo = {
     version: process.env.npm_package_version || "unknown",
-    commit: process.env.VERCEL_GIT_COMMIT_SHA || "unknown", 
-    environment: process.env.NODE_ENV || "development",
-    deploymentId: process.env.VERCEL_DEPLOYMENT_ID || "unknown",
+    environment: environment,
   };
+  
+  // Vercel 환경변수 콘솔 출력 (staging, production에서)
+  if (environment === "staging" || environment === "production") {
+    console.log("=== Vercel Environment Variables ===");
+    console.log("NODE_ENV:", process.env.NODE_ENV);
+    console.log("ENVIRONMENT:", process.env.ENVIRONMENT);
+    console.log("VERCEL_ENV:", process.env.VERCEL_ENV);
+    console.log("VERCEL_GIT_COMMIT_SHA:", process.env.VERCEL_GIT_COMMIT_SHA);
+    console.log("VERCEL_DEPLOYMENT_ID:", process.env.VERCEL_DEPLOYMENT_ID);
+    console.log("VERCEL_URL:", process.env.VERCEL_URL);
+    console.log("====================================");
+  }
   
   return { buildInfo };
 }
@@ -49,9 +60,7 @@ export const meta: MetaFunction<typeof loader> = ({ data }) => [
   { name: "description", content: "함께 만들어가는 우리 아파트 소통공간" },
   // 서버에서 로드한 빌드 정보를 메타태그에 포함
   { name: "build-version", content: data?.buildInfo.version || "unknown" },
-  { name: "build-commit", content: data?.buildInfo.commit || "unknown" },
   { name: "build-environment", content: data?.buildInfo.environment || "unknown" },
-  { name: "vercel-deployment", content: data?.buildInfo.deploymentId || "unknown" },
 ];
 
 export const links: LinksFunction = () => [
@@ -122,8 +131,18 @@ export default function App() {
   const buildInfo = data?.buildInfo;
   const location = useLocation();
   
-  // Google Analytics 페이지 변경 추적
+  // 환경정보 콘솔 출력 및 Google Analytics 페이지 변경 추적
   useEffect(() => {
+    // 환경정보 콘솔 출력 (클라이언트 사이드)
+    if (buildInfo && typeof window !== "undefined") {
+      console.log("=== 클라이언트 환경 정보 ===");
+      console.log("Environment:", buildInfo.environment);
+      console.log("Version:", buildInfo.version);
+      console.log("Current URL:", window.location.href);
+      console.log("User Agent:", navigator.userAgent);
+      console.log("========================");
+    }
+    
     const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
     
     if (typeof window !== "undefined" && window.gtag && GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-XXXXXXXXX") {
@@ -139,7 +158,7 @@ export default function App() {
         page_path: location.pathname,
       });
     }
-  }, [location]);
+  }, [location, buildInfo]);
   
   return (
     <ErrorBoundary>
@@ -148,29 +167,37 @@ export default function App() {
           <AuthProvider>
             <NotificationProvider>
               <Outlet />
-              {/* 개발 환경에서만 빌드 정보 표시 */}
-              {buildInfo?.environment === "development" && (
+              
+              {/* 모든 환경에서 환경 정보 표시 */}
+              {buildInfo && (
                 <div 
-                  id="build-info-dev" 
+                  id="environment-info" 
                   style={{
                     position: "fixed",
                     bottom: "10px",
                     right: "10px", 
-                    background: "rgba(0, 0, 0, 0.8)",
+                    background: buildInfo.environment === "production" 
+                      ? "rgba(220, 38, 38, 0.9)" 
+                      : buildInfo.environment === "staging" 
+                      ? "rgba(245, 158, 11, 0.9)" 
+                      : "rgba(0, 0, 0, 0.8)",
                     color: "white",
                     padding: "8px 12px",
                     borderRadius: "6px",
                     fontSize: "12px",
                     fontFamily: "monospace",
                     zIndex: 9999,
-                    maxWidth: "300px"
+                    maxWidth: "300px",
+                    border: buildInfo.environment === "production" 
+                      ? "2px solid #dc2626" 
+                      : buildInfo.environment === "staging" 
+                      ? "2px solid #f59e0b" 
+                      : "1px solid #374151"
                   }}
                 >
-                  <div><strong>Build Info:</strong></div>
-                  <div>Version: {buildInfo?.version || "unknown"}</div>
-                  <div>Commit: {buildInfo?.commit?.slice(0, 8) || "unknown"}</div>
-                  <div>Environment: {buildInfo?.environment || "unknown"}</div>
-                  <div>Deployment: {buildInfo?.deploymentId?.slice(0, 12) || "unknown"}</div>
+                  <div><strong>환경 정보:</strong></div>
+                  <div>Environment: <strong>{buildInfo.environment || "unknown"}</strong></div>
+                  <div>Version: {buildInfo.version || "unknown"}</div>
                 </div>
               )}
             </NotificationProvider>

@@ -104,3 +104,4 @@ credentials.json
 # Vercel local project settings only
 .vercel/
 frontend/.vercel/
+.vercel
