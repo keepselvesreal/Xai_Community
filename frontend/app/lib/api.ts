@@ -34,6 +34,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xai-community-back
 // 디버깅: API URL 확인
 console.log('🔍 API_BASE_URL 설정값:', API_BASE_URL);
 console.log('🔍 VITE_API_URL 환경변수:', import.meta.env.VITE_API_URL);
+console.log('🔍 Environment Mode:', import.meta.env.MODE);
 
 class ApiClient {
   private baseURL: string;
