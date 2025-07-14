@@ -1,4 +1,5 @@
 import { Link } from '@remix-run/react';
+import { getAnalytics } from '~/hooks/useAnalytics';
 import type { SearchAndFiltersProps } from '~/types/listTypes';
 
 export function SearchAndFilters({
@@ -12,6 +13,12 @@ export function SearchAndFilters({
   const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      
+      // GA4 검색 이벤트 추적
+      if (typeof window !== 'undefined' && searchQuery.trim()) {
+        const analytics = getAnalytics();
+        analytics.trackSearchQuery(searchQuery.trim(), 0); // 결과 수는 나중에 업데이트
+      }
     }
   };
 

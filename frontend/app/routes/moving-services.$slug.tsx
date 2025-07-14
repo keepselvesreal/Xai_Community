@@ -2,11 +2,14 @@ import { useState, useEffect } from "react";
 import { type MetaFunction, type LoaderFunction, json } from "@remix-run/node";
 import { useParams, useNavigate, useLoaderData } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
+import CommentSection from "~/components/comment/CommentSection";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 import { apiClient } from "~/lib/api";
+import { getAnalytics } from "~/hooks/useAnalytics";
 import { convertPostToService } from "~/types/service-types";
 import type { Service } from "~/types/service-types";
+import type { Comment } from "~/types";
 
 interface LoaderData {
   service: Service | null;
@@ -518,6 +521,12 @@ export default function ServiceDetail() {
           setReviewText('');
           setSelectedRating(0);
           
+          // GA4 서비스 후기 추적
+          if (typeof window !== 'undefined') {
+            const analytics = getAnalytics();
+            analytics.trackServiceReviewComment(slug!, 'new_review');
+          }
+          
           // 🚀 실시간 후기 통계 반영
           setService(prev => {
             if (!prev) return null;
@@ -576,6 +585,12 @@ export default function ServiceDetail() {
         setReplyContentMap(prev => ({ ...prev, [commentId]: '' }));
         setReplyingTo(null);
         await loadComments();
+        
+        // GA4 서비스 댓글 답글 추적
+        if (typeof window !== 'undefined') {
+          const analytics = getAnalytics();
+          analytics.trackServiceReviewComment(slug!, commentId); // 답글도 서비스 페이지 상호작용으로 추적
+        }
       } else {
         showError('답글 등록에 실패했습니다');
       }
@@ -1015,6 +1030,12 @@ export default function ServiceDetail() {
           setInquiryContact('');
           setIsInquiryPublic(true);
           setShowInquiryForm(false);
+          
+          // GA4 서비스 문의 추적
+          if (typeof window !== 'undefined') {
+            const analytics = getAnalytics();
+            analytics.trackServiceInquiryComment(slug!, 'new_inquiry');
+          }
           
           // 🚀 실시간 문의 통계 반영
           setService(prev => {

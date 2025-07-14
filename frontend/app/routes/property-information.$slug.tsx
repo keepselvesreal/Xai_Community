@@ -523,6 +523,7 @@ export default function InfoDetail() {
           postSlug={infoItem.slug!}
           comments={comments}
           onCommentAdded={handleCommentAdded}
+          pageType="property_information"
         />
 
         {/* 관련 정보 추천 */}

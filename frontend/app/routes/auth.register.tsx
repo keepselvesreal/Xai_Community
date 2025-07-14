@@ -7,6 +7,7 @@ import Input from "~/components/ui/Input";
 import Button from "~/components/ui/Button";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
+import { getAnalytics } from "~/hooks/useAnalytics";
 import { validateEmail, validatePassword, validateUserHandle } from "~/lib/utils";
 import { ERROR_MESSAGES, SUCCESS_MESSAGES } from "~/lib/constants";
 import type { RegisterRequest } from "~/types";
@@ -87,15 +88,37 @@ export default function Register() {
       password: formData.get("password") as string,
     };
 
+    // 퍼널 분석 - 회원가입 시도 단계
+    if (typeof window !== 'undefined') {
+      const analytics = getAnalytics();
+      analytics.trackFunnelStep('user_signup', 'form_submit', 3);
+    }
+
     try {
       await register(userData);
       showSuccess(SUCCESS_MESSAGES.REGISTER_SUCCESS);
+      
+      // 퍼널 분석 - 회원가입 완료 및 전환 이벤트
+      if (typeof window !== 'undefined') {
+        const analytics = getAnalytics();
+        analytics.trackFunnelComplete('user_signup', 3, Date.now());
+        analytics.trackSignUpConversion(userHandle, 'email');
+      }
+      
       // 회원가입 성공 시 바로 로그인 페이지로 이동
       window.location.href = "/auth/login";
     } catch (error) {
       showError(error instanceof Error ? error.message : ERROR_MESSAGES.UNKNOWN_ERROR);
     }
   };
+
+  // 페이지 로드 시 퍼널 시작 이벤트
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const analytics = getAnalytics();
+      analytics.trackFunnelStep('user_signup', 'page_load', 1);
+    }
+  }, []);
 
   // 이메일이 변경되면 아이디 자동 설정
   useEffect(() => {
@@ -105,6 +128,12 @@ export default function Register() {
       const validHandle = emailPart.replace(/[^a-zA-Z0-9_]/g, '').toLowerCase();
       setUserHandle(validHandle);
       setIsHandleEditing(false);
+      
+      // 퍼널 분석 - 이메일 입력 완료 단계
+      if (typeof window !== 'undefined') {
+        const analytics = getAnalytics();
+        analytics.trackFunnelStep('user_signup', 'email_input', 2);
+      }
     }
   }, [email]);
 

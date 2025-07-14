@@ -4,16 +4,19 @@ import Button from '~/components/ui/Button';
 import Textarea from '~/components/ui/Textarea';
 import CommentItem from '~/components/comment/CommentItem';
 import { useComments } from '~/hooks/useComments';
+import { getAnalytics } from '~/hooks/useAnalytics';
 import type { Comment } from '~/types';
 
 interface CommentSectionProps {
   postSlug: string;
   comments: Comment[];
   onCommentAdded: () => void;
+  pageType?: 'board' | 'property_information' | 'expert_tips' | 'moving_services';
+  subtype?: 'inquiry' | 'review' | 'service_inquiry' | 'service_review';
   className?: string;
 }
 
-const CommentSection = ({ postSlug, comments, onCommentAdded, className = "" }: CommentSectionProps) => {
+const CommentSection = ({ postSlug, comments, onCommentAdded, pageType = 'board', subtype, className = "" }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState('');
   
   const {
@@ -30,12 +33,80 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, className = "" }: 
     const success = await submitComment(newComment);
     if (success) {
       setNewComment('');
+      
+      // GA4 이벤트 추적 (페이지 타입 및 subtype별로 구분)
+      if (typeof window !== 'undefined') {
+        const analytics = getAnalytics();
+        
+        // moving_services 페이지에서 subtype별 추적
+        if (pageType === 'moving_services' && subtype) {
+          switch (subtype) {
+            case 'service_inquiry':
+              analytics.trackServiceInquiryComment(postSlug, 'new_comment');
+              break;
+            case 'service_review':
+              analytics.trackServiceReviewComment(postSlug, 'new_comment');
+              break;
+            default:
+              analytics.trackCommentCreate(postSlug, 'new_comment', pageType);
+          }
+        } else {
+          // 기존 페이지별 추적
+          switch (pageType) {
+            case 'board':
+              analytics.trackBoardComment(postSlug, 'new_comment');
+              break;
+            case 'property_information':
+              analytics.trackPropertyInfoComment(postSlug, 'new_comment');
+              break;
+            case 'expert_tips':
+              analytics.trackExpertTipComment(postSlug, 'new_comment');
+              break;
+            default:
+              analytics.trackCommentCreate(postSlug, 'new_comment', pageType);
+          }
+        }
+      }
     }
   };
 
   // CommentItem 핸들러들
   const handleReply = async (parentId: string, content: string) => {
-    await submitReply(parentId, content);
+    const success = await submitReply(parentId, content);
+    
+    // GA4 이벤트 추적 (페이지 타입 및 subtype별로 구분)
+    if (success && typeof window !== 'undefined') {
+      const analytics = getAnalytics();
+      
+      // moving_services 페이지에서 subtype별 추적
+      if (pageType === 'moving_services' && subtype) {
+        switch (subtype) {
+          case 'service_inquiry':
+            analytics.trackServiceInquiryComment(postSlug, parentId);
+            break;
+          case 'service_review':
+            analytics.trackServiceReviewComment(postSlug, parentId);
+            break;
+          default:
+            analytics.trackCommentCreate(postSlug, parentId, pageType);
+        }
+      } else {
+        // 기존 페이지별 추적
+        switch (pageType) {
+          case 'board':
+            analytics.trackBoardComment(postSlug, parentId);
+            break;
+          case 'property_information':
+            analytics.trackPropertyInfoComment(postSlug, parentId);
+            break;
+          case 'expert_tips':
+            analytics.trackExpertTipComment(postSlug, parentId);
+            break;
+          default:
+            analytics.trackCommentCreate(postSlug, parentId, pageType);
+        }
+      }
+    }
   };
 
   const handleEdit = async (commentId: string, content: string) => {

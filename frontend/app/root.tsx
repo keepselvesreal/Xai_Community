@@ -15,6 +15,7 @@ import { AuthProvider } from "~/contexts/AuthContext";
 import { NotificationProvider } from "~/contexts/NotificationContext";
 import { ThemeProvider } from "~/contexts/ThemeContext";
 import ErrorBoundary from "~/components/common/ErrorBoundary";
+import { getAnalytics } from "~/hooks/useAnalytics";
 
 // 빌드 정보 타입 정의
 interface BuildInfo {
@@ -91,8 +92,8 @@ export const links: LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const GA_MEASUREMENT_ID = typeof window !== "undefined" 
-    ? import.meta.env.VITE_GA_MEASUREMENT_ID 
-    : process.env.VITE_GA_MEASUREMENT_ID;
+    ? import.meta.env.VITE_GA_MEASUREMENT_ID_DEV 
+    : process.env.VITE_GA_MEASUREMENT_ID_DEV;
 
   return (
     <html lang="ko">
@@ -118,6 +119,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   gtag('config', '${GA_MEASUREMENT_ID}', {
                     page_title: document.title,
                     page_location: window.location.href,
+                    debug_mode: ${process.env.NODE_ENV === 'development'}
                   });
                 `,
               }}
@@ -166,20 +168,10 @@ export default function App() {
       console.log("========================");
     }
     
-    const GA_MEASUREMENT_ID = import.meta.env.VITE_GA_MEASUREMENT_ID;
-    
-    if (typeof window !== "undefined" && window.gtag && GA_MEASUREMENT_ID && GA_MEASUREMENT_ID !== "G-XXXXXXXXX") {
-      window.gtag("config", GA_MEASUREMENT_ID, {
-        page_title: document.title,
-        page_location: window.location.href,
-      });
-      
-      // 페이지뷰 이벤트 전송
-      window.gtag("event", "page_view", {
-        page_title: document.title,
-        page_location: window.location.href,
-        page_path: location.pathname,
-      });
+    // 새로운 analytics 라이브러리 사용
+    if (typeof window !== 'undefined') {
+      const analytics = getAnalytics();
+      analytics.trackPageView(location.pathname, document.title);
     }
   }, [location, buildInfo]);
   

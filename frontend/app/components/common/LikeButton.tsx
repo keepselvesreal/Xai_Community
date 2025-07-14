@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { getAnalytics } from "~/hooks/useAnalytics";
 
 interface LikeButtonProps {
   count: number;
@@ -19,6 +20,13 @@ export default function LikeButton({
 
   const handleClick = () => {
     setIsLiked(!isLiked);
+    
+    // GA4 이벤트 추적
+    if (typeof window !== 'undefined' && itemId && itemType) {
+      const analytics = getAnalytics();
+      analytics.trackPostLike(itemId.toString(), itemType);
+    }
+    
     if (onLike && itemId && itemType) {
       onLike(itemId, itemType);
     }

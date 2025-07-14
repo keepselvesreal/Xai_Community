@@ -603,6 +603,7 @@ export default function ExpertTipDetail() {
         postSlug={slug!}
         comments={comments}
         onCommentAdded={handleCommentAdded}
+        pageType="expert_tips"
       />
 
       {/* 관련 글 (향후 구현) */}

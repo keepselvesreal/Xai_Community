@@ -8,6 +8,7 @@ import Input from "~/components/ui/Input";
 import Select from "~/components/ui/Select";
 import Textarea from "~/components/ui/Textarea";
 import PostCard from "~/components/post/PostCard";
+import GA4TestPanel from "~/components/dev/GA4TestPanel";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 import { formatNumber, getMethodColor, getStatusColor } from "~/lib/utils";
@@ -256,6 +257,11 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* GA4 테스트 패널 */}
+      <div className="mb-8">
+        <GA4TestPanel />
+      </div>
+
       {/* API 테스트 섹션 */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
@@ -277,7 +283,7 @@ export default function Dashboard() {
                   <ApiEndpointTest
                     key={endpoint.id}
                     endpoint={endpoint}
-                    isExpanded={endpoint.isExpanded}
+                    isExpanded={endpoint.isExpanded || false}
                     testResult={testResults[endpoint.id]}
                     onToggle={() => toggleEndpoint(endpoint.id)}
                     onTest={(formData) => handleApiTest(endpoint, formData)}
@@ -300,7 +306,7 @@ export default function Dashboard() {
                   <ApiEndpointTest
                     key={endpoint.id}
                     endpoint={endpoint}
-                    isExpanded={endpoint.isExpanded}
+                    isExpanded={endpoint.isExpanded || false}
                     testResult={testResults[endpoint.id]}
                     onToggle={() => toggleEndpoint(endpoint.id)}
                     onTest={(formData) => handleApiTest(endpoint, formData)}
@@ -323,7 +329,7 @@ export default function Dashboard() {
                   <ApiEndpointTest
                     key={endpoint.id}
                     endpoint={endpoint}
-                    isExpanded={endpoint.isExpanded}
+                    isExpanded={endpoint.isExpanded || false}
                     testResult={testResults[endpoint.id]}
                     onToggle={() => toggleEndpoint(endpoint.id)}
                     onTest={(formData) => handleApiTest(endpoint, formData)}

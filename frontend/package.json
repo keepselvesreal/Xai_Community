@@ -24,6 +24,7 @@
     "@types/react-dom": "^18.2.7",
     "autoprefixer": "^10.4.19",
     "clsx": "^2.1.0",
+    "gtag": "^1.0.1",
     "isbot": "^4.1.0",
     "isomorphic-dompurify": "^2.25.0",
     "postcss": "^8.4.38",
