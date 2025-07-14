@@ -31,10 +31,16 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
 
-// 디버깅: API URL 확인
+// 🚨 EMERGENCY ENV DEBUG: 모든 환경변수 확인
 console.log('🔍 API_BASE_URL 설정값:', API_BASE_URL);
 console.log('🔍 VITE_API_URL 환경변수:', import.meta.env.VITE_API_URL);
 console.log('🔍 Environment Mode:', import.meta.env.MODE);
+console.log('🚨 NODE_ENV:', import.meta.env.NODE_ENV);
+console.log('🚨 PROD:', import.meta.env.PROD);
+console.log('🚨 DEV:', import.meta.env.DEV);
+console.log('🚨 VERCEL_ENV:', import.meta.env.VERCEL_ENV);
+console.log('🚨 Process NODE_ENV:', typeof process !== 'undefined' ? process.env.NODE_ENV : 'undefined');
+console.log('🚨 Process VERCEL_ENV:', typeof process !== 'undefined' ? process.env.VERCEL_ENV : 'undefined');
 
 class ApiClient {
   private baseURL: string;

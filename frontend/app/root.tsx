@@ -148,6 +148,33 @@ export default function App() {
           <AuthProvider>
             <NotificationProvider>
               <Outlet />
+              
+              {/* 🔍 STAGING EMERGENCY DEBUG: 모든 환경에서 환경변수 표시 */}
+              <div style={{
+                position: "fixed",
+                top: "10px",
+                left: "10px",
+                background: "#ff0000",
+                color: "white",
+                padding: "10px",
+                borderRadius: "5px",
+                fontSize: "11px",
+                fontFamily: "monospace",
+                zIndex: 99999,
+                maxWidth: "400px",
+                border: "3px solid #ffffff"
+              }}>
+                <div><strong>🚨 EMERGENCY ENV DEBUG</strong></div>
+                <div>NODE_ENV: {typeof window !== 'undefined' ? (import.meta.env.NODE_ENV || 'undefined') : process.env.NODE_ENV}</div>
+                <div>MODE: {typeof window !== 'undefined' ? (import.meta.env.MODE || 'undefined') : 'server'}</div>
+                <div>PROD: {typeof window !== 'undefined' ? (import.meta.env.PROD ? 'true' : 'false') : 'server'}</div>
+                <div>DEV: {typeof window !== 'undefined' ? (import.meta.env.DEV ? 'true' : 'false') : 'server'}</div>
+                <div>VERCEL_ENV: {typeof window !== 'undefined' ? (import.meta.env.VERCEL_ENV || 'undefined') : (process.env.VERCEL_ENV || 'undefined')}</div>
+                <div>VITE_API_URL: {typeof window !== 'undefined' ? (import.meta.env.VITE_API_URL || 'undefined') : 'server'}</div>
+                <div>Build Env: {buildInfo?.environment || 'unknown'}</div>
+                <div>Timestamp: {new Date().toISOString()}</div>
+              </div>
+              
               {/* 개발 환경에서만 빌드 정보 표시 */}
               {buildInfo?.environment === "development" && (
                 <div 
