@@ -319,10 +319,34 @@ export default function PostDetailOptimized() {
           setPost(postResult.data);
           
           if (commentsResult.success && commentsResult.data) {
+            console.log('🔍 OPTIMIZED.tsx - 댓글 API 응답 구조 분석:', {
+              success: commentsResult.success,
+              data: commentsResult.data,
+              hasComments: !!commentsResult.data.comments,
+              commentsLength: commentsResult.data.comments?.length || 0,
+              nestedData: commentsResult.data.data,
+              nestedCommentsLength: commentsResult.data.data?.comments?.length || 0
+            });
+            
             // getCommentsBatch 응답 구조 처리
             const actualComments = commentsResult.data.data?.comments || commentsResult.data.comments || [];
+            console.log('🔍 OPTIMIZED.tsx - actualComments:', {
+              actualCommentsLength: actualComments.length,
+              actualComments: actualComments.slice(0, 2)
+            });
+            
             const processedComments = processCommentsRecursive(actualComments);
+            console.log('🔍 OPTIMIZED.tsx - 처리된 댓글:', {
+              processedLength: processedComments.length,
+              processedComments: processedComments.slice(0, 2)
+            });
             setComments(processedComments);
+          } else {
+            console.log('❌ OPTIMIZED.tsx - 댓글 로딩 실패:', {
+              success: commentsResult.success,
+              error: commentsResult.error,
+              data: commentsResult.data
+            });
           }
           
           setLoadingState('loaded');

@@ -240,17 +240,37 @@ export default function PostDetailComplete() {
         setPost(data);
         
         // 댓글 데이터 처리
+        console.log('🔥🔥🔥 ROUTE DEBUG - board.$slug.COMPLETE.tsx 실행됨! 시간:', new Date().toISOString());
+        console.log('🔍 COMPLETE.tsx - 댓글 데이터 구조:', {
+          hasComments: !!data.comments,
+          commentsLength: data.comments?.length || 0,
+          commentsData: data.comments,
+          fullData: data
+        });
+        
         if (data.comments) {
           const processCommentsRecursive = (comments: any[]): any[] => {
-            return comments.map(comment => ({
-              ...comment,
-              id: comment.id || comment._id,
-              replies: comment.replies ? processCommentsRecursive(comment.replies) : []
-            }));
+            return comments.map(comment => {
+              console.log('🔍 COMPLETE.tsx - 댓글 처리:', {
+                id: comment.id || comment._id,
+                content: comment.content?.substring(0, 50) + '...'
+              });
+              return {
+                ...comment,
+                id: comment.id || comment._id,
+                replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+              };
+            });
           };
           
           const processedComments = processCommentsRecursive(data.comments || []);
+          console.log('🔍 COMPLETE.tsx - 처리된 댓글:', {
+            processedLength: processedComments.length,
+            processedComments
+          });
           setComments(processedComments);
+        } else {
+          console.log('❌ COMPLETE.tsx - 댓글 데이터 없음:', data);
         }
       } else {
         setIsNotFound(true);
