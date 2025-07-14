@@ -252,6 +252,75 @@ jobs:
         
         echo "🎉 스테이징 환경 검증 완료!"
 
+  # 🌐 프론트엔드 스테이징 배포 및 Git URL 연결
+  frontend-staging-deployment:
+    needs: [backend-safe-checks, frontend-safe-checks, staging-deployment]
+    runs-on: ubuntu-latest
+    environment: preview
+    if: github.ref == 'refs/heads/staging' && github.event_name == 'push'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        
+    - name: 🔧 Install Vercel CLI
+      run: npm install -g vercel
+      
+    - name: 🔑 Configure Vercel Authentication
+      run: |
+        echo "${{ secrets.VERCEL_TOKEN }}" | vercel login --stdin
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        
+    - name: 🌐 Deploy Frontend to Vercel (Staging)
+      working-directory: ./frontend
+      env:
+        VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+        VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      run: |
+        echo "🚀 프론트엔드 스테이징 배포 시작"
+        
+        # Vercel 프로젝트 연결
+        vercel link --yes --token=$VERCEL_TOKEN
+        
+        # Preview 환경으로 배포
+        DEPLOYMENT_URL=$(vercel deploy --token=$VERCEL_TOKEN --env NODE_ENV=development --env VERCEL_ENV=preview)
+        echo "📦 새로운 배포 URL: $DEPLOYMENT_URL"
+        
+        # Git 스테이징 URL에 alias 설정
+        echo "🔗 Git 스테이징 URL에 alias 설정 중..."
+        vercel alias $DEPLOYMENT_URL xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app --token=$VERCEL_TOKEN
+        
+        echo "✅ Git 스테이징 URL 연결 완료!"
+        echo "🌐 https://xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app"
+        
+    - name: 🔍 프론트엔드 배포 검증
+      run: |
+        echo "🔍 프론트엔드 배포 검증 시작"
+        echo "⏳ 배포 안정화 대기..."
+        sleep 10
+        
+        # Git 스테이징 URL 테스트
+        STAGING_FRONTEND_URL="https://xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app"
+        echo "🌐 스테이징 프론트엔드 URL: $STAGING_FRONTEND_URL"
+        
+        # 헬스체크
+        echo "🔍 프론트엔드 헬스체크..."
+        if curl -f -m 30 "$STAGING_FRONTEND_URL"; then
+          echo "✅ 프론트엔드 헬스체크 성공"
+        else
+          echo "❌ 프론트엔드 헬스체크 실패"
+          exit 1
+        fi
+        
+        echo "🎉 프론트엔드 배포 검증 완료!"
+
   # 🚀 프로덕션 배포 (main 브랜치에서만)
   production-deployment:
     needs: [backend-safe-checks, frontend-safe-checks]
@@ -407,7 +476,7 @@ jobs:
 
   # 📊 결과 알림
   notification:
-    needs: [backend-safe-checks, frontend-safe-checks, production-deployment, staging-deployment]
+    needs: [backend-safe-checks, frontend-safe-checks, production-deployment, staging-deployment, frontend-staging-deployment]
     runs-on: ubuntu-latest
     if: always()
     
@@ -421,9 +490,10 @@ jobs:
         
         # 스테이징 결과 표시 (staging 브랜치에서만)
         if [ "${{ github.ref }}" == "refs/heads/staging" ]; then
-          echo "🎯 스테이징 배포: ${{ needs.staging-deployment.result }}"
+          echo "🎯 스테이징 백엔드 배포: ${{ needs.staging-deployment.result }}"
+          echo "🎯 스테이징 프론트엔드 배포: ${{ needs.frontend-staging-deployment.result }}"
           echo "🌐 스테이징 백엔드: $STAGING_BACKEND_URL"
-          echo "🌐 스테이징 프런트엔드: $STAGING_FRONTEND_URL"
+          echo "🌐 스테이징 프런트엔드: https://xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app"
         fi
         
         # 프로덕션 결과 표시 (main 브랜치에서만)
@@ -434,7 +504,7 @@ jobs:
         fi
         
     - name: ❌ Failure notification
-      if: needs.backend-safe-checks.result == 'failure' || needs.frontend-safe-checks.result == 'failure' || needs.production-deployment.result == 'failure' || needs.staging-deployment.result == 'failure'
+      if: needs.backend-safe-checks.result == 'failure' || needs.frontend-safe-checks.result == 'failure' || needs.production-deployment.result == 'failure' || needs.staging-deployment.result == 'failure' || needs.frontend-staging-deployment.result == 'failure'
       run: |
         echo "❌ 일부 테스트 또는 배포 실패"
         echo "🔧 백엔드: ${{ needs.backend-safe-checks.result }}"
@@ -442,7 +512,8 @@ jobs:
         
         # 스테이징 실패 확인
         if [ "${{ github.ref }}" == "refs/heads/staging" ]; then
-          echo "🎯 스테이징 배포: ${{ needs.staging-deployment.result }}"
+          echo "🎯 스테이징 백엔드 배포: ${{ needs.staging-deployment.result }}"
+          echo "🎯 스테이징 프론트엔드 배포: ${{ needs.frontend-staging-deployment.result }}"
         fi
         
         # 프로덕션 실패 확인
@@ -454,9 +525,9 @@ jobs:
 
   # 🔄 자동 롤백 (배포 실패 시)
   auto-rollback:
-    needs: [backend-safe-checks, frontend-safe-checks, production-deployment, staging-deployment]
+    needs: [backend-safe-checks, frontend-safe-checks, production-deployment, staging-deployment, frontend-staging-deployment]
     runs-on: ubuntu-latest
-    if: failure() && (needs.production-deployment.result == 'failure' || needs.staging-deployment.result == 'failure')
+    if: failure() && (needs.production-deployment.result == 'failure' || needs.staging-deployment.result == 'failure' || needs.frontend-staging-deployment.result == 'failure')
     
     steps:
     - name: 📥 Checkout code
