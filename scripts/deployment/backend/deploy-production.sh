@@ -5,6 +5,7 @@
 # 참고: XAI-Community-완전통합-성공기록-2025-07-08.md
 
 set -e  # 오류 시 스크립트 중단
+set -x  # 모든 명령어 출력 (디버깅용)
 
 # 색상 정의
 RED='\033[0;31m'
@@ -38,7 +39,17 @@ log_info "=== XAI Community Backend Production Cloud Run 배포 시작 ==="
 
 # 환경변수 확인 (GitHub Secrets에서 주입됨)
 log_info "환경변수 확인 중..."
-log_info "환경변수는 GitHub Secrets에서 주입됨 - CI/CD 환경"
+if [ -f ".env.prod" ]; then
+    log_info ".env.prod 파일 발견 - 로컬 개발 환경"
+    # Windows 줄바꿈 문제 해결
+    sed -i 's/\r$//' .env.prod 2>/dev/null || true
+    # 파일에서 환경변수 로드
+    set -a
+    source .env.prod
+    set +a
+else
+    log_info "환경변수는 GitHub Secrets에서 주입됨 - CI/CD 환경"
+fi
 
 log_info "프로덕션 환경 설정 확인:"
 log_info "  - ENVIRONMENT: $ENVIRONMENT"
