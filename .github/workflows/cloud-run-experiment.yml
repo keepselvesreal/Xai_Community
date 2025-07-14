@@ -2,9 +2,9 @@ name: 🧪 Cloud Run 실험용 배포 (디버깅 테스트)
 
 on:
   push:
-    branches: [ main, experiment ]
+    branches: [ experiment ]
   pull_request:
-    branches: [ main ]
+    branches: [ experiment ]
 
 env:
   PROJECT_ID: xai-community
