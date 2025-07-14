@@ -31,16 +31,16 @@ import {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
 
-// ✅ 환경변수 디버깅 (VERCEL_ENV 개행문자 문제 해결 후)
+// ✅ 환경변수 디버깅 (올바른 Vite 환경변수 접근)
 console.log('🔍 API_BASE_URL 설정값:', API_BASE_URL);
 console.log('🔍 VITE_API_URL 환경변수:', import.meta.env.VITE_API_URL);
 console.log('🔍 Environment Mode:', import.meta.env.MODE);
-console.log('✅ NODE_ENV:', import.meta.env.NODE_ENV);
+console.log('✅ VITE_NODE_ENV:', import.meta.env.VITE_NODE_ENV || 'undefined (추가 필요)');
+console.log('✅ VITE_VERCEL_ENV:', import.meta.env.VITE_VERCEL_ENV || 'undefined (추가 필요)');
 console.log('✅ PROD:', import.meta.env.PROD);
 console.log('✅ DEV:', import.meta.env.DEV);
-console.log('✅ VERCEL_ENV:', import.meta.env.VERCEL_ENV);
-console.log('✅ Process NODE_ENV:', typeof process !== 'undefined' ? process.env.NODE_ENV : 'undefined');
-console.log('✅ Process VERCEL_ENV:', typeof process !== 'undefined' ? process.env.VERCEL_ENV : 'undefined');
+console.log('✅ BASE_URL:', import.meta.env.BASE_URL);
+console.log('✅ SSR:', import.meta.env.SSR);
 
 class ApiClient {
   private baseURL: string;
