@@ -15,12 +15,6 @@
   "github": {
     "autoAlias": true
   },
-  "alias": [
-    {
-      "domain": "xai-community-git-staging-ktsfrank-navercoms-projects.vercel.app",
-      "branch": "staging"
-    }
-  ],
   "rewrites": [
     {
       "source": "/(.*)",
