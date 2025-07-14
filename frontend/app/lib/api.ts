@@ -29,25 +29,16 @@ import {
   SESSION_MESSAGES
 } from './constants';
 
-// Vercel 환경에 따른 동적 API URL 설정
+// 환경별 API URL 설정
 function getApiBaseUrl(): string {
-  // 환경변수로 명시적으로 설정된 경우 우선 사용
+  // staging, production 환경에서는 Vercel 사이트 환경변수 사용
+  // 개발환경에서는 .env.development 파일의 환경변수 사용
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
   
-  // Vercel 환경에 따른 자동 설정
-  const vercelEnv = import.meta.env.VITE_NODE_ENV || import.meta.env.MODE;
-  
-  switch (vercelEnv) {
-    case 'preview':
-      return 'https://xai-community-backend-staging-798170408536.asia-northeast3.run.app';
-    case 'production':
-      return 'https://xai-community-backend-798170408536.asia-northeast3.run.app';
-    case 'development':
-    default:
-      return 'http://localhost:8000';
-  }
+  // 개발환경 fallback
+  return 'http://localhost:8000';
 }
 
 const API_BASE_URL = getApiBaseUrl();
