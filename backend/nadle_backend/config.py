@@ -402,20 +402,24 @@ class Settings(BaseSettings):
     # === Sentry 모니터링 설정 ===
     sentry_dsn: Optional[str] = Field(
         default=None,
+        env="SENTRY_DSN",
         description="Sentry DSN (에러 추적 및 성능 모니터링) - 환경변수 SENTRY_DSN"
     )
     sentry_environment: Optional[str] = Field(
         default=None,
+        env="SENTRY_ENVIRONMENT",
         description="Sentry 환경 설정 (자동으로 ENVIRONMENT 값 사용)"
     )
     sentry_traces_sample_rate: float = Field(
         default=1.0,
         ge=0.0,
         le=1.0,
+        env="SENTRY_TRACES_SAMPLE_RATE",
         description="Sentry 성능 추적 샘플링 비율 (0.0-1.0)"
     )
     sentry_send_default_pii: bool = Field(
         default=True,
+        env="SENTRY_SEND_DEFAULT_PII",
         description="Sentry에 개인정보 전송 여부"
     )
     

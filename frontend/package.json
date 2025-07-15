@@ -19,6 +19,8 @@
     "@remix-run/node": "^2.16.8",
     "@remix-run/react": "^2.16.8",
     "@remix-run/serve": "^2.16.8",
+    "@sentry/react": "^9.38.0",
+    "@sentry/tracing": "^7.120.3",
     "@types/ga-gtag": "^1.2.0",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",

@@ -48,6 +48,21 @@ logger.info(f"🔌 Server configuration: {HOST}:{PORT}")
 logger.info(f"📊 Environment: {ENVIRONMENT}")
 logger.info(f"🐍 Python path: {os.getenv('PYTHONPATH', 'Not set')}")
 
+# Sentry 초기화 테스트
+logger.info("🔍 Sentry 초기화 시도 중...")
+try:
+    from nadle_backend.monitoring.sentry_config import init_sentry_for_fastapi, get_sentry_config
+    
+    sentry_config = get_sentry_config()
+    if sentry_config.get('dsn'):
+        logger.info(f"✅ Sentry DSN 발견: {sentry_config['dsn'][:20]}...")
+        logger.info(f"🌍 Sentry Environment: {sentry_config['environment']}")
+    else:
+        logger.info("ℹ️  Sentry DSN이 설정되지 않음 - 개발 모드에서는 정상")
+        
+except Exception as e:
+    logger.error(f"❌ Sentry 초기화 실패: {e}")
+
 def create_app() -> FastAPI:
     """Routers와 Database 연결을 포함한 FastAPI 앱 생성"""
     logger.info("🚀 Creating FastAPI app with Routers and Database...")
@@ -57,6 +72,24 @@ def create_app() -> FastAPI:
         description="FastAPI app testing Routers and Database connection",
         version="1.0.0-progressive"
     )
+    
+    # Sentry 초기화 및 미들웨어 추가
+    logger.info("🚨 Sentry 초기화 중...")
+    try:
+        from nadle_backend.monitoring.sentry_config import init_sentry_for_fastapi
+        from nadle_backend.middleware.sentry_middleware import SentryRequestMiddleware, SentryUserMiddleware
+        
+        # Sentry 초기화
+        init_sentry_for_fastapi(app, dsn=sentry_config.get('dsn'), environment=sentry_config.get('environment'))
+        
+        # Sentry 미들웨어 추가
+        app.add_middleware(SentryRequestMiddleware)
+        app.add_middleware(SentryUserMiddleware)
+        
+        logger.info("✅ Sentry 초기화 및 미들웨어 추가 완료")
+        
+    except Exception as e:
+        logger.error(f"❌ Sentry 초기화 실패: {e}")
     
     # 1. Database 연결 테스트
     db_status = "not_tested"

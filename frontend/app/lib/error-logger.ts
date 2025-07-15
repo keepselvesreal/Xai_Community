@@ -1,8 +1,10 @@
 /**
  * 프론트엔드 에러 로깅 시스템
  * 
- * Sentry 대체용 자체 에러 로깅 및 Discord 알림 시스템
+ * Sentry와 Discord 하이브리드 에러 로깅 및 모니터링 시스템
  */
+
+import { sentryService } from './sentry-service';
 
 export interface ErrorContext {
   userId?: string;
@@ -41,6 +43,7 @@ class FrontendErrorLogger {
   private flushInterval: number = 30000; // 30초
   private retryCount: number = 0;
   private maxRetries: number = 3;
+  private useSentry: boolean = true; // Sentry 사용 여부
 
   constructor() {
     this.setupErrorHandlers();
@@ -56,11 +59,13 @@ class FrontendErrorLogger {
     isEnabled?: boolean;
     maxQueueSize?: number;
     flushInterval?: number;
+    useSentry?: boolean;
   }) {
     this.discordWebhookUrl = config.discordWebhookUrl || null;
     this.isEnabled = config.isEnabled ?? true;
     this.maxQueueSize = config.maxQueueSize || 100;
     this.flushInterval = config.flushInterval || 30000;
+    this.useSentry = config.useSentry ?? true;
   }
 
   /**
@@ -205,7 +210,40 @@ class FrontendErrorLogger {
   public logError(errorInfo: ErrorInfo) {
     if (!this.isEnabled) return;
 
-    // 큐에 추가
+    // Sentry로 에러 전송
+    if (this.useSentry && sentryService.isReady()) {
+      const error = new Error(errorInfo.message);
+      if (errorInfo.stack) {
+        error.stack = errorInfo.stack;
+      }
+
+      sentryService.captureError(error, {
+        component: errorInfo.context?.component,
+        action: 'error-logger',
+        url: errorInfo.context?.url,
+        userId: errorInfo.context?.userId,
+        sessionId: errorInfo.context?.sessionId,
+        additionalData: {
+          errorType: errorInfo.type,
+          severity: errorInfo.severity,
+          timestamp: errorInfo.context?.timestamp,
+          ...errorInfo.context?.additionalData
+        }
+      });
+
+      // Sentry 브레드크럼 추가
+      sentryService.addBreadcrumb(
+        `ErrorLogger: ${errorInfo.type} - ${errorInfo.message}`,
+        'error',
+        errorInfo.severity as any,
+        {
+          component: errorInfo.context?.component,
+          errorType: errorInfo.type
+        }
+      );
+    }
+
+    // 큐에 추가 (Discord 전송용)
     this.errorQueue.push(errorInfo);
 
     // 큐 크기 제한
@@ -274,7 +312,35 @@ class FrontendErrorLogger {
   public logPerformance(performanceInfo: PerformanceInfo) {
     if (!this.isEnabled) return;
 
-    // 큐에 추가
+    // Sentry로 성능 데이터 전송 (느린 작업만)
+    if (this.useSentry && sentryService.isReady() && performanceInfo.isSlowOperation) {
+      const transaction = sentryService.startTransaction(
+        `performance.${performanceInfo.operation}`,
+        'performance'
+      );
+      
+      if (transaction) {
+        transaction.setData('duration', performanceInfo.duration);
+        transaction.setData('component', performanceInfo.component);
+        transaction.setData('memoryUsage', performanceInfo.memoryUsage);
+        transaction.setData('additionalMetrics', performanceInfo.additionalMetrics);
+        transaction.finish();
+      }
+
+      // Sentry 브레드크럼 추가
+      sentryService.addBreadcrumb(
+        `Performance: ${performanceInfo.operation} took ${performanceInfo.duration.toFixed(2)}ms`,
+        'navigation',
+        'warning',
+        {
+          operation: performanceInfo.operation,
+          duration: performanceInfo.duration,
+          component: performanceInfo.component
+        }
+      );
+    }
+
+    // 큐에 추가 (Discord 전송용)
     this.performanceQueue.push(performanceInfo);
 
     // 큐 크기 제한
@@ -409,6 +475,15 @@ class FrontendErrorLogger {
    * 사용자 컨텍스트 설정
    */
   public setUserContext(userId: string, sessionId?: string) {
+    // Sentry에도 사용자 정보 설정
+    if (this.useSentry && sentryService.isReady()) {
+      sentryService.setUser({
+        id: userId,
+        // sessionId는 추가 데이터로 설정
+        sessionId: sessionId
+      });
+    }
+
     // 이후 모든 로그에 사용자 정보 포함
     const updateContext = (context: ErrorContext = {}) => {
       context.userId = userId;

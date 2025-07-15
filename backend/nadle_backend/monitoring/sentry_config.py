@@ -18,17 +18,19 @@ logger = logging.getLogger(__name__)
 
 def get_sentry_config() -> Dict[str, Any]:
     """
-    환경변수로부터 Sentry 설정을 로드합니다.
+    Settings 인스턴스로부터 Sentry 설정을 로드합니다.
     
     Returns:
         Dict[str, Any]: Sentry 설정 딕셔너리
     """
+    from nadle_backend.config import settings
+    
     return {
-        'dsn': os.getenv('SENTRY_DSN'),
-        'environment': os.getenv('SENTRY_ENVIRONMENT', 'development'),
-        'traces_sample_rate': float(os.getenv('SENTRY_TRACES_SAMPLE_RATE', '1.0')),
-        'send_default_pii': os.getenv('SENTRY_SEND_DEFAULT_PII', 'true').lower() == 'true',
-        'debug': os.getenv('SENTRY_DEBUG', 'false').lower() == 'true'
+        'dsn': settings.sentry_dsn,
+        'environment': settings.sentry_environment or settings.environment,
+        'traces_sample_rate': settings.sentry_traces_sample_rate,
+        'send_default_pii': settings.sentry_send_default_pii,
+        'debug': settings.environment == 'development'
     }
 
 

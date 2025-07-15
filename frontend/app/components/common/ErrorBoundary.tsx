@@ -1,4 +1,5 @@
 import React from "react";
+import { sentryService } from "~/lib/sentry-service";
 
 interface ErrorBoundaryState {
   hasError: boolean;
@@ -39,6 +40,17 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
       console.error('Auth error details:', error);
       console.error('Error info:', errorInfo);
       
+      // Sentry에 AuthContext 에러 리포트 (낮은 우선순위)
+      sentryService.captureError(error, {
+        component: 'ErrorBoundary',
+        action: 'auth_context_error',
+        additionalData: {
+          errorInfo: errorInfo.componentStack,
+          isAuthError: true,
+          autoRecovery: true
+        }
+      });
+      
       // 짧은 지연 후 자동 복구 시도 (뒤로가기 등의 일시적 문제 해결)
       setTimeout(() => {
         console.log('ErrorBoundary: Attempting auto-recovery from auth error');
@@ -47,6 +59,29 @@ export default class ErrorBoundary extends React.Component<ErrorBoundaryProps, E
     } else {
       // 일반 에러 로깅
       console.error('ErrorBoundary caught an error:', error, errorInfo);
+      
+      // Sentry에 일반 에러 리포트
+      sentryService.captureError(error, {
+        component: 'ErrorBoundary',
+        action: 'react_error_boundary',
+        additionalData: {
+          errorInfo: errorInfo.componentStack,
+          errorBoundary: true,
+          errorMessage: error.message,
+          errorStack: error.stack
+        }
+      });
+      
+      // Sentry 브레드크럼 추가
+      sentryService.addBreadcrumb(
+        `ErrorBoundary caught error: ${error.message}`,
+        'error',
+        'error',
+        {
+          componentStack: errorInfo.componentStack,
+          errorName: error.name
+        }
+      );
     }
     
     if (this.props.onError) {

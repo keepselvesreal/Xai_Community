@@ -69,7 +69,7 @@ export const mockUser = {
 export const mockToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1MDdmMWY3N2JjZjg2Y2Q3OTk0MzkwMTEiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpYXQiOjE2NzI1MzEyMDAsImV4cCI6OTk5OTk5OTk5OSwidHlwZSI6ImFjY2VzcyJ9.test-signature';
 
 // API 응답 모킹 헬퍼
-export const createMockApiResponse = <T>(data: T, success = true) => ({
+export const createMockApiResponse = <T,>(data: T, success = true) => ({
   success,
   data: success ? data : undefined,
   error: success ? undefined : 'Mock error',

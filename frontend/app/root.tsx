@@ -16,6 +16,7 @@ import { NotificationProvider } from "~/contexts/NotificationContext";
 import { ThemeProvider } from "~/contexts/ThemeContext";
 import ErrorBoundary from "~/components/common/ErrorBoundary";
 import { getAnalytics } from "~/hooks/useAnalytics";
+import { sentryService } from "~/lib/sentry-service";
 
 // 빌드 정보 타입 정의
 interface BuildInfo {
@@ -40,6 +41,15 @@ export async function loader() {
     deploymentUrl: process.env.VERCEL_URL,
     gitBranch: process.env.VERCEL_GIT_COMMIT_REF,
   };
+
+  // Sentry 설정 정보 (클라이언트에서 사용하기 위해)
+  const sentryConfig = {
+    dsn: process.env.SENTRY_DSN,
+    environment: environment,
+    tracesSampleRate: parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE || "1.0"),
+    sendDefaultPii: process.env.SENTRY_SEND_DEFAULT_PII === "true",
+    debug: process.env.SENTRY_DEBUG === "true" || environment === "development",
+  };
   
   // Vercel 환경변수 콘솔 출력 (staging, production에서)
   if (environment === "staging" || environment === "production") {
@@ -53,7 +63,7 @@ export async function loader() {
     console.log("====================================");
   }
   
-  return { buildInfo };
+  return { buildInfo, sentryConfig };
 }
 
 // Google Analytics 초기화 함수
@@ -139,11 +149,51 @@ export function Layout({ children }: { children: React.ReactNode }) {
 export default function App() {
   const data = useLoaderData<typeof loader>();
   const buildInfo = data?.buildInfo;
+  const sentryConfig = data?.sentryConfig;
   const location = useLocation();
   
   // Hydration 불일치 방지를 위해 상태로 관리
   const [clientEnvironment, setClientEnvironment] = useState(buildInfo?.environment || 'development');
+  const [sentryInitialized, setSentryInitialized] = useState(false);
   
+  // Sentry 초기화 useEffect (최우선)
+  useEffect(() => {
+    if (typeof window !== "undefined" && !sentryInitialized) {
+      try {
+        // Vite 환경변수에서 직접 로드
+        const finalConfig = {
+          dsn: import.meta.env.VITE_SENTRY_DSN,
+          environment: import.meta.env.VITE_ENVIRONMENT || 'development',
+          tracesSampleRate: parseFloat(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE || '1.0'),
+          sendDefaultPii: import.meta.env.VITE_SENTRY_SEND_DEFAULT_PII === 'true',
+          debug: import.meta.env.VITE_SENTRY_DEBUG === 'true' || import.meta.env.VITE_ENVIRONMENT === 'development',
+        };
+
+        console.log('🚨 프론트엔드 Sentry 초기화 시도:', {
+          environment: finalConfig.environment,
+          hasDsn: !!finalConfig.dsn,
+          debug: finalConfig.debug,
+          dsn: finalConfig.dsn ? finalConfig.dsn.substring(0, 30) + '...' : 'None'
+        });
+
+        if (finalConfig.dsn) {
+          // Sentry 초기화
+          sentryService.initialize(finalConfig);
+          setSentryInitialized(true);
+
+          console.log('✅ 프론트엔드 Sentry 초기화 완료');
+          
+          // 전역에 노출 (디버깅용)
+          (window as any).sentryService = sentryService;
+        } else {
+          console.warn('⚠️ VITE_SENTRY_DSN이 설정되지 않아 Sentry 초기화를 건너뜁니다.');
+        }
+      } catch (error) {
+        console.error('❌ 프론트엔드 Sentry 초기화 실패:', error);
+      }
+    }
+  }, [sentryInitialized]);
+
   // 환경정보 콘솔 출력 및 Google Analytics 페이지 변경 추적
   useEffect(() => {
     // 클라이언트에서 올바른 환경 설정 (hydration 불일치 방지)
