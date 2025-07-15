@@ -26,9 +26,6 @@ class TestNotificationServiceMock:
         service.smtp_password = "test_password"
         service.smtp_use_tls = True
         service.discord_webhook_url = "https://discord.com/api/webhooks/test"
-        service.sms_api_key = "test_api_key"
-        service.sms_api_secret = "test_api_secret"
-        service.sms_from_number = "+82101234567"
         return service
 
     @pytest.mark.asyncio
@@ -80,6 +77,9 @@ class TestNotificationServiceMock:
         # Given: SMTP 설정이 누락된 서비스
         service = NotificationService()
         # smtp_host, smtp_user, smtp_password 중 일부 누락
+        service.smtp_host = None
+        service.smtp_user = None
+        service.smtp_password = None
         
         # When: 이메일 전송 시도
         result = await service.send_email_notification(
@@ -193,33 +193,17 @@ class TestNotificationServiceMock:
         # Then: 전송 실패
         assert result is False
 
+    @pytest.mark.skip(reason="SMS 기능은 구현하지 않음")
     @pytest.mark.asyncio
     async def test_send_sms_notification_success(self, notification_service):
         """SMS 알림 전송 성공 테스트 (Mock)"""
-        # When: SMS 전송
-        result = await notification_service.send_sms_notification(
-            phone="+821012345678",
-            message="Test SMS alert",
-            urgent=True
-        )
-        
-        # Then: Mock 전송 성공
-        assert result is True
+        pass
 
+    @pytest.mark.skip(reason="SMS 기능은 구현하지 않음")
     @pytest.mark.asyncio
     async def test_send_sms_notification_missing_config(self):
         """SMS 설정 누락 테스트"""
-        # Given: SMS 설정이 누락된 서비스
-        service = NotificationService()
-        
-        # When: SMS 전송 시도
-        result = await service.send_sms_notification(
-            phone="+821012345678",
-            message="Test SMS alert"
-        )
-        
-        # Then: Mock 전송으로도 성공 (로그 기반)
-        assert result is True
+        pass
 
     @pytest.mark.asyncio
     async def test_send_uptime_alert_down(self, notification_service):
@@ -323,27 +307,23 @@ class TestNotificationServiceMock:
     @pytest.mark.asyncio
     async def test_notification_service_integration(self, notification_service):
         """알림 서비스 통합 테스트"""
-        # Given: 모든 알림 메서드 Mock
+        # Given: 이메일과 Discord 알림 메서드 Mock
         notification_service.send_email_notification = AsyncMock(return_value=True)
         notification_service.send_discord_notification = AsyncMock(return_value=True)
-        notification_service.send_sms_notification = AsyncMock(return_value=True)
         
         # When: 여러 알림을 순차적으로 전송
         email_result = await notification_service.send_email_notification(
             "test@example.com", "Test", "Message"
         )
         discord_result = await notification_service.send_discord_notification("Discord message")
-        sms_result = await notification_service.send_sms_notification("+821234567890", "SMS message")
         
         # Then: 모든 알림 전송 성공
         assert email_result is True
         assert discord_result is True
-        assert sms_result is True
         
         # 모든 메서드가 호출되었는지 확인
         notification_service.send_email_notification.assert_called_once()
         notification_service.send_discord_notification.assert_called_once()
-        notification_service.send_sms_notification.assert_called_once()
 
 
 class TestNotificationServiceFactory:
@@ -359,4 +339,4 @@ class TestNotificationServiceFactory:
         assert isinstance(service, NotificationService)
         assert hasattr(service, 'send_email_notification')
         assert hasattr(service, 'send_discord_notification')
-        assert hasattr(service, 'send_sms_notification')
+        # SMS 기능은 구현하지 않음

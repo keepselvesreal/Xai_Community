@@ -658,3 +658,37 @@ class HealthCheckService:
     def _get_uptime_seconds(self) -> int:
         """서버 업타임 초 계산 (더미 구현)"""
         return 3600  # 1시간
+    
+    async def get_version_info(self) -> Dict[str, Any]:
+        """버전 정보 조회"""
+        import os
+        return {
+            "version": os.getenv("BUILD_VERSION", "unknown"),
+            "commit_hash": os.getenv("COMMIT_HASH", "unknown"),
+            "build_time": os.getenv("BUILD_TIME", "unknown"),
+            "environment": os.getenv("ENVIRONMENT", "unknown"),
+            "service": "xai-community-backend"
+        }
+    
+    async def _check_redis_cache(self) -> Dict[str, Any]:
+        """Redis 캐시 상태 확인"""
+        try:
+            from ..database.redis_factory import get_redis_health
+            from ..config import get_settings
+            
+            redis_health = await get_redis_health()
+            settings = get_settings()
+            
+            return {
+                "status": "healthy" if redis_health.get("status") == "connected" else "unhealthy",
+                "redis_type": "upstash" if settings.use_upstash_redis else "local",
+                "key_prefix": settings.redis_key_prefix,
+                "cache_enabled": settings.cache_enabled,
+                "details": redis_health
+            }
+        except Exception as e:
+            logger.error(f"Redis 캐시 상태 확인 실패: {e}")
+            return {
+                "status": "unhealthy",
+                "error": str(e)
+            }

@@ -392,12 +392,16 @@ class TestIntelligentAlertingAPI:
         """알림 억제 설정 API 테스트"""
         # Given: 억제 규칙 데이터
         suppression_data = {
-            "type": "maintenance_window",
             "name": "weekend_maintenance",
-            "start_time": "2024-12-21T02:00:00Z",
-            "end_time": "2024-12-21T06:00:00Z",
-            "affected_services": ["api", "database"],
-            "description": "주말 유지보수"
+            "description": "주말 유지보수",
+            "rule_patterns": ["*weekend*", "*maintenance*"],
+            "time_windows": [
+                {
+                    "start": "2024-12-21T02:00:00Z",
+                    "end": "2024-12-21T06:00:00Z"
+                }
+            ],
+            "enabled": True
         }
 
         # When: 알림 억제 규칙 생성
@@ -408,8 +412,9 @@ class TestIntelligentAlertingAPI:
         
         response_data = response.json()
         assert response_data["name"] == "weekend_maintenance"
-        assert response_data["type"] == "maintenance_window"
-        assert "api" in response_data["affected_services"]
+        assert response_data["description"] == "주말 유지보수"
+        assert "*weekend*" in response_data["rule_patterns"]
+        assert "*maintenance*" in response_data["rule_patterns"]
 
     @pytest.mark.asyncio
     async def test_get_suppression_rules(self, async_client: AsyncClient):

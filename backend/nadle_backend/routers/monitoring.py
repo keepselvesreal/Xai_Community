@@ -79,10 +79,19 @@ async def monitoring_status() -> Dict[str, Any]:
 
 @router.get("/hetrix/monitors")
 async def get_monitors(
-    environment: Optional[str] = Query(None, description="환경 필터 (production, staging)"),
+    environment: Optional[str] = Query(None, description="환경 필터 (development, staging, production)"),
     hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service)
 ) -> Dict[str, Any]:
     """HetrixTools 모니터 목록 조회"""
+    # 환경 검증
+    if environment:
+        valid_environments = ["development", "staging", "production"]
+        if environment not in valid_environments:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}"
+            )
+    
     try:
         async with hetrix_service as service:
             if environment:
@@ -380,14 +389,35 @@ async def get_uptime_monitors_legacy(
 
 @router.get("/infrastructure/status", response_model=UnifiedMonitoringResponse)
 async def get_infrastructure_status(
+    environment: Optional[str] = Query(None, description="환경 필터 (development, staging, production)"),
     unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
 ) -> UnifiedMonitoringResponse:
     """모든 인프라의 통합 상태 조회"""
+    # 환경 검증
+    if environment:
+        valid_environments = ["development", "staging", "production"]
+        if environment not in valid_environments:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}"
+            )
+    
     try:
-        logger.info("인프라 통합 상태 조회 요청")
+        logger.info(f"인프라 통합 상태 조회 요청 (환경: {environment or 'all'})")
         result = await unified_service.get_all_infrastructure_status()
+        
+        # 환경 정보를 응답에 추가
+        if hasattr(result, 'model_dump'):
+            result_dict = result.model_dump()
+        elif hasattr(result, 'dict'):
+            result_dict = result.dict()
+        else:
+            result_dict = result.__dict__
+        
+        result_dict["environment"] = environment or "all"
+        
         logger.info(f"인프라 통합 상태 조회 완료: {result.infrastructure_count}개 서비스")
-        return result
+        return result_dict
         
     except Exception as e:
         logger.error(f"인프라 상태 조회 실패: {e}")
@@ -601,3 +631,182 @@ async def get_upstash_status(
     except Exception as e:
         logger.error(f"Upstash Redis 상태 조회 실패: {e}")
         raise HTTPException(status_code=500, detail=f"Upstash Redis 상태 조회 실패: {str(e)}")
+
+
+# === 새로운 통합 API들 ===
+
+@router.get("/environments")
+async def get_environments() -> Dict[str, Any]:
+    """사용 가능한 환경 목록 조회"""
+    return {
+        "environments": ["development", "staging", "production"],
+        "default": "production",
+        "description": "모니터링 가능한 환경 목록"
+    }
+
+
+@router.get("/dashboard/{environment}")
+async def get_unified_dashboard(
+    environment: str,
+    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
+    health_service: HealthCheckService = Depends(get_health_service)
+) -> Dict[str, Any]:
+    """환경별 통합 대시보드 API - 모든 모니터링 데이터를 하나의 엔드포인트에서 제공"""
+    
+    # 환경 검증
+    valid_environments = ["development", "staging", "production"]
+    if environment not in valid_environments:
+        raise HTTPException(
+            status_code=400, 
+            detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}"
+        )
+    
+    try:
+        logger.info(f"환경 '{environment}' 통합 대시보드 조회 시작")
+        
+        # 1. 외부 모니터링 (HetrixTools)
+        external_monitoring = {}
+        try:
+            async with hetrix_service as service:
+                monitors = await service.client.get_monitors_by_environment(environment)
+                
+                monitors_data = []
+                for monitor in monitors:
+                    monitors_data.append({
+                        "id": monitor.id,
+                        "name": monitor.name,
+                        "url": monitor.url,
+                        "status": monitor.status.value,
+                        "uptime": monitor.uptime,
+                        "response_time": monitor.response_time,
+                        "last_check": monitor.last_check
+                    })
+                
+                external_monitoring = {
+                    "service": "hetrixtools",
+                    "total_monitors": len(monitors_data),
+                    "monitors": monitors_data
+                }
+                
+        except Exception as e:
+            logger.warning(f"외부 모니터링 조회 실패: {e}")
+            external_monitoring = {
+                "service": "hetrixtools",
+                "error": str(e),
+                "total_monitors": 0,
+                "monitors": []
+            }
+        
+        # 2. 애플리케이션 모니터링 (헬스체크)
+        application_monitoring = {}
+        try:
+            health_result = await health_service.simple_health_check()
+            application_monitoring = {
+                "health_status": health_result.get("status", "unknown"),
+                "service": health_result.get("service", "nadle-backend-api"),
+                "timestamp": health_result.get("timestamp", datetime.utcnow().isoformat())
+            }
+        except Exception as e:
+            logger.warning(f"애플리케이션 모니터링 조회 실패: {e}")
+            application_monitoring = {
+                "health_status": "unhealthy",
+                "error": str(e),
+                "service": "nadle-backend-api"
+            }
+        
+        # 3. 인프라 모니터링 (4개 서비스)
+        infrastructure_monitoring = {}
+        try:
+            infra_result = await unified_service.get_all_infrastructure_status()
+            # Pydantic 모델을 딕셔너리로 변환
+            if hasattr(infra_result, 'model_dump'):
+                infrastructure_monitoring = infra_result.model_dump()
+            elif hasattr(infra_result, 'dict'):
+                infrastructure_monitoring = infra_result.dict()
+            else:
+                infrastructure_monitoring = infra_result.__dict__
+        except Exception as e:
+            logger.warning(f"인프라 모니터링 조회 실패: {e}")
+            infrastructure_monitoring = {
+                "error": str(e),
+                "services": {}
+            }
+        
+        # 통합 응답 구성
+        response = {
+            "environment": environment,
+            "timestamp": datetime.utcnow().isoformat(),
+            "external_monitoring": external_monitoring,
+            "application_monitoring": application_monitoring,
+            "infrastructure_monitoring": infrastructure_monitoring
+        }
+        
+        logger.info(f"환경 '{environment}' 통합 대시보드 조회 완료")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"통합 대시보드 조회 실패 (환경: {environment}): {e}")
+        raise HTTPException(status_code=500, detail=f"통합 대시보드 조회 실패: {str(e)}")
+
+
+@router.get("/health/cache")
+async def cache_health_check(
+    health_service: HealthCheckService = Depends(get_health_service)
+) -> Dict[str, Any]:
+    """Redis 캐시 상태 확인 (통합 API)"""
+    try:
+        result = await health_service._check_redis_cache()
+        return result
+    except Exception as e:
+        logger.error(f"캐시 헬스체크 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"캐시 헬스체크 실패: {str(e)}")
+
+
+@router.get("/version")
+async def version_info(
+    health_service: HealthCheckService = Depends(get_health_service)
+) -> Dict[str, Any]:
+    """버전 정보 조회 (통합 API)"""
+    try:
+        result = await health_service.get_version_info()
+        return result
+    except Exception as e:
+        logger.error(f"버전 정보 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"버전 정보 조회 실패: {str(e)}")
+
+
+@router.get("/debug/config")
+async def debug_config() -> Dict[str, Any]:
+    """외부 인프라 API 키 설정 상태 디버깅"""
+    settings = get_settings()
+    
+    return {
+        "vercel": {
+            "api_token_configured": bool(settings.vercel_api_token),
+            "team_id_configured": bool(settings.vercel_team_id),
+            "project_id_configured": bool(settings.vercel_project_id),
+            "api_token_preview": settings.vercel_api_token[:8] + "..." if settings.vercel_api_token else None
+        },
+        "atlas": {
+            "public_key_configured": bool(settings.atlas_public_key),
+            "private_key_configured": bool(settings.atlas_private_key),
+            "group_id_configured": bool(settings.atlas_group_id),
+            "cluster_name_configured": bool(settings.atlas_cluster_name),
+            "public_key_preview": settings.atlas_public_key[:4] + "..." if settings.atlas_public_key else None
+        },
+        "upstash": {
+            "api_key_configured": bool(settings.upstash_api_key),
+            "email_configured": bool(settings.upstash_email),
+            "database_id_configured": bool(settings.upstash_database_id),
+            "email_preview": settings.upstash_email[:5] + "..." if settings.upstash_email else None
+        },
+        "hetrix": {
+            "api_token_configured": bool(settings.hetrixtools_api_token),
+            "api_token_preview": settings.hetrixtools_api_token[:8] + "..." if settings.hetrixtools_api_token else None
+        },
+        "environment": settings.environment,
+        "env_file_loaded": getattr(settings, "_env_file", "unknown")
+    }

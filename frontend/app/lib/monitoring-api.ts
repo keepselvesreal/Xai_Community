@@ -18,9 +18,7 @@ import type {
   PopularEndpointsQueryParams,
 } from '~/types/monitoring';
 
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'https://your-backend-domain.com'
-  : 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const MONITORING_API_BASE = `${API_BASE_URL}/api/internal`;
 

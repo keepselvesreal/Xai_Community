@@ -230,15 +230,20 @@ class AuthService:
         cached_user = await cache_service.get_user_cache(user_id)
         
         if cached_user:
-            # 캐시된 데이터를 User 객체로 변환
-            return User(**cached_user)
+            # 캐시된 데이터에서 User 객체 생성 시 password_hash 필드 누락 처리
+            # 캐시된 데이터는 보안상 password_hash를 포함하지 않으므로 DB에서 다시 조회
+            user = await self.user_repository.get_by_id(user_id)
+            return user
         
         # 캐시에 없으면 DB에서 조회
         user = await self.user_repository.get_by_id(user_id)
         
-        # 조회된 데이터를 캐시에 저장
+        # 조회된 데이터를 캐시에 저장 (password_hash 제외)
         user_dict = user.model_dump()
-        await cache_service.set_user_cache(user_id, user_dict)
+        # 보안상 민감한 필드들 제외
+        sensitive_fields = ['password_hash', 'email_verification_token']
+        user_cache_dict = {k: v for k, v in user_dict.items() if k not in sensitive_fields}
+        await cache_service.set_user_cache(user_id, user_cache_dict)
         
         return user
     

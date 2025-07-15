@@ -76,5 +76,12 @@ app = create_minimal_app()
 
 if __name__ == "__main__":
     import uvicorn
+    
+    # 환경변수 기반 서버 설정
+    HOST = os.getenv("HOST", "0.0.0.0")
+    PORT = int(os.getenv("PORT", "8000"))
+    
     logger.info("🐍 Starting minimal uvicorn server...")
-    uvicorn.run("main_minimal:app", host="0.0.0.0", port=8000, reload=True)
+    logger.info(f"🔌 Binding to {HOST}:{PORT}")
+    
+    uvicorn.run("main_minimal:app", host=HOST, port=PORT, reload=True)
