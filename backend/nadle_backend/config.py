@@ -452,9 +452,15 @@ class Settings(BaseSettings):
     )
     
     # === 업타임 모니터링 설정 ===
+    # UptimeRobot에서 HetrixTools로 마이그레이션
     uptimerobot_api_key: Optional[str] = Field(
         default=None,
-        description="UptimeRobot API 키"
+        description="UptimeRobot API 키 (deprecated, use hetrixtools_api_token)"
+    )
+    
+    hetrixtools_api_token: Optional[str] = Field(
+        default=None,
+        description="HetrixTools API 토큰"
     )
     
     @field_validator("secret_key")
