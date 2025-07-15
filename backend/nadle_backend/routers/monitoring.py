@@ -1,7 +1,8 @@
 """
-HetrixTools 모니터링 API 라우터
+통합 모니터링 API 라우터
 
-업타임 모니터링, 헬스체크, 모니터 관리를 위한 API 엔드포인트
+HetrixTools 업타임 모니터링과 인프라 모니터링(Cloud Run, Vercel, Atlas, Upstash)을 
+통합하여 제공하는 API 엔드포인트
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Query
@@ -9,11 +10,21 @@ from typing import Dict, Any, List, Optional
 import logging
 from datetime import datetime
 
+# 기존 HetrixTools 모니터링
 from ..services.hetrix_monitoring import (
     HetrixMonitoringService, 
     HealthCheckService,
     Monitor,
     UptimeStatus
+)
+
+# 새로운 인프라 모니터링
+from ..services.monitoring import UnifiedMonitoringService
+from ..models.monitoring import (
+    InfrastructureType,
+    ServiceStatus,
+    UnifiedMonitoringResponse,
+    HealthCheckResponse
 )
 from ..config import get_settings
 
@@ -36,6 +47,11 @@ def get_hetrix_service() -> HetrixMonitoringService:
 def get_health_service() -> HealthCheckService:
     """HealthCheckService 의존성 주입"""
     return HealthCheckService()
+
+
+def get_unified_monitoring_service() -> UnifiedMonitoringService:
+    """UnifiedMonitoringService 의존성 주입"""
+    return UnifiedMonitoringService()
 
 
 @router.get("/status")
@@ -358,3 +374,230 @@ async def get_uptime_monitors_legacy(
                 "message": str(e)
             }
         }
+
+
+# === 새로운 인프라 모니터링 엔드포인트들 ===
+
+@router.get("/infrastructure/status", response_model=UnifiedMonitoringResponse)
+async def get_infrastructure_status(
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> UnifiedMonitoringResponse:
+    """모든 인프라의 통합 상태 조회"""
+    try:
+        logger.info("인프라 통합 상태 조회 요청")
+        result = await unified_service.get_all_infrastructure_status()
+        logger.info(f"인프라 통합 상태 조회 완료: {result.infrastructure_count}개 서비스")
+        return result
+        
+    except Exception as e:
+        logger.error(f"인프라 상태 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"인프라 상태 조회 실패: {str(e)}")
+
+
+@router.get("/infrastructure/health", response_model=HealthCheckResponse)
+async def infrastructure_health_check(
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> HealthCheckResponse:
+    """인프라 통합 헬스체크 (빠른 상태 확인)"""
+    try:
+        logger.info("인프라 헬스체크 요청")
+        result = await unified_service.health_check()
+        logger.info(f"인프라 헬스체크 완료: {result.status.value}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"인프라 헬스체크 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"인프라 헬스체크 실패: {str(e)}")
+
+
+@router.get("/infrastructure/services")
+async def get_configured_services(
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> Dict[str, Any]:
+    """설정된 인프라 서비스 목록 조회"""
+    try:
+        configured_services = unified_service.get_configured_services()
+        
+        return {
+            "total_services": len(configured_services),
+            "configured_services": [service.value for service in configured_services],
+            "service_details": {
+                service.value: {
+                    "name": service.value.replace('_', ' ').title(),
+                    "type": service.value
+                }
+                for service in configured_services
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"설정된 서비스 목록 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"서비스 목록 조회 실패: {str(e)}")
+
+
+@router.get("/infrastructure/{infrastructure_type}/metrics")
+async def get_service_metrics(
+    infrastructure_type: InfrastructureType,
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> Dict[str, Any]:
+    """특정 인프라 서비스의 상세 메트릭 조회"""
+    try:
+        logger.info(f"{infrastructure_type.value} 메트릭 조회 요청")
+        
+        metrics = await unified_service.get_service_metrics(infrastructure_type)
+        
+        if metrics is None:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"{infrastructure_type.value} 서비스가 설정되지 않았거나 메트릭을 가져올 수 없습니다"
+            )
+        
+        # 메트릭을 딕셔너리로 변환
+        metrics_dict = metrics.dict() if hasattr(metrics, 'dict') else metrics.__dict__
+        
+        result = {
+            "infrastructure_type": infrastructure_type.value,
+            "metrics": metrics_dict,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        logger.info(f"{infrastructure_type.value} 메트릭 조회 완료")
+        return result
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"{infrastructure_type.value} 메트릭 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"메트릭 조회 실패: {str(e)}")
+
+
+@router.get("/infrastructure/cloud-run/status")
+async def get_cloud_run_status(
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> Dict[str, Any]:
+    """Google Cloud Run 상태 조회"""
+    try:
+        metrics = await unified_service.get_service_metrics(InfrastructureType.CLOUD_RUN)
+        
+        if metrics is None:
+            raise HTTPException(status_code=404, detail="Cloud Run 서비스가 설정되지 않았습니다")
+        
+        return {
+            "service": "cloud_run",
+            "status": metrics.status.value,
+            "service_name": metrics.service_name,
+            "region": metrics.region,
+            "metrics": {
+                "cpu_utilization": metrics.cpu_utilization,
+                "memory_utilization": metrics.memory_utilization,
+                "instance_count": metrics.instance_count,
+                "request_count": metrics.request_count,
+                "response_time_ms": metrics.response_time_ms
+            },
+            "timestamp": metrics.timestamp.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Cloud Run 상태 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"Cloud Run 상태 조회 실패: {str(e)}")
+
+
+@router.get("/infrastructure/vercel/status")
+async def get_vercel_status(
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> Dict[str, Any]:
+    """Vercel 상태 조회"""
+    try:
+        metrics = await unified_service.get_service_metrics(InfrastructureType.VERCEL)
+        
+        if metrics is None:
+            raise HTTPException(status_code=404, detail="Vercel 서비스가 설정되지 않았습니다")
+        
+        return {
+            "service": "vercel",
+            "status": metrics.status.value,
+            "project_id": metrics.project_id,
+            "deployment_status": metrics.deployment_status,
+            "metrics": {
+                "deployment_url": metrics.deployment_url,
+                "function_invocations": metrics.function_invocations,
+                "core_web_vitals_score": metrics.core_web_vitals_score,
+                "response_time_ms": metrics.response_time_ms
+            },
+            "timestamp": metrics.timestamp.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Vercel 상태 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"Vercel 상태 조회 실패: {str(e)}")
+
+
+@router.get("/infrastructure/atlas/status")
+async def get_atlas_status(
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> Dict[str, Any]:
+    """MongoDB Atlas 상태 조회"""
+    try:
+        metrics = await unified_service.get_service_metrics(InfrastructureType.MONGODB_ATLAS)
+        
+        if metrics is None:
+            raise HTTPException(status_code=404, detail="MongoDB Atlas 서비스가 설정되지 않았습니다")
+        
+        return {
+            "service": "mongodb_atlas",
+            "status": metrics.status.value,
+            "cluster_name": metrics.cluster_name,
+            "cluster_type": metrics.cluster_type,
+            "metrics": {
+                "connections_current": metrics.connections_current,
+                "cpu_usage_percent": metrics.cpu_usage_percent,
+                "memory_usage_percent": metrics.memory_usage_percent,
+                "operations_per_second": metrics.operations_per_second,
+                "response_time_ms": metrics.response_time_ms
+            },
+            "timestamp": metrics.timestamp.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"MongoDB Atlas 상태 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"MongoDB Atlas 상태 조회 실패: {str(e)}")
+
+
+@router.get("/infrastructure/upstash/status")
+async def get_upstash_status(
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+) -> Dict[str, Any]:
+    """Upstash Redis 상태 조회"""
+    try:
+        metrics = await unified_service.get_service_metrics(InfrastructureType.UPSTASH_REDIS)
+        
+        if metrics is None:
+            raise HTTPException(status_code=404, detail="Upstash Redis 서비스가 설정되지 않았습니다")
+        
+        return {
+            "service": "upstash_redis",
+            "status": metrics.status.value,
+            "database_id": metrics.database_id,
+            "database_name": metrics.database_name,
+            "metrics": {
+                "hit_rate": metrics.hit_rate,
+                "memory_usage_percent": metrics.memory_usage_percent,
+                "connection_count": metrics.connection_count,
+                "operations_per_second": metrics.operations_per_second,
+                "response_time_ms": metrics.response_time_ms
+            },
+            "timestamp": metrics.timestamp.isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Upstash Redis 상태 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"Upstash Redis 상태 조회 실패: {str(e)}")

@@ -45,6 +45,10 @@ dependencies = [
     "redis>=5.0.0",
     "locust>=2.37.12",
     "sentry-sdk[fastapi]>=2.22.0",
+    # 인프라 모니터링을 위한 패키지들
+    "google-cloud-monitoring>=2.22.0",
+    "google-cloud-run>=0.10.0",
+    "google-auth>=2.30.0",
 ]
 
 [project.optional-dependencies]

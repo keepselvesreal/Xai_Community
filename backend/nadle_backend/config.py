@@ -467,6 +467,71 @@ class Settings(BaseSettings):
         description="HetrixTools API 토큰"
     )
     
+    # === 인프라 모니터링 설정 ===
+    # Google Cloud Run
+    gcp_project_id: Optional[str] = Field(
+        default=None,
+        description="Google Cloud 프로젝트 ID - Cloud Run 모니터링용"
+    )
+    gcp_service_account_path: Optional[str] = Field(
+        default=None,
+        description="Google Cloud 서비스 계정 JSON 파일 경로"
+    )
+    gcp_service_name: Optional[str] = Field(
+        default=None,
+        description="Google Cloud Run 서비스 이름"
+    )
+    gcp_region: Optional[str] = Field(
+        default=None,
+        description="Google Cloud Run 서비스 리전"
+    )
+    
+    # Vercel
+    vercel_api_token: Optional[str] = Field(
+        default=None,
+        description="Vercel API 토큰"
+    )
+    vercel_team_id: Optional[str] = Field(
+        default=None,
+        description="Vercel 팀 ID"
+    )
+    vercel_project_id: Optional[str] = Field(
+        default=None,
+        description="Vercel 프로젝트 ID"
+    )
+    
+    # MongoDB Atlas
+    atlas_public_key: Optional[str] = Field(
+        default=None,
+        description="MongoDB Atlas API 공개키"
+    )
+    atlas_private_key: Optional[str] = Field(
+        default=None,
+        description="MongoDB Atlas API 비밀키"
+    )
+    atlas_group_id: Optional[str] = Field(
+        default=None,
+        description="MongoDB Atlas 그룹(프로젝트) ID"
+    )
+    atlas_cluster_name: Optional[str] = Field(
+        default=None,
+        description="MongoDB Atlas 클러스터 이름"
+    )
+    
+    # Upstash Redis (추가 - 기존 REST API 외에 Dashboard API)
+    upstash_email: Optional[str] = Field(
+        default=None,
+        description="Upstash 계정 이메일 - API 인증용"
+    )
+    upstash_api_key: Optional[str] = Field(
+        default=None,
+        description="Upstash Dashboard API 키"
+    )
+    upstash_database_id: Optional[str] = Field(
+        default=None,
+        description="Upstash Redis 데이터베이스 ID"
+    )
+    
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
