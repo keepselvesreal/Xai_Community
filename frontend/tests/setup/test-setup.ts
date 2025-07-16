@@ -58,6 +58,21 @@ Object.defineProperty(window, 'location', {
   writable: true,
 });
 
+// window.matchMedia mock
+Object.defineProperty(window, 'matchMedia', {
+  value: vi.fn().mockImplementation((query) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(), // deprecated
+    removeListener: vi.fn(), // deprecated
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+  writable: true,
+});
+
 // Console 에러 필터링 (React 개발 모드 경고 제거)
 const originalError = console.error;
 beforeAll(() => {

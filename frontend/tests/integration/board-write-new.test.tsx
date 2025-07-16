@@ -1,12 +1,12 @@
 /**
- * 게시글 작성 폼 통합 테스트
- * TDD Red 단계: 폼 제출과 API 호출의 통합 테스트
+ * 게시글 작성 폼 통합 테스트 (PostWriteForm 기반)
+ * TDD Green 단계: 새로운 PostWriteForm 기반 구현 테스트
  */
 
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
-import BoardWrite from '~/routes/board_.write';
+import BoardWriteNew from '~/routes/board_.write.new';
 import { AuthProvider } from '~/contexts/AuthContext';
 import { NotificationProvider } from '~/contexts/NotificationContext';
 import { ThemeProvider } from '~/contexts/ThemeContext';
@@ -41,7 +41,7 @@ vi.mock('~/hooks/useTagInput', () => ({
   }),
 }));
 
-describe('Board Write Integration', () => {
+describe('Board Write Integration (PostWriteForm based)', () => {
   const mockUser = {
     id: '507f1f77bcf86cd799439011',
     email: 'test@example.com',
@@ -52,11 +52,13 @@ describe('Board Write Integration', () => {
 
   const TestWrapper = ({ children }: { children: React.ReactNode }) => (
     <MemoryRouter>
-      <AuthProvider>
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </MemoryRouter>
   );
 
@@ -89,7 +91,7 @@ describe('Board Write Integration', () => {
 
     render(
       <TestWrapper>
-        <BoardWrite />
+        <BoardWriteNew />
       </TestWrapper>
     );
 
@@ -134,7 +136,7 @@ describe('Board Write Integration', () => {
 
     render(
       <TestWrapper>
-        <BoardWrite />
+        <BoardWriteNew />
       </TestWrapper>
     );
 
@@ -175,22 +177,22 @@ describe('Board Write Integration', () => {
     const mockCreatePost = vi.mocked(apiClient.createPost);
     mockCreatePost.mockResolvedValue({
       success: false,
-      error: 'Validation Error: title field required',
+      error: 'Server Error: database connection failed',
       timestamp: '2025-06-30T10:00:00Z'
     });
 
     render(
       <TestWrapper>
-        <BoardWrite />
+        <BoardWriteNew />
       </TestWrapper>
     );
 
-    // Act: 유효하지 않은 데이터로 폼 제출
+    // Act: 유효한 데이터로 폼 제출하지만 서버 오류 발생
     const titleInput = screen.getByLabelText(/제목/);
     const contentTextarea = screen.getByLabelText(/내용/);
     const submitButton = screen.getByRole('button', { name: /게시글 작성/ });
 
-    fireEvent.change(titleInput, { target: { value: '' } }); // 빈 제목
+    fireEvent.change(titleInput, { target: { value: '테스트 제목' } });
     fireEvent.change(contentTextarea, { target: { value: '테스트 내용' } });
     fireEvent.click(submitButton);
 
@@ -217,7 +219,7 @@ describe('Board Write Integration', () => {
 
     render(
       <TestWrapper>
-        <BoardWrite />
+        <BoardWriteNew />
       </TestWrapper>
     );
 
@@ -251,7 +253,7 @@ describe('Board Write Integration', () => {
     
     render(
       <TestWrapper>
-        <BoardWrite />
+        <BoardWriteNew />
       </TestWrapper>
     );
 
@@ -265,7 +267,23 @@ describe('Board Write Integration', () => {
     fireEvent.click(submitButton);
     expect(mockCreatePost).not.toHaveBeenCalled();
   });
+
+  test('should render PostWriteForm with correct configuration', () => {
+    render(
+      <TestWrapper>
+        <BoardWriteNew />
+      </TestWrapper>
+    );
+
+    // PostWriteForm 설정 확인
+    expect(screen.getByText('글쓰기')).toBeInTheDocument();
+    expect(screen.getByText('아파트 주민들과 정보를 공유하고 소통해보세요.')).toBeInTheDocument();
+    expect(screen.getByLabelText('카테고리')).toBeInTheDocument();
+    expect(screen.getByLabelText(/제목/)).toBeInTheDocument();
+    expect(screen.getByLabelText(/내용/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /게시글 작성/ })).toBeInTheDocument();
+    expect(screen.getByText('취소')).toBeInTheDocument();
+  });
 });
 
-// Note: 이 테스트들은 현재 구현이 없으므로 실패할 것입니다.
-// TDD Red 단계: 실제 API 호출 로직을 구현해야 합니다.
+// Note: 이 테스트들은 PostWriteForm 기반 구현이 기존 구현과 동일하게 동작하는지 검증합니다.

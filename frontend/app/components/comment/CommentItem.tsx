@@ -137,8 +137,8 @@ const CommentItem = ({
   };
 
   return (
-    <div className={`${indentClass} ${depth > 0 ? 'border-l-2 border-gray-200 pl-4' : ''}`}>
-      <div className="py-4 border-b border-gray-100 last:border-b-0">
+    <div className={`${indentClass} ${depth > 0 ? 'pl-4' : ''}`}>
+      <div className="border-t border-gray-100 py-4">
         {/* Comment header */}
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2">
@@ -247,7 +247,7 @@ const CommentItem = ({
 
         {/* Reply form */}
         {isReplying && (
-          <div className="mt-3 pl-4 border-l-2 border-blue-200">
+          <div className="mt-3 pl-4">
             <Textarea
               placeholder="답글을 작성해주세요..."
               value={replyContent}
@@ -280,7 +280,7 @@ const CommentItem = ({
 
         {/* Nested replies */}
         {comment.replies && comment.replies.length > 0 && (
-          <div className="mt-4 border-l-2 border-gray-200 pl-4">
+          <div className="mt-4 pl-4">
             <div className="text-xs text-gray-500 mb-2">
               {comment.replies.length}개의 답글
             </div>

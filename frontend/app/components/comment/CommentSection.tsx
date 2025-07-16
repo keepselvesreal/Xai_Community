@@ -153,27 +153,23 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, pageType = 'board'
 
       {/* 댓글 작성 폼 */}
       {user && (
-        <Card>
-          <Card.Content>
-            <div className="space-y-4">
-              <Textarea
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="댓글을 작성해주세요..."
-                rows={3}
-              />
-              <div className="flex justify-end">
-                <Button
-                  onClick={handleSubmitComment}
-                  disabled={!newComment.trim() || isSubmitting}
-                  loading={isSubmitting}
-                >
-                  댓글 작성
-                </Button>
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
+        <div className="space-y-4">
+          <Textarea
+            value={newComment}
+            onChange={(e) => setNewComment(e.target.value)}
+            placeholder="댓글을 작성해주세요..."
+            rows={3}
+          />
+          <div className="flex justify-end">
+            <Button
+              onClick={handleSubmitComment}
+              disabled={!newComment.trim() || isSubmitting}
+              loading={isSubmitting}
+            >
+              댓글 작성
+            </Button>
+          </div>
+        </div>
       )}
 
       {/* 댓글 목록 */}

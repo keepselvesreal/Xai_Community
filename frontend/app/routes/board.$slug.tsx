@@ -2,9 +2,7 @@ import { useEffect, useState, useCallback, useMemo, memo } from 'react';
 import { useParams, useNavigate, useLoaderData } from '@remix-run/react';
 import { json, type LoaderFunction } from '@remix-run/node';
 import AppLayout from '~/components/layout/AppLayout';
-import Card from '~/components/ui/Card';
-import Button from '~/components/ui/Button';
-import CommentSection from '~/components/comment/CommentSection';
+import DetailPageLayout from '~/components/common/DetailPageLayout';
 import { useAuth } from '~/contexts/AuthContext';
 import { useNotification } from '~/contexts/NotificationContext';
 import { apiClient } from '~/lib/api';
@@ -37,66 +35,6 @@ export const loader: LoaderFunction = async ({ params }) => {
   });
 };
 
-interface ReactionButtonsProps {
-  post: Post;
-  onReactionChange: (reactionType: 'like' | 'dislike' | 'bookmark') => void;
-  pendingReactions?: Set<string>;
-}
-
-// 🚀 React.memo로 성능 최적화: post.stats가 변경되지 않으면 리렌더링 방지
-const ReactionButtons = memo(({ post, onReactionChange, pendingReactions = new Set() }: ReactionButtonsProps) => {
-  // 매번 새로운 함수 생성 방지
-  const handleLike = useCallback(() => onReactionChange('like'), [onReactionChange]);
-  const handleDislike = useCallback(() => onReactionChange('dislike'), [onReactionChange]);
-  const handleBookmark = useCallback(() => onReactionChange('bookmark'), [onReactionChange]);
-
-  return (
-    <div className="flex items-center space-x-2">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleLike}
-        disabled={pendingReactions.has('like')}
-        className="flex items-center space-x-1"
-      >
-        <span>👍</span>
-        <span>{post.stats?.like_count || post.stats?.likes || 0}</span>
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleDislike}
-        disabled={pendingReactions.has('dislike')}
-        className="flex items-center space-x-1"
-      >
-        <span>👎</span>
-        <span>{post.stats?.dislike_count || post.stats?.dislikes || 0}</span>
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleBookmark}
-        disabled={pendingReactions.has('bookmark')}
-        className="flex items-center space-x-1"
-      >
-        <span>🔖</span>
-        <span>{post.stats?.bookmark_count || post.stats?.bookmarks || 0}</span>
-      </Button>
-    </div>
-  );
-}, (prevProps, nextProps) => {
-  // 사용자 정의 비교 함수: 필요한 경우에만 리렌더링
-  const statsChanged = 
-    prevProps.post.stats?.like_count !== nextProps.post.stats?.like_count ||
-    prevProps.post.stats?.dislike_count !== nextProps.post.stats?.dislike_count ||
-    prevProps.post.stats?.bookmark_count !== nextProps.post.stats?.bookmark_count;
-  
-  const pendingChanged = 
-    prevProps.pendingReactions?.size !== nextProps.pendingReactions?.size ||
-    [...(prevProps.pendingReactions || [])].some(r => !nextProps.pendingReactions?.has(r));
-
-  return !statsChanged && !pendingChanged;
-});
 
 
 export default function PostDetail() {
@@ -340,17 +278,6 @@ export default function PostDetail() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      timeZone: 'Asia/Seoul', // 한국 시간대 명시적 설정
-    });
-  };
 
   // 작성자 권한 체크 함수
   const isAuthor = () => {
@@ -520,51 +447,20 @@ export default function PostDetail() {
   if (isLoading) {
     return (
       <AppLayout title="게시글" user={user} onLogout={logout}>
-        <div className="max-w-4xl mx-auto space-y-6">
-          {/* 스켈레톤 UI - 게시글 헤더 */}
-          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
-            <div className="h-8 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="flex space-x-4 mb-4">
-              <div className="h-4 bg-gray-200 rounded w-20"></div>
-              <div className="h-4 bg-gray-200 rounded w-24"></div>
-              <div className="h-4 bg-gray-200 rounded w-16"></div>
-            </div>
-            <div className="flex space-x-2">
-              <div className="h-8 bg-gray-200 rounded w-16"></div>
-              <div className="h-8 bg-gray-200 rounded w-16"></div>
-              <div className="h-8 bg-gray-200 rounded w-16"></div>
-            </div>
-          </div>
-          
-          {/* 스켈레톤 UI - 게시글 내용 */}
-          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-            <div className="space-y-3">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            </div>
-          </div>
-          
-          {/* 스켈레톤 UI - 댓글 섹션 */}
-          <div className="bg-white rounded-lg shadow p-6 animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-32 mb-4"></div>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex space-x-3">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full"></div>
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <DetailPageLayout
+          post={{} as Post}
+          user={user}
+          comments={[]}
+          onReactionChange={handleReactionChange}
+          onCommentAdded={handleCommentAdded}
+          onEditPost={handleEditPost}
+          onDeletePost={handleDeletePost}
+          isLoading={true}
+          pendingReactions={pendingReactions}
+          userReactions={userReactions}
+          postSlug={slug}
+          pageType="board"
+        />
       </AppLayout>
     );
   }
@@ -572,121 +468,40 @@ export default function PostDetail() {
   if (isNotFound || !post) {
     return (
       <AppLayout title="게시글을 찾을 수 없음" user={user} onLogout={logout}>
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            게시글을 찾을 수 없습니다
-          </h2>
-          <p className="text-gray-600 mb-6">
-            {loaderData.error || "요청하신 게시글이 존재하지 않거나 삭제되었습니다."}
-          </p>
-          <Button onClick={() => navigate('/board')}>
-            게시글 목록으로 돌아가기
-          </Button>
-        </div>
+        <DetailPageLayout
+          post={null as any}
+          user={user}
+          comments={[]}
+          onReactionChange={handleReactionChange}
+          onCommentAdded={handleCommentAdded}
+          onEditPost={handleEditPost}
+          onDeletePost={handleDeletePost}
+          isLoading={false}
+          pendingReactions={pendingReactions}
+          userReactions={userReactions}
+          postSlug={slug}
+          pageType="board"
+        />
       </AppLayout>
     );
   }
 
   return (
     <AppLayout title={post.title} user={user} onLogout={logout}>
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* 게시글 헤더 */}
-        <Card>
-          <Card.Header>
-            <div className="space-y-4">
-              <div>
-                <Card.Title level={1} className="text-2xl">
-                  {post.title}
-                </Card.Title>
-              </div>
-              
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                  {post.metadata?.type || 'board'}
-                </span>
-                <span>•</span>
-                <span>
-                  작성자: {post.author?.display_name || post.author?.user_handle || '익명'}
-                </span>
-                <span>•</span>
-                <span>{formatDate(post.created_at)}</span>
-                {post.stats && (
-                  <>
-                    <span>•</span>
-                    <span>조회 {post.stats.view_count || post.stats.views}</span>
-                  </>
-                )}
-              </div>
-
-              <ReactionButtons 
-                post={post} 
-                onReactionChange={handleReactionChange}
-                pendingReactions={pendingReactions}
-              />
-              
-              {/* 수정/삭제 버튼 (작성자만 보이도록) */}
-              {isAuthor() && (
-                <div className="flex items-center space-x-2 pt-2 border-t border-gray-200">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleEditPost}
-                    className="flex items-center space-x-1"
-                  >
-                    <span>✏️</span>
-                    <span>수정</span>
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleDeletePost}
-                    className="flex items-center space-x-1 text-red-600 hover:bg-red-50"
-                  >
-                    <span>🗑️</span>
-                    <span>삭제</span>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </Card.Header>
-        </Card>
-
-        {/* 게시글 내용 */}
-        <Card>
-          <Card.Content>
-            <div className="prose max-w-none">
-              <div className="whitespace-pre-wrap text-gray-700">
-                {post.content}
-              </div>
-            </div>
-          </Card.Content>
-        </Card>
-
-        {/* 태그 */}
-        {post.metadata?.tags && post.metadata.tags.length > 0 && (
-          <Card>
-            <Card.Content>
-              <div className="flex flex-wrap gap-2">
-                {post.metadata.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </Card.Content>
-          </Card>
-        )}
-
-        {/* 댓글 섹션 */}
-        <CommentSection
-          postSlug={slug!}
-          comments={comments}
-          onCommentAdded={handleCommentAdded}
-        />
-      </div>
+      <DetailPageLayout
+        post={post}
+        user={user}
+        comments={comments}
+        onReactionChange={handleReactionChange}
+        onCommentAdded={handleCommentAdded}
+        onEditPost={handleEditPost}
+        onDeletePost={handleDeletePost}
+        isLoading={isLoading}
+        pendingReactions={pendingReactions}
+        userReactions={userReactions}
+        postSlug={slug}
+        pageType="board"
+      />
     </AppLayout>
   );
 }

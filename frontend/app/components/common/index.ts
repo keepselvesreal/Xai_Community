@@ -14,3 +14,10 @@ export { ListSkeleton } from './ListSkeleton';
 
 // 기타 유틸리티 컴포넌트
 export { default as EmptyState } from './EmptyState';
+
+// 폼 컴포넌트
+export { default as PostWriteForm } from './PostWriteForm';
+export type { PostWriteFormProps, PostWriteFormConfig } from './PostWriteForm';
+
+// 레이아웃 컴포넌트
+export { default as DetailPageLayout } from './DetailPageLayout';
