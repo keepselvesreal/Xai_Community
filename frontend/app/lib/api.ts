@@ -789,10 +789,21 @@ class ApiClient {
   }
 
   async createComment(postSlug: string, commentData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
-    return this.request<Comment>(`/api/posts/${postSlug}/comments`, {
+    console.log('🚀 댓글 작성 API 호출:', { postSlug, commentData });
+    
+    const response = await this.request<Comment>(`/api/posts/${postSlug}/comments`, {
       method: 'POST',
       body: JSON.stringify(commentData),
     });
+    
+    console.log('🔍 댓글 작성 API 응답:', {
+      success: response.success,
+      data: response.data,
+      error: response.error,
+      timestamp: response.timestamp
+    });
+    
+    return response;
   }
 
   async updateComment(postSlug: string, commentId: string, content: string): Promise<ApiResponse<Comment>> {

@@ -63,6 +63,10 @@ class CommentsService:
         # Increment post comment count
         await self._increment_post_comment_count(str(post.id))
         
+        # 🚀 댓글 작성 후 캐시 무효화
+        await self._invalidate_comments_cache(post_slug)
+        print(f"🔄 댓글 작성 후 캐시 무효화 완료 - {post_slug}")
+        
         # Convert to response format
         comment_detail = await self._convert_to_comment_detail(comment)
         return comment_detail
@@ -231,6 +235,10 @@ class CommentsService:
         # Increment post comment count
         await self._increment_post_comment_count(str(post.id))
         
+        # 🚀 답글 작성 후 캐시 무효화
+        await self._invalidate_comments_cache(post_slug)
+        print(f"🔄 답글 작성 후 캐시 무효화 완료 - {post_slug}")
+        
         # Convert to response format
         reply_detail = await self._convert_to_comment_detail(reply)
         return reply_detail
@@ -270,6 +278,15 @@ class CommentsService:
         
         # Update comment
         updated_comment = await self.comment_repo.update(comment_id, content)
+        
+        # 🚀 댓글 수정 후 캐시 무효화
+        try:
+            post = await self.post_repo.get_by_id(str(comment.post_id))
+            if post:
+                await self._invalidate_comments_cache(post.slug)
+                print(f"🔄 댓글 수정 후 캐시 무효화 완료 - {post.slug}")
+        except Exception as e:
+            print(f"❌ 댓글 수정 후 캐시 무효화 실패: {e}")
         
         # Convert to response format
         comment_detail = await self._convert_to_comment_detail(updated_comment)
@@ -344,6 +361,15 @@ class CommentsService:
         # Get updated comment for response
         updated_comment = await self.comment_repo.get_by_id(comment_id)
         
+        # 🚀 댓글 반응 후 캐시 무효화
+        try:
+            post = await self.post_repo.get_by_id(str(comment.post_id))
+            if post:
+                await self._invalidate_comments_cache(post.slug)
+                print(f"🔄 댓글 반응 후 캐시 무효화 완료 - {post.slug}")
+        except Exception as e:
+            print(f"❌ 댓글 반응 후 캐시 무효화 실패: {e}")
+        
         return {
             "like_count": updated_comment.like_count,
             "dislike_count": updated_comment.dislike_count,
@@ -389,6 +415,13 @@ class CommentsService:
         if success:
             # Decrement post comment count
             await self._decrement_post_comment_count(str(post.id))
+            
+            # 🚀 댓글 삭제 후 캐시 무효화
+            try:
+                await self._invalidate_comments_cache(post.slug)
+                print(f"🔄 댓글 삭제 후 캐시 무효화 완료 - {post.slug}")
+            except Exception as e:
+                print(f"❌ 댓글 삭제 후 캐시 무효화 실패: {e}")
         
         return success
     
@@ -581,3 +614,24 @@ class CommentsService:
         }
         
         return route_mapping.get(normalized_type, f"/post/{slug}")
+    
+    async def _invalidate_comments_cache(self, post_slug: str) -> None:
+        """댓글 캐시 무효화
+        
+        Args:
+            post_slug: 게시글 slug
+        """
+        try:
+            from nadle_backend.database.redis_factory import get_redis_manager
+            from nadle_backend.database.cache_utils import get_prefixed_key
+            
+            redis_manager = await get_redis_manager()
+            cache_key = get_prefixed_key(f"comments_batch_v2:{post_slug}")
+            
+            # 캐시 삭제
+            await redis_manager.delete(cache_key)
+            print(f"🗑️ 댓글 캐시 삭제 완료 - {cache_key}")
+            
+        except Exception as e:
+            print(f"❌ 댓글 캐시 무효화 실패: {e}")
+            # 캐시 무효화 실패는 치명적이지 않으므로 예외를 발생시키지 않음

@@ -312,6 +312,26 @@ export default function PostDetail() {
           processedLength: processedComments.length
         });
         setComments(processedComments);
+        
+        // 🚀 댓글 수 업데이트: 게시글 통계 업데이트
+        if (post) {
+          const commentCount = processedComments.length;
+          setPost(prev => prev ? {
+            ...prev,
+            stats: {
+              view_count: prev.stats?.view_count || 0,
+              like_count: prev.stats?.like_count || 0,
+              dislike_count: prev.stats?.dislike_count || 0,
+              bookmark_count: prev.stats?.bookmark_count || 0,
+              comment_count: commentCount,
+              ...prev.stats
+            }
+          } : prev);
+          console.log('🔍 게시글 댓글 수 업데이트:', {
+            previousCount: post.stats?.comment_count || 0,
+            newCount: commentCount
+          });
+        }
       } else {
         console.log('❌ 댓글 새로고침 실패:', response);
       }
@@ -458,6 +478,26 @@ export default function PostDetail() {
             processedLength: processedComments.length
           });
           setComments(processedComments);
+          
+          // 🚀 초기 로딩 시에도 게시글 댓글 수 업데이트
+          if (postResult.success && postResult.data) {
+            const commentCount = processedComments.length;
+            setPost(prev => prev ? {
+              ...prev,
+              stats: {
+                view_count: prev.stats?.view_count || 0,
+                like_count: prev.stats?.like_count || 0,
+                dislike_count: prev.stats?.dislike_count || 0,
+                bookmark_count: prev.stats?.bookmark_count || 0,
+                comment_count: commentCount,
+                ...prev.stats
+              }
+            } : prev);
+            console.log('🔍 초기 로딩 게시글 댓글 수 업데이트:', {
+              previousCount: postResult.data.stats?.comment_count || 0,
+              newCount: commentCount
+            });
+          }
         } else {
           console.log('❌ 댓글 로딩 실패:', {
             success: commentsResult.success,
@@ -562,7 +602,7 @@ export default function PostDetail() {
               
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                  {post.type}
+                  {post.metadata?.type || 'board'}
                 </span>
                 <span>•</span>
                 <span>

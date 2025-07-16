@@ -15,6 +15,8 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
 
   // 댓글 작성
   const submitComment = async (content: string) => {
+    console.log('🚀 useComments - submitComment 호출:', { postSlug, content: content.substring(0, 50) + '...' });
+    
     if (!user) {
       showError('로그인이 필요합니다');
       return;
@@ -27,19 +29,29 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
 
     setIsSubmitting(true);
     try {
+      console.log('🔄 useComments - API 호출 시작:', { postSlug, contentLength: content.trim().length });
       const response = await apiClient.createComment(postSlug, {
         content: content.trim(),
       });
 
+      console.log('🔍 useComments - API 응답:', {
+        success: response.success,
+        hasData: !!response.data,
+        error: response.error
+      });
+
       if (response.success) {
+        console.log('✅ useComments - 댓글 작성 성공, onCommentAdded 호출');
         onCommentAdded();
         showSuccess('댓글이 작성되었습니다');
         return true;
       } else {
+        console.log('❌ useComments - 댓글 작성 실패:', response.error);
         showError(response.error || '댓글 작성에 실패했습니다');
         return false;
       }
     } catch (error) {
+      console.error('🚨 useComments - 댓글 작성 예외:', error);
       showError('댓글 작성 중 오류가 발생했습니다');
       return false;
     } finally {
