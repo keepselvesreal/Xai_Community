@@ -28,7 +28,7 @@ interface BoardFormData {
 const config: PostWriteFormConfig = {
   pageTitle: "글쓰기",
   pageDescription: "아파트 주민들과 정보를 공유하고 소통해보세요.",
-  submitButtonText: "게시글 작성",
+  submitButtonText: "작성",
   successMessage: "게시글이 성공적으로 작성되었습니다!",
   guidelines: [
     "아파트 주민들에게 도움이 되는 정보를 공유해주세요",
@@ -113,7 +113,7 @@ export default function BoardWrite() {
     }
   };
 
-  // 확장 필드 컴포넌트 (카테고리 선택 + 태그 입력)
+  // 확장 필드 컴포넌트 (카테고리 선택)
   const extendedFields = (
     <>
       {/* 카테고리 선택 */}
@@ -135,7 +135,12 @@ export default function BoardWrite() {
           ))}
         </select>
       </div>
+    </>
+  );
 
+  // 내용 섹션 후에 위치할 태그 입력 필드
+  const afterContentFields = (
+    <>
       {/* 태그 입력 */}
       <TagInput
         tags={tagInput.tags}
@@ -155,6 +160,7 @@ export default function BoardWrite() {
       initialData={formData}
       onDataChange={handleFormDataChange}
       extendedFields={extendedFields}
+      afterContentFields={afterContentFields}
       onSubmit={handleSubmit}
       onCancel={handleCancel}
       isSubmitting={isSubmitting}

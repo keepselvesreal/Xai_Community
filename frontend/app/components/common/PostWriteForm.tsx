@@ -17,7 +17,7 @@ export interface PostWriteFormConfig {
   contentMaxLength?: number;
 }
 
-export interface PostWriteFormProps<T = any> {
+export interface PostWriteFormProps<T = Record<string, unknown>> {
   // 설정
   config: PostWriteFormConfig;
   
@@ -27,6 +27,7 @@ export interface PostWriteFormProps<T = any> {
   
   // 확장 필드
   extendedFields?: React.ReactNode;
+  afterContentFields?: React.ReactNode;
   
   // 이벤트 핸들러
   onSubmit: (data: T) => Promise<void>;
@@ -42,10 +43,11 @@ export default function PostWriteForm<T extends { title: string; content: string
   initialData,
   onDataChange,
   extendedFields,
+  afterContentFields,
   onSubmit,
   onCancel,
   isSubmitting,
-  isEditMode = false,
+  isEditMode = false, // eslint-disable-line @typescript-eslint/no-unused-vars
 }: PostWriteFormProps<T>) {
   const { user, logout } = useAuth();
 
@@ -139,15 +141,8 @@ export default function PostWriteForm<T extends { title: string; content: string
               </div>
             </div>
 
-            {/* 작성 가이드라인 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">📝 작성 가이드라인</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                {guidelines.map((guideline, index) => (
-                  <li key={index}>• {guideline}</li>
-                ))}
-              </ul>
-            </div>
+            {/* 내용 후 필드 (예: 태그 입력) */}
+            {afterContentFields}
 
             {/* 버튼 영역 */}
             <div className="flex justify-end gap-3 pt-4 border-t border-var-color">

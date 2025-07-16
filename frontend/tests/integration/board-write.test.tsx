@@ -52,11 +52,13 @@ describe('Board Write Integration', () => {
 
   const TestWrapper = ({ children }: { children: React.ReactNode }) => (
     <MemoryRouter>
-      <AuthProvider>
-        <NotificationProvider>
-          {children}
-        </NotificationProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            {children}
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
     </MemoryRouter>
   );
 
@@ -97,7 +99,7 @@ describe('Board Write Integration', () => {
     const categorySelect = screen.getByLabelText('카테고리');
     const titleInput = screen.getByLabelText(/제목/);
     const contentTextarea = screen.getByLabelText(/내용/);
-    const submitButton = screen.getByRole('button', { name: /게시글 작성/ });
+    const submitButton = screen.getByRole('button', { name: /작성/ });
 
     fireEvent.change(categorySelect, { target: { value: 'info' } });
     fireEvent.change(titleInput, { target: { value: '테스트 제목' } });
@@ -141,7 +143,7 @@ describe('Board Write Integration', () => {
     const categorySelect = screen.getByLabelText('카테고리');
     const titleInput = screen.getByLabelText(/제목/);
     const contentTextarea = screen.getByLabelText(/내용/);
-    const submitButton = screen.getByRole('button', { name: /게시글 작성/ });
+    const submitButton = screen.getByRole('button', { name: /작성/ });
 
     // Act & Assert: 각 카테고리별로 테스트
     const categoryTests = [
@@ -175,7 +177,7 @@ describe('Board Write Integration', () => {
     const mockCreatePost = vi.mocked(apiClient.createPost);
     mockCreatePost.mockResolvedValue({
       success: false,
-      error: 'Validation Error: title field required',
+      error: 'Server Error: database connection failed',
       timestamp: '2025-06-30T10:00:00Z'
     });
 
@@ -185,12 +187,12 @@ describe('Board Write Integration', () => {
       </TestWrapper>
     );
 
-    // Act: 유효하지 않은 데이터로 폼 제출
+    // Act: 유효한 데이터로 폼 제출하지만 서버 오류 발생
     const titleInput = screen.getByLabelText(/제목/);
     const contentTextarea = screen.getByLabelText(/내용/);
-    const submitButton = screen.getByRole('button', { name: /게시글 작성/ });
+    const submitButton = screen.getByRole('button', { name: /작성/ });
 
-    fireEvent.change(titleInput, { target: { value: '' } }); // 빈 제목
+    fireEvent.change(titleInput, { target: { value: '테스트 제목' } });
     fireEvent.change(contentTextarea, { target: { value: '테스트 내용' } });
     fireEvent.click(submitButton);
 
@@ -224,7 +226,7 @@ describe('Board Write Integration', () => {
     // Act: 폼 제출
     const titleInput = screen.getByLabelText(/제목/);
     const contentTextarea = screen.getByLabelText(/내용/);
-    const submitButton = screen.getByRole('button', { name: /게시글 작성/ });
+    const submitButton = screen.getByRole('button', { name: /작성/ });
 
     fireEvent.change(titleInput, { target: { value: '테스트 제목' } });
     fireEvent.change(contentTextarea, { target: { value: '테스트 내용' } });
@@ -256,7 +258,7 @@ describe('Board Write Integration', () => {
     );
 
     // Act: 빈 필드로 제출 시도
-    const submitButton = screen.getByRole('button', { name: /게시글 작성/ });
+    const submitButton = screen.getByRole('button', { name: /작성/ });
     
     // Assert: 버튼이 비활성화되어 있어야 함
     expect(submitButton).toBeDisabled();
