@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시글 작성 - 첨부파일 기능</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f8fafc;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        
+        .header {
+            margin-bottom: 2rem;
+        }
+        
+        .header h1 {
+            font-size: 1.875rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            color: #64748b;
+        }
+        
+        .form-card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            padding: 2rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+        }
+        
+        .required {
+            color: #ef4444;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: all 0.2s;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .char-count {
+            text-align: right;
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 0.25rem;
+        }
+        
+        /* 리치 에디터 스타일 */
+        .editor-container {
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            overflow: hidden;
+        }
+        
+        .editor-toolbar {
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 0.75rem 1rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        
+        .toolbar-btn {
+            padding: 0.375rem 0.75rem;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .toolbar-btn:hover {
+            background: #f3f4f6;
+        }
+        
+        .toolbar-btn.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .file-upload-btn {
+            background: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+        
+        .file-upload-btn:hover {
+            background: #059669;
+        }
+        
+        .content-editor {
+            min-height: 300px;
+            padding: 1rem;
+            outline: none;
+            font-size: 1rem;
+            line-height: 1.6;
+            background: white;
+        }
+        
+        .content-editor:focus {
+            box-shadow: inset 0 0 0 2px #3b82f6;
+        }
+        
+        .content-editor img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 0.375rem;
+            margin: 0.5rem 0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .content-editor img:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .content-editor img.selected {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        
+        /* 드래그 앤 드롭 스타일 */
+        .content-editor.drag-over {
+            background: #eff6ff;
+            border-color: #3b82f6;
+        }
+        
+        .drop-indicator {
+            display: none;
+            position: absolute;
+            background: #3b82f6;
+            height: 2px;
+            left: 0;
+            right: 0;
+            z-index: 10;
+        }
+        
+        /* 이미지 편집 패널 */
+        .image-edit-panel {
+            display: none;
+            position: absolute;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+            z-index: 20;
+        }
+        
+        .image-edit-panel.show {
+            display: block;
+        }
+        
+        .panel-title {
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+            color: #374151;
+        }
+        
+        .panel-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .control-label {
+            font-size: 0.875rem;
+            color: #6b7280;
+            min-width: 60px;
+        }
+        
+        .control-input {
+            flex: 1;
+            padding: 0.375rem 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-small {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.25rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .btn-small:hover {
+            background: #f3f4f6;
+        }
+        
+        .btn-small.active {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        /* 태그 입력 */
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            min-height: 2.5rem;
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.5rem;
+            background: white;
+        }
+        
+        .tag {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            background: #e0e7ff;
+            color: #3730a3;
+            border-radius: 0.25rem;
+            font-size: 0.875rem;
+        }
+        
+        .tag-remove {
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .tag-input {
+            flex: 1;
+            min-width: 100px;
+            border: none;
+            outline: none;
+            font-size: 0.875rem;
+        }
+        
+        /* 버튼 스타일 */
+        .button-group {
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid;
+        }
+        
+        .btn-secondary {
+            background: white;
+            color: #6b7280;
+            border-color: #d1d5db;
+        }
+        
+        .btn-secondary:hover {
+            background: #f9fafb;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            border-color: #3b82f6;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        /* 가이드라인 */
+        .guidelines {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        
+        .guidelines h4 {
+            color: #1e40af;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .guidelines ul {
+            color: #1e3a8a;
+            font-size: 0.875rem;
+            margin-left: 1rem;
+        }
+        
+        .guidelines li {
+            margin-bottom: 0.25rem;
+        }
+        
+        /* 파일 업로드 숨김 */
+        #fileInput {
+            display: none;
+        }
+        
+        /* 로딩 스피너 */
+        .loading-spinner {
+            display: inline-block;
+            width: 1rem;
+            height: 1rem;
+            border: 2px solid #ffffff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <div class="header">
+            <h1>글쓰기</h1>
+            <p>아파트 주민들과 정보를 공유하고 소통해보세요.</p>
+        </div>
+        
+        <!-- 글쓰기 폼 -->
+        <div class="form-card">
+            <form id="postForm">
+                <!-- 카테고리 선택 -->
+                <div class="form-group">
+                    <label class="form-label">카테고리</label>
+                    <select class="form-select" name="category">
+                        <option value="info">정보 공유</option>
+                        <option value="notice">공지사항</option>
+                        <option value="question">질문</option>
+                        <option value="community">커뮤니티</option>
+                        <option value="complaint">민원/건의</option>
+                    </select>
+                </div>
+                
+                <!-- 제목 입력 -->
+                <div class="form-group">
+                    <label class="form-label">제목 <span class="required">*</span></label>
+                    <input type="text" class="form-input" name="title" placeholder="제목을 입력하세요" maxlength="200">
+                    <div class="char-count">0/200자</div>
+                </div>
+                
+                <!-- 내용 입력 (리치 에디터) -->
+                <div class="form-group">
+                    <label class="form-label">내용 <span class="required">*</span></label>
+                    <div class="editor-container">
+                        <!-- 에디터 툴바 -->
+                        <div class="editor-toolbar">
+                            <button type="button" class="toolbar-btn" data-command="bold">
+                                <strong>B</strong>
+                            </button>
+                            <button type="button" class="toolbar-btn" data-command="italic">
+                                <em>I</em>
+                            </button>
+                            <button type="button" class="toolbar-btn" data-command="underline">
+                                <u>U</u>
+                            </button>
+                            <span style="border-left: 1px solid #d1d5db; height: 20px; margin: 0 0.5rem;"></span>
+                            <button type="button" class="toolbar-btn" data-command="insertUnorderedList">
+                                • 목록
+                            </button>
+                            <button type="button" class="toolbar-btn" data-command="insertOrderedList">
+                                1. 목록
+                            </button>
+                            <span style="border-left: 1px solid #d1d5db; height: 20px; margin: 0 0.5rem;"></span>
+                            <button type="button" class="toolbar-btn file-upload-btn" onclick="document.getElementById('fileInput').click()">
+                                📎 이미지 추가
+                            </button>
+                            <button type="button" class="toolbar-btn" onclick="insertTestImage()" style="background: #8b5cf6; color: white;">
+                                🖼️ 테스트 이미지
+                            </button>
+                        </div>
+                        
+                        <!-- 콘텐츠 에디터 -->
+                        <div class="content-editor" 
+                             contenteditable="true" 
+                             data-placeholder="내용을 입력하세요. 이미지를 드래그하여 원하는 위치에 추가할 수 있습니다."
+                             id="contentEditor">
+                        </div>
+                    </div>
+                    <div class="char-count" id="contentCharCount">0/10,000자</div>
+                </div>
+                
+                <!-- 태그 입력 -->
+                <div class="form-group">
+                    <label class="form-label">태그 (최대 3개)</label>
+                    <div class="tag-container" id="tagContainer">
+                        <input type="text" class="tag-input" placeholder="태그 입력 후 쉼표(,) 또는 엔터" id="tagInput">
+                    </div>
+                </div>
+                
+                <!-- 작성 가이드라인 -->
+                <div class="form-group">
+                    <div class="guidelines">
+                        <h4>📝 게시글 작성 가이드라인</h4>
+                        <ul>
+                            <li>아파트 주민들에게 도움이 되는 정보를 공유해주세요</li>
+                            <li>서로를 배려하는 건전한 내용으로 작성해주세요</li>
+                            <li>개인정보나 민감한 정보는 포함하지 마세요</li>
+                            <li>명확하고 이해하기 쉬운 제목을 작성해주세요</li>
+                            <li>태그를 활용해 다른 주민들이 쉽게 찾을 수 있도록 해주세요</li>
+                            <li>이미지는 드래그앤드롭으로 추가하고, 클릭하여 크기와 정렬을 조절할 수 있습니다</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 버튼 영역 -->
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="handleCancel()">
+                        취소
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        ✏️ 게시글 작성
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- 파일 입력 (숨김) -->
+    <input type="file" id="fileInput" accept="image/*" multiple>
+    
+    <!-- 이미지 편집 패널 -->
+    <div class="image-edit-panel" id="imageEditPanel">
+        <div class="panel-title">이미지 편집</div>
+        <div class="panel-controls">
+            <div class="control-group">
+                <label class="control-label">크기:</label>
+                <input type="range" class="control-input" id="imageSizeSlider" min="10" max="100" value="100">
+                <span id="imageSizeValue">100%</span>
+            </div>
+            <div class="control-group">
+                <label class="control-label">정렬:</label>
+                <div class="control-buttons">
+                    <button type="button" class="btn-small" data-align="left">좌측</button>
+                    <button type="button" class="btn-small active" data-align="center">중앙</button>
+                    <button type="button" class="btn-small" data-align="right">우측</button>
+                </div>
+            </div>
+            <div class="control-group">
+                <button type="button" class="btn-small" onclick="deleteSelectedImage()" style="background: #ef4444; color: white; border-color: #ef4444;">삭제</button>
+                <button type="button" class="btn-small" onclick="closeImageEditPanel()">완료</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 전역 변수
+        let selectedImage = null;
+        let tags = [];
+        let isSubmitting = false;
+        
+        // DOM 요소
+        const contentEditor = document.getElementById('contentEditor');
+        const fileInput = document.getElementById('fileInput');
+        const imageEditPanel = document.getElementById('imageEditPanel');
+        const tagContainer = document.getElementById('tagContainer');
+        const tagInput = document.getElementById('tagInput');
+        const submitBtn = document.getElementById('submitBtn');
+        const titleInput = document.querySelector('input[name="title"]');
+        
+        // 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEditor();
+            setupFileUpload();
+            setupTagInput();
+            setupFormValidation();
+        });
+        
+        // 에디터 설정
+        function setupEditor() {
+            // 플레이스홀더 처리
+            contentEditor.addEventListener('focus', function() {
+                if (this.textContent.trim() === '') {
+                    this.innerHTML = '';
+                }
+            });
+            
+            contentEditor.addEventListener('blur', function() {
+                if (this.textContent.trim() === '') {
+                    this.innerHTML = '';
+                }
+                updateCharCount();
+            });
+            
+            // 입력 이벤트
+            contentEditor.addEventListener('input', updateCharCount);
+            
+            // 드래그 앤 드롭
+            contentEditor.addEventListener('dragover', handleDragOver);
+            contentEditor.addEventListener('drop', handleDrop);
+            contentEditor.addEventListener('dragleave', handleDragLeave);
+            
+            // 이미지 클릭 이벤트
+            contentEditor.addEventListener('click', handleImageClick);
+            
+            // 툴바 버튼 이벤트
+            document.querySelectorAll('.toolbar-btn[data-command]').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const command = this.dataset.command;
+                    document.execCommand(command, false, null);
+                    contentEditor.focus();
+                });
+            });
+        }
+        
+        // 파일 업로드 설정
+        function setupFileUpload() {
+            fileInput.addEventListener('change', function(e) {
+                console.log('파일 선택됨:', e.target.files);
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    console.log('파일 처리 중:', file.name, file.type);
+                    if (file.type.startsWith('image/')) {
+                        insertImageFile(file);
+                    } else {
+                        console.log('이미지 파일이 아님:', file.type);
+                    }
+                });
+                // 파일 입력 초기화
+                this.value = '';
+            });
+        }
+        
+        // 태그 입력 설정
+        function setupTagInput() {
+            tagInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    addTag();
+                } else if (e.key === 'Backspace' && this.value === '' && tags.length > 0) {
+                    removeTag(tags.length - 1);
+                }
+            });
+            
+            tagInput.addEventListener('blur', addTag);
+        }
+        
+        // 폼 검증 설정
+        function setupFormValidation() {
+            titleInput.addEventListener('input', function() {
+                updateCharCount();
+                validateForm();
+            });
+            
+            document.getElementById('postForm').addEventListener('submit', handleSubmit);
+        }
+        
+        // 드래그 오버 처리
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            contentEditor.classList.add('drag-over');
+        }
+        
+        // 드래그 리브 처리
+        function handleDragLeave(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            contentEditor.classList.remove('drag-over');
+        }
+        
+        // 드롭 처리
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            contentEditor.classList.remove('drag-over');
+            
+            console.log('파일 드롭됨:', e.dataTransfer.files);
+            const files = Array.from(e.dataTransfer.files);
+            
+            if (files.length === 0) {
+                console.log('드롭된 파일이 없음');
+                return;
+            }
+            
+            files.forEach(file => {
+                console.log('드롭된 파일:', file.name, file.type);
+                if (file.type.startsWith('image/')) {
+                    insertImageFileAtCursor(file, e);
+                } else {
+                    console.log('이미지 파일이 아님:', file.type);
+                }
+            });
+        }
+        
+        // 커서 위치에 이미지 파일 삽입
+        function insertImageFileAtCursor(file, event) {
+            console.log('드롭된 이미지 파일 처리 시작:', file.name);
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageUrl = e.target.result;
+                console.log('드롭된 파일 읽기 완료');
+                
+                // 드롭 위치 계산 (안전하게 처리)
+                try {
+                    if (event && event.clientX && event.clientY) {
+                        const range = document.caretRangeFromPoint(event.clientX, event.clientY);
+                        if (range && contentEditor.contains(range.startContainer)) {
+                            const selection = window.getSelection();
+                            selection.removeAllRanges();
+                            selection.addRange(range);
+                            console.log('드롭 위치에 커서 설정');
+                        }
+                    }
+                } catch (error) {
+                    console.log('드롭 위치 계산 실패, 기본 위치 사용:', error);
+                }
+                
+                insertImageAtCursor(imageUrl);
+            };
+            reader.onerror = function(e) {
+                console.error('드롭된 파일 읽기 실패:', e);
+                alert('이미지 파일을 읽는 중 오류가 발생했습니다.');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 일반 이미지 파일 삽입
+        function insertImageFile(file) {
+            console.log('이미지 파일 읽기 시작:', file.name);
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                console.log('파일 읽기 완료, 이미지 삽입 시작');
+                insertImageAtCursor(e.target.result);
+            };
+            reader.onerror = function(e) {
+                console.error('파일 읽기 실패:', e);
+                alert('이미지 파일을 읽는 중 오류가 발생했습니다.');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        // 커서 위치에 이미지 삽입
+        function insertImageAtCursor(imageUrl) {
+            console.log('이미지 삽입 함수 호출됨:', imageUrl.substring(0, 50) + '...');
+            
+            // 에디터에 포커스 주기
+            contentEditor.focus();
+            
+            const selection = window.getSelection();
+            let range;
+            
+            if (selection.rangeCount > 0) {
+                range = selection.getRangeAt(0);
+                console.log('기존 커서 위치 사용');
+            } else {
+                // 커서가 없으면 에디터 끝에 추가
+                range = document.createRange();
+                range.selectNodeContents(contentEditor);
+                range.collapse(false);
+                console.log('에디터 끝에 추가');
+            }
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.style.maxWidth = '100%';
+            img.style.height = 'auto';
+            img.style.display = 'block';
+            img.style.margin = '0.5rem auto';
+            img.style.borderRadius = '0.375rem';
+            img.style.cursor = 'pointer';
+            img.classList.add('inserted-image');
+            
+            // 이미지를 div 태그로 감싸기 (p 태그 대신)
+            const div = document.createElement('div');
+            div.style.textAlign = 'center';
+            div.style.margin = '1rem 0';
+            div.appendChild(img);
+            
+            // 이미지 삽입
+            try {
+                range.insertNode(div);
+                range.setStartAfter(div);
+                range.collapse(true);
+                selection.removeAllRanges();
+                selection.addRange(range);
+                console.log('이미지 삽입 성공');
+            } catch (error) {
+                console.error('이미지 삽입 실패:', error);
+                // 대안: 에디터 끝에 추가
+                contentEditor.appendChild(div);
+                console.log('에디터 끝에 직접 추가');
+            }
+            
+            updateCharCount();
+        }
+        
+        // 이미지 클릭 처리
+        function handleImageClick(e) {
+            if (e.target.tagName === 'IMG') {
+                selectImage(e.target);
+                showImageEditPanel(e.target);
+            } else {
+                closeImageEditPanel();
+            }
+        }
+        
+        // 이미지 선택
+        function selectImage(img) {
+            // 기존 선택 해제
+            document.querySelectorAll('.content-editor img').forEach(image => {
+                image.classList.remove('selected');
+            });
+            
+            // 새 이미지 선택
+            img.classList.add('selected');
+            selectedImage = img;
+        }
+        
+        // 이미지 편집 패널 표시
+        function showImageEditPanel(img) {
+            const rect = img.getBoundingClientRect();
+            const panel = imageEditPanel;
+            
+            // 현재 이미지 설정값 읽기
+            const computedStyle = window.getComputedStyle(img);
+            const currentWidth = parseInt(computedStyle.width);
+            const parentWidth = img.parentElement.offsetWidth;
+            const widthPercent = Math.round((currentWidth / parentWidth) * 100);
+            
+            // 슬라이더 값 설정
+            document.getElementById('imageSizeSlider').value = widthPercent;
+            document.getElementById('imageSizeValue').textContent = widthPercent + '%';
+            
+            // 현재 정렬 상태 확인
+            let currentAlign = 'center';
+            const floatValue = computedStyle.float;
+            
+            if (floatValue === 'left') {
+                currentAlign = 'left';
+            } else if (floatValue === 'right') {
+                currentAlign = 'right';
+            } else {
+                currentAlign = 'center';
+            }
+            
+            console.log('현재 이미지 정렬:', currentAlign, 'float:', floatValue);
+            
+            // 정렬 버튼 상태 설정
+            document.querySelectorAll('[data-align]').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.align === currentAlign);
+            });
+            
+            // 패널 위치 설정
+            panel.style.left = rect.left + 'px';
+            panel.style.top = (rect.bottom + 10) + 'px';
+            panel.classList.add('show');
+            
+            // 이벤트 리스너 설정
+            setupImageEditControls();
+        }
+        
+        // 이미지 편집 컨트롤 설정
+        function setupImageEditControls() {
+            const sizeSlider = document.getElementById('imageSizeSlider');
+            const sizeValue = document.getElementById('imageSizeValue');
+            
+            // 크기 조절
+            sizeSlider.oninput = function() {
+                if (selectedImage) {
+                    const percent = this.value;
+                    selectedImage.style.width = percent + '%';
+                    sizeValue.textContent = percent + '%';
+                }
+            };
+            
+            // 정렬 버튼
+            document.querySelectorAll('[data-align]').forEach(btn => {
+                btn.onclick = function() {
+                    if (selectedImage) {
+                        console.log('정렬 버튼 클릭:', this.dataset.align);
+                        
+                        document.querySelectorAll('[data-align]').forEach(b => b.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const align = this.dataset.align;
+                        const parent = selectedImage.parentElement;
+                        
+                        // textAlign 대신 이미지 자체의 정렬 스타일 변경
+                        if (align === 'left') {
+                            selectedImage.style.float = 'left';
+                            selectedImage.style.margin = '0.5rem 1rem 0.5rem 0';
+                            parent.style.textAlign = '';
+                        } else if (align === 'right') {
+                            selectedImage.style.float = 'right';
+                            selectedImage.style.margin = '0.5rem 0 0.5rem 1rem';
+                            parent.style.textAlign = '';
+                        } else {
+                            selectedImage.style.float = 'none';
+                            selectedImage.style.margin = '0.5rem auto';
+                            selectedImage.style.display = 'block';
+                            parent.style.textAlign = 'center';
+                        }
+                        
+                        console.log('이미지 정렬 적용됨:', align);
+                    }
+                };
+            });
+        }
+        
+        // 이미지 편집 패널 닫기
+        function closeImageEditPanel() {
+            imageEditPanel.classList.remove('show');
+            if (selectedImage) {
+                selectedImage.classList.remove('selected');
+                selectedImage = null;
+            }
+        }
+        
+        // 선택된 이미지 삭제
+        function deleteSelectedImage() {
+            if (selectedImage) {
+                console.log('이미지 삭제 중...');
+                
+                if (confirm('선택한 이미지를 삭제하시겠습니까?')) {
+                    const parent = selectedImage.parentElement;
+                    
+                    // 안전하게 삭제
+                    try {
+                        parent.remove();
+                        console.log('이미지 삭제 완료');
+                    } catch (error) {
+                        console.error('이미지 삭제 실패:', error);
+                        selectedImage.remove();
+                    }
+                    
+                    closeImageEditPanel();
+                    updateCharCount();
+                    
+                    // 에디터에 포커스 다시 주기
+                    contentEditor.focus();
+                } else {
+                    console.log('이미지 삭제 취소됨');
+                }
+            }
+        }
+        
+        // 태그 추가
+        function addTag() {
+            const value = tagInput.value.trim();
+            if (value && tags.length < 3 && !tags.includes(value)) {
+                tags.push(value);
+                renderTags();
+                tagInput.value = '';
+            }
+        }
+        
+        // 태그 제거
+        function removeTag(index) {
+            tags.splice(index, 1);
+            renderTags();
+        }
+        
+        // 태그 렌더링
+        function renderTags() {
+            const tagsHtml = tags.map((tag, index) => 
+                `<span class="tag">
+                    ${tag}
+                    <span class="tag-remove" onclick="removeTag(${index})">×</span>
+                </span>`
+            ).join('');
+            
+            tagContainer.innerHTML = tagsHtml + '<input type="text" class="tag-input" placeholder="태그 입력 후 쉼표(,) 또는 엔터" id="tagInput">';
+            
+            // 새로운 입력 요소에 이벤트 리스너 재설정
+            const newTagInput = document.getElementById('tagInput');
+            newTagInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    addTag();
+                } else if (e.key === 'Backspace' && this.value === '' && tags.length > 0) {
+                    removeTag(tags.length - 1);
+                }
+            });
+            newTagInput.addEventListener('blur', addTag);
+        }
+        
+        // 글자 수 업데이트
+        function updateCharCount() {
+            const titleLength = titleInput.value.length;
+            const contentLength = contentEditor.textContent.length;
+            
+            document.querySelector('.form-group:nth-child(2) .char-count').textContent = `${titleLength}/200자`;
+            document.getElementById('contentCharCount').textContent = `${contentLength}/10,000자`;
+            
+            validateForm();
+        }
+        
+        // 폼 검증
+        function validateForm() {
+            const titleValid = titleInput.value.trim().length > 0;
+            const contentValid = contentEditor.textContent.trim().length > 0;
+            
+            submitBtn.disabled = !titleValid || !contentValid || isSubmitting;
+        }
+        
+        // 폼 제출 처리
+        function handleSubmit(e) {
+            e.preventDefault();
+            
+            if (isSubmitting) return;
+            
+            const title = titleInput.value.trim();
+            const content = contentEditor.innerHTML;
+            const category = document.querySelector('select[name="category"]').value;
+            
+            if (!title || !content) {
+                alert('제목과 내용을 모두 입력해주세요.');
+                return;
+            }
+            
+            isSubmitting = true;
+            submitBtn.innerHTML = '<span class="loading-spinner"></span> 작성 중...';
+            submitBtn.disabled = true;
+            
+            // 실제 API 호출은 여기서 구현
+            setTimeout(() => {
+                alert('게시글이 성공적으로 작성되었습니다!');
+                // 페이지 이동 로직
+                isSubmitting = false;
+                submitBtn.innerHTML = '✏️ 게시글 작성';
+                validateForm();
+            }, 2000);
+        }
+        
+        // 취소 처리
+        function handleCancel() {
+            const hasContent = titleInput.value.trim() || contentEditor.textContent.trim() || tags.length > 0;
+            
+            if (hasContent) {
+                if (confirm('작성 중인 내용이 있습니다. 정말로 취소하시겠습니까?')) {
+                    // 페이지 이동 로직
+                    alert('게시판으로 이동합니다.');
+                }
+            } else {
+                // 페이지 이동 로직
+                alert('게시판으로 이동합니다.');
+            }
+        }
+        
+        // 테스트 이미지 삽입
+        function insertTestImage() {
+            console.log('테스트 이미지 생성 중...');
+            
+            // 캔버스로 테스트 이미지 생성
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 300;
+            const ctx = canvas.getContext('2d');
+            
+            // 그라데이션 배경
+            const gradient = ctx.createLinearGradient(0, 0, 400, 300);
+            gradient.addColorStop(0, '#ff7b7b');
+            gradient.addColorStop(0.5, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 400, 300);
+            
+            // 텍스트 추가
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 24px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('테스트 이미지', 200, 130);
+            
+            ctx.font = '16px Arial';
+            ctx.fillText('첨부파일 기능 테스트용', 200, 160);
+            ctx.fillText(new Date().toLocaleString(), 200, 180);
+            
+            // 데이터 URL로 변환하여 삽입
+            const imageUrl = canvas.toDataURL('image/png');
+            insertImageAtCursor(imageUrl);
+            
+            console.log('테스트 이미지 삽입 완료');
+        }
+        
+        // 외부 클릭 시 이미지 편집 패널 닫기
+        document.addEventListener('click', function(e) {
+            if (!imageEditPanel.contains(e.target) && !contentEditor.contains(e.target)) {
+                closeImageEditPanel();
+            }
+        });
+    </script>
+</body>
+</html>

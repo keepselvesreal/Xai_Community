@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XAI 커뮤니티 - 네비게이션 리디자인</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        /* 사이드바 */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            width: 280px;
+            height: 100vh;
+            background: white;
+            border-right: 1px solid #e5e5e7;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+
+        /* 상단 헤더 영역 - 고정 높이 */
+        .sidebar-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid #e5e5e7;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 120px; /* 고정 높이 설정 */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* 최상단 줄: 로고 + 로그인/다크모드 버튼 */
+        .header-top-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            letter-spacing: 2px;
+        }
+
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .login-btn, .dark-mode-btn, .toggle-btn {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .login-btn:hover, .dark-mode-btn:hover, .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .dark-mode-btn, .toggle-btn {
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        /* 회원정보 항목 (로그인 시에만 표시) */
+        .user-info-row {
+            height: 40px; /* 고정 높이 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 16px;
+        }
+
+        .user-info-item {
+            display: none; /* 기본적으로 숨김 */
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 8px 12px;
+            border-radius: 8px;
+        }
+
+        .user-info-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .user-info-item.show {
+            display: block;
+        }
+
+        /* 내비게이션 영역 */
+        .sidebar-nav {
+            flex: 1;
+            padding: 24px 0;
+            overflow-y: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.2); /* 구분선 추가 */
+        }
+
+        .nav-items {
+            padding: 0 16px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px 20px;
+            margin-bottom: 4px;
+            color: #424245;
+            text-decoration: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            position: relative;
+            text-align: center;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .nav-item:hover {
+            background: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .nav-item.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            right: 20px;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+        }
+
+        /* 푸터 */
+        .sidebar-footer {
+            padding: 20px 24px;
+            border-top: 1px solid #e5e5e7;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            color: #86868b;
+        }
+
+        /* 메인 콘텐츠 영역 */
+        .main-content {
+            margin-left: 280px;
+            padding: 40px;
+            min-height: 100vh;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.sidebar-collapsed {
+            margin-left: 0;
+        }
+
+        .content-header {
+            margin-bottom: 32px;
+        }
+
+        .content-title {
+            font-size: 32px;
+            font-weight: bold;
+            color: #1d1d1f;
+            margin-bottom: 8px;
+        }
+
+        .content-subtitle {
+            font-size: 16px;
+            color: #86868b;
+        }
+
+        .demo-content {
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        /* 로그인 상태 토글을 위한 스타일 */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            z-index: 1001;
+        }
+
+        .demo-toggle {
+            padding: 8px 16px;
+            background: #007aff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* 다크모드 스타일 */
+        body.dark {
+            background: #1c1c1e;
+            color: #f2f2f7;
+        }
+
+        body.dark .sidebar {
+            background: #2c2c2e;
+            border-right-color: #38383a;
+        }
+
+        body.dark .sidebar-header {
+            border-bottom-color: #38383a;
+        }
+
+        body.dark .sidebar-footer {
+            border-top-color: #38383a;
+        }
+
+        body.dark .nav-item {
+            color: #ebebf5;
+        }
+
+        body.dark .nav-item:hover {
+            background: #3a3a3c;
+            color: #f2f2f7;
+        }
+
+        /* 다크모드에서 네비게이션 아이템 구분선 */
+        body.dark .nav-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        body.dark .demo-content {
+            background: #2c2c2e;
+        }
+
+        body.dark .demo-controls {
+            background: #2c2c2e;
+        }
+
+        body.dark .footer-text {
+            color: #ebebf599;
+        }
+
+        body.dark .sidebar-nav {
+            border-top: 1px solid #38383a;
+        }
+
+        /* 회원정보 네비게이션 아이템 스타일 */
+        .user-nav-item {
+            display: none; /* 기본적으로 숨김 */
+        }
+
+        .user-nav-item.show {
+            display: flex;
+        }
+
+        /* 회원정보 구분선 */
+        .user-nav-divider {
+            height: 1px;
+            background: rgba(0, 0, 0, 0.2);
+            margin: 16px 20px;
+            display: none;
+        }
+
+        .user-nav-divider.show {
+            display: block;
+        }
+
+        /* 다크모드에서 구분선 색상 */
+        body.dark .user-nav-divider {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        /* 네비게이션 하단 메뉴 토글 버튼 */
+        .nav-toggle-btn {
+            margin: 16px;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            width: calc(100% - 32px);
+            display: block;
+        }
+
+        .nav-toggle-btn:hover {
+            background: rgba(0, 0, 0, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* 라이트 모드에서의 토글 버튼 */
+        body:not(.dark) .nav-toggle-btn {
+            background: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.2);
+            color: #333;
+        }
+
+        body:not(.dark) .nav-toggle-btn:hover {
+            background: rgba(0, 0, 0, 0.15);
+        }
+
+        /* 메뉴 보기 버튼 - 정확히 메뉴 숨기기 버튼과 같은 위치 */
+        .show-menu-btn {
+            position: fixed;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 1001;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+            opacity: 0.8;
+        }
+
+        .show-menu-btn.show {
+            display: block;
+        }
+
+        .show-menu-btn:hover {
+            transform: translateY(-50%) scale(1.05);
+            opacity: 1;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- 데모 컨트롤 -->
+    <div class="demo-controls">
+        <button class="demo-toggle" onclick="toggleLoginState()">로그인 상태 토글</button>
+        <button class="demo-toggle" onclick="toggleDarkMode()" style="margin-left: 8px;">다크모드 토글</button>
+        <button class="demo-toggle" onclick="toggleSidebar()" style="margin-left: 8px;">사이드바 토글</button>
+    </div>
+
+    <!-- 메뉴 보기 버튼 -->
+    <button class="show-menu-btn" id="showMenuBtn" onclick="toggleSidebar()">메뉴 보기</button>
+
+    <!-- 사이드바 -->
+    <nav class="sidebar">
+        <!-- 헤더 영역 -->
+        <div class="sidebar-header">
+            <!-- 최상단 줄: 로고 + 로그인/다크모드 버튼 -->
+            <div class="header-top-row">
+                <div class="logo-section">
+                    <div class="logo-text">xAI</div>
+                </div>
+                <div class="header-controls">
+                    <button class="login-btn" id="loginBtn">로그인</button>
+                    <button class="dark-mode-btn" onclick="toggleDarkMode()">🌙</button>
+                </div>
+            </div>
+
+            <!-- 두 번째 줄: 빈 공간 (회원정보 항목 제거) -->
+            <div class="user-info-row">
+                <!-- 회원정보 항목이 네비게이션으로 이동됨 -->
+            </div>
+        </div>
+
+        <!-- 내비게이션 -->
+        <div class="sidebar-nav">
+            <div class="nav-items">
+                <a href="#" class="nav-item active">게시판</a>
+                <a href="#" class="nav-item">정보</a>
+                <a href="#" class="nav-item">입주 업체 서비스</a>
+                <a href="#" class="nav-item">전문가 꿀정보</a>
+                
+                <!-- 회원정보 항목 (로그인 시에만 표시) -->
+                <a href="#" class="nav-item user-nav-item" id="userNavItem">회원정보</a>
+            </div>
+        </div>
+
+        <!-- 메뉴 토글 버튼 -->
+        <button class="nav-toggle-btn" onclick="toggleSidebar()">메뉴 숨기기</button>
+
+        <!-- 푸터 -->
+        <div class="sidebar-footer">
+            <div class="footer-text">© 2024 XAI 아파트 커뮤니티</div>
+        </div>
+    </nav>
+
+    <!-- 메인 콘텐츠 -->
+    <main class="main-content" id="mainContent">
+        <div class="content-header">
+            <h1 class="content-title">네비게이션 리디자인</h1>
+            <p class="content-subtitle">새로운 XAI 커뮤니티 네비게이션 디자인 프로토타입</p>
+        </div>
+
+        <div class="demo-content">
+            <h2 style="margin-bottom: 16px; font-size: 24px;">수정 사항</h2>
+            <ul style="line-height: 1.8; color: #666;">
+                <li>✅ 모든 이모티콘 삭제 (내비게이션 항목에서)</li>
+                <li>✅ "XAI 커뮤니티" → "xAI" 로고로 변경</li>
+                <li>✅ 최상단에 로그인 버튼 및 다크모드 아이콘 추가</li>
+                <li>✅ 로그인 시 회원정보 항목 표시 (헤더 내 배경 없이)</li>
+                <li>✅ "메인 메뉴" 글자 제거</li>
+                <li>✅ 내비게이션 항목 텍스트 크기 증대 (16px)</li>
+                <li>✅ 모든 네비게이션 항목 가운데 정렬</li>
+                <li>✅ 사이드바 토글 기능 추가</li>
+                <li>✅ 토글된 상태에서 재활성화 표시 추가</li>
+            </ul>
+        </div>
+    </main>
+
+    <script>
+        let isLoggedIn = false;
+        let isDarkMode = false;
+        let isSidebarCollapsed = false;
+
+        function toggleLoginState() {
+            isLoggedIn = !isLoggedIn;
+            const userNavItem = document.getElementById('userNavItem');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (isLoggedIn) {
+                userNavItem.classList.add('show');
+                loginBtn.textContent = '로그아웃';
+                loginBtn.onclick = logout;
+            } else {
+                userNavItem.classList.remove('show');
+                loginBtn.textContent = '로그인';
+                loginBtn.onclick = null;
+            }
+        }
+
+        function logout() {
+            isLoggedIn = false;
+            const userNavItem = document.getElementById('userNavItem');
+            const loginBtn = document.getElementById('loginBtn');
+            
+            userNavItem.classList.remove('show');
+            loginBtn.textContent = '로그인';
+            loginBtn.onclick = null;
+        }
+
+        function toggleDarkMode() {
+            isDarkMode = !isDarkMode;
+            document.body.classList.toggle('dark', isDarkMode);
+            
+            const darkModeBtn = document.querySelector('.dark-mode-btn');
+            darkModeBtn.textContent = isDarkMode ? '☀️' : '🌙';
+        }
+
+        function toggleSidebar() {
+            isSidebarCollapsed = !isSidebarCollapsed;
+            const sidebar = document.querySelector('.sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const showMenuBtn = document.getElementById('showMenuBtn');
+            
+            if (isSidebarCollapsed) {
+                sidebar.classList.add('collapsed');
+                mainContent.classList.add('sidebar-collapsed');
+                showMenuBtn.classList.add('show');
+            } else {
+                sidebar.classList.remove('collapsed');
+                mainContent.classList.remove('sidebar-collapsed');
+                showMenuBtn.classList.remove('show');
+            }
+        }
+    </script>
+</body>
+</html>

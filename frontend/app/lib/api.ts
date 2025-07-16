@@ -20,6 +20,11 @@ import type {
   EmailVerificationResponse,
   EmailVerificationCodeRequest,
   EmailVerificationCodeResponse,
+  AlertRule,
+  AlertStatistics,
+  AlertHistory,
+  CreateAlertRuleRequest,
+  UpdateAlertRuleRequest,
 } from "~/types";
 import { validateJWTFormat, decodeJWTPayload, isTokenExpired } from './jwt-utils';
 import { 
@@ -981,6 +986,84 @@ class ApiClient {
         timestamp: new Date().toISOString(),
       };
     }
+  }
+
+  // 알림 관련 API
+  async getAlertRules(): Promise<ApiResponse<{ rules: AlertRule[] }>> {
+    return this.request<{ rules: AlertRule[] }>('/api/alerts/rules');
+  }
+
+  async getAvailableMetrics(): Promise<ApiResponse<{ metrics: any[], categories: string[] }>> {
+    return this.request<{ metrics: any[], categories: string[] }>('/api/alerts/metrics');
+  }
+
+  async createAlertRule(ruleData: CreateAlertRuleRequest): Promise<ApiResponse<AlertRule>> {
+    return this.request<AlertRule>('/api/alerts/rules', {
+      method: 'POST',
+      body: JSON.stringify(ruleData),
+    });
+  }
+
+  async updateAlertRule(ruleId: string, ruleData: UpdateAlertRuleRequest): Promise<ApiResponse<AlertRule>> {
+    return this.request<AlertRule>(`/api/alerts/rules/${ruleId}`, {
+      method: 'PUT',
+      body: JSON.stringify(ruleData),
+    });
+  }
+
+  async deleteAlertRule(ruleId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/api/alerts/rules/${ruleId}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async getAlertStatistics(): Promise<ApiResponse<AlertStatistics>> {
+    return this.request<AlertStatistics>('/api/alerts/statistics');
+  }
+
+  async getAlertHistory(
+    page: number = 1,
+    limit: number = 20,
+    ruleId?: string
+  ): Promise<ApiResponse<{ alerts: AlertHistory[], total: number }>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+    });
+    
+    if (ruleId) {
+      params.append('rule_id', ruleId);
+    }
+    
+    return this.request<{ alerts: AlertHistory[], total: number }>(`/api/alerts/history?${params.toString()}`);
+  }
+
+  async evaluateAlertRules(): Promise<ApiResponse<{ evaluated: number; triggered: number }>> {
+    return this.request<{ evaluated: number; triggered: number }>('/api/alerts/evaluate', {
+      method: 'POST',
+    });
+  }
+
+  async toggleAlertRule(ruleId: string): Promise<ApiResponse<AlertRule>> {
+    return this.request<AlertRule>(`/api/alerts/rules/${ruleId}/toggle`, {
+      method: 'POST',
+    });
+  }
+
+  async testAlertRule(ruleId: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
+    return this.request<{ success: boolean; message: string }>(`/api/alerts/rules/${ruleId}/test`, {
+      method: 'POST',
+    });
+  }
+
+  async getAlertSystemHealth(): Promise<ApiResponse<any>> {
+    return this.request<any>('/api/alerts/health');
+  }
+
+  async testAlertSystem(): Promise<ApiResponse<any>> {
+    return this.request<any>('/api/alerts/test', {
+      method: 'POST',
+    });
   }
 }
 

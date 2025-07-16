@@ -7,6 +7,7 @@ from enum import Enum
 from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
+import uuid
 
 
 class AlertSeverity(str, Enum):
@@ -53,6 +54,7 @@ class AlertThreshold(BaseModel):
 
 class AlertRule(BaseModel):
     """알림 규칙 모델"""
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="알림 규칙 고유 ID")
     name: str = Field(..., description="알림 규칙 이름")
     description: Optional[str] = Field(None, description="알림 규칙 설명")
     condition: AlertCondition = Field(..., description="알림 조건")

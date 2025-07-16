@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업체 상세 페이지 - 개선된 디자인</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+            line-height: 1.6;
+            color: #334155;
+        }
+
+        .container {
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .service-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* 헤더 섹션 */
+        .service-header {
+            padding: 24px;
+        }
+
+        .service-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .service-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .service-meta-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .service-category {
+            background: #dcfce7;
+            color: #16a34a;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .service-rating {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .star {
+            color: #fbbf24;
+        }
+
+        .star.empty {
+            color: #d1d5db;
+        }
+
+        .service-meta-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reaction-mini {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        /* 북마크 버튼 - 우측 화면 중앙 고정 */
+        .bookmark-btn {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .bookmark-btn:hover {
+            background: #f1f5f9;
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        .bookmark-btn.active {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1d4ed8;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 0;
+        }
+
+        /* 업체 정보 섹션 */
+        .service-info {
+            padding: 24px;
+        }
+
+        .company-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 14px;
+            margin-bottom: 16px;
+            padding: 6px 12px;
+            background: #dbeafe;
+            border-radius: 20px;
+            transition: all 0.2s;
+        }
+
+        .company-link:hover {
+            background: #bfdbfe;
+            color: #1d4ed8;
+        }
+
+        /* 본문 섹션 (업체 소개) */
+        .service-content {
+            padding: 24px;
+        }
+
+        .content-text {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #334155;
+            margin-bottom: 24px;
+            white-space: pre-wrap;
+        }
+
+        .highlight-box {
+            background: #dbeafe;
+            border: 1px solid #93c5fd;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .highlight-box h4 {
+            color: #1d4ed8;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .highlight-box ul {
+            color: #1e40af;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .highlight-box ul li {
+            margin-bottom: 4px;
+        }
+
+        /* 서비스 및 가격 섹션 - 개별 분리 */
+        .services-section {
+            padding: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .service-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .service-item-left {
+            flex: 1;
+        }
+
+        .service-item-title {
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .service-item-desc {
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .service-item-right {
+            text-align: right;
+            margin-left: 16px;
+        }
+
+        .original-price {
+            font-size: 12px;
+            color: #94a3b8;
+            text-decoration: line-through;
+        }
+
+        .sale-price {
+            font-size: 18px;
+            font-weight: 700;
+            color: #dc2626;
+        }
+
+        .price-note {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 13px;
+            color: #92400e;
+            margin-top: 16px;
+        }
+
+        /* 댓글 섹션 (문의 내용) */
+        .comments-section {
+            padding: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .comments-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comment-form {
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comment-form-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .comment-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .comment-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .comment-submit {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .comment-submit:hover {
+            background: #2563eb;
+        }
+
+        .comments-list {
+            space-y: 16px;
+        }
+
+        .comment-item {
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .comment-author-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+        .comment-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .comment-badge.public {
+            background: #dcfce7;
+            color: #16a34a;
+        }
+
+        .comment-badge.private {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .comment-badge.business {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .comment-date {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .comment-content {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .comment-reply {
+            margin-left: 16px;
+            padding: 12px;
+            background: #dbeafe;
+            border-radius: 6px;
+            border-left: 4px solid #3b82f6;
+            margin-top: 12px;
+        }
+
+        .comment-reply .comment-author {
+            color: #1d4ed8;
+        }
+
+        .comment-reply .comment-content {
+            color: #1e40af;
+        }
+
+        /* 후기 섹션 */
+        .reviews-section {
+            padding: 24px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .rating-summary {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
+            border: 1px solid #e2e8f0;
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .review-form {
+            border-top: 1px solid #e2e8f0;
+            padding-top: 24px;
+            margin-top: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+        }
+
+        .rating-input {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 8px;
+        }
+
+        .rating-star {
+            font-size: 24px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .rating-star:hover {
+            transform: scale(1.1);
+        }
+
+        .btn-primary {
+            background: #16a34a;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #15803d;
+        }
+
+        /* 본인 글 관리 버튼 */
+        .author-controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .author-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+        }
+
+        .author-btn.edit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .author-btn.edit:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .author-btn.delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .author-btn.delete:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .service-header,
+            .service-content,
+            .services-section,
+            .comments-section,
+            .reviews-section {
+                padding: 16px;
+            }
+
+            .service-title {
+                font-size: 24px;
+            }
+
+            .service-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .service-meta-right {
+                align-self: flex-end;
+            }
+
+            .service-item {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .service-item-right {
+                margin-left: 0;
+                text-align: left;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="service-container">
+            <!-- 헤더 섹션 (업체명, 메타정보) -->
+            <div class="service-header">
+
+                <div style="text-align: center;">
+                    <h1 class="service-title">깔끔한 이사 서비스</h1>
+                </div>
+                
+                <!-- 평점 표시 -->
+                <div style="display: flex; justify-content: center; margin-bottom: 16px;">
+                    <div class="service-rating">
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star">⭐</span>
+                        <span class="star empty">⭐</span>
+                        <span style="color: #64748b; font-size: 14px; margin-left: 4px;">4.5</span>
+                    </div>
+                </div>
+
+                <!-- 회사 링크 -->
+                <div style="display: flex; justify-content: center; margin-bottom: 16px;">
+                    <a href="https://cleanmove-blog.co.kr" target="_blank" class="company-link">
+                        <span>🌐</span>
+                        <span>회사 블로그</span>
+                    </a>
+                </div>
+                
+                <div class="service-meta">
+                    <div class="service-meta-left">
+                        <span class="service-category">이사</span>
+                        <span>✍️</span>
+                        <span>깔끔한 이사 서비스</span>
+                        <span>⏰</span>
+                        <span>2025년 7월 16일 등록</span>
+                    </div>
+                    <div class="service-meta-right">
+                        <div class="reaction-mini">
+                            <span>👁️</span>
+                            <span>1,250</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>🔖</span>
+                            <span>89</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>💬</span>
+                            <span>23</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>🌟</span>
+                            <span>45</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 구분선 -->
+            <div class="divider"></div>
+
+            <!-- 본문 섹션 (업체 소개) -->
+            <div class="service-content">
+                <!-- 본인 글일 경우 수정/삭제 버튼 -->
+                <div class="author-controls">
+                    <button class="author-btn edit">
+                        <span>수정</span>
+                    </button>
+                    <button class="author-btn delete">
+                        <span>삭제</span>
+                    </button>
+                </div>
+
+                <!-- 업체 소개 섹션 타이틀 -->
+                <h2 class="section-title">
+                    <span>🏢</span>
+                    <span>업체 소개</span>
+                </h2>
+
+                <div class="content-text">**깔끔한 이사 서비스**는 15년 경력의 전문 이사 업체입니다. 
+고객의 소중한 물건을 안전하게 운반하는 것을 최우선으로 생각하며, 
+체계적인 포장과 운반 시스템을 통해 고객 만족도 98%를 달성하고 있습니다.
+
+                <div class="highlight-box">
+                    <h4>🎯 서비스 특징</h4>
+                    <ul>
+                        <li>• 전문 포장재 사용으로 물건 손상 제로</li>
+                        <li>• 숙련된 작업팀의 신속하고 정확한 작업</li>
+                        <li>• 이사 후 청소 서비스 무료 제공</li>
+                        <li>• 물건 분실 및 파손에 대한 100% 보상</li>
+                    </ul>
+                </div>
+
+저희는 단순한 이사가 아닌, 고객의 새로운 시작을 도와드리는 
+파트너가 되고자 합니다. 언제든지 편안하게 문의해 주세요.</div>
+
+            </div>
+
+            <!-- 서비스 및 가격 섹션 (개별 분리) -->
+            <div class="services-section">
+                <h2 class="section-title">
+                    <span>💰</span>
+                    <span>서비스 및 가격</span>
+                </h2>
+                
+                <div class="service-item">
+                    <div class="service-item-left">
+                        <div class="service-item-title">원룸 이사</div>
+                        <div class="service-item-desc">원룸 전체 짐 포장 및 이사</div>
+                    </div>
+                    <div class="service-item-right">
+                        <div class="original-price">80,000원</div>
+                        <div class="sale-price">60,000원</div>
+                    </div>
+                </div>
+                
+                <div class="service-item">
+                    <div class="service-item-left">
+                        <div class="service-item-title">투룸 이사</div>
+                        <div class="service-item-desc">투룸 전체 짐 포장 및 이사</div>
+                    </div>
+                    <div class="service-item-right">
+                        <div class="sale-price">120,000원</div>
+                    </div>
+                </div>
+                
+                <div class="service-item">
+                    <div class="service-item-left">
+                        <div class="service-item-title">포장 서비스</div>
+                        <div class="service-item-desc">전문 포장 서비스</div>
+                    </div>
+                    <div class="service-item-right">
+                        <div class="original-price">50,000원</div>
+                        <div class="sale-price">40,000원</div>
+                    </div>
+                </div>
+                
+                <div class="price-note">
+                    💡 정확한 견적은 현장 상담 후 제공됩니다.
+                </div>
+            </div>
+
+            <!-- 연락처 정보 섹션 -->
+            <div class="services-section">
+                <h2 class="section-title">
+                    <span>📞</span>
+                    <span>연락처 정보</span>
+                </h2>
+                
+                <!-- 연락처 정보 통합 카드 -->
+                <div class="service-item" style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; display: block;">
+                    <!-- 연락 방법 - 단일 카드 내에 모두 포함 -->
+                    <div style="display: flex; flex-direction: column; gap: 16px;">
+                        <!-- 위치 정보 -->
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #dc2626; border-radius: 50%;">
+                                <span style="color: white; font-size: 18px;">📍</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 2px;">회사 위치</div>
+                                <div style="color: #dc2626; font-size: 14px; font-weight: 600;">서울시 강남구 테헤란로 123</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 구분선 -->
+                        <div style="height: 1px; background: #e2e8f0; margin: 0 8px;"></div>
+                        
+                        <!-- 회사 블로그 -->
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #3b82f6; border-radius: 50%;">
+                                <span style="color: white; font-size: 18px;">🌐</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 2px;">회사 블로그</div>
+                                <a href="https://cleanmove-blog.co.kr" target="_blank" style="color: #3b82f6; text-decoration: underline; font-size: 14px;">https://cleanmove-blog.co.kr</a>
+                            </div>
+                        </div>
+                        
+                        <!-- 구분선 -->
+                        <div style="height: 1px; background: #e2e8f0; margin: 0 8px;"></div>
+                        
+                        <!-- 전화번호 -->
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #16a34a; border-radius: 50%;">
+                                <span style="color: white; font-size: 18px;">📞</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 2px;">전화 문의</div>
+                                <a href="tel:010-1234-5678" style="color: #16a34a; text-decoration: none; font-size: 16px; font-weight: 700;">010-1234-5678</a>
+                            </div>
+                        </div>
+                        
+                        <!-- 구분선 -->
+                        <div style="height: 1px; background: #e2e8f0; margin: 0 8px;"></div>
+                        
+                        <!-- 이메일 -->
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <div style="display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: #9333ea; border-radius: 50%;">
+                                <span style="color: white; font-size: 18px;">📧</span>
+                            </div>
+                            <div style="flex: 1;">
+                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 2px;">이메일 문의</div>
+                                <a href="mailto:contact@cleanmove.co.kr" style="color: #9333ea; text-decoration: none; font-size: 16px; font-weight: 700;">contact@cleanmove.co.kr</a>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+                
+                <div style="text-align: center; margin-top: 16px; padding: 12px; background: #fef3c7; border: 1px solid #fcd34d; border-radius: 6px;">
+                    <div style="font-size: 18px; font-weight: 600; color: #92400e;">업무 시간: 09:00 ~ 18:00</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 문의 섹션 (별도 컨테이너) -->
+    <div class="container">
+        <div class="service-container">
+            <!-- 문의 섹션 -->
+            <div class="comments-section">
+                <div style="text-align: center;">
+                    <h3 class="comments-header">
+                        <span>💬</span>
+                        <span>문의 (23개)</span>
+                    </h3>
+                </div>
+                
+                <!-- 문의 목록 -->
+                <div class="comments-list">
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <div class="comment-author-info">
+                                <span class="comment-author">김**님</span>
+                                <span class="comment-badge public">공개</span>
+                            </div>
+                            <span class="comment-date">2024.07.08</span>
+                        </div>
+                        <div class="comment-content">
+                            원룸에서 투룸으로 이사 예정인데, 큰 냉장고와 세탁기도 같이 옮겨주시나요?
+                        </div>
+                        
+                        <!-- 업체 답글 -->
+                        <div class="comment-reply">
+                            <div class="comment-header">
+                                <div class="comment-author-info">
+                                    <span class="comment-author">깔끔한 이사 서비스</span>
+                                    <span class="comment-badge business">업체</span>
+                                </div>
+                            </div>
+                            <div class="comment-content">
+                                네, 대형 가전제품도 전문 장비를 이용해 안전하게 운반해드립니다. 별도 추가비용은 없으니 걱정하지 마세요!
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <div class="comment-author-info">
+                                <span class="comment-author">이**님</span>
+                                <span class="comment-badge private">비공개</span>
+                            </div>
+                            <span class="comment-date">2024.07.07</span>
+                        </div>
+                        <div class="comment-content">
+                            [비공개 문의입니다]
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 문의 작성 폼 -->
+                <div class="comment-form">
+                    <textarea class="comment-textarea" placeholder="업체에 대한 문의사항을 입력하세요..."></textarea>
+                    <div class="comment-form-actions" style="justify-content: center;">
+                        <button class="comment-submit">문의 등록</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 후기 섹션 (별도 컨테이너) -->
+    <div class="container">
+        <div class="service-container">
+            <!-- 후기 섹션 -->
+            <div class="reviews-section">
+                <div style="text-align: center;">
+                    <h3 class="comments-header">
+                        <span>🌟</span>
+                        <span>후기 (45개)</span>
+                    </h3>
+                </div>
+                
+                <!-- 평점 표시 -->
+                <div class="rating-summary">
+                    <div class="rating-display">
+                        <span style="font-size: 14px; color: #64748b;">평점:</span>
+                        <div class="service-rating">
+                            <span class="star">⭐</span>
+                            <span class="star">⭐</span>
+                            <span class="star">⭐</span>
+                            <span class="star">⭐</span>
+                            <span class="star empty">⭐</span>
+                        </div>
+                        <span style="color: #1e293b; font-weight: 600;">(4.5)</span>
+                    </div>
+                </div>
+
+                <!-- 실제 후기 목록 -->
+                <div class="comments-list">
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <div class="comment-author-info">
+                                <span class="comment-author">박**님</span>
+                                <div class="service-rating">
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                </div>
+                            </div>
+                            <span class="comment-date">2024.07.05</span>
+                        </div>
+                        <div class="comment-content">
+                            정말 깔끔하고 친절하게 이사해주셨어요! 포장도 꼼꼼히 해주시고, 새 집에서 정리까지 도와주셔서 감사했습니다. 다음에도 꼭 이용하겠습니다.
+                        </div>
+                    </div>
+
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <div class="comment-author-info">
+                                <span class="comment-author">최**님</span>
+                                <div class="service-rating">
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star" style="font-size: 12px;">⭐</span>
+                                    <span class="star empty" style="font-size: 12px;">⭐</span>
+                                </div>
+                            </div>
+                            <span class="comment-date">2024.07.03</span>
+                        </div>
+                        <div class="comment-content">
+                            시간 약속도 잘 지키시고, 가격도 합리적이었어요. 작업하시는 분들도 모두 친절하시고 전문적이었습니다.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 후기 작성 -->
+                <div class="review-form">
+                    <h4 style="font-weight: 600; color: #1e293b; margin-bottom: 16px;">후기 작성</h4>
+                    <div class="form-group">
+                        <label class="form-label">별점 평가 *</label>
+                        <div class="rating-input" id="ratingStars">
+                            <span class="rating-star" onclick="setRating(1)">⭐</span>
+                            <span class="rating-star" onclick="setRating(2)">⭐</span>
+                            <span class="rating-star" onclick="setRating(3)">⭐</span>
+                            <span class="rating-star" onclick="setRating(4)">⭐</span>
+                            <span class="rating-star" onclick="setRating(5)">⭐</span>
+                        </div>
+                        <span style="font-size: 14px; color: #64748b;" id="ratingText">(0점)</span>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">후기 내용 *</label>
+                        <textarea
+                            placeholder="서비스 이용 후기를 상세히 작성해주세요..."
+                            class="form-input"
+                            style="min-height: 100px; resize: vertical;"
+                        ></textarea>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: center;">
+                        <button class="btn-primary">후기 등록</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 북마크 버튼 -->
+    <button class="bookmark-btn" onclick="toggleBookmark(this)">
+        <span class="bookmark-icon">🔖</span>
+    </button>
+
+    <script>
+        let currentRating = 0;
+        let isBookmarked = false;
+
+        // 북마크 토글 함수
+        function toggleBookmark(button) {
+            isBookmarked = !isBookmarked;
+            
+            if (isBookmarked) {
+                button.classList.add('active');
+            } else {
+                button.classList.remove('active');
+            }
+        }
+
+        // 별점 설정 함수
+        function setRating(rating) {
+            currentRating = rating;
+            const stars = document.querySelectorAll('#ratingStars .rating-star');
+            const ratingText = document.getElementById('ratingText');
+            
+            stars.forEach((star, index) => {
+                if (index < rating) {
+                    star.style.color = '#fbbf24';
+                } else {
+                    star.style.color = '#d1d5db';
+                }
+            });
+            
+            ratingText.textContent = `(${rating}점)`;
+        }
+
+        // 별점 호버 효과
+        document.querySelectorAll('#ratingStars .rating-star').forEach((star, index) => {
+            star.addEventListener('mouseenter', () => {
+                const stars = document.querySelectorAll('#ratingStars .rating-star');
+                stars.forEach((s, i) => {
+                    if (i <= index) {
+                        s.style.color = '#fbbf24';
+                    } else {
+                        s.style.color = '#d1d5db';
+                    }
+                });
+            });
+            
+            star.addEventListener('mouseleave', () => {
+                setRating(currentRating);
+            });
+        });
+
+        // 문의 작성 폼
+        document.querySelector('.comment-submit').addEventListener('click', function() {
+            const textarea = document.querySelector('.comment-textarea');
+            if (textarea.value.trim()) {
+                alert('문의가 등록되었습니다!');
+                textarea.value = '';
+            }
+        });
+
+        // 후기 작성 폼
+        document.querySelector('.btn-primary').addEventListener('click', function() {
+            const textarea = document.querySelector('.review-form textarea');
+            if (currentRating > 0 && textarea.value.trim()) {
+                alert('후기가 등록되었습니다!');
+                textarea.value = '';
+                setRating(0);
+            } else {
+                alert('별점과 후기 내용을 모두 입력해주세요.');
+            }
+        });
+
+        // 초기 별점 설정 (0점으로 시작)
+        setRating(0);
+    </script>
+</body>
+</html>

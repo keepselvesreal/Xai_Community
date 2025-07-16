@@ -153,7 +153,7 @@ def create_app() -> FastAPI:
         app.include_router(content.router, prefix="/api/content", tags=["content"])
         app.include_router(health.router, tags=["health"])
         app.include_router(monitoring.router, tags=["monitoring"])  # HetrixTools 모니터링 라우터 추가
-        app.include_router(alerts.router, tags=["alerts"])  # 지능형 알림 라우터 추가
+        app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])  # 지능형 알림 라우터 추가
         
         logger.info("✅ Routers 추가 성공 (HetrixTools 모니터링 포함)")
         routers_status = "added"

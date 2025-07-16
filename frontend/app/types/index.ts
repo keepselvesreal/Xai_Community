@@ -645,3 +645,109 @@ export interface EmailVerificationCodeResponse {
   can_proceed: boolean;
   message: string;
 }
+
+// 알림 시스템 관련 타입
+export type AlertSeverity = 'low' | 'medium' | 'high' | 'critical';
+export type AlertChannel = 'email' | 'discord';
+export type AlertCondition = 'greater_than' | 'less_than' | 'equals';
+export type AlertStatus = 'sent' | 'pending' | 'failed' | 'suppressed';
+
+export interface AlertThreshold {
+  metric: string;
+  value: number;
+  duration_minutes?: number;
+}
+
+export interface AlertRule {
+  id: string;
+  name: string;
+  description?: string;
+  condition: AlertCondition;
+  threshold: AlertThreshold;
+  severity: AlertSeverity;
+  channels: AlertChannel[];
+  cooldown_minutes?: number;
+  escalation_minutes?: number;
+  enabled: boolean;
+  tags?: Record<string, string>;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AlertRuleCreate {
+  name: string;
+  description?: string;
+  condition: AlertCondition;
+  threshold: AlertThreshold;
+  severity: AlertSeverity;
+  channels: AlertChannel[];
+  cooldown_minutes?: number;
+  escalation_minutes?: number;
+  enabled: boolean;
+  tags?: Record<string, string>;
+}
+
+export interface AlertRuleUpdate {
+  description?: string;
+  condition?: AlertCondition;
+  threshold?: AlertThreshold;
+  severity?: AlertSeverity;
+  channels?: AlertChannel[];
+  cooldown_minutes?: number;
+  escalation_minutes?: number;
+  enabled?: boolean;
+  tags?: Record<string, string>;
+}
+
+export interface AlertEvent {
+  rule_name: string;
+  metric_name: string;
+  current_value: number;
+  threshold_value: number;
+  severity: AlertSeverity;
+  status: AlertStatus;
+  message: string;
+  triggered_at: string;
+}
+
+export interface AlertStatistics {
+  total_rules: number;
+  active_rules: number;
+  total_alerts: number;
+  alerts_sent_today: number;
+  alerts_by_severity: Record<AlertSeverity, number>;
+  alerts_by_channel: Record<AlertChannel, number>;
+  alert_rate_per_hour: number;
+}
+
+export interface AlertSuppression {
+  id: string;
+  name: string;
+  description?: string;
+  rule_patterns: string[];
+  time_windows?: Array<Record<string, string>>;
+  enabled: boolean;
+  created_at?: string;
+  expires_at?: string;
+}
+
+export interface AlertRulesResponse {
+  rules: AlertRule[];
+}
+
+export interface AlertHistoryResponse {
+  rule_id: string;
+  rule_name: string;
+  history: AlertEvent[];
+}
+
+export interface AlertEvaluationResult {
+  rule_id: string;
+  rule_name: string;
+  should_alert: boolean;
+  evaluated_at: string;
+}
+
+export interface AlertEvaluationResponse {
+  evaluation_results: AlertEvaluationResult[];
+}

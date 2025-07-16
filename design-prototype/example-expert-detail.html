@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전문가의 꿀정보 상세페이지 - 개선된 디자인</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+            line-height: 1.6;
+            color: #334155;
+        }
+
+        .container {
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .post-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* 헤더 섹션 */
+        .post-header {
+            padding: 24px;
+        }
+
+        .post-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .post-meta-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .post-category {
+            background: #f3e8ff;
+            color: #7c3aed;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .expert-badge {
+            background: #fef3c7;
+            color: #d97706;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .post-meta-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reaction-mini {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 0;
+        }
+
+        /* 전문가 소개 섹션 */
+        .expert-intro-section {
+            padding: 24px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .expert-intro-content {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .expert-profile {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .expert-avatar {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .expert-info {
+            flex: 1;
+        }
+
+        .expert-name {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+
+        .expert-title {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .expert-credentials {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .credential-tag {
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .expert-description {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        /* 본문 섹션 */
+        .post-content {
+            padding: 24px;
+        }
+
+        .content-text {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #334155;
+            margin-bottom: 24px;
+            white-space: pre-wrap;
+        }
+
+        .content-text h2 {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1e293b;
+            margin: 24px 0 12px 0;
+        }
+
+        .content-text h3 {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+            margin: 20px 0 10px 0;
+        }
+
+        .content-text ul {
+            margin: 12px 0;
+            padding-left: 20px;
+        }
+
+        .content-text li {
+            margin-bottom: 8px;
+        }
+
+        .highlight-tip {
+            background: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+
+        .highlight-tip .tip-title {
+            font-weight: 600;
+            color: #92400e;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .highlight-tip .tip-content {
+            color: #78350f;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* 태그 섹션 */
+        .tags-section {
+            margin-bottom: 24px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .tag:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        .tag::before {
+            content: '#';
+            opacity: 0.7;
+            margin-right: 2px;
+        }
+
+        /* 반응 버튼들 */
+        .reactions-section {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding-bottom: 8px;
+        }
+
+        .reaction-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+
+        .reaction-btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .reaction-btn.active {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1d4ed8;
+        }
+
+        /* 댓글 섹션 */
+        .comments-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .comments-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+
+        .comment-form {
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comment-form-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .comment-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .comment-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .comment-submit {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .comment-submit:hover {
+            background: #2563eb;
+        }
+
+        .comments-list {
+            space-y: 16px;
+        }
+
+        .comment-item {
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+        .comment-date {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .comment-content {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .comment-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .comment-action {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .comment-action:hover {
+            background: #f8fafc;
+        }
+
+        .comment-action.edit {
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 500;
+        }
+
+        .comment-action.edit:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .comment-action.delete {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        .comment-action.delete:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* 본인 글 관리 버튼 */
+        .author-controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .author-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+        }
+
+        .author-btn.edit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .author-btn.edit:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .author-btn.delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .author-btn.delete:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .post-header,
+            .expert-intro-section,
+            .post-content,
+            .comments-section {
+                padding: 16px;
+            }
+
+            .post-title {
+                font-size: 24px;
+            }
+
+            .post-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .post-meta-right {
+                align-self: flex-end;
+            }
+
+            .reactions-section {
+                flex-wrap: wrap;
+            }
+
+            .expert-profile {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="post-container">
+            <!-- 헤더 섹션 (제목, 메타정보, 반응) -->
+            <div class="post-header">
+                <h1 class="post-title">
+                    부동산 투자 초보자를 위한 실전 가이드 - 안전한 수익률 10% 달성법
+                </h1>
+                
+                <div class="post-meta">
+                    <div class="post-meta-left">
+                        <span class="post-category">부동산</span>
+                        <span class="expert-badge">전문가</span>
+                        <span>✍️</span>
+                        <span>김부동산 전문가</span>
+                        <span>⏰</span>
+                        <span>2025년 7월 16일 오후 6:30</span>
+                    </div>
+                    <div class="post-meta-right">
+                        <div class="reaction-mini">
+                            <span>👁️</span>
+                            <span>2,450</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>👍</span>
+                            <span>185</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>👎</span>
+                            <span>3</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>🔖</span>
+                            <span>67</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>💬</span>
+                            <span>42</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 구분선 -->
+            <div class="divider"></div>
+
+            <!-- 전문가 소개 섹션 -->
+            <div class="expert-intro-section">
+                <!-- 본인 글일 경우 수정/삭제 버튼 -->
+                <div class="author-controls">
+                    <button class="author-btn edit">
+                        <span>수정</span>
+                    </button>
+                    <button class="author-btn delete">
+                        <span>삭제</span>
+                    </button>
+                </div>
+
+                <h2 class="section-title">
+                    <span>👨‍💼</span>
+                    <span>전문가 소개</span>
+                </h2>
+                
+                <div class="expert-intro-content">
+                    <div class="expert-profile">
+                        <div class="expert-avatar">김</div>
+                        <div class="expert-info">
+                            <div class="expert-name">김부동산 전문가</div>
+                            <div class="expert-title">공인중개사 · 부동산 투자 컨설턴트</div>
+                            <div class="expert-credentials">
+                                <span class="credential-tag">공인중개사 자격증</span>
+                                <span class="credential-tag">부동산투자분석사</span>
+                                <span class="credential-tag">15년 경력</span>
+                                <span class="credential-tag">투자 성공사례 500+</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="expert-description">
+                        15년간 부동산 업계에서 활동하며 수많은 고객들의 성공적인 투자를 도와드렸습니다. 
+                        특히 초보 투자자들을 위한 안전하고 실용적인 투자 전략 수립에 전문성을 가지고 있으며, 
+                        현재까지 500여 건의 성공적인 투자 사례를 만들어왔습니다. 
+                        복잡한 부동산 시장을 쉽게 이해할 수 있도록 도와드리겠습니다.
+                    </div>
+                </div>
+            </div>
+
+            <!-- 본문 섹션 -->
+            <div class="post-content">
+                <!-- 전문가의 한 수 섹션 -->
+                <h2 class="section-title">
+                    <span>💡</span>
+                    <span>전문가의 한 수</span>
+                </h2>
+
+                <div class="content-text">안녕하세요, 부동산 전문가 김부동산입니다. 오늘은 부동산 투자 초보자분들을 위해 실제로 적용 가능한 투자 전략을 공유하겠습니다.
+
+## 1. 투자 전 준비사항
+
+부동산 투자를 시작하기 전에 반드시 체크해야 할 사항들입니다:
+
+• **자금 계획 수립**: 총 자산의 70% 이하로 투자 규모 설정
+• **투자 목적 명확화**: 단기 수익 vs 장기 안정 수익
+• **지역 시장 조사**: 최소 3개월간 목표 지역 시장 모니터링
+• **법적 사항 확인**: 규제, 세금, 대출 조건 등 사전 검토
+
+## 2. 안전한 수익률 10% 달성 전략
+
+<div class="highlight-tip">
+    <div class="tip-title">
+        <span>🎯</span>
+        <span>핵심 전략</span>
+    </div>
+    <div class="tip-content">
+        "위치가 좋은 소형 아파트 + 전세 운용"이 가장 안전하고 확실한 방법입니다. 
+        강남 3구는 아니더라도 교통이 편리하고 학군이 괜찮은 지역의 소형 아파트를 매수 후 
+        전세로 운용하면 연간 7-10%의 안정적인 수익률을 얻을 수 있습니다.
+    </div>
+</div>
+
+### 단계별 실행 방법:
+
+1. **지역 선정**: 지하철 2호선, 9호선 인근 역세권
+2. **물건 선택**: 32-42평형 아파트 (가격 8-12억 구간)
+3. **매수 타이밍**: 시장 하락기 또는 급매물 발견 시
+4. **자금 조달**: 50-60% LTV로 대출 활용
+5. **임차인 확보**: 신혼부부, 1-2인 가구 타겟팅
+
+## 3. 리스크 관리 방법
+
+부동산 투자에서 가장 중요한 것은 리스크 관리입니다:
+
+• **분산 투자**: 한 지역에 모든 자금 집중 금지
+• **현금 보유**: 총 투자금의 20%는 현금으로 보유
+• **보험 가입**: 화재보험, 임대인 배상책임보험 필수
+• **정기 점검**: 월 1회 물건 상태 및 시장 동향 체크
+
+<div class="highlight-tip">
+    <div class="tip-title">
+        <span>⚠️</span>
+        <span>주의사항</span>
+    </div>
+    <div class="tip-content">
+        절대 급하게 결정하지 마세요. 좋은 매물은 충분한 검토 시간을 두고 신중하게 접근해야 합니다. 
+        특히 "지금 아니면 못 산다"는 식의 압박이 있다면 99% 함정입니다.
+    </div>
+</div>
+
+이상으로 부동산 투자 초보자를 위한 실전 가이드를 마치겠습니다. 
+더 자세한 상담이나 개별 포트폴리오 검토가 필요하시면 언제든 댓글로 문의해 주세요!</div>
+
+                <!-- 태그 섹션 -->
+                <div class="tags-section">
+                    <div class="tags-container">
+                        <span class="tag">부동산투자</span>
+                        <span class="tag">초보투자자</span>
+                        <span class="tag">수익률10%</span>
+                        <span class="tag">아파트투자</span>
+                        <span class="tag">전세운용</span>
+                        <span class="tag">리스크관리</span>
+                    </div>
+                </div>
+
+                <!-- 반응 버튼 섹션 -->
+                <div class="reactions-section">
+                    <button class="reaction-btn active">
+                        <span>👍</span>
+                        <span>185</span>
+                    </button>
+                    <button class="reaction-btn">
+                        <span>👎</span>
+                        <span>3</span>
+                    </button>
+                    <button class="reaction-btn">
+                        <span>🔖</span>
+                        <span>67</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 댓글 섹션 -->
+        <div class="comments-section">
+                <h3 class="comments-header">댓글 42개</h3>
+                
+                <!-- 댓글 작성 폼 -->
+                <div class="comment-form">
+                    <textarea class="comment-textarea" placeholder="전문가님께 궁금한 점을 댓글로 남겨보세요..."></textarea>
+                    <div class="comment-form-actions">
+                        <button class="comment-submit">작성</button>
+                    </div>
+                </div>
+
+                <!-- 댓글 목록 -->
+                <div class="comments-list">
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">이투자</span>
+                            <span class="comment-date">2025.07.16 18:45</span>
+                        </div>
+                        <div class="comment-content">
+                            정말 실용적인 조언 감사합니다! 지하철 2호선 근처에서 물건을 보고 있는데, 구체적으로 어떤 역 주변이 가장 좋을까요?
+                        </div>
+                        <div class="comment-actions">
+                            <div class="comment-action">
+                                <span>👍</span>
+                                <span>12</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>👎</span>
+                                <span>0</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>💬</span>
+                                <span>답글</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">박초보</span>
+                            <span class="comment-date">2025.07.16 19:12</span>
+                        </div>
+                        <div class="comment-content">
+                            LTV 50-60%라고 하셨는데, 대출 승인받기가 쉽지 않더라고요. 초보자도 쉽게 대출받을 수 있는 팁이 있을까요?
+                        </div>
+                        <div class="comment-actions">
+                            <div class="comment-action">
+                                <span>👍</span>
+                                <span>8</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>👎</span>
+                                <span>0</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>💬</span>
+                                <span>답글</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">최부동산</span>
+                            <span class="comment-date">2025.07.16 19:25</span>
+                        </div>
+                        <div class="comment-content">
+                            전문가님 말씀처럼 급매물을 찾는 것이 핵심인 것 같아요. 급매물 정보는 어디서 얻을 수 있나요? 개인적인 노하우가 있으시다면 공유 부탁드려요!
+                        </div>
+                        <div class="comment-actions">
+                            <div class="comment-action">
+                                <span>👍</span>
+                                <span>15</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>👎</span>
+                                <span>0</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>💬</span>
+                                <span>답글</span>
+                            </div>
+                            <!-- 본인 댓글일 경우 수정/삭제 버튼 -->
+                            <div class="comment-action edit">
+                                <span>수정</span>
+                            </div>
+                            <div class="comment-action delete">
+                                <span>삭제</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">정신혼</span>
+                            <span class="comment-date">2025.07.16 19:40</span>
+                        </div>
+                        <div class="comment-content">
+                            신혼부부 대상으로 전세를 놓는다고 하셨는데, 신혼부부들이 선호하는 아파트의 조건이나 특징이 따로 있을까요?
+                        </div>
+                        <div class="comment-actions">
+                            <div class="comment-action">
+                                <span>👍</span>
+                                <span>6</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>👎</span>
+                                <span>0</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>💬</span>
+                                <span>답글</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // 반응 버튼 토글 기능
+        document.querySelectorAll('.reaction-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // 댓글 반응 버튼 토글
+        document.querySelectorAll('.comment-action').forEach(action => {
+            action.addEventListener('click', function() {
+                if (this.querySelector('span').textContent.includes('👍') || 
+                    this.querySelector('span').textContent.includes('👎')) {
+                    this.style.color = this.style.color === 'rgb(59, 130, 246)' ? '#64748b' : '#3b82f6';
+                }
+            });
+        });
+
+        // 댓글 작성 폼
+        document.querySelector('.comment-submit').addEventListener('click', function() {
+            const textarea = document.querySelector('.comment-textarea');
+            if (textarea.value.trim()) {
+                alert('댓글이 작성되었습니다!');
+                textarea.value = '';
+            }
+        });
+    </script>
+</body>
+</html>

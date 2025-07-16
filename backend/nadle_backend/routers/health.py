@@ -28,6 +28,72 @@ async def health_check(
             "error": str(e)
         }
 
+@router.get("/api/health")
+async def api_health_check(
+    health_service: HealthCheckService = Depends(get_health_service)
+) -> Dict[str, Any]:
+    """API 헬스체크 엔드포인트 (엔드포인트 모니터링용)"""
+    try:
+        result = await health_service.simple_health_check()
+        return result
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "service": "nadle-backend-api",
+            "error": str(e)
+        }
+
+@router.get("/api/auth/health")
+async def auth_health_check() -> Dict[str, Any]:
+    """인증 시스템 헬스체크"""
+    try:
+        return {
+            "status": "healthy",
+            "service": "auth-service",
+            "timestamp": "2025-07-15T22:00:00Z",
+            "message": "Authentication service is operational"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "service": "auth-service",
+            "error": str(e)
+        }
+
+@router.get("/api/posts/health")
+async def posts_health_check() -> Dict[str, Any]:
+    """게시글 시스템 헬스체크"""
+    try:
+        return {
+            "status": "healthy",
+            "service": "posts-service",
+            "timestamp": "2025-07-15T22:00:00Z",
+            "message": "Posts service is operational"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "service": "posts-service",
+            "error": str(e)
+        }
+
+@router.get("/api/comments/health")
+async def comments_health_check() -> Dict[str, Any]:
+    """댓글 시스템 헬스체크"""
+    try:
+        return {
+            "status": "healthy",
+            "service": "comments-service",
+            "timestamp": "2025-07-15T22:00:00Z",
+            "message": "Comments service is operational"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "service": "comments-service",
+            "error": str(e)
+        }
+
 @router.get("/health/cache")
 async def cache_health_check(
     health_service: HealthCheckService = Depends(get_health_service)

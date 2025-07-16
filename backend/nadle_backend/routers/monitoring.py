@@ -8,6 +8,7 @@ HetrixTools 업타임 모니터링과 인프라 모니터링(Cloud Run, Vercel, 
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import Dict, Any, List, Optional
 import logging
+import asyncio
 from datetime import datetime
 
 # 기존 HetrixTools 모니터링
@@ -26,6 +27,11 @@ from ..models.monitoring import (
     UnifiedMonitoringResponse,
     HealthCheckResponse
 )
+
+# 새로운 Sentry 및 엔드포인트 모니터링
+from ..services.sentry_monitoring_service import SentryMonitoringService
+from ..services.endpoint_monitoring_service import EndpointMonitoringService
+
 from ..config import get_settings
 
 
@@ -52,6 +58,16 @@ def get_health_service() -> HealthCheckService:
 def get_unified_monitoring_service() -> UnifiedMonitoringService:
     """UnifiedMonitoringService 의존성 주입"""
     return UnifiedMonitoringService()
+
+
+def get_sentry_monitoring_service() -> SentryMonitoringService:
+    """SentryMonitoringService 의존성 주입"""
+    return SentryMonitoringService()
+
+
+def get_endpoint_monitoring_service() -> EndpointMonitoringService:
+    """EndpointMonitoringService 의존성 주입"""
+    return EndpointMonitoringService()
 
 
 @router.get("/status")
@@ -810,3 +826,304 @@ async def debug_config() -> Dict[str, Any]:
         "environment": settings.environment,
         "env_file_loaded": getattr(settings, "_env_file", "unknown")
     }
+
+
+# === 새로운 Sentry 및 엔드포인트 모니터링 API들 ===
+
+@router.get("/sentry/errors")
+async def get_sentry_errors(
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+) -> Dict[str, Any]:
+    """Sentry 에러 통계 조회 (1시간/24시간/3일)"""
+    try:
+        logger.info("Sentry 에러 통계 조회 요청")
+        
+        error_stats = await sentry_service.get_error_statistics()
+        
+        response = {
+            "last_hour_errors": error_stats.last_hour_errors,
+            "last_24h_errors": error_stats.last_24h_errors,
+            "last_3d_errors": error_stats.last_3d_errors,
+            "error_rate_per_hour": error_stats.error_rate_per_hour,
+            "status": error_stats.status,
+            "last_error_time": error_stats.last_error_time,
+            "environment": error_stats.environment,
+            "total_events": error_stats.total_events,
+            "recent_errors": [
+                {
+                    "message": error.message,
+                    "timestamp": error.timestamp,
+                    "error_type": error.error_type,
+                    "file_path": error.file_path,
+                    "line_number": error.line_number
+                }
+                for error in error_stats.recent_errors
+            ],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        logger.info(f"Sentry 에러 통계 조회 완료: {error_stats.status} 상태")
+        return response
+        
+    except Exception as e:
+        logger.error(f"Sentry 에러 통계 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"Sentry 에러 통계 조회 실패: {str(e)}")
+
+
+@router.get("/sentry/health")
+async def get_sentry_health(
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+) -> Dict[str, Any]:
+    """Sentry 연결 상태 확인"""
+    try:
+        health_info = await sentry_service.check_sentry_health()
+        
+        return {
+            "sentry_health": health_info,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Sentry 상태 확인 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"Sentry 상태 확인 실패: {str(e)}")
+
+
+@router.get("/sentry/trends")
+async def get_sentry_trends(
+    hours: int = Query(24, ge=1, le=168, description="조회할 시간 (1-168시간)"),
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+) -> Dict[str, Any]:
+    """Sentry 에러 트렌드 조회"""
+    try:
+        logger.info(f"Sentry 에러 트렌드 조회 요청 ({hours}시간)")
+        
+        trends = await sentry_service.get_error_trends(hours)
+        
+        return {
+            "hours": hours,
+            "trends": trends,
+            "total_data_points": len(trends),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Sentry 에러 트렌드 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"Sentry 에러 트렌드 조회 실패: {str(e)}")
+
+
+@router.post("/sentry/test-error")
+async def send_test_error(
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+) -> Dict[str, Any]:
+    """테스트 에러를 Sentry에 전송"""
+    try:
+        result = await sentry_service.capture_test_error()
+        
+        if result['success']:
+            logger.info("테스트 에러 전송 성공")
+            return result
+        else:
+            logger.warning(f"테스트 에러 전송 실패: {result['message']}")
+            raise HTTPException(status_code=400, detail=result['message'])
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"테스트 에러 전송 중 오류: {e}")
+        raise HTTPException(status_code=500, detail=f"테스트 에러 전송 실패: {str(e)}")
+
+
+@router.get("/endpoints/status")
+async def get_endpoints_status(
+    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+) -> Dict[str, Any]:
+    """API 엔드포인트 상태 체크"""
+    try:
+        logger.info("API 엔드포인트 상태 체크 요청")
+        
+        monitoring_result = await endpoint_service.check_all_endpoints()
+        
+        response = {
+            "overall_status": monitoring_result.overall_status,
+            "total_endpoints": monitoring_result.total_endpoints,
+            "healthy_count": monitoring_result.healthy_count,
+            "degraded_count": monitoring_result.degraded_count,
+            "down_count": monitoring_result.down_count,
+            "average_response_time": monitoring_result.average_response_time,
+            "endpoints": [
+                {
+                    "endpoint": ep.endpoint,
+                    "name": ep.name,
+                    "status": ep.status,
+                    "response_time": ep.response_time,
+                    "status_code": ep.status_code,
+                    "last_check": ep.last_check,
+                    "error_message": ep.error_message
+                }
+                for ep in monitoring_result.endpoints
+            ],
+            "last_check": monitoring_result.last_check,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        logger.info(f"API 엔드포인트 상태 체크 완료: {monitoring_result.overall_status}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"API 엔드포인트 상태 체크 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"API 엔드포인트 상태 체크 실패: {str(e)}")
+
+
+@router.get("/endpoints/{endpoint_name}/status")
+async def get_endpoint_status(
+    endpoint_name: str,
+    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+) -> Dict[str, Any]:
+    """특정 엔드포인트 상태 체크"""
+    try:
+        logger.info(f"특정 엔드포인트 상태 체크 요청: {endpoint_name}")
+        
+        endpoint_status = await endpoint_service.check_specific_endpoint(endpoint_name)
+        
+        if not endpoint_status:
+            raise HTTPException(status_code=404, detail=f"엔드포인트 '{endpoint_name}'를 찾을 수 없습니다")
+        
+        response = {
+            "endpoint": endpoint_status.endpoint,
+            "name": endpoint_status.name,
+            "status": endpoint_status.status,
+            "response_time": endpoint_status.response_time,
+            "status_code": endpoint_status.status_code,
+            "last_check": endpoint_status.last_check,
+            "error_message": endpoint_status.error_message,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+        logger.info(f"특정 엔드포인트 상태 체크 완료: {endpoint_name} - {endpoint_status.status}")
+        return response
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"특정 엔드포인트 상태 체크 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"특정 엔드포인트 상태 체크 실패: {str(e)}")
+
+
+@router.get("/endpoints/{endpoint_name}/history")
+async def get_endpoint_history(
+    endpoint_name: str,
+    hours: int = Query(24, ge=1, le=168, description="조회할 시간 (1-168시간)"),
+    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+) -> Dict[str, Any]:
+    """특정 엔드포인트의 히스토리 조회"""
+    try:
+        logger.info(f"엔드포인트 히스토리 조회 요청: {endpoint_name} ({hours}시간)")
+        
+        history = await endpoint_service.get_endpoint_history(endpoint_name, hours)
+        
+        return {
+            "endpoint_name": endpoint_name,
+            "hours": hours,
+            "history": history,
+            "total_data_points": len(history),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"엔드포인트 히스토리 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"엔드포인트 히스토리 조회 실패: {str(e)}")
+
+
+@router.get("/endpoints/list")
+async def get_monitored_endpoints(
+    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+) -> Dict[str, Any]:
+    """모니터링 대상 엔드포인트 목록 조회"""
+    try:
+        endpoints = endpoint_service.get_monitored_endpoints()
+        
+        return {
+            "total_endpoints": len(endpoints),
+            "endpoints": endpoints,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"모니터링 엔드포인트 목록 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"모니터링 엔드포인트 목록 조회 실패: {str(e)}")
+
+
+@router.get("/advanced/status")
+async def get_advanced_monitoring_status(
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service),
+    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+) -> Dict[str, Any]:
+    """고급 모니터링 상태 (Sentry + 엔드포인트) 통합 조회"""
+    try:
+        logger.info("고급 모니터링 상태 통합 조회 요청")
+        
+        # 병렬로 데이터 수집
+        sentry_stats_task = asyncio.create_task(sentry_service.get_error_statistics())
+        endpoint_status_task = asyncio.create_task(endpoint_service.check_all_endpoints())
+        
+        sentry_stats, endpoint_status = await asyncio.gather(
+            sentry_stats_task, 
+            endpoint_status_task,
+            return_exceptions=True
+        )
+        
+        # 결과 처리
+        response = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "overall_health": "unknown"
+        }
+        
+        # Sentry 데이터 처리
+        if isinstance(sentry_stats, Exception):
+            logger.error(f"Sentry 데이터 수집 실패: {sentry_stats}")
+            response["sentry"] = {
+                "status": "error",
+                "error": str(sentry_stats)
+            }
+        else:
+            response["sentry"] = {
+                "status": sentry_stats.status,
+                "last_hour_errors": sentry_stats.last_hour_errors,
+                "last_24h_errors": sentry_stats.last_24h_errors,
+                "last_3d_errors": sentry_stats.last_3d_errors,
+                "error_rate_per_hour": sentry_stats.error_rate_per_hour
+            }
+        
+        # 엔드포인트 데이터 처리
+        if isinstance(endpoint_status, Exception):
+            logger.error(f"엔드포인트 데이터 수집 실패: {endpoint_status}")
+            response["endpoints"] = {
+                "status": "error",
+                "error": str(endpoint_status)
+            }
+        else:
+            response["endpoints"] = {
+                "overall_status": endpoint_status.overall_status,
+                "healthy_count": endpoint_status.healthy_count,
+                "degraded_count": endpoint_status.degraded_count,
+                "down_count": endpoint_status.down_count,
+                "average_response_time": endpoint_status.average_response_time
+            }
+        
+        # 전체 상태 결정
+        sentry_healthy = response["sentry"].get("status") in ["healthy", "warning"]
+        endpoints_healthy = response["endpoints"].get("overall_status") in ["healthy", "degraded"]
+        
+        if sentry_healthy and endpoints_healthy:
+            response["overall_health"] = "healthy"
+        elif sentry_healthy or endpoints_healthy:
+            response["overall_health"] = "degraded"
+        else:
+            response["overall_health"] = "unhealthy"
+        
+        logger.info(f"고급 모니터링 상태 통합 조회 완료: {response['overall_health']}")
+        return response
+        
+    except Exception as e:
+        logger.error(f"고급 모니터링 상태 조회 실패: {e}")
+        raise HTTPException(status_code=500, detail=f"고급 모니터링 상태 조회 실패: {str(e)}")

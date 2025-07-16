@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시판 상세 페이지 - 개선된 디자인</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans KR', sans-serif;
+            background-color: #f8fafc;
+            line-height: 1.6;
+            color: #334155;
+        }
+
+        .container {
+            max-width: 1024px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .post-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* 헤더 섹션 */
+        .post-header {
+            padding: 24px;
+        }
+
+        .post-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 16px;
+            line-height: 1.3;
+        }
+
+        .post-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .post-meta-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            color: #64748b;
+        }
+
+        .post-category {
+            background: #dbeafe;
+            color: #1d4ed8;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .post-meta-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .reaction-mini {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 13px;
+            color: #64748b;
+        }
+
+        .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 0;
+        }
+
+        /* 본문 섹션 */
+        .post-content {
+            padding: 24px;
+        }
+
+        .content-text {
+            font-size: 16px;
+            line-height: 1.7;
+            color: #334155;
+            margin-bottom: 24px;
+            white-space: pre-wrap;
+        }
+
+        /* 태그 섹션 */
+        .tags-section {
+            margin-bottom: 24px;
+        }
+
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background: #f1f5f9;
+            color: #475569;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .tag:hover {
+            background: #e2e8f0;
+            border-color: #cbd5e1;
+        }
+
+        .tag::before {
+            content: '#';
+            opacity: 0.7;
+            margin-right: 2px;
+        }
+
+        /* 반응 버튼들 */
+        .reactions-section {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding-bottom: 8px;
+        }
+
+        .reaction-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+
+        .reaction-btn:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .reaction-btn.active {
+            background: #dbeafe;
+            border-color: #3b82f6;
+            color: #1d4ed8;
+        }
+
+        /* 댓글 섹션 */
+        .comments-section {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            padding: 24px;
+            margin-top: 24px;
+        }
+
+        .comments-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1e293b;
+            margin-bottom: 20px;
+        }
+
+        .comment-form {
+            margin-bottom: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .comment-form-actions {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .comment-textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 12px 16px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+            resize: vertical;
+        }
+
+        .comment-textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .comment-submit {
+            background: #3b82f6;
+            color: white;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .comment-submit:hover {
+            background: #2563eb;
+        }
+
+        .comments-list {
+            space-y: 16px;
+        }
+
+        .comment-item {
+            padding: 16px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .comment-author {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 14px;
+        }
+
+        .comment-date {
+            font-size: 12px;
+            color: #94a3b8;
+        }
+
+        .comment-content {
+            color: #475569;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 12px;
+        }
+
+        .comment-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .comment-action {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 12px;
+            color: #64748b;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .comment-action:hover {
+            background: #f8fafc;
+        }
+
+        .comment-action.edit {
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 500;
+        }
+
+        .comment-action.edit:hover {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .comment-action.delete {
+            background: #fee2e2;
+            color: #dc2626;
+            font-weight: 500;
+        }
+
+        .comment-action.delete:hover {
+            background: #ef4444;
+            color: white;
+        }
+
+        /* 본인 글 관리 버튼 */
+        .author-controls {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-bottom: 16px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .author-btn {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+            text-decoration: none;
+        }
+
+        .author-btn.edit {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .author-btn.edit:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .author-btn.delete {
+            background: #ef4444;
+            color: white;
+        }
+
+        .author-btn.delete:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.3);
+        }
+
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .post-header,
+            .post-content,
+            .comments-section {
+                padding: 16px;
+            }
+
+            .post-title {
+                font-size: 24px;
+            }
+
+            .post-meta {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .post-meta-right {
+                align-self: flex-end;
+            }
+
+            .reactions-section {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="post-container">
+            <!-- 헤더 섹션 (제목, 메타정보, 반응) -->
+            <div class="post-header">
+                <h1 class="post-title">
+                    React 18의 새로운 기능들과 성능 최적화 방법에 대해 알아보자
+                </h1>
+                
+                <div class="post-meta">
+                    <div class="post-meta-left">
+                        <span class="post-category">기술</span>
+                        <span>✍️</span>
+                        <span>김개발</span>
+                        <span>⏰</span>
+                        <span>2025년 7월 16일 오후 6:30</span>
+                    </div>
+                    <div class="post-meta-right">
+                        <div class="reaction-mini">
+                            <span>👁️</span>
+                            <span>156</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>👍</span>
+                            <span>24</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>👎</span>
+                            <span>2</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>🔖</span>
+                            <span>8</span>
+                        </div>
+                        <div class="reaction-mini">
+                            <span>💬</span>
+                            <span>12</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 구분선 -->
+            <div class="divider"></div>
+
+            <!-- 본문 섹션 -->
+            <div class="post-content">
+                <!-- 본인 글일 경우 수정/삭제 버튼 -->
+                <div class="author-controls">
+                    <button class="author-btn edit">
+                        <span>수정</span>
+                    </button>
+                    <button class="author-btn delete">
+                        <span>삭제</span>
+                    </button>
+                </div>
+
+                <div class="content-text">React 18이 공식 출시되면서 많은 새로운 기능들이 추가되었습니다. 특히 Concurrent Rendering, Automatic Batching, Suspense의 개선사항들이 주목할 만합니다.
+
+## 주요 변경사항
+
+1. **Concurrent Rendering**: 렌더링 프로세스를 중단하고 재개할 수 있게 되어 사용자 경험이 크게 향상되었습니다.
+
+2. **Automatic Batching**: React 18에서는 Promise, setTimeout, native event handler 등에서도 자동으로 배칭이 이루어집니다.
+
+3. **Suspense SSR**: 서버 사이드 렌더링에서 Suspense를 사용할 수 있게 되어 로딩 성능이 개선되었습니다.
+
+이러한 변경사항들은 개발자 경험과 사용자 경험 모두를 크게 향상시킬 것으로 예상됩니다.</div>
+
+                <!-- 태그 섹션 -->
+                <div class="tags-section">
+                    <div class="tags-container">
+                        <span class="tag">React</span>
+                        <span class="tag">JavaScript</span>
+                        <span class="tag">프론트엔드</span>
+                        <span class="tag">성능최적화</span>
+                        <span class="tag">Concurrent</span>
+                    </div>
+                </div>
+
+                <!-- 반응 버튼 섹션 -->
+                <div class="reactions-section">
+                    <button class="reaction-btn active">
+                        <span>👍</span>
+                        <span>24</span>
+                    </button>
+                    <button class="reaction-btn">
+                        <span>👎</span>
+                        <span>2</span>
+                    </button>
+                    <button class="reaction-btn">
+                        <span>🔖</span>
+                        <span>8</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 댓글 섹션 -->
+        <div class="comments-section">
+                <h3 class="comments-header">댓글 12개</h3>
+                
+                <!-- 댓글 작성 폼 -->
+                <div class="comment-form">
+                    <textarea class="comment-textarea" placeholder="댓글을 입력하세요..."></textarea>
+                    <div class="comment-form-actions">
+                        <button class="comment-submit">작성</button>
+                    </div>
+                </div>
+
+                <!-- 댓글 목록 -->
+                <div class="comments-list">
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">이리액트</span>
+                            <span class="comment-date">2025.07.16 18:45</span>
+                        </div>
+                        <div class="comment-content">
+                            정말 유용한 정보네요! Concurrent Rendering 부분이 특히 흥미로웠습니다. 실제 프로젝트에 적용해보고 싶어요.
+                        </div>
+                        <div class="comment-actions">
+                            <div class="comment-action">
+                                <span>👍</span>
+                                <span>5</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>👎</span>
+                                <span>0</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>💬</span>
+                                <span>답글</span>
+                            </div>
+                            <!-- 본인 댓글일 경우 수정/삭제 버튼 -->
+                            <div class="comment-action edit">
+                                <span>수정</span>
+                            </div>
+                            <div class="comment-action delete">
+                                <span>삭제</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">박개발자</span>
+                            <span class="comment-date">2025.07.16 19:12</span>
+                        </div>
+                        <div class="comment-content">
+                            Automatic Batching 관련해서 궁금한게 있는데, 기존 프로젝트에서 React 18로 마이그레이션할 때 주의할 점이 있을까요?
+                        </div>
+                        <div class="comment-actions">
+                            <div class="comment-action">
+                                <span>👍</span>
+                                <span>3</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>👎</span>
+                                <span>0</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>💬</span>
+                                <span>답글</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="comment-item">
+                        <div class="comment-header">
+                            <span class="comment-author">최프론트</span>
+                            <span class="comment-date">2025.07.16 19:25</span>
+                        </div>
+                        <div class="comment-content">
+                            Suspense SSR 부분 더 자세히 설명해주실 수 있나요? 서버 렌더링 성능 개선 효과가 궁금합니다.
+                        </div>
+                        <div class="comment-actions">
+                            <div class="comment-action">
+                                <span>👍</span>
+                                <span>7</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>👎</span>
+                                <span>0</span>
+                            </div>
+                            <div class="comment-action">
+                                <span>💬</span>
+                                <span>답글</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+    </div>
+
+    <script>
+        // 반응 버튼 토글 기능
+        document.querySelectorAll('.reaction-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                this.classList.toggle('active');
+            });
+        });
+
+        // 댓글 반응 버튼 토글
+        document.querySelectorAll('.comment-action').forEach(action => {
+            action.addEventListener('click', function() {
+                if (this.querySelector('span').textContent.includes('👍') || 
+                    this.querySelector('span').textContent.includes('👎')) {
+                    this.style.color = this.style.color === 'rgb(59, 130, 246)' ? '#64748b' : '#3b82f6';
+                }
+            });
+        });
+
+        // 댓글 작성 폼
+        document.querySelector('.comment-submit').addEventListener('click', function() {
+            const textarea = document.querySelector('.comment-textarea');
+            if (textarea.value.trim()) {
+                alert('댓글이 작성되었습니다!');
+                textarea.value = '';
+            }
+        });
+    </script>
+</body>
+</html>

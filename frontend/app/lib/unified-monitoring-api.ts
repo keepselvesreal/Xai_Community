@@ -115,6 +115,113 @@ export async function getComprehensiveHealth(): Promise<ApiResponse<{
 }
 
 /**
+ * Sentry 에러 통계 조회
+ */
+export async function getSentryErrors(): Promise<ApiResponse<{
+  last_hour_errors: number;
+  last_24h_errors: number;
+  last_3d_errors: number;
+  error_rate_per_hour: number;
+  status: 'healthy' | 'warning' | 'critical';
+  last_error_time: string | null;
+  environment: string;
+  total_events: number;
+  recent_errors: Array<{
+    message: string;
+    timestamp: string;
+    error_type: string;
+    file_path: string | null;
+    line_number: number | null;
+  }>;
+  timestamp: string;
+}>> {
+  return apiRequest(`/api/monitoring/sentry/errors`);
+}
+
+/**
+ * Sentry 연결 상태 확인
+ */
+export async function getSentryHealth(): Promise<ApiResponse<{
+  sentry_health: {
+    status: string;
+    message: string;
+    configured: boolean;
+    dsn_configured?: boolean;
+    environment?: string;
+  };
+  timestamp: string;
+}>> {
+  return apiRequest(`/api/monitoring/sentry/health`);
+}
+
+/**
+ * API 엔드포인트 상태 체크
+ */
+export async function getEndpointsStatus(): Promise<ApiResponse<{
+  overall_status: 'healthy' | 'degraded' | 'down';
+  total_endpoints: number;
+  healthy_count: number;
+  degraded_count: number;
+  down_count: number;
+  average_response_time: number;
+  endpoints: Array<{
+    endpoint: string;
+    name: string;
+    status: 'healthy' | 'degraded' | 'down';
+    response_time: number;
+    status_code: number | null;
+    last_check: string;
+    error_message?: string;
+  }>;
+  last_check: string;
+  timestamp: string;
+}>> {
+  return apiRequest(`/api/monitoring/endpoints/status`);
+}
+
+/**
+ * 특정 엔드포인트 상태 체크
+ */
+export async function getEndpointStatus(endpointName: string): Promise<ApiResponse<{
+  endpoint: string;
+  name: string;
+  status: 'healthy' | 'degraded' | 'down';
+  response_time: number;
+  status_code: number | null;
+  last_check: string;
+  error_message?: string;
+  timestamp: string;
+}>> {
+  return apiRequest(`/api/monitoring/endpoints/${endpointName}/status`);
+}
+
+/**
+ * 고급 모니터링 상태 (Sentry + 엔드포인트) 통합 조회
+ */
+export async function getAdvancedMonitoringStatus(): Promise<ApiResponse<{
+  overall_health: 'healthy' | 'degraded' | 'unhealthy';
+  sentry: {
+    status: string;
+    last_hour_errors?: number;
+    last_24h_errors?: number;
+    last_3d_errors?: number;
+    error_rate_per_hour?: number;
+    error?: string;
+  };
+  endpoints: {
+    overall_status: string;
+    healthy_count?: number;
+    degraded_count?: number;
+    down_count?: number;
+    average_response_time?: number;
+    error?: string;
+  };
+  timestamp: string;
+}>> {
+  return apiRequest(`/api/monitoring/advanced/status`);
+}
+
+/**
  * 모니터링 에러 로깅
  */
 export function logMonitoringError(
@@ -192,6 +299,11 @@ export default {
   getInfrastructureStatus,
   getSimpleHealth,
   getComprehensiveHealth,
+  getSentryErrors,
+  getSentryHealth,
+  getEndpointsStatus,
+  getEndpointStatus,
+  getAdvancedMonitoringStatus,
   logMonitoringError,
   checkMonitoringHealth,
   MONITORING_CONFIG,

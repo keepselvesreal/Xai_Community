@@ -30,7 +30,8 @@ class AlertRuleEngine:
     
     def __init__(self):
         """규칙 엔진 초기화"""
-        self.rules: Dict[str, AlertRule] = {}
+        self.rules: Dict[str, AlertRule] = {}  # rule_id -> AlertRule
+        self.name_to_id: Dict[str, str] = {}   # rule_name -> rule_id
         logger.info("AlertRuleEngine 초기화 완료")
     
     async def add_rule(self, rule: AlertRule) -> None:
@@ -40,22 +41,25 @@ class AlertRuleEngine:
         Args:
             rule: 추가할 알림 규칙
         """
-        self.rules[rule.name] = rule
-        logger.info(f"알림 규칙 추가됨: {rule.name}")
+        self.rules[rule.id] = rule
+        self.name_to_id[rule.name] = rule.id
+        logger.info(f"알림 규칙 추가됨: {rule.name} (ID: {rule.id})")
     
-    async def remove_rule(self, rule_name: str) -> bool:
+    async def remove_rule(self, rule_id: str) -> bool:
         """
         알림 규칙 제거
         
         Args:
-            rule_name: 제거할 규칙 이름
+            rule_id: 제거할 규칙 ID
             
         Returns:
             제거 성공 여부
         """
-        if rule_name in self.rules:
-            del self.rules[rule_name]
-            logger.info(f"알림 규칙 제거됨: {rule_name}")
+        if rule_id in self.rules:
+            rule = self.rules[rule_id]
+            del self.rules[rule_id]
+            del self.name_to_id[rule.name]
+            logger.info(f"알림 규칙 제거됨: {rule.name} (ID: {rule_id})")
             return True
         return False
     
@@ -68,9 +72,21 @@ class AlertRuleEngine:
         """
         return [rule for rule in self.rules.values() if rule.enabled]
     
-    async def get_rule(self, rule_name: str) -> Optional[AlertRule]:
+    async def get_rule(self, rule_id: str) -> Optional[AlertRule]:
         """
-        특정 알림 규칙 조회
+        특정 알림 규칙 조회 (ID 기반)
+        
+        Args:
+            rule_id: 규칙 ID
+            
+        Returns:
+            알림 규칙 (없으면 None)
+        """
+        return self.rules.get(rule_id)
+    
+    async def get_rule_by_name(self, rule_name: str) -> Optional[AlertRule]:
+        """
+        특정 알림 규칙 조회 (이름 기반)
         
         Args:
             rule_name: 규칙 이름
@@ -78,7 +94,10 @@ class AlertRuleEngine:
         Returns:
             알림 규칙 (없으면 None)
         """
-        return self.rules.get(rule_name)
+        rule_id = self.name_to_id.get(rule_name)
+        if rule_id:
+            return self.rules.get(rule_id)
+        return None
 
 
 class IntelligentAlertingService:
