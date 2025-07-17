@@ -268,7 +268,27 @@ export default function ExpertTipDetail() {
           }, 0);
         };
         
-        // 댓글 수 업데이트는 post 객체를 통해 처리됨
+        const totalCommentCount = countAllComments(processedComments);
+        
+        // 🔄 Post 객체의 댓글 수 실시간 업데이트
+        setPost(prev => prev ? {
+          ...prev,
+          stats: {
+            ...prev.stats,
+            comment_count: totalCommentCount,
+            // 기존 필드 유지
+            view_count: prev.stats?.view_count || 0,
+            like_count: prev.stats?.like_count || 0,
+            dislike_count: prev.stats?.dislike_count || 0,
+            bookmark_count: prev.stats?.bookmark_count || 0
+          }
+        } : null);
+        
+        console.log('📊 전문가 꿀정보 댓글 수 업데이트:', {
+          totalComments: totalCommentCount,
+          이전댓글수: post?.stats?.comment_count,
+          새댓글수: totalCommentCount
+        });
       }
     } catch (error) {
       console.error('댓글 로드 실패:', error);
@@ -400,65 +420,9 @@ export default function ExpertTipDetail() {
     </div>
   );
 
-  // 태그 섹션 컴포넌트
-  const TagsSection = () => (
-    tip.tags && tip.tags.length > 0 ? (
-      <div className="mb-6">
-        <div className="flex flex-wrap gap-2">
-          {tip.tags.map((tag: string, index: number) => (
-            <span 
-              key={index}
-              className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm border border-gray-200 hover:bg-gray-200 transition-colors cursor-pointer"
-            >
-              {tag.startsWith('#') ? tag : `#${tag}`}
-            </span>
-          ))}
-        </div>
-      </div>
-    ) : null
-  );
+  // 태그는 DetailPageLayout에서 자동으로 표시되므로 중복 제거
 
-  // 반응 버튼 섹션 컴포넌트
-  const ReactionsSection = () => (
-    <div className="flex justify-center gap-2 pb-2">
-      <button
-        onClick={() => handleReactionChange('like')}
-        disabled={pendingReactions.has('like')}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-          userReactions.liked 
-            ? 'bg-blue-100 border-blue-300 text-blue-700' 
-            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-        } ${pendingReactions.has('like') ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        <span>👍</span>
-        <span>{post.stats?.like_count || 0}</span>
-      </button>
-      <button
-        onClick={() => handleReactionChange('dislike')}
-        disabled={pendingReactions.has('dislike')}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-          userReactions.disliked 
-            ? 'bg-red-100 border-red-300 text-red-700' 
-            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-        } ${pendingReactions.has('dislike') ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        <span>👎</span>
-        <span>{post.stats?.dislike_count || 0}</span>
-      </button>
-      <button
-        onClick={() => handleReactionChange('bookmark')}
-        disabled={pendingReactions.has('bookmark')}
-        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
-          userReactions.bookmarked 
-            ? 'bg-green-100 border-green-300 text-green-700' 
-            : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-        } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : ''}`}
-      >
-        <span>🔖</span>
-        <span>{post.stats?.bookmark_count || 0}</span>
-      </button>
-    </div>
-  );
+  // 반응 버튼은 DetailPageLayout에서 자동으로 제공되므로 중복 제거
 
   return (
     <AppLayout 
@@ -498,9 +462,7 @@ export default function ExpertTipDetail() {
         pageType="expert_tips"
         sections={{
           beforeContent: [<ExpertIntroSection key="expert-intro" />],
-          afterContent: [<ExpertContentSection key="expert-content" />],
-          afterTags: [<TagsSection key="tags" />],
-          afterReactions: [<ReactionsSection key="reactions" />]
+          afterContent: [<ExpertContentSection key="expert-content" />]
         }}
       />
     </AppLayout>

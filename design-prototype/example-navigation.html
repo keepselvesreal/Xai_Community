@@ -17,13 +17,234 @@
             color: #1d1d1f;
         }
 
+        /* 최상단 가로막대 네비게이션 바 */
+        .top-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 120px;
+            background: linear-gradient(135deg, #6B8E23 0%, #556B2F 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 16px 20px;
+            z-index: 1002;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .top-navbar-row1 {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .top-navbar-brand-section {
+            display: flex;
+            align-items: center;
+        }
+
+        .top-navbar-row2 {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .top-navbar-brand {
+            font-size: 28px;
+            font-weight: bold;
+            color: white;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .top-navbar-menu-btn {
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            color: white;
+            font-size: 10px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .top-navbar-menu-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .top-navbar-dark-btn {
+            padding: 6px 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .top-navbar-dark-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* 전체 네비게이션 영역 */
+        .navigation-area {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 280px;
+            height: 100vh;
+            z-index: 1002;
+            transition: transform 0.3s ease;
+        }
+
+        .navigation-area.collapsed {
+            transform: translateX(-100%);
+        }
+
+        .sidebar-toggle-btn {
+            padding: 6px 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .sidebar-toggle-btn.hidden {
+            display: none;
+        }
+
+        .sidebar-toggle-btn.show {
+            display: block;
+        }
+
+        .top-navbar-user-info {
+            display: none;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .top-navbar-user-info.show {
+            display: block;
+        }
+
+        .top-navbar-login-btn {
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .top-navbar-login-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        /* 메인 콘텐츠 상단 여백 조정 */
+        .main-content {
+            padding-top: 160px;
+        }
+
+        /* 네비게이션 영역 외부 메뉴 토글 버튼 */
+        .external-menu-toggle {
+            position: fixed;
+            bottom: 60px;
+            left: 0;
+            width: 280px;
+            height: 50px;
+            background: transparent;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+        }
+
+        .external-menu-toggle.show {
+            display: flex;
+        }
+
+        .external-menu-toggle .menu-toggle-area {
+            position: relative;
+            bottom: auto;
+            width: 100%;
+            height: 100%;
+            background: transparent;
+        }
+
+        /* 메뉴 숨김/보기 버튼 영역 - 배경 제거 */
+        .menu-toggle-area {
+            position: absolute;
+            bottom: 60px;
+            left: 0;
+            width: 100%;
+            height: 50px;
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1001;
+        }
+
+        .menu-toggle-btn {
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #6B8E23 0%, #556B2F 100%);
+            border: 1px solid #556B2F;
+            border-radius: 8px;
+            color: white;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 8px rgba(107, 142, 35, 0.2);
+        }
+
+        .menu-toggle-btn:hover {
+            background: linear-gradient(135deg, #556B2F 0%, #6B8E23 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(107, 142, 35, 0.3);
+        }
+
+        /* 네비게이션 영역에 메뉴 토글 버튼 포함 */
+        .sidebar {
+            position: relative;
+        }
+
         /* 사이드바 */
         .sidebar {
             position: fixed;
             left: 0;
-            top: 0;
+            top: 120px;
             width: 280px;
-            height: 100vh;
+            height: calc(100vh - 120px);
             background: white;
             border-right: 1px solid #e5e5e7;
             display: flex;
@@ -40,99 +261,67 @@
         .sidebar-header {
             padding: 20px 24px;
             border-bottom: 1px solid #e5e5e7;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 120px; /* 고정 높이 설정 */
+            background: linear-gradient(135deg, #6B8E23 0%, #556B2F 100%);
+            min-height: 80px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            justify-content: center;
         }
 
-        /* 최상단 줄: 로고 + 로그인/다크모드 버튼 */
-        .header-top-row {
+        /* 사이드바 헤더 - 다크모드 버튼만 포함 */
+        .sidebar-header-content {
             display: flex;
             align-items: center;
             justify-content: space-between;
         }
 
-        .logo-section {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .logo-text {
-            font-size: 24px;
+        .sidebar-brand {
+            font-size: 20px;
             font-weight: bold;
             color: white;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
         }
 
-        .header-controls {
+        .sidebar-controls {
             display: flex;
             align-items: center;
             gap: 8px;
         }
 
-        .login-btn, .dark-mode-btn, .toggle-btn {
-            padding: 8px 12px;
-            background: rgba(255, 255, 255, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            border-radius: 8px;
-            color: white;
-            font-size: 12px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .login-btn:hover, .dark-mode-btn:hover, .toggle-btn:hover {
-            background: rgba(255, 255, 255, 0.3);
-        }
-
         .dark-mode-btn, .toggle-btn {
             padding: 8px;
-            font-size: 16px;
-        }
-
-        /* 회원정보 항목 (로그인 시에만 표시) */
-        .user-info-row {
-            height: 40px; /* 고정 높이 */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 16px;
-        }
-
-        .user-info-item {
-            display: none; /* 기본적으로 숨김 */
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 6px;
             color: white;
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 500;
-            text-align: center;
             cursor: pointer;
             transition: all 0.2s ease;
-            padding: 8px 12px;
-            border-radius: 8px;
         }
 
-        .user-info-item:hover {
-            background: rgba(255, 255, 255, 0.1);
-        }
-
-        .user-info-item.show {
-            display: block;
+        .dark-mode-btn:hover, .toggle-btn:hover {
+            background: rgba(255, 255, 255, 0.25);
+            transform: translateY(-1px);
         }
 
         /* 내비게이션 영역 */
         .sidebar-nav {
             flex: 1;
-            padding: 24px 0;
+            padding: 0;
             overflow-y: auto;
-            border-top: 1px solid rgba(255, 255, 255, 0.2); /* 구분선 추가 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
         .nav-items {
             padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 16px;
         }
 
         .nav-item {
@@ -140,8 +329,8 @@
             align-items: center;
             justify-content: center;
             padding: 16px 20px;
-            margin-bottom: 4px;
-            color: #424245;
+            margin: 0;
+            color: #595959;
             text-decoration: none;
             border-radius: 12px;
             font-size: 16px;
@@ -150,15 +339,16 @@
             position: relative;
             text-align: center;
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            min-height: 48px;
         }
 
         .nav-item:hover {
-            background: #f5f5f7;
-            color: #1d1d1f;
+            background: #F0F8E8;
+            color: #6B8E23;
         }
 
         .nav-item.active {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6B8E23 0%, #556B2F 100%);
             color: white;
         }
 
@@ -188,7 +378,7 @@
         .main-content {
             margin-left: 280px;
             padding: 40px;
-            min-height: 100vh;
+            min-height: calc(100vh - 80px);
             transition: margin-left 0.3s ease;
         }
 
@@ -222,7 +412,7 @@
         /* 로그인 상태 토글을 위한 스타일 */
         .demo-controls {
             position: fixed;
-            top: 20px;
+            top: 80px;
             right: 20px;
             background: white;
             padding: 16px;
@@ -273,6 +463,17 @@
         /* 다크모드에서 네비게이션 아이템 구분선 */
         body.dark .nav-item {
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: #ebebf5;
+        }
+
+        body.dark .nav-item:hover {
+            background: rgba(82, 196, 26, 0.1);
+            color: #52C41A;
+        }
+
+        body.dark .nav-item.active {
+            background: linear-gradient(135deg, #52C41A 0%, #6B8E23 100%);
+            color: white;
         }
 
         body.dark .demo-content {
@@ -317,39 +518,7 @@
             background: rgba(255, 255, 255, 0.3);
         }
 
-        /* 네비게이션 하단 메뉴 토글 버튼 */
-        .nav-toggle-btn {
-            margin: 16px;
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            color: white;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: center;
-            width: calc(100% - 32px);
-            display: block;
-        }
-
-        .nav-toggle-btn:hover {
-            background: rgba(0, 0, 0, 0.3);
-            transform: translateY(-1px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        /* 라이트 모드에서의 토글 버튼 */
-        body:not(.dark) .nav-toggle-btn {
-            background: rgba(0, 0, 0, 0.1);
-            border: 1px solid rgba(0, 0, 0, 0.2);
-            color: #333;
-        }
-
-        body:not(.dark) .nav-toggle-btn:hover {
-            background: rgba(0, 0, 0, 0.15);
-        }
+        /* 게시판 섹션 스타일 제거 (통합됨) */
 
         /* 메뉴 보기 버튼 - 정확히 메뉴 숨기기 버튼과 같은 위치 */
         .show-menu-btn {
@@ -358,7 +527,7 @@
             top: 50%;
             transform: translateY(-50%);
             z-index: 1001;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6B8E23 0%, #556B2F 100%);
             border: none;
             border-radius: 8px;
             padding: 8px 12px;
@@ -367,7 +536,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 2px 12px rgba(107, 142, 35, 0.2);
             display: none;
             opacity: 0.8;
         }
@@ -379,63 +548,64 @@
         .show-menu-btn:hover {
             transform: translateY(-50%) scale(1.05);
             opacity: 1;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 4px 16px rgba(107, 142, 35, 0.3);
         }
     </style>
 </head>
 <body>
+    <!-- 전체 네비게이션 영역 -->
+    <div class="navigation-area" id="navigationArea">
+        <!-- 최상단 네비게이션 바 -->
+        <nav class="top-navbar">
+            <div class="top-navbar-row1">
+                <div class="top-navbar-brand-section">
+                    <div class="top-navbar-brand">Xai</div>
+                </div>
+                <button class="top-navbar-dark-btn" onclick="toggleDarkMode()">🌙</button>
+            </div>
+            <div class="top-navbar-row2">
+                <button class="top-navbar-login-btn" id="topLoginBtn">로그인</button>
+                <div class="top-navbar-user-info" id="topUserInfo">회원정보</div>
+            </div>
+        </nav>
+
+        <!-- 사이드바 -->
+        <nav class="sidebar">
+            <!-- 내비게이션 -->
+            <div class="sidebar-nav">
+                <div class="nav-items">
+                    <a href="#" class="nav-item active">게시판</a>
+                    <a href="#" class="nav-item">정보</a>
+                    <a href="#" class="nav-item">입주 업체 서비스</a>
+                    <a href="#" class="nav-item">전문가 꿀정보</a>
+                </div>
+            </div>
+
+            <!-- 메뉴 토글 버튼 (푸터 위) -->
+            <div class="menu-toggle-area" id="internalMenuToggle">
+                <button class="menu-toggle-btn" id="menuToggleBtn" onclick="toggleSidebar()">메뉴 숨김</button>
+            </div>
+
+            <!-- 푸터 -->
+            <div class="sidebar-footer">
+                <div class="footer-text">© 2024 XAI 아파트 커뮤니티</div>
+            </div>
+        </nav>
+    </div>
+
+    <!-- 메뉴 보기 버튼 (토글된 위치에 나타남) -->
+    <div class="external-menu-toggle" id="externalMenuShow">
+        <div class="menu-toggle-area">
+            <button class="menu-toggle-btn" onclick="toggleSidebar()">메뉴 보기</button>
+        </div>
+    </div>
+
     <!-- 데모 컨트롤 -->
     <div class="demo-controls">
         <button class="demo-toggle" onclick="toggleLoginState()">로그인 상태 토글</button>
         <button class="demo-toggle" onclick="toggleDarkMode()" style="margin-left: 8px;">다크모드 토글</button>
         <button class="demo-toggle" onclick="toggleSidebar()" style="margin-left: 8px;">사이드바 토글</button>
     </div>
-
-    <!-- 메뉴 보기 버튼 -->
-    <button class="show-menu-btn" id="showMenuBtn" onclick="toggleSidebar()">메뉴 보기</button>
-
-    <!-- 사이드바 -->
-    <nav class="sidebar">
-        <!-- 헤더 영역 -->
-        <div class="sidebar-header">
-            <!-- 최상단 줄: 로고 + 로그인/다크모드 버튼 -->
-            <div class="header-top-row">
-                <div class="logo-section">
-                    <div class="logo-text">xAI</div>
-                </div>
-                <div class="header-controls">
-                    <button class="login-btn" id="loginBtn">로그인</button>
-                    <button class="dark-mode-btn" onclick="toggleDarkMode()">🌙</button>
-                </div>
-            </div>
-
-            <!-- 두 번째 줄: 빈 공간 (회원정보 항목 제거) -->
-            <div class="user-info-row">
-                <!-- 회원정보 항목이 네비게이션으로 이동됨 -->
-            </div>
-        </div>
-
-        <!-- 내비게이션 -->
-        <div class="sidebar-nav">
-            <div class="nav-items">
-                <a href="#" class="nav-item active">게시판</a>
-                <a href="#" class="nav-item">정보</a>
-                <a href="#" class="nav-item">입주 업체 서비스</a>
-                <a href="#" class="nav-item">전문가 꿀정보</a>
-                
-                <!-- 회원정보 항목 (로그인 시에만 표시) -->
-                <a href="#" class="nav-item user-nav-item" id="userNavItem">회원정보</a>
-            </div>
-        </div>
-
-        <!-- 메뉴 토글 버튼 -->
-        <button class="nav-toggle-btn" onclick="toggleSidebar()">메뉴 숨기기</button>
-
-        <!-- 푸터 -->
-        <div class="sidebar-footer">
-            <div class="footer-text">© 2024 XAI 아파트 커뮤니티</div>
-        </div>
-    </nav>
 
     <!-- 메인 콘텐츠 -->
     <main class="main-content" id="mainContent">
@@ -449,13 +619,13 @@
             <ul style="line-height: 1.8; color: #666;">
                 <li>✅ 모든 이모티콘 삭제 (내비게이션 항목에서)</li>
                 <li>✅ "XAI 커뮤니티" → "xAI" 로고로 변경</li>
-                <li>✅ 최상단에 로그인 버튼 및 다크모드 아이콘 추가</li>
-                <li>✅ 로그인 시 회원정보 항목 표시 (헤더 내 배경 없이)</li>
-                <li>✅ "메인 메뉴" 글자 제거</li>
-                <li>✅ 내비게이션 항목 텍스트 크기 증대 (16px)</li>
-                <li>✅ 모든 네비게이션 항목 가운데 정렬</li>
+                <li>✅ 최상단 가로막대 네비게이션 바 추가</li>
+                <li>✅ 로그인 버튼 우측 이동</li>
+                <li>✅ 로그인 시 회원정보 항목 표시 (로그인 버튼 왼쪽)</li>
+                <li>✅ 브랜드 색상 일관성 반영 (올리브 그린 계열)</li>
                 <li>✅ 사이드바 토글 기능 추가</li>
-                <li>✅ 토글된 상태에서 재활성화 표시 추가</li>
+                <li>✅ 다크모드 지원</li>
+                <li>✅ 레이아웃 중복 문제 해결</li>
             </ul>
         </div>
     </main>
@@ -467,28 +637,28 @@
 
         function toggleLoginState() {
             isLoggedIn = !isLoggedIn;
-            const userNavItem = document.getElementById('userNavItem');
-            const loginBtn = document.getElementById('loginBtn');
+            const topLoginBtn = document.getElementById('topLoginBtn');
+            const topUserInfo = document.getElementById('topUserInfo');
             
             if (isLoggedIn) {
-                userNavItem.classList.add('show');
-                loginBtn.textContent = '로그아웃';
-                loginBtn.onclick = logout;
+                topLoginBtn.textContent = '로그아웃';
+                topUserInfo.classList.add('show');
+                topLoginBtn.onclick = logout;
             } else {
-                userNavItem.classList.remove('show');
-                loginBtn.textContent = '로그인';
-                loginBtn.onclick = null;
+                topLoginBtn.textContent = '로그인';
+                topUserInfo.classList.remove('show');
+                topLoginBtn.onclick = null;
             }
         }
 
         function logout() {
             isLoggedIn = false;
-            const userNavItem = document.getElementById('userNavItem');
-            const loginBtn = document.getElementById('loginBtn');
+            const topLoginBtn = document.getElementById('topLoginBtn');
+            const topUserInfo = document.getElementById('topUserInfo');
             
-            userNavItem.classList.remove('show');
-            loginBtn.textContent = '로그인';
-            loginBtn.onclick = null;
+            topLoginBtn.textContent = '로그인';
+            topUserInfo.classList.remove('show');
+            topLoginBtn.onclick = null;
         }
 
         function toggleDarkMode() {
@@ -501,18 +671,20 @@
 
         function toggleSidebar() {
             isSidebarCollapsed = !isSidebarCollapsed;
-            const sidebar = document.querySelector('.sidebar');
+            const navigationArea = document.getElementById('navigationArea');
             const mainContent = document.getElementById('mainContent');
-            const showMenuBtn = document.getElementById('showMenuBtn');
+            const externalMenuShow = document.getElementById('externalMenuShow');
+            const menuToggleBtn = document.getElementById('menuToggleBtn');
             
             if (isSidebarCollapsed) {
-                sidebar.classList.add('collapsed');
+                navigationArea.classList.add('collapsed');
                 mainContent.classList.add('sidebar-collapsed');
-                showMenuBtn.classList.add('show');
+                externalMenuShow.classList.add('show');
             } else {
-                sidebar.classList.remove('collapsed');
+                navigationArea.classList.remove('collapsed');
                 mainContent.classList.remove('sidebar-collapsed');
-                showMenuBtn.classList.remove('show');
+                externalMenuShow.classList.remove('show');
+                menuToggleBtn.textContent = '메뉴 숨김';
             }
         }
     </script>
