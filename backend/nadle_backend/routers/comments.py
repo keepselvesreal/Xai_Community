@@ -298,10 +298,16 @@ async def create_service_inquiry(
 ):
     """Create a service inquiry."""
     try:
-        # metadata에 subtype 설정 (기존 metadata와 병합)
+        # metadata에 subtype과 isPublic 설정 (기존 metadata와 병합)
         if not comment_data.metadata:
             comment_data.metadata = {}
         comment_data.metadata["subtype"] = "service_inquiry"
+        
+        # isPublic 필드가 있으면 보존, 없으면 기본값 True 설정
+        if "isPublic" not in comment_data.metadata:
+            comment_data.metadata["isPublic"] = True
+            
+        print(f"🔍 [DEBUG] 문의 생성 - isPublic: {comment_data.metadata.get('isPublic')}, metadata: {comment_data.metadata}")
         
         # 기존 create_comment 메서드 재사용
         inquiry = await comments_service.create_comment(

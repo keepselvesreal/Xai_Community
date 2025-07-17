@@ -147,9 +147,9 @@ class PostsService:
                 "content": post.content,
                 "slug": post.slug,
                 "author_id": str(post.author_id),
-                "service": post.service.value if post.service else "content",
+                "service": post.service if post.service else "content",
                 "metadata": post.metadata.model_dump() if post.metadata else {},
-                "status": post.status.value if post.status else "published",
+                "status": post.status if post.status else "published",
                 "view_count": post.view_count + 1,  # 증가된 조회수 반영
                 "like_count": post.like_count,
                 "dislike_count": post.dislike_count,

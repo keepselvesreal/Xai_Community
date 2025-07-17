@@ -68,7 +68,7 @@ class CommentsService:
         print(f"🔄 댓글 작성 후 캐시 무효화 완료 - {post_slug}")
         
         # Convert to response format
-        comment_detail = await self._convert_to_comment_detail(comment)
+        comment_detail = await self._convert_to_comment_detail(comment, None, current_user)
         return comment_detail
     
     async def get_comments_with_user_data(
@@ -170,7 +170,7 @@ class CommentsService:
             
             # Convert main comment
             comment_detail = await self._convert_to_comment_detail(
-                comment, user_reactions.get(str(comment.id))
+                comment, user_reactions.get(str(comment.id)), current_user
             )
             comment_detail.replies = reply_details
             
@@ -214,10 +214,32 @@ class CommentsService:
         # Verify parent comment exists
         parent_comment = await self.comment_repo.get_by_id(parent_comment_id)
         
+        # 부모 댓글의 공개/비공개 상태를 답글에 isPublic으로 통일하여 상속
+        reply_metadata = comment_data.metadata.copy() if comment_data.metadata else {}
+        
+        # 부모 댓글의 공개 상태 확인 (isPublic 또는 is_private 필드 모두 확인)
+        parent_metadata = parent_comment.metadata or {}
+        parent_is_public = parent_metadata.get('isPublic', True)  # 기본값은 공개
+        
+        # is_private 필드가 있다면 이를 isPublic으로 변환
+        if 'is_private' in parent_metadata:
+            parent_is_public = not parent_metadata['is_private']
+        
+        # 답글에 isPublic 필드로 통일하여 설정
+        reply_metadata['isPublic'] = parent_is_public
+        
+        # 기존 is_private 필드가 있다면 제거 (통일성을 위해)
+        reply_metadata.pop('is_private', None)
+        
+        print(f"🔍 [DEBUG] 답글 공개/비공개 상속: parent_id={parent_comment_id}, parent_is_public={parent_is_public}")
+        print(f"🔍 [DEBUG] 부모 댓글 메타데이터: {parent_comment.metadata}")
+        print(f"🔍 [DEBUG] 답글 메타데이터: {reply_metadata}")
+        
         # Set parent_comment_id in comment data
         reply_data = CommentCreate(
             content=comment_data.content,
-            parent_comment_id=parent_comment_id
+            parent_comment_id=parent_comment_id,
+            metadata=reply_metadata
         )
         
         # Create reply
@@ -240,7 +262,7 @@ class CommentsService:
         print(f"🔄 답글 작성 후 캐시 무효화 완료 - {post_slug}")
         
         # Convert to response format
-        reply_detail = await self._convert_to_comment_detail(reply)
+        reply_detail = await self._convert_to_comment_detail(reply, None, current_user)
         return reply_detail
     
     async def update_comment_with_permission(
@@ -289,7 +311,7 @@ class CommentsService:
             print(f"❌ 댓글 수정 후 캐시 무효화 실패: {e}")
         
         # Convert to response format
-        comment_detail = await self._convert_to_comment_detail(updated_comment)
+        comment_detail = await self._convert_to_comment_detail(updated_comment, None, current_user)
         return comment_detail
     
     async def toggle_comment_reaction(
@@ -503,7 +525,8 @@ class CommentsService:
     async def _convert_to_comment_detail(
         self, 
         comment: Comment, 
-        user_reaction: Optional[Dict[str, bool]] = None
+        user_reaction: Optional[Dict[str, bool]] = None,
+        current_user: Optional[User] = None
     ) -> CommentDetail:
         """Convert Comment to CommentDetail.
         
@@ -539,18 +562,30 @@ class CommentsService:
                 # If user not found, leave author as None
                 pass
         
+        # 🔒 비공개 문의 마스킹 처리
+        content = comment.content
+        metadata = comment.metadata or {}
+        
+        # 서비스 문의인 경우 비공개 처리 확인
+        if (metadata.get("subtype") == "service_inquiry" and 
+            metadata.get("isPublic") is False):
+            
+            # 비공개 문의는 모든 사용자에게 마스킹 (작성자 포함)
+            content = "[비공개 문의입니다]"
+            print(f"🔒 [DEBUG] 비공개 문의 마스킹 적용 - comment_id: {comment.id}")
+
         return CommentDetail(
             id=str(comment.id),
             author_id=comment.author_id,
             author=author,
-            content=comment.content,
+            content=content,
             parent_comment_id=comment.parent_comment_id,
             status=comment.status,
             like_count=comment.like_count,
             dislike_count=comment.dislike_count,
             reply_count=comment.reply_count,
             user_reaction=user_reaction,
-            metadata=comment.metadata or {},  # 🆕 metadata 필드 추가
+            metadata=metadata,
             created_at=comment.created_at,
             updated_at=comment.updated_at,
             replies=None  # Will be populated by caller if needed
@@ -622,8 +657,7 @@ class CommentsService:
             post_slug: 게시글 slug
         """
         try:
-            from nadle_backend.database.redis_factory import get_redis_manager
-            from nadle_backend.database.cache_utils import get_prefixed_key
+            from nadle_backend.database.redis_factory import get_redis_manager, get_prefixed_key
             
             redis_manager = await get_redis_manager()
             cache_key = get_prefixed_key(f"comments_batch_v2:{post_slug}")

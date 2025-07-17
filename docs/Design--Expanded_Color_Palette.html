@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>확장된 컬러 팔레트 색상 조합 가이드</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #FAFAFA;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #262626;
+            margin-bottom: 40px;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        .section {
+            margin-bottom: 60px;
+            background: white;
+            border-radius: 16px;
+            padding: 32px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        
+        .section-title {
+            color: #262626;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .section-desc {
+            color: #595959;
+            font-size: 14px;
+            margin-bottom: 32px;
+            line-height: 1.5;
+        }
+        
+        .combinations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+        }
+        
+        .combination-card {
+            background: white;
+            border: 1px solid #E8E8E8;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .combination-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.12);
+        }
+        
+        .color-preview {
+            height: 120px;
+            display: flex;
+            position: relative;
+        }
+        
+        .color-strip {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 12px;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            position: relative;
+        }
+        
+        .color-strip.text-dark {
+            color: #333;
+            text-shadow: none;
+        }
+        
+        .color-info {
+            padding: 20px;
+        }
+        
+        .combination-name {
+            font-weight: 600;
+            color: #262626;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        
+        .combination-desc {
+            color: #595959;
+            font-size: 13px;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+        
+        .use-cases {
+            margin-bottom: 12px;
+        }
+        
+        .use-case-label {
+            font-size: 11px;
+            color: #8C8C8C;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .use-case-text {
+            font-size: 12px;
+            color: #595959;
+        }
+        
+        .color-codes {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .color-code {
+            background: #F5F5F5;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 10px;
+            color: #595959;
+        }
+        
+        /* 특별한 조합 효과들 */
+        .gradient-preview {
+            background: linear-gradient(135deg, var(--color1), var(--color2));
+        }
+        
+        .gradient-three {
+            background: linear-gradient(135deg, var(--color1), var(--color2), var(--color3));
+        }
+        
+        .pattern-preview {
+            background: 
+                radial-gradient(circle at 50% 50%, var(--color1) 30%, transparent 30%),
+                var(--color2);
+            background-size: 20px 20px;
+        }
+        
+        .layered-preview {
+            background: var(--color1);
+            position: relative;
+        }
+        
+        .layered-preview::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 50%;
+            bottom: 0;
+            background: var(--color2);
+            opacity: 0.8;
+        }
+        
+        .mood-indicator {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        /* 컬러 조합별 스타일 */
+        
+        /* 1. 브랜드 하모니 조합 */
+        .brand-harmony-1 { --color1: #6B8E23; --color2: #9ACD32; }
+        .brand-harmony-2 { --color1: #6B8E23; --color2: #52C41A; }
+        .brand-harmony-3 { --color1: #556B2F; --color2: #F0F8E8; }
+        .brand-harmony-4 { --color1: #6B8E23; --color2: #FCFFF9; --color3: #E8F4E0; }
+        
+        /* 2. 감정 표현 조합 */
+        .emotion-success { --color1: #52C41A; --color2: #F0F8E8; }
+        .emotion-warning { --color1: #FAAD14; --color2: #FFF7E6; }
+        .emotion-info { --color1: #1890FF; --color2: #E6F7FF; }
+        .emotion-premium { --color1: #722ED1; --color2: #F9F0FF; }
+        
+        /* 3. 대비 강조 조합 */
+        .contrast-energy { --color1: #FA8C16; --color2: #13C2C2; }
+        .contrast-passion { --color1: #EB2F96; --color2: #69C0FF; }
+        .contrast-luxury { --color1: #722ED1; --color2: #FAAD14; }
+        .contrast-nature { --color1: #6B8E23; --color2: #FA8C16; }
+        
+        /* 4. 중성 조화 조합 */
+        .neutral-modern { --color1: #262626; --color2: #F5F5F5; }
+        .neutral-soft { --color1: #8C8C8C; --color2: #FAFAFA; }
+        .neutral-elegant { --color1: #595959; --color2: #E8E8E8; }
+        .neutral-minimal { --color1: #BFBFBF; --color2: #FCFFF9; }
+        
+        /* 5. 그라디언트 마법 조합 */
+        .gradient-sunset { --color1: #FA8C16; --color2: #EB2F96; --color3: #722ED1; }
+        .gradient-ocean { --color1: #13C2C2; --color2: #1890FF; --color3: #69C0FF; }
+        .gradient-forest { --color1: #6B8E23; --color2: #52C41A; --color3: #9ACD32; }
+        .gradient-royal { --color1: #722ED1; --color2: #1890FF; --color3: #13C2C2; }
+        
+        /* 6. 계절감 조합 */
+        .season-spring { --color1: #9ACD32; --color2: #69C0FF; }
+        .season-summer { --color1: #FA8C16; --color2: #FAAD14; }
+        .season-autumn { --color1: #FAAD14; --color2: #556B2F; }
+        .season-winter { --color1: #1890FF; --color2: #F5F5F5; }
+        
+        /* 특별 섹션 스타일 */
+        .special-section {
+            background: linear-gradient(135deg, #FCFFF9 0%, #F0F8E8 100%);
+            border: 1px solid #E8F4E0;
+        }
+        
+        .inspiration-card {
+            background: white;
+            border: 1px solid #E8E8E8;
+            border-radius: 8px;
+            padding: 16px;
+            margin: 16px 0;
+        }
+        
+        .inspiration-title {
+            font-weight: 600;
+            color: #6B8E23;
+            margin-bottom: 8px;
+        }
+        
+        .inspiration-text {
+            font-size: 13px;
+            color: #595959;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>확장된 컬러 팔레트 색상 조합 가이드</h1>
+        
+        <!-- 1. 브랜드 하모니 조합 -->
+        <div class="section">
+            <h2 class="section-title">🎯 브랜드 하모니 조합</h2>
+            <p class="section-desc">메인 브랜드 컬러(Primary Green)를 중심으로 한 조화로운 조합들입니다. 브랜드 일관성을 유지하면서도 다양한 느낌을 표현할 수 있습니다.</p>
+            
+            <div class="combinations-grid">
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #6B8E23;">Primary</div>
+                        <div class="color-strip" style="background: #9ACD32;">Light</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">클래식 브랜드</div>
+                        <div class="combination-desc">안정적이고 신뢰할 수 있는 브랜드 조합</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">메인 헤더, 네비게이션, 주요 CTA 버튼</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#6B8E23</span>
+                            <span class="color-code">#9ACD32</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #6B8E23;">Primary</div>
+                        <div class="color-strip" style="background: #52C41A;">Success</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">성장 파트너십</div>
+                        <div class="combination-desc">성장과 성공을 상징하는 긍정적 조합</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">성공 메시지, 완료 상태, 수익률 표시</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#6B8E23</span>
+                            <span class="color-code">#52C41A</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #556B2F;">Dark</div>
+                        <div class="color-strip text-dark" style="background: #F0F8E8;">Light BG</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">내추럴 엘레강스</div>
+                        <div class="combination-desc">자연스럽고 고급스러운 느낌의 조합</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">카드 배경, 섹션 구분, 프리미엄 컨텐츠</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#556B2F</span>
+                            <span class="color-code">#F0F8E8</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview gradient-three">
+                        <div class="mood-indicator">🌿 내추럴</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">브랜드 그라디언트</div>
+                        <div class="combination-desc">3단계 그라디언트로 깊이감 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">히어로 섹션, 카드 헤더, 강조 배경</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#6B8E23</span>
+                            <span class="color-code">#FCFFF9</span>
+                            <span class="color-code">#E8F4E0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 2. 감정 표현 조합 -->
+        <div class="section">
+            <h2 class="section-title">💫 감정 표현 조합</h2>
+            <p class="section-desc">각 상황과 감정에 맞는 색상 조합들입니다. 사용자에게 명확한 메시지를 전달하고 적절한 감정을 유도할 수 있습니다.</p>
+            
+            <div class="combinations-grid">
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #52C41A;">Success</div>
+                        <div class="color-strip text-dark" style="background: #F0F8E8;">Success BG</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">성공의 기쁨</div>
+                        <div class="combination-desc">성취감과 만족감을 표현하는 조합</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">계약 완료, 목표 달성, 승인 메시지</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#52C41A</span>
+                            <span class="color-code">#F0F8E8</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #FAAD14;">Warning</div>
+                        <div class="color-strip text-dark" style="background: #FFF7E6;">Warning BG</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">주의 집중</div>
+                        <div class="combination-desc">중요한 정보나 주의사항을 강조</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">마감 임박, 서류 보완, 중요 공지</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#FAAD14</span>
+                            <span class="color-code">#FFF7E6</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #1890FF;">Info</div>
+                        <div class="color-strip text-dark" style="background: #E6F7FF;">Info BG</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">신뢰의 정보</div>
+                        <div class="combination-desc">신뢰할 수 있는 정보 전달</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">시장 분석, 팁 정보, 가이드 메시지</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#1890FF</span>
+                            <span class="color-code">#E6F7FF</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #722ED1;">Premium</div>
+                        <div class="color-strip text-dark" style="background: #F9F0FF;">Premium BG</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">프리미엄 럭셔리</div>
+                        <div class="combination-desc">고급스럽고 특별한 서비스 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">VIP 서비스, 독점 매물, 특별 혜택</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#722ED1</span>
+                            <span class="color-code">#F9F0FF</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 3. 대비 강조 조합 -->
+        <div class="section">
+            <h2 class="section-title">⚡ 대비 강조 조합</h2>
+            <p class="section-desc">강한 대비로 시선을 끌고 에너지를 표현하는 조합들입니다. 특별한 이벤트나 중요한 액션을 유도할 때 효과적입니다.</p>
+            
+            <div class="combinations-grid">
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #FA8C16;">Orange</div>
+                        <div class="color-strip" style="background: #13C2C2;">Cyan</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">에너지 폭발</div>
+                        <div class="combination-desc">역동적이고 활기찬 에너지 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">이벤트 배너, 특가 상품, 신규 서비스</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#FA8C16</span>
+                            <span class="color-code">#13C2C2</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #EB2F96;">Pink</div>
+                        <div class="color-strip" style="background: #69C0FF;">Light Blue</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">열정적 혁신</div>
+                        <div class="combination-desc">열정과 혁신을 동시에 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">인기 매물, 추천 서비스, 트렌드 정보</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#EB2F96</span>
+                            <span class="color-code">#69C0FF</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #722ED1;">Purple</div>
+                        <div class="color-strip" style="background: #FAAD14;">Gold</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">로얄 골드</div>
+                        <div class="combination-desc">고급스러움과 가치를 강조</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">프리미엄 등급, 투자 상품, 한정 혜택</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#722ED1</span>
+                            <span class="color-code">#FAAD14</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #6B8E23;">Nature</div>
+                        <div class="color-strip" style="background: #FA8C16;">Warm</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">자연과 온기</div>
+                        <div class="combination-desc">안정성과 따뜻함의 균형</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">가족 서비스, 주거 공간, 라이프스타일</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#6B8E23</span>
+                            <span class="color-code">#FA8C16</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 4. 중성 조화 조합 -->
+        <div class="section">
+            <h2 class="section-title">🎨 중성 조화 조합</h2>
+            <p class="section-desc">차분하고 세련된 중성 색상들의 조합입니다. 콘텐츠에 집중할 수 있게 하고 전문적인 느낌을 연출합니다.</p>
+            
+            <div class="combinations-grid">
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #262626;">Dark</div>
+                        <div class="color-strip text-dark" style="background: #F5F5F5;">Light</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">모던 클래식</div>
+                        <div class="combination-desc">시대를 초월하는 모던한 조합</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">텍스트와 배경, 카드 구조, 레이아웃</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#262626</span>
+                            <span class="color-code">#F5F5F5</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #8C8C8C;">Medium</div>
+                        <div class="color-strip text-dark" style="background: #FAFAFA;">Ultra Light</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">소프트 미니멀</div>
+                        <div class="combination-desc">부드럽고 깔끔한 미니멀 스타일</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">보조 텍스트, 아이콘, 구분선</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#8C8C8C</span>
+                            <span class="color-code">#FAFAFA</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #595959;">Text</div>
+                        <div class="color-strip text-dark" style="background: #E8E8E8;">Border</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">엘레간트 그레이</div>
+                        <div class="combination-desc">우아하고 전문적인 회색 조합</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">폼 요소, 테두리, 데이터 테이블</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#595959</span>
+                            <span class="color-code">#E8E8E8</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip text-dark" style="background: #BFBFBF;">Placeholder</div>
+                        <div class="color-strip text-dark" style="background: #FCFFF9;">Brand BG</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">미니멀 브랜드</div>
+                        <div class="combination-desc">중성색과 브랜드 색의 조화</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">플레이스홀더, 비활성화 상태, 배경</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#BFBFBF</span>
+                            <span class="color-code">#FCFFF9</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 5. 그라디언트 마법 조합 -->
+        <div class="section">
+            <h2 class="section-title">🌈 그라디언트 마법 조합</h2>
+            <p class="section-desc">3가지 색상을 활용한 아름다운 그라디언트 조합들입니다. 시각적 임팩트가 강하고 브랜드 차별화에 효과적입니다.</p>
+            
+            <div class="combinations-grid">
+                <div class="combination-card">
+                    <div class="color-preview gradient-three" style="--color1: #FA8C16; --color2: #EB2F96; --color3: #722ED1;">
+                        <div class="mood-indicator">🌅 열정</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">선셋 드림</div>
+                        <div class="combination-desc">따뜻한 석양 같은 열정적 그라디언트</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">히어로 섹션, 이벤트 배너, 프로모션</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#FA8C16</span>
+                            <span class="color-code">#EB2F96</span>
+                            <span class="color-code">#722ED1</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview gradient-three" style="--color1: #13C2C2; --color2: #1890FF; --color3: #69C0FF;">
+                        <div class="mood-indicator">🌊 신뢰</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">오션 브리즈</div>
+                        <div class="combination-desc">시원하고 신뢰감 있는 바다 그라디언트</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">신뢰 섹션, 데이터 시각화, 분석 차트</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#13C2C2</span>
+                            <span class="color-code">#1890FF</span>
+                            <span class="color-code">#69C0FF</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview gradient-three" style="--color1: #6B8E23; --color2: #52C41A; --color3: #9ACD32;">
+                        <div class="mood-indicator">🌳 성장</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">포레스트 그로스</div>
+                        <div class="combination-desc">자연과 성장을 표현하는 숲 그라디언트</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">성장 지표, 친환경 서비스, 자연 컨셉</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#6B8E23</span>
+                            <span class="color-code">#52C41A</span>
+                            <span class="color-code">#9ACD32</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview gradient-three" style="--color1: #722ED1; --color2: #1890FF; --color3: #13C2C2;">
+                        <div class="mood-indicator">👑 프리미엄</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">로얄 테크</div>
+                        <div class="combination-desc">고급스럽고 미래적인 프리미엄 그라디언트</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">VIP 서비스, AI 기능, 혁신 기술</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#722ED1</span>
+                            <span class="color-code">#1890FF</span>
+                            <span class="color-code">#13C2C2</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 6. 계절감 조합 -->
+        <div class="section">
+            <h2 class="section-title">🌸 계절감 조합</h2>
+            <p class="section-desc">계절의 특성을 반영한 감성적인 색상 조합들입니다. 시기별 마케팅이나 감성적 연결에 효과적입니다.</p>
+            
+            <div class="combinations-grid">
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #9ACD32;">Fresh</div>
+                        <div class="color-strip" style="background: #69C0FF;">Sky</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">봄의 신선함</div>
+                        <div class="combination-desc">새로운 시작과 희망을 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">신규 서비스, 리뉴얼, 새로운 기능</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#9ACD32</span>
+                            <span class="color-code">#69C0FF</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #FA8C16;">Energy</div>
+                        <div class="color-strip" style="background: #FAAD14;">Sun</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">여름의 활력</div>
+                        <div class="combination-desc">뜨거운 열정과 에너지 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">여름 이벤트, 휴가 정보, 액티브 서비스</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#FA8C16</span>
+                            <span class="color-code">#FAAD14</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #FAAD14;">Harvest</div>
+                        <div class="color-strip" style="background: #556B2F;">Earth</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">가을의 수확</div>
+                        <div class="combination-desc">풍요로움과 안정감 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">성과 보고, 투자 수익, 결실 컨텐츠</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#FAAD14</span>
+                            <span class="color-code">#556B2F</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="combination-card">
+                    <div class="color-preview">
+                        <div class="color-strip" style="background: #1890FF;">Cool</div>
+                        <div class="color-strip text-dark" style="background: #F5F5F5;">Pure</div>
+                    </div>
+                    <div class="color-info">
+                        <div class="combination-name">겨울의 순수</div>
+                        <div class="combination-desc">깔끔함과 명료함 표현</div>
+                        <div class="use-cases">
+                            <div class="use-case-label">적용 예시:</div>
+                            <div class="use-case-text">정보 정리, 데이터 분석, 클린 디자인</div>
+                        </div>
+                        <div class="color-codes">
+                            <span class="color-code">#1890FF</span>
+                            <span class="color-code">#F5F5F5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 실무 활용 팁 -->
+        <div class="section special-section">
+            <h2 class="section-title">💡 실무 활용 팁</h2>
+            <p class="section-desc">색상 조합을 효과적으로 활용하기 위한 실무 가이드라인입니다.</p>
+            
+            <div class="inspiration-card">
+                <div class="inspiration-title">🎯 조합 선택 기준</div>
+                <div class="inspiration-text">
+                    <strong>목적 우선:</strong> 브랜드 일관성 > 감정 전달 > 시각적 임팩트 순으로 고려<br>
+                    <strong>대비 확인:</strong> 접근성을 위해 명도 대비 4.5:1 이상 유지<br>
+                    <strong>조화 테스트:</strong> 최대 3-4가지 색상으로 제한하여 일관성 유지
+                </div>
+            </div>
+            
+            <div class="inspiration-card">
+                <div class="inspiration-title">🚀 적용 우선순위</div>
+                <div class="inspiration-text">
+                    <strong>1단계:</strong> 브랜드 하모니 조합으로 기본 틀 구성<br>
+                    <strong>2단계:</strong> 감정 표현 조합으로 상태별 메시지 차별화<br>
+                    <strong>3단계:</strong> 대비 강조 조합으로 특별한 요소 부각<br>
+                    <strong>4단계:</strong> 계절감/그라디언트 조합으로 브랜드 개성 강화
+                </div>
+            </div>
+            
+            <div class="inspiration-card">
+                <div class="inspiration-title">⚡ 주의사항</div>
+                <div class="inspiration-text">
+                    <strong>과도한 사용 금지:</strong> 강한 대비 조합은 포인트로만 활용<br>
+                    <strong>플랫폼 고려:</strong> 모바일에서도 선명하게 보이는지 확인<br>
+                    <strong>문화적 고려:</strong> 타겟 사용자의 문화적 색상 인식 고려
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

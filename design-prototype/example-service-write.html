@@ -8,23 +8,13 @@
     <style>
         /* 커스텀 색상 및 스타일 */
         .service-item {
-            transition: all 0.3s ease;
-        }
-        
-        .service-item:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            /* 애니메이션 효과 제거 */
         }
         
         .service-add-btn {
             background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
             border: none;
-            transition: all 0.3s ease;
-        }
-        
-        .service-add-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            /* 애니메이션 효과 제거 */
         }
         
         .service-counter {
@@ -127,7 +117,7 @@
                     </div>
                     
                     <!-- 서비스 목록 컨테이너 -->
-                    <div id="servicesList" class="space-y-4">
+                    <div id="servicesList" class="space-y-6">
                         <!-- 서비스 아이템들이 여기에 동적으로 추가됩니다 -->
                     </div>
                 </div>
@@ -209,19 +199,19 @@
             const serviceId = `service-${index}`;
             
             return `
-                <div class="service-item bg-white border-2 border-gray-200 rounded-xl p-6 relative" data-service-id="${serviceId}">
+                <div class="service-item relative border border-gray-200 rounded-lg p-4" data-service-id="${serviceId}">
                     <!-- 삭제 버튼 (첫 번째 서비스가 아닌 경우에만) -->
                     ${index > 0 ? `
-                        <div class="flex justify-end mb-4">
+                        <div class="flex justify-end mb-2">
                             <button 
                                 type="button" 
-                                class="text-red-500 hover:text-red-700 text-xs"
+                                class="text-red-500 hover:text-red-600 text-xs"
                                 onclick="removeService('${serviceId}')"
                             >
-                                🗑️ 삭제
+                                삭제
                             </button>
                         </div>
-                    ` : '<div class="mb-4"></div>'}
+                    ` : ''}
 
                     <!-- 기존 프런트엔드와 동일한 레이아웃 -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">

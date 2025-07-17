@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시판 목록 - 수정본</title>
+    <style>
+        /* CSS 변수 기반 테마 시스템 */
+        :root {
+            --bg-primary: #FAFAFA;
+            --bg-secondary: white;
+            --bg-card: white;
+            --text-primary: #2F2F2F;
+            --text-secondary: #595959;
+            --text-muted: #8C8C8C;
+            --border-color: #D9D9D9;
+            --border-light: #F5F5F5;
+            --accent-primary: #6B8E23;
+            --accent-secondary: #9ACD32;
+            --accent-hover: #556B2F;
+            --bg-hover: #F0F8E8;
+            --bg-section: #F8F9FA;
+            --shadow-card: rgba(107, 142, 35, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* 검색 및 글쓰기 섹션 */
+        .search-write-section {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .write-button-top {
+            width: 100%;
+            max-width: 320px;
+            padding: 12px 24px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .write-button-top:hover {
+            border-color: #10b981;
+            background: #ecfdf5;
+            color: #059669;
+        }
+
+        .search-bar-top {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            padding: 12px 16px;
+            width: 100%;
+            max-width: 320px;
+            transition: all 0.2s ease;
+        }
+
+        .search-bar-top:focus-within {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .search-icon {
+            color: #6366f1;
+            font-size: 16px;
+        }
+
+        .search-input-top {
+            flex: 1;
+            border: none;
+            outline: none;
+            background: transparent;
+            color: var(--text-primary);
+            font-size: 16px;
+        }
+
+        .search-input-top::placeholder {
+            color: var(--text-muted);
+        }
+
+        /* 필터 및 정렬 섹션 */
+        .filter-sort-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .filter-button {
+            padding: 8px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 50px;
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .filter-button:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .filter-button.active {
+            border-color: #3b82f6;
+            background: #3b82f6;
+            color: white;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        .sort-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .sort-label {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        .sort-select {
+            padding: 6px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: var(--bg-card);
+            color: var(--text-primary);
+            transition: all 0.2s ease;
+        }
+
+        .sort-select:focus {
+            outline: none;
+            border-color: #f59e0b;
+            box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+        }
+
+        /* 게시글 목록 스타일 */
+        .post-list {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 32px;
+        }
+
+        .post-item {
+            padding: 16px 20px;
+            margin: 0;
+            border-bottom: 1px solid var(--border-light);
+            transition: background-color 0.2s ease;
+            cursor: pointer;
+        }
+
+        .post-item:hover {
+            background-color: var(--bg-hover);
+        }
+
+        .post-item:last-child {
+            border-bottom: none;
+        }
+
+        .post-title {
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .post-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .post-tag {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .post-tag-info {
+            background-color: #fbbf24;
+            color: #ffffff;
+        }
+
+        .post-tag-life {
+            background-color: #10b981;
+            color: #ffffff;
+        }
+
+        .post-tag-story {
+            background-color: #8b5cf6;
+            color: #ffffff;
+        }
+
+        .badge-new {
+            display: none;
+        }
+
+        .stat-icon {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .post-title-text {
+            color: var(--text-primary);
+            font-weight: 500;
+            font-size: 18px;
+        }
+
+        .post-meta-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .post-meta-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-tag {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+            background: #6b7280;
+            color: #ffffff;
+            border: 1px solid #9ca3af;
+        }
+
+        /* 페이지네이션 스타일 */
+        .pagination-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin-top: 32px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .pagination-button {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            min-width: 44px;
+            text-align: center;
+        }
+
+        .pagination-button:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
+        }
+
+        .pagination-button.active {
+            background: #8b5cf6;
+            color: white;
+            border-color: #8b5cf6;
+            box-shadow: 0 2px 4px rgba(139, 92, 246, 0.2);
+        }
+
+        .pagination-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .pagination-numbers {
+            display: flex;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .pagination-info-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pagination-separator {
+            font-size: 16px;
+            color: var(--text-muted);
+        }
+
+        .pagination-info {
+            font-size: 14px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+        }
+
+        /* 반응형 스타일 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .search-write-section {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .write-button-top, .search-bar-top {
+                max-width: 100%;
+            }
+
+            .filter-sort-section {
+                flex-direction: column;
+                gap: 16px;
+                align-items: flex-start;
+            }
+
+            .filter-buttons {
+                flex-wrap: wrap;
+            }
+
+            .post-meta {
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+
+            .post-meta-right {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 검색 및 글쓰기 섹션 -->
+        <div class="search-write-section">
+            <a href="#" class="write-button-top">✏️ 글쓰기</a>
+            <div class="search-bar-top">
+                <span class="search-icon">🔍</span>
+                <input type="text" class="search-input-top" placeholder="게시글 검색..." id="searchInput">
+            </div>
+        </div>
+
+        <!-- 필터 및 정렬 섹션 -->
+        <div class="filter-sort-section">
+            <div class="filter-buttons">
+                <button class="filter-button active" onclick="filterByCategory('all')">전체</button>
+                <button class="filter-button" onclick="filterByCategory('info')">입주 정보</button>
+                <button class="filter-button" onclick="filterByCategory('life')">생활 정보</button>
+                <button class="filter-button" onclick="filterByCategory('story')">이야기</button>
+            </div>
+            <div class="sort-section">
+                <span class="sort-label">정렬:</span>
+                <select class="sort-select" id="sortFilter" onchange="sortPosts()">
+                    <option value="latest">최신순</option>
+                    <option value="views">조회수</option>
+                    <option value="likes">추천수</option>
+                    <option value="comments">댓글수</option>
+                    <option value="saves">저장수</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 게시글 목록 -->
+        <div class="post-list" id="postList">
+            <!-- 게시글 항목들이 여기에 동적으로 추가됩니다 -->
+        </div>
+
+        <!-- 페이지네이션 -->
+        <div class="pagination-container">
+            <div class="pagination">
+                <button class="pagination-button" onclick="changePage(1)" id="firstButton">맨앞</button>
+                <div class="pagination-numbers" id="paginationNumbers">
+                    <!-- 페이지 번호들이 여기에 동적으로 생성됩니다 -->
+                </div>
+                <button class="pagination-button" onclick="changePage(getTotalPages())" id="lastButton">맨뒤</button>
+            </div>
+            <div class="pagination-info-row">
+                <div class="pagination-separator">│</div>
+                <div class="pagination-info">
+                    <span id="currentPageInfo">1</span>/<span id="totalPagesInfo">2</span> 페이지
+                </div>
+                <div class="pagination-separator">│</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Mock 데이터 (총 150개 - 페이지네이션 테스트용)
+        const mockPosts = [];
+        
+        // 기본 게시글 템플릿들
+        const postTemplates = [
+            {
+                title: "아파트 입주 체크리스트 공유합니다",
+                category: "입주 정보",
+                tags: ["입주", "체크리스트", "준비사항"]
+            },
+            {
+                title: "관리비 절약 노하우 대방출!",
+                category: "생활 정보",
+                tags: ["관리비", "절약", "팁"]
+            },
+            {
+                title: "우리 아파트 수영장 이용 후기",
+                category: "이야기",
+                tags: ["수영장", "후기", "운동"]
+            },
+            {
+                title: "주차장 에티켓에 대해 이야기해봐요",
+                category: "생활 정보",
+                tags: ["주차", "에티켓", "매너"]
+            },
+            {
+                title: "인테리어 공사 전 알아두면 좋은 것들",
+                category: "입주 정보",
+                tags: ["인테리어", "공사", "팁"]
+            },
+            {
+                title: "아이들 놀이터 안전 관리 제안",
+                category: "생활 정보",
+                tags: ["놀이터", "안전", "아이"]
+            },
+            {
+                title: "겨울철 보일러 관리 방법",
+                category: "생활 정보",
+                tags: ["보일러", "겨울", "관리"]
+            },
+            {
+                title: "엘리베이터 고장 시 대처 방법",
+                category: "입주 정보",
+                tags: ["엘리베이터", "고장", "대처"]
+            },
+            {
+                title: "분리수거 올바른 방법 정리",
+                category: "생활 정보",
+                tags: ["분리수거", "환경", "방법"]
+            },
+            {
+                title: "아파트 생활 첫 달 소감",
+                category: "이야기",
+                tags: ["첫달", "소감", "적응"]
+            }
+        ];
+
+        const authors = ["김주민", "절약왕", "수영러버", "매너운전자", "인테리어맘", "육아맘", "따뜻한집", "안전지킴이", "환경지킴이", "신입주민"];
+
+        // 150개의 mock 데이터 생성
+        for (let i = 1; i <= 150; i++) {
+            const template = postTemplates[i % postTemplates.length];
+            const author = authors[i % authors.length];
+            const daysAgo = Math.floor(i / 10);
+            const isNew = i <= 5; // 처음 5개만 새 게시글
+
+            const post = {
+                id: i,
+                title: `${template.title} ${i}`,
+                author: author,
+                created_at: new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000).toISOString(),
+                category: template.category,
+                tags: template.tags,
+                stats: {
+                    views: Math.floor(Math.random() * 5000) + 100,
+                    likes: Math.floor(Math.random() * 200) + 10,
+                    dislikes: Math.floor(Math.random() * 20) + 1,
+                    comments: Math.floor(Math.random() * 100) + 5,
+                    bookmarks: Math.floor(Math.random() * 50) + 2
+                },
+                isNew: isNew
+            };
+
+            mockPosts.push(post);
+        }
+
+        // 현재 페이지 상태
+        let currentPage = 1;
+        let postsPerPage = 10;
+        let filteredPosts = [...mockPosts];
+
+        // 시간 포맷팅 함수
+        function formatRelativeTime(dateString) {
+            const date = new Date(dateString);
+            const now = new Date();
+            const diff = now - date;
+            
+            const seconds = Math.floor(diff / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            const days = Math.floor(hours / 24);
+            
+            if (days > 0) return `${days}일 전`;
+            if (hours > 0) return `${hours}시간 전`;
+            if (minutes > 0) return `${minutes}분 전`;
+            return '방금 전';
+        }
+
+        // 숫자 포맷팅 함수
+        function formatNumber(num) {
+            if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'k';
+            }
+            return num.toString();
+        }
+
+        // 카테고리 색상 매핑
+        function getCategoryClass(category) {
+            switch (category) {
+                case '입주 정보': return 'post-tag-info';
+                case '생활 정보': return 'post-tag-life';
+                case '이야기': return 'post-tag-story';
+                default: return 'post-tag-info';
+            }
+        }
+
+        // 게시글 렌더링
+        function renderPosts() {
+            const postList = document.getElementById('postList');
+            const startIndex = (currentPage - 1) * postsPerPage;
+            const endIndex = startIndex + postsPerPage;
+            const postsToShow = filteredPosts.slice(startIndex, endIndex);
+
+            postList.innerHTML = postsToShow.map(post => {
+                const userTags = post.tags.slice(0, 3).map(tag => 
+                    `<span class="user-tag">#${tag}</span>`
+                ).join('');
+                
+                const additionalTagsCount = post.tags.length > 3 ? 
+                    `<span style="font-size: 10px; color: var(--text-muted); margin-left: 4px;">+${post.tags.length - 3}</span>` : '';
+
+                return `
+                    <div class="post-item" onclick="viewPost(${post.id})">
+                        <div class="post-title">
+                            <span class="post-tag ${getCategoryClass(post.category)}">${post.category}</span>
+                            <span class="post-title-text">${post.title}</span>
+                            ${post.isNew ? '<span class="badge-new">NEW</span>' : ''}
+                        </div>
+                        <div class="post-meta">
+                            <div class="post-meta-left">
+                                ${userTags}
+                                ${additionalTagsCount}
+                            </div>
+                            <div class="post-meta-right">
+                                <span>${post.author}</span>
+                                <span>·</span>
+                                <span>${formatRelativeTime(post.created_at)}</span>
+                                <span>·</span>
+                                <span class="stat-icon">👁️ ${formatNumber(post.stats.views)}</span>
+                                <span class="stat-icon">👍 ${formatNumber(post.stats.likes)}</span>
+                                <span class="stat-icon">👎 ${formatNumber(post.stats.dislikes)}</span>
+                                <span class="stat-icon">💬 ${formatNumber(post.stats.comments)}</span>
+                                <span class="stat-icon">🔖 ${formatNumber(post.stats.bookmarks)}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            updatePagination();
+        }
+
+        // 총 페이지 수 계산
+        function getTotalPages() {
+            return Math.ceil(filteredPosts.length / postsPerPage);
+        }
+
+        // 페이지네이션 업데이트
+        function updatePagination() {
+            const totalPages = getTotalPages();
+            const firstButton = document.getElementById('firstButton');
+            const lastButton = document.getElementById('lastButton');
+            const currentPageInfo = document.getElementById('currentPageInfo');
+            const totalPagesInfo = document.getElementById('totalPagesInfo');
+            const paginationNumbers = document.getElementById('paginationNumbers');
+
+            // 맨앞/맨뒤 버튼 상태
+            firstButton.disabled = currentPage === 1;
+            lastButton.disabled = currentPage === totalPages;
+
+            // 페이지 정보 업데이트
+            currentPageInfo.textContent = currentPage;
+            totalPagesInfo.textContent = totalPages;
+
+            // 페이지 번호 생성 (현재 페이지 기준 앞뒤 3개씩, 총 7개)
+            let startPage = Math.max(1, currentPage - 3);
+            let endPage = Math.min(totalPages, currentPage + 3);
+            
+            // 항상 7개를 유지하도록 조정
+            if (endPage - startPage + 1 < 7) {
+                if (startPage === 1) {
+                    endPage = Math.min(totalPages, startPage + 6);
+                } else if (endPage === totalPages) {
+                    startPage = Math.max(1, endPage - 6);
+                }
+            }
+
+            // 페이지 번호 버튼 생성
+            paginationNumbers.innerHTML = '';
+            for (let i = startPage; i <= endPage; i++) {
+                const button = document.createElement('button');
+                button.className = `pagination-button ${i === currentPage ? 'active' : ''}`;
+                button.textContent = i;
+                button.onclick = () => changePage(i);
+                paginationNumbers.appendChild(button);
+            }
+        }
+
+        // 페이지 변경
+        function changePage(page) {
+            const totalPages = getTotalPages();
+            if (page < 1 || page > totalPages) return;
+            
+            currentPage = page;
+            renderPosts();
+        }
+
+        // 검색 기능
+        function searchPosts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const activeFilter = document.querySelector('.filter-button.active');
+            const categoryFilter = activeFilter ? activeFilter.textContent : '전체';
+            
+            filteredPosts = mockPosts.filter(post => {
+                const matchesSearch = !searchTerm || 
+                    post.title.toLowerCase().includes(searchTerm) ||
+                    post.author.toLowerCase().includes(searchTerm) ||
+                    post.tags.some(tag => tag.toLowerCase().includes(searchTerm));
+                
+                const matchesCategory = categoryFilter === '전체' || 
+                    post.category === categoryFilter;
+                
+                return matchesSearch && matchesCategory;
+            });
+            
+            currentPage = 1;
+            renderPosts();
+        }
+
+        // 카테고리 필터링
+        function filterByCategory(category) {
+            // 모든 버튼에서 active 클래스 제거
+            document.querySelectorAll('.filter-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // 클릭된 버튼에 active 클래스 추가
+            event.target.classList.add('active');
+            
+            // 검색 함수 호출
+            searchPosts();
+        }
+
+        // 정렬
+        function sortPosts() {
+            const sortBy = document.getElementById('sortFilter').value;
+            
+            filteredPosts.sort((a, b) => {
+                switch (sortBy) {
+                    case 'latest':
+                        return new Date(b.created_at) - new Date(a.created_at);
+                    case 'views':
+                        return b.stats.views - a.stats.views;
+                    case 'likes':
+                        return b.stats.likes - a.stats.likes;
+                    case 'comments':
+                        return b.stats.comments - a.stats.comments;
+                    case 'saves':
+                        return b.stats.bookmarks - a.stats.bookmarks;
+                    default:
+                        return 0;
+                }
+            });
+            
+            renderPosts();
+        }
+
+        // 게시글 상세 보기
+        function viewPost(postId) {
+            alert(`게시글 ${postId}번을 보러 갑니다.`);
+        }
+
+        // 검색 엔터키 처리
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchPosts();
+            }
+        });
+
+        // 실시간 검색
+        document.getElementById('searchInput').addEventListener('input', function() {
+            searchPosts();
+        });
+
+        // 초기 로드
+        document.addEventListener('DOMContentLoaded', function() {
+            renderPosts();
+        });
+    </script>
+</body>
+</html>
