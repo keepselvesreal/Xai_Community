@@ -148,6 +148,43 @@ export default function ServiceDetail() {
     loadData();
   }, [slug]);
 
+  // 댓글 상태 변경 감지하여 실시간 통계 업데이트
+  useEffect(() => {
+    if (!service || !post || !comments) return;
+    
+    console.log('📊 댓글 상태 변경 감지, 실시간 통계 업데이트 시작:', {
+      commentsLength: comments.length,
+      hasService: !!service,
+      hasPost: !!post
+    });
+    
+    // 서비스 통계 업데이트
+    const updatedService = recalculateServiceRating(service, comments);
+    if (updatedService && updatedService !== service) {
+      setService(updatedService);
+      console.log('📊 실시간 서비스 통계 업데이트 완료:', {
+        newRating: updatedService.rating,
+        reviewCount: updatedService.serviceStats?.review_count
+      });
+    }
+    
+    // 포스트 통계 업데이트 (게시글 헤더용)
+    const updatedPost = updatePostStats(post, comments);
+    if (updatedPost && 
+        (updatedPost.stats?.inquiry_count !== post.stats?.inquiry_count ||
+         updatedPost.stats?.review_count !== post.stats?.review_count ||
+         updatedPost.stats?.comment_count !== post.stats?.comment_count)) {
+      setPost(updatedPost);
+      console.log('📊 실시간 포스트 통계 업데이트 완료:', {
+        totalComments: updatedPost.stats?.comment_count,
+        inquiryCount: updatedPost.stats?.inquiry_count,
+        reviewCount: updatedPost.stats?.review_count,
+        이전_문의수: post.stats?.inquiry_count,
+        이전_후기수: post.stats?.review_count
+      });
+    }
+  }, [comments]); // comments 상태 변경 시마다 실행
+
   // 반응 처리 함수 (북마크만 활성화)
   const handleReactionChange = async (reactionType: 'like' | 'dislike' | 'bookmark') => {
     console.log('🔖 입주 서비스 반응 처리 시작:', {
@@ -285,7 +322,11 @@ export default function ServiceDetail() {
         }
         
         setComments(comments);
-        console.log('🔄 댓글 목록만 업데이트 완료:', comments.length);
+        console.log('🔄 댓글 목록만 업데이트 완료:', {
+          totalComments: comments.length,
+          inquiryComments: comments.filter(c => c.metadata?.subtype === 'service_inquiry').length,
+          reviewComments: comments.filter(c => c.metadata?.subtype === 'service_review').length
+        });
       }
     } catch (error) {
       console.error('댓글 새로고침 오류:', error);
@@ -320,6 +361,9 @@ export default function ServiceDetail() {
           
           updatedService.rating = roundedRating;
         }
+      } else {
+        // 후기가 없으면 기본 별점 유지 (또는 0으로 설정)
+        updatedService.rating = currentService.rating || 0;
       }
       
       // 서비스 통계 업데이트
@@ -377,7 +421,12 @@ export default function ServiceDetail() {
       console.log('📊 Post 통계 업데이트 완료:', {
         totalComments: comments.length,
         inquiryCount: inquiryComments.length,
-        reviewCount: reviewComments.length
+        reviewCount: reviewComments.length,
+        이전상태: {
+          inquiry_count: currentPost.stats?.inquiry_count,
+          review_count: currentPost.stats?.review_count,
+          comment_count: currentPost.stats?.comment_count
+        }
       });
       
       return updatedPost;
@@ -397,29 +446,8 @@ export default function ServiceDetail() {
     // 2. 서버에서 통계 정보 새로고침
     await refreshServiceStats();
     
-    // 3. 새로고침된 댓글 목록으로 서비스와 포스트 통계 업데이트
-    setTimeout(() => {
-      // 서비스 통계 업데이트
-      const updatedService = recalculateServiceRating(service, comments);
-      if (updatedService) {
-        setService(updatedService);
-        console.log('📊 실시간 서비스 별점 업데이트 완료:', {
-          newRating: updatedService.rating,
-          reviewCount: updatedService.serviceStats?.review_count
-        });
-      }
-      
-      // 포스트 통계 업데이트 (게시글 헤더용)
-      const updatedPost = updatePostStats(post, comments);
-      if (updatedPost) {
-        setPost(updatedPost);
-        console.log('📊 실시간 포스트 통계 업데이트 완료:', {
-          totalComments: updatedPost.stats?.comment_count,
-          inquiryCount: updatedPost.stats?.inquiry_count,
-          reviewCount: updatedPost.stats?.review_count
-        });
-      }
-    }, 100); // 댓글 상태 업데이트 후 통계 재계산
+    // 3. 통계 업데이트는 useEffect에서 comments 상태 변경 감지 후 처리
+    console.log('📊 댓글 새로고침 완료, useEffect에서 통계 업데이트 예정');
   };
 
   // 댓글 반응 후 콜백 (추천/비추천 시)
@@ -427,18 +455,8 @@ export default function ServiceDetail() {
     // 댓글 반응 시에는 로딩 없이 댓글만 새로고침
     await refreshComments();
     
-    // 댓글 반응 후에도 통계 업데이트
-    setTimeout(() => {
-      const updatedService = recalculateServiceRating(service, comments);
-      if (updatedService) {
-        setService(updatedService);
-      }
-      
-      const updatedPost = updatePostStats(post, comments);
-      if (updatedPost) {
-        setPost(updatedPost);
-      }
-    }, 100);
+    // 통계 업데이트는 useEffect에서 comments 상태 변경 감지 후 처리
+    console.log('📊 댓글 반응 후 새로고침 완료, useEffect에서 통계 업데이트 예정');
   };
 
   // 수정 버튼 핸들러
