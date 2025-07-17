@@ -5,9 +5,20 @@ import { convertPostToInfoItem, infoFilterFunction, infoSortFunction } from '~/t
 import type { Service } from '~/types/service-types';
 import { formatRelativeTime, formatNumber } from '~/lib/utils';
 import { convertPostToService } from '~/types/service-types';
+import { UnifiedPostListItem } from '~/components/common/UnifiedPostListItem';
 
-// 게시판 카드 렌더러
-const PostCardRenderer = ({ post }: { post: Post }) => {
+// 새로운 통합 게시판 렌더러 (일관된 레이아웃)
+const UnifiedPostRenderer = ({ post }: { post: Post }) => {
+  return <UnifiedPostListItem post={post} />;
+};
+
+// 정보 페이지용 통합 렌더러 (Post 타입으로 통일)
+const UnifiedInfoRenderer = ({ post }: { post: Post }) => {
+  return <UnifiedPostListItem post={post} />;
+};
+
+// ⚠️ 백업용 - 기존 게시판 카드 렌더러 (더 이상 사용하지 않음)
+const DEPRECATED_PostCardRenderer = ({ post }: { post: Post }) => {
   
   const getTagColor = (category: string) => {
     switch (category) {
@@ -30,74 +41,75 @@ const PostCardRenderer = ({ post }: { post: Post }) => {
   const isNew = new Date().getTime() - new Date(post.created_at).getTime() < 24 * 60 * 60 * 1000;
 
   return (
-    <div className="post-item flex items-start">
-      <div className="flex-1">
-        {/* 카테고리와 제목 (같은 줄) */}
-        <div className="post-title flex items-center gap-2 mb-2">
-          <span className={`post-tag ${getTagColor(post.metadata?.category || 'info')}`}>
-            {post.metadata?.category || '일반'}
-          </span>
-          <span className="text-var-primary font-medium text-lg">
-            {post.title}
-          </span>
-          {/* 새 게시글 표시 (24시간 이내) */}
-          {isNew && (
-            <span className="badge-new">NEW</span>
-          )}
-        </div>
-        
-        {/* 하단: 태그 및 작성자/시간/통계 */}
-        <div className="post-meta flex items-center justify-between text-sm text-var-muted">
-          {/* 좌측: 사용자 태그 */}
-          <div className="flex items-center gap-1">
-            {post.metadata?.tags && post.metadata.tags.length > 0 ? (
-              <>
-                {post.metadata.tags.slice(0, 3).map((tag, index) => (
-                  <span
-                    key={index}
-                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700 border border-green-200"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-                {post.metadata.tags.length > 3 && (
-                  <span className="text-xs text-var-muted px-1">
-                    +{post.metadata.tags.length - 3}
-                  </span>
-                )}
-              </>
-            ) : (
-              <div></div>
-            )}
-          </div>
-          
-          {/* 우측: 작성자, 시간, 통계 */}
-          <div className="flex items-center gap-2">
-            <span className="text-var-secondary">
-              {post.author?.display_name || post.author?.user_handle || post.author?.name || '익명'}
-            </span>
-            <span>·</span>
-            <span>{formatRelativeTime(post.created_at)}</span>
-            <span>·</span>
-            <span className="stat-icon text-var-muted">
-              👁️ {formatNumber(post.stats?.view_count || post.stats?.views || 0)}
-            </span>
-            <span className="stat-icon text-var-muted">
-              👍 {formatNumber(post.stats?.like_count || post.stats?.likes || 0)}
-            </span>
-            <span className="stat-icon text-var-muted">
-              👎 {formatNumber(post.stats?.dislike_count || post.stats?.dislikes || 0)}
-            </span>
-            <span className="stat-icon text-var-muted">
-              💬 {formatNumber(post.stats?.comment_count || post.stats?.comments || 0)}
-            </span>
-            <span className="stat-icon text-var-muted">
-              🔖 {formatNumber(post.stats?.bookmark_count || post.stats?.bookmarks || 0)}
-            </span>
-          </div>
+    <>
+      {/* 카테고리 영역 */}
+      <div className="post-category-area">
+        <span className={`post-tag ${getTagColor(post.metadata?.category || 'info')}`}>
+          {post.metadata?.category || '일반'}
+        </span>
+      </div>
+      
+      {/* 제목 영역 */}
+      <div className="post-title-area">
+        <span className="post-title-text">
+          {post.title}
+        </span>
+      </div>
+      
+      {/* 배지 영역 */}
+      <div className="post-badge-area">
+        {isNew && (
+          <span className="badge-new">NEW</span>
+        )}
+      </div>
+      
+      {/* 태그 영역 */}
+      <div className="post-tags-area">
+        <div className="user-tags-container">
+          {post.metadata?.tags && post.metadata.tags.length > 0 ? (
+            <>
+              {post.metadata.tags.slice(0, 2).map((tag, index) => (
+                <span key={index} className="user-tag">
+                  #{tag}
+                </span>
+              ))}
+              {post.metadata.tags.length > 2 && (
+                <span className="tag-counter">
+                  +{post.metadata.tags.length - 2}
+                </span>
+              )}
+            </>
+          ) : null}
         </div>
       </div>
-    </div>
+      
+      {/* 메타 정보 영역 */}
+      <div className="post-meta-area">
+        <span className="author-name">
+          {post.author?.display_name || post.author?.user_handle || post.author?.name || '익명'}
+        </span>
+        <span className="meta-separator">·</span>
+        <span className="time-info">
+          {formatRelativeTime(post.created_at)}
+        </span>
+        <span className="meta-separator">·</span>
+        <span className="stat-icon">
+          👁️ {formatNumber(post.stats?.view_count || post.stats?.views || 0)}
+        </span>
+        <span className="stat-icon">
+          👍 {formatNumber(post.stats?.like_count || post.stats?.likes || 0)}
+        </span>
+        <span className="stat-icon">
+          👎 {formatNumber(post.stats?.dislike_count || post.stats?.dislikes || 0)}
+        </span>
+        <span className="stat-icon">
+          💬 {formatNumber(post.stats?.comment_count || post.stats?.comments || 0)}
+        </span>
+        <span className="stat-icon">
+          🔖 {formatNumber(post.stats?.bookmark_count || post.stats?.bookmarks || 0)}
+        </span>
+      </div>
+    </>
   );
 };
 
@@ -191,8 +203,8 @@ export const boardConfig: ListPageConfig<Post> = {
     actionLabel: '글쓰기'
   },
   
-  // 렌더링 함수
-  renderCard: (post) => <PostCardRenderer post={post} />,
+  // 렌더링 함수 - 새로운 통합 레이아웃 사용
+  renderCard: (post) => <UnifiedPostRenderer post={post} />,
   filterFn: boardFilterFunction,
   sortFn: boardSortFunction
 };
@@ -771,37 +783,20 @@ const transformPostsToTips = (posts: Post[]): Tip[] => {
   return tips;
 };
 
-// 정보 카드 렌더러
+// 정보 카드 렌더러 (게시판 리스트 스타일)
 const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
-  const navigate = useNavigate();
-  
-  const getContentTypeLabel = (contentType: ContentType) => {
-    switch (contentType) {
-      case 'interactive_chart':
-        return '인터렉티브 차트';
-      case 'ai_article':
-        return 'AI 생성 글';
-      case 'data_visualization':
-        return '데이터 시각화';
-      case 'mixed_content':
-        return '혼합 콘텐츠';
+  const getTagColor = (category: string) => {
+    switch (category) {
+      case 'market_analysis':
+        return 'post-tag-info';
+      case 'legal_info':
+        return 'post-tag-life';
+      case 'move_in_guide':
+        return 'post-tag-story';
+      case 'investment_trend':
+        return 'post-tag-info';
       default:
-        return 'AI 생성 글';
-    }
-  };
-
-  const getContentTypeColor = (contentType: ContentType) => {
-    switch (contentType) {
-      case 'interactive_chart':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'ai_article':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'data_visualization':
-        return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'mixed_content':
-        return 'bg-orange-100 text-orange-700 border-orange-200';
-      default:
-        return 'bg-green-100 text-green-700 border-green-200';
+        return 'post-tag-info';
     }
   };
 
@@ -823,92 +818,75 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
   const isNew = new Date().getTime() - new Date(info.created_at).getTime() < 24 * 60 * 60 * 1000;
 
   return (
-    <div 
-      className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-md transition-shadow h-full cursor-pointer"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        navigate(`/property-information/${info.slug}`);
-      }}
-    >
-      {/* 상단: 콘텐츠 타입 배지 */}
-      <div className="flex items-center gap-2 mb-3">
-        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getContentTypeColor(info.content_type)}`}>
-          {getContentTypeLabel(info.content_type)}
+    <>
+      {/* 카테고리 영역 */}
+      <div className="post-category-area">
+        <span className={`post-tag ${getTagColor(info.metadata?.category || 'market_analysis')}`}>
+          {getCategoryLabel(info.metadata?.category || 'market_analysis')}
         </span>
-        {info.metadata?.category && (
-          <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-            {getCategoryLabel(info.metadata.category)}
-          </span>
-        )}
+      </div>
+      
+      {/* 제목 영역 */}
+      <div className="post-title-area">
+        <span className="post-title-text">
+          {info.title}
+        </span>
+      </div>
+      
+      {/* 배지 영역 */}
+      <div className="post-badge-area">
         {isNew && (
-          <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-            NEW
-          </span>
+          <span className="badge-new">NEW</span>
         )}
       </div>
-
-      {/* 제목 */}
-      <h3 className="text-var-primary font-bold text-lg mb-3 line-clamp-2">
-        {info.title}
-      </h3>
-
-      {/* 데이터 소스 정보 (있는 경우) */}
-      {info.metadata?.data_source && (
-        <div className="mb-3">
-          <span className="text-xs text-var-muted bg-gray-100 px-2 py-1 rounded">
-            📊 {info.metadata.data_source}
-          </span>
+      
+      {/* 태그 영역 */}
+      <div className="post-tags-area">
+        <div className="user-tags-container">
+          {info.metadata?.tags && info.metadata.tags.length > 0 ? (
+            <>
+              {info.metadata.tags.slice(0, 2).map((tag, index) => (
+                <span key={index} className="user-tag">
+                  #{tag}
+                </span>
+              ))}
+              {info.metadata.tags.length > 2 && (
+                <span className="tag-counter">
+                  +{info.metadata.tags.length - 2}
+                </span>
+              )}
+            </>
+          ) : null}
         </div>
-      )}
-
-      {/* 요약 (있는 경우) */}
-      {info.metadata?.summary && (
-        <p className="text-var-secondary text-sm mb-4 line-clamp-2">
-          {info.metadata.summary}
-        </p>
-      )}
-
-      {/* 태그 */}
-      {info.metadata?.tags && info.metadata.tags.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {info.metadata.tags.slice(0, 3).map((tag: string, index: number) => (
-            <span key={index} className="px-3 py-1 bg-gray-50 text-gray-700 text-xs rounded-full font-medium">
-              #{tag}
-            </span>
-          ))}
-          {info.metadata.tags.length > 3 && (
-            <span className="text-xs text-var-muted px-1">
-              +{info.metadata.tags.length - 3}
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* 하단: 통계 및 날짜 */}
-      <div className="flex items-center justify-between text-var-muted text-sm mt-auto">
-        <span className="text-var-secondary font-medium">
+      </div>
+      
+      {/* 메타 정보 영역 */}
+      <div className="post-meta-area">
+        <span className="author-name">
+          AI 시스템
+        </span>
+        <span className="meta-separator">·</span>
+        <span className="time-info">
           {formatRelativeTime(info.created_at)}
         </span>
-        <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1">
-            👁️ {formatNumber(info.stats?.view_count || 0)}
-          </span>
-          <span className="flex items-center gap-1">
-            👍 {formatNumber(info.stats?.like_count || 0)}
-          </span>
-          <span className="flex items-center gap-1">
-            👎 {formatNumber(info.stats?.dislike_count || 0)}
-          </span>
-          <span className="flex items-center gap-1">
-            💬 {formatNumber(info.stats?.comment_count || 0)}
-          </span>
-          <span className="flex items-center gap-1">
-            🔖 {formatNumber(info.stats?.bookmark_count || 0)}
-          </span>
-        </div>
+        <span className="meta-separator">·</span>
+        <span className="stat-icon">
+          👁️ {formatNumber(info.stats?.view_count || 0)}
+        </span>
+        <span className="stat-icon">
+          👍 {formatNumber(info.stats?.like_count || 0)}
+        </span>
+        <span className="stat-icon">
+          👎 {formatNumber(info.stats?.dislike_count || 0)}
+        </span>
+        <span className="stat-icon">
+          💬 {formatNumber(info.stats?.comment_count || 0)}
+        </span>
+        <span className="stat-icon">
+          🔖 {formatNumber(info.stats?.bookmark_count || 0)}
+        </span>
       </div>
-    </div>
+    </>
   );
 };
 
@@ -929,9 +907,9 @@ const transformPostsToInfoItems = (posts: Post[]): InfoItem[] => {
 export const infoConfig: ListPageConfig<InfoItem> = {
   // 페이지 기본 설정
   title: '정보',
-  writeButtonText: '', // 관리자만 직접 데이터 입력하므로 빈 값
-  writeButtonLink: '', // 관리자만 직접 데이터 입력하므로 빈 값
-  searchPlaceholder: '정보 검색...',
+  writeButtonText: '📊 정보 제공', // 정보 제공 버튼으로 변경
+  writeButtonLink: '/info/suggest', // 정보 제안 페이지로 링크
+  searchPlaceholder: '부동산 정보 검색...',
   
   // API 설정
   apiEndpoint: '/api/posts',
@@ -958,7 +936,7 @@ export const infoConfig: ListPageConfig<InfoItem> = {
     { value: 'saves', label: '저장수' }
   ],
   
-  cardLayout: 'grid',
+  cardLayout: 'list',
   
   // 빈 상태 설정
   emptyState: {
@@ -975,6 +953,87 @@ export const infoConfig: ListPageConfig<InfoItem> = {
   renderCard: (info) => <InfoCardRenderer info={info} />,
   filterFn: infoFilterFunction,
   sortFn: infoSortFunction
+};
+
+// 정보 필터 함수 (Post 타입용)
+const infoPostFilterFunction = (post: Post, category: string, query: string): boolean => {
+  // 카테고리 필터
+  if (category !== 'all') {
+    const categoryMapping: { [key: string]: string[] } = {
+      'market_analysis': ['시세분석'],
+      'legal_info': ['법률정보'],
+      'move_in_guide': ['입주가이드'],
+      'investment_trend': ['투자동향']
+    };
+    
+    const postCategory = post.metadata?.category;
+    if (!postCategory) return false;
+    
+    const acceptedCategories = categoryMapping[category];
+    if (!acceptedCategories || !acceptedCategories.includes(postCategory)) {
+      return false;
+    }
+  }
+  
+  // 검색 필터
+  if (query && query.trim()) {
+    const searchLower = query.toLowerCase();
+    return (
+      post.title.toLowerCase().includes(searchLower) ||
+      post.content.toLowerCase().includes(searchLower)
+    );
+  }
+  
+  return true;
+};
+
+// 통합 정보 페이지 설정 (Post 타입 사용)
+export const unifiedInfoConfig: ListPageConfig<Post> = {
+  // 페이지 기본 설정
+  title: '정보',
+  writeButtonText: '📊 정보 제공',
+  writeButtonLink: '/info/suggest',
+  searchPlaceholder: '부동산 정보 검색...',
+  
+  // API 설정
+  apiEndpoint: '/api/posts',
+  apiFilters: {
+    metadata_type: 'property_information',
+    page: 1,
+    size: 50
+  },
+  
+  // UI 설정
+  categories: [
+    { value: 'all', label: '전체' },
+    { value: 'market_analysis', label: '시세분석' },
+    { value: 'legal_info', label: '법률정보' },
+    { value: 'move_in_guide', label: '입주가이드' },
+    { value: 'investment_trend', label: '투자동향' }
+  ],
+  
+  sortOptions: [
+    { value: 'latest', label: '최신순' },
+    { value: 'views', label: '조회수' },
+    { value: 'likes', label: '추천수' },
+    { value: 'comments', label: '댓글수' },
+    { value: 'saves', label: '저장수' }
+  ],
+  
+  cardLayout: 'list',
+  
+  // 빈 상태 설정
+  emptyState: {
+    icon: '📋',
+    title: '등록된 정보가 없습니다',
+    description: '아직 등록된 부동산 정보가 없어요.\n곧 유용한 정보들을 제공해드릴게요!',
+    actionLabel: ''
+  },
+  
+  // 새로운 통합 렌더러 사용
+  renderCard: (post) => <UnifiedInfoRenderer post={post} />,
+  filterFn: infoPostFilterFunction,
+  sortFn: boardSortFunction // 게시판과 동일한 정렬 사용
 };
 
 export const tipsConfig: ListPageConfig<Tip> = {

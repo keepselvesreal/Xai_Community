@@ -11,6 +11,7 @@ import type { LinksFunction, MetaFunction } from "@remix-run/node";
 import { useEffect, useState } from "react";
 
 import "./tailwind.css";
+import "./styles/service-comments.css";
 import { AuthProvider } from "~/contexts/AuthContext";
 import { NotificationProvider } from "~/contexts/NotificationContext";
 import { ThemeProvider } from "~/contexts/ThemeContext";

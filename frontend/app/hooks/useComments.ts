@@ -13,8 +13,8 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
   const { showSuccess, showError } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // 댓글 작성
-  const submitComment = async (content: string) => {
+  // 댓글 작성 (subtype 지원)
+  const submitComment = async (content: string, subtype?: string, rating?: number, isPublic?: boolean) => {
     console.log('🚀 useComments - submitComment 호출:', { postSlug, content: content.substring(0, 50) + '...' });
     
     if (!user) {
@@ -29,10 +29,38 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
 
     setIsSubmitting(true);
     try {
-      console.log('🔄 useComments - API 호출 시작:', { postSlug, contentLength: content.trim().length });
-      const response = await apiClient.createComment(postSlug, {
-        content: content.trim(),
-      });
+      console.log('🔄 useComments - API 호출 시작:', { postSlug, contentLength: content.trim().length, subtype, rating, isPublic });
+      
+      let response;
+      if (subtype === 'service_inquiry') {
+        response = await apiClient.createServiceInquiry(postSlug, {
+          content: content.trim(),
+          metadata: { 
+            subtype,
+            isPublic: isPublic !== undefined ? isPublic : true
+          }
+        });
+      } else if (subtype === 'service_review') {
+        response = await apiClient.createServiceReview(postSlug, {
+          content: content.trim(),
+          metadata: { 
+            subtype,
+            rating: rating 
+          }
+        });
+      } else {
+        const metadata = subtype ? { subtype, rating, isPublic } : undefined;
+        console.log('🔍 useComments - 댓글 생성 요청 데이터:', {
+          postSlug,
+          content: content.trim().substring(0, 50) + '...',
+          metadata
+        });
+        
+        response = await apiClient.createComment(postSlug, {
+          content: content.trim(),
+          metadata
+        });
+      }
 
       console.log('🔍 useComments - API 응답:', {
         success: response.success,
@@ -43,11 +71,27 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
       if (response.success) {
         console.log('✅ useComments - 댓글 작성 성공, onCommentAdded 호출');
         onCommentAdded();
-        showSuccess('댓글이 작성되었습니다');
+        
+        // subtype에 따른 성공 메시지
+        if (subtype === 'service_inquiry') {
+          showSuccess('문의가 등록되었습니다');
+        } else if (subtype === 'service_review') {
+          showSuccess('후기가 등록되었습니다');
+        } else {
+          showSuccess('댓글이 작성되었습니다');
+        }
         return true;
       } else {
         console.log('❌ useComments - 댓글 작성 실패:', response.error);
-        showError(response.error || '댓글 작성에 실패했습니다');
+        
+        // subtype에 따른 오류 메시지
+        if (subtype === 'service_inquiry') {
+          showError(response.error || '문의 등록에 실패했습니다');
+        } else if (subtype === 'service_review') {
+          showError(response.error || '후기 등록에 실패했습니다');
+        } else {
+          showError(response.error || '댓글 작성에 실패했습니다');
+        }
         return false;
       }
     } catch (error) {
@@ -105,7 +149,7 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
       console.log('편집 API 응답:', response);
 
       if (response.success) {
-        onCommentAdded(); // 댓글 목록 새로고침
+        await onCommentAdded(); // 댓글 목록 새로고침
         showSuccess('댓글이 수정되었습니다');
         return true;
       } else {
@@ -129,7 +173,7 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
       console.log('삭제 API 응답:', response);
 
       if (response.success) {
-        onCommentAdded(); // 댓글 목록 새로고침
+        await onCommentAdded(); // 댓글 목록 새로고침
         showSuccess('댓글이 삭제되었습니다');
         return true;
       } else {
@@ -144,36 +188,39 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
   };
 
   // 댓글 반응 (좋아요/싫어요)
-  const reactToComment = async (commentId: string, type: 'like' | 'dislike') => {
+  const reactToComment = (commentId: string, type: 'like' | 'dislike') => {
     if (!user) {
       showError('로그인이 필요합니다');
-      return false;
+      return;
     }
 
     console.log('useComments reactToComment:', { postSlug, commentId, type });
 
-    try {
-      let response;
-      if (type === 'like') {
-        response = await apiClient.likeComment(postSlug, commentId);
-      } else {
-        response = await apiClient.dislikeComment(postSlug, commentId);
-      }
+    // API 호출은 하지만 응답을 기다리지 않음 (즉시 반응)
+    const callApi = async () => {
+      try {
+        let response;
+        if (type === 'like') {
+          response = await apiClient.likeComment(postSlug, commentId);
+        } else {
+          response = await apiClient.dislikeComment(postSlug, commentId);
+        }
 
-      console.log('반응 API 응답:', response);
+        console.log('반응 API 응답:', response);
 
-      if (response.success) {
-        onCommentAdded(); // 댓글 목록 새로고침 (반응 수 업데이트)
-        return true;
-      } else {
-        showError(response.error || '반응 처리에 실패했습니다');
-        return false;
+        if (response.success) {
+          // 댓글 목록 새로고침 (반응 수 업데이트)
+          onCommentAdded(); 
+        } else {
+          showError(response.error || '반응 처리에 실패했습니다');
+        }
+      } catch (error) {
+        console.error('반응 처리 오류:', error);
+        showError('반응 처리 중 오류가 발생했습니다');
       }
-    } catch (error) {
-      console.error('반응 처리 오류:', error);
-      showError('반응 처리 중 오류가 발생했습니다');
-      return false;
-    }
+    };
+
+    callApi();
   };
 
   return {

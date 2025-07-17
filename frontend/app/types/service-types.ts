@@ -98,6 +98,8 @@ export interface ServiceContactInfo {
   address: string;
   /** 이메일 */
   email: string;
+  /** 웹사이트 (선택사항) */
+  website?: string;
 }
 
 // 고객 후기 타입

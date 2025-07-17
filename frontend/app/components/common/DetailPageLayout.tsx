@@ -166,6 +166,11 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
               <span className={`px-3 py-1 rounded-full text-xs font-medium ${getCategoryColor(post.metadata?.category || post.metadata?.type || '일반')}`}>
                 {post.metadata?.category || post.metadata?.type || '일반'}
               </span>
+              {pageType === 'expert_tips' && (
+                <span className="bg-yellow-100 text-yellow-700 px-2 py-1 rounded-full text-xs font-medium">
+                  전문가
+                </span>
+              )}
               <span>✍️</span>
               <span>
                 {post.author?.display_name || post.author?.user_handle || '익명'}
@@ -174,26 +179,22 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
               <span>{formatDate(post.created_at)}</span>
             </div>
             
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-4">
               <div className="flex items-center gap-1 text-sm text-gray-600">
                 <span>👁️</span>
                 <span>{post.stats?.view_count || 0}</span>
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-600">
-                <span>👍</span>
-                <span>{post.stats?.like_count || 0}</span>
-              </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <span>👎</span>
-                <span>{post.stats?.dislike_count || 0}</span>
-              </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <span>🔖</span>
+                <span>관심</span>
                 <span>{post.stats?.bookmark_count || 0}</span>
               </div>
               <div className="flex items-center gap-1 text-sm text-gray-600">
-                <span>💬</span>
+                <span>문의</span>
                 <span>{post.stats?.comment_count || 0}</span>
+              </div>
+              <div className="flex items-center gap-1 text-sm text-gray-600">
+                <span>후기</span>
+                <span>{post.stats?.review_count || 0}</span>
               </div>
             </div>
           </div>
@@ -229,10 +230,12 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
             </div>
           ))}
 
-          {/* 본문 텍스트 */}
-          <div className="text-base leading-relaxed text-gray-700 mb-6 whitespace-pre-wrap">
-            {post.content}
-          </div>
+          {/* 본문 텍스트 - 서비스 페이지와 전문가 꿀정보 페이지에서는 숨김 */}
+          {pageType !== 'moving_services' && pageType !== 'expert_tips' && (
+            <div className="text-base leading-relaxed text-gray-700 mb-6 whitespace-pre-wrap">
+              {post.content}
+            </div>
+          )}
 
           {/* 본문 이후 커스텀 섹션 */}
           {sections.afterContent?.map((section, index) => (
@@ -241,79 +244,12 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
             </div>
           ))}
 
-          {/* 태그 섹션 - 프로토타입 스타일 적용 */}
-          {post.metadata?.tags && post.metadata.tags.length > 0 && (
-            <div className="mb-6">
-              <div className="flex flex-wrap gap-2">
-                {post.metadata.tags.map((tag, index) => (
-                  <span
-                    key={index}
-                    className="px-3 py-2 bg-gray-100 text-gray-700 rounded-full text-sm border border-gray-200 hover:bg-gray-200 hover:border-gray-300 transition-all duration-200 cursor-pointer font-medium"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* 태그 이후 커스텀 섹션 */}
           {sections.afterTags?.map((section, index) => (
             <div key={`after-tags-${index}`} className="mb-6">
               {section}
             </div>
           ))}
-
-          {/* 반응 버튼 섹션 - 프로토타입 스타일 적용 */}
-          <div className="flex items-center justify-center gap-2 pb-2">
-            <button
-              onClick={() => handleReactionClick('like')}
-              disabled={pendingReactions.has('like')}
-              aria-label="좋아요"
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 ${
-                userReactions.liked
-                  ? 'bg-blue-100 border-blue-300 text-blue-700 active'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-              } ${
-                pendingReactions.has('like') ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <span>👍</span>
-              <span>{post.stats?.like_count || 0}</span>
-            </button>
-            
-            <button
-              onClick={() => handleReactionClick('dislike')}
-              disabled={pendingReactions.has('dislike')}
-              aria-label="싫어요"
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 ${
-                userReactions.disliked
-                  ? 'bg-blue-100 border-blue-300 text-blue-700 active'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-              } ${
-                pendingReactions.has('dislike') ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <span>👎</span>
-              <span>{post.stats?.dislike_count || 0}</span>
-            </button>
-            
-            <button
-              onClick={() => handleReactionClick('bookmark')}
-              disabled={pendingReactions.has('bookmark')}
-              aria-label="북마크"
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-200 ${
-                userReactions.bookmarked
-                  ? 'bg-blue-100 border-blue-300 text-blue-700 active'
-                  : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-              } ${
-                pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <span>🔖</span>
-              <span>{post.stats?.bookmark_count || 0}</span>
-            </button>
-          </div>
 
           {/* 반응 이후 커스텀 섹션 */}
           {sections.afterReactions?.map((section, index) => (

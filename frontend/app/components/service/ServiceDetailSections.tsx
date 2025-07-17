@@ -303,7 +303,7 @@ export const ServiceReviewSection: React.FC<{
     return Array.from({ length: 5 }, (_, i) => (
       <span 
         key={i} 
-        className={i < Math.floor(rating) ? "text-yellow-400" : "text-gray-300"}
+        className={i < rating ? "text-yellow-400" : "text-gray-300"}
       >
         ⭐
       </span>

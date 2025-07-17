@@ -1,0 +1,226 @@
+/* 서비스 페이지 댓글 스타일 - 참조 디자인 기반 */
+
+.comment-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.comment-item:last-child {
+  border-bottom: none;
+}
+
+.comment-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.comment-author-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.comment-author {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.comment-badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 500;
+}
+
+.comment-badge.public {
+  background: #dcfce7;
+  color: #16a34a;
+}
+
+.comment-badge.private {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.comment-badge.business {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.comment-date {
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.comment-content {
+  color: #475569;
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 12px;
+}
+
+.comment-reply {
+  margin-left: 16px;
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.comment-reply .comment-author {
+  color: #1e293b;
+}
+
+.comment-reply .comment-content {
+  color: #475569;
+}
+
+/* 댓글 작성 폼 */
+.comment-form {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comment-form-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.comment-textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.comment-textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.comment-submit {
+  background: #3b82f6;
+  color: white;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.comment-submit:hover {
+  background: #2563eb;
+}
+
+.comments-list {
+  margin-bottom: 24px;
+}
+
+/* 후기 섹션 */
+.reviews-section {
+  padding: 24px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.rating-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.review-form {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 24px;
+  margin-top: 24px;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.rating-input {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.rating-star {
+  font-size: 24px;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.rating-star.active {
+  color: #fbbf24;
+}
+
+.rating-star.inactive {
+  color: #d1d5db;
+}
+
+.rating-star:hover {
+  color: #f59e0b;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.btn-primary {
+  background: #3b82f6;
+  color: white;
+  padding: 12px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover {
+  background: #2563eb;
+}
+
+.btn-primary:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}

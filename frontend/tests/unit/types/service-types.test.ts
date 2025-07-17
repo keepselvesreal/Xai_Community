@@ -89,8 +89,10 @@ describe('Service와 BaseListItem 호환성 테스트', () => {
           { name: '테스트 서비스', price: 100000, description: '테스트' }
         ]
       }),
-      metadata: { category: '이사' },
+      metadata: { type: 'moving services', category: '이사' },
       stats: { view_count: 50, comment_count: 5 },
+      view_count: 50,
+      comment_count: 5,
       created_at: '2024-01-01T00:00:00Z'
     };
 
@@ -101,8 +103,8 @@ describe('Service와 BaseListItem 호환성 테스트', () => {
       expect(service.id).toBe('test-id');
       expect(service.name).toBe('테스트 서비스');
       expect(service.category).toBe('이사');
-      expect(service.stats.views).toBe(50);
-      expect(service.stats.reviews).toBe(5);
+      expect(service.serviceStats?.views).toBe(50);
+      expect(service.serviceStats?.reviews).toBe(0); // comment_count는 리뷰가 아니므로 0
     }
   });
 });

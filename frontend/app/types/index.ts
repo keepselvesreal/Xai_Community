@@ -37,6 +37,23 @@ export interface RegisterRequest {
   password: string;
 }
 
+// 서비스 관련 타입 정의
+export interface ServiceItem {
+  serviceName: string;
+  price: string;
+  specialPrice: string;
+  hasSpecialPrice: boolean;
+}
+
+export interface ServiceFormData {
+  title: string;           // 업체명 (PostWriteForm 호환)
+  content: string;         // 업체 소개 (PostWriteForm 호환)
+  category: string;        // 카테고리
+  contact: string;         // 연락처
+  availableHours: string;  // 문의 가능시간
+  services: ServiceItem[]; // 서비스 목록
+}
+
 // 게시글 관련 타입 (API v3 명세서 기준)
 export interface PostMetadata {
   type: string;              // 게시판 타입 (예: "자유게시판")
@@ -130,6 +147,18 @@ export interface Comment {
   likes?: number;                // like_count의 alias
   dislikes?: number;             // dislike_count의 alias
   parent_id?: string;            // parent_comment_id의 alias
+  
+  // 서비스 관련 메타데이터 및 통계
+  metadata?: {                   // 서비스 댓글의 메타데이터
+    rating?: number;             // 별점 (후기용)
+    isPublic?: boolean;          // 공개 여부 (문의용)
+    [key: string]: any;          // 기타 메타데이터
+  };
+  stats?: {                      // 통계 정보 (기존 필드와의 호환성)
+    like_count?: number;
+    dislike_count?: number;
+    reply_count?: number;
+  };
 }
 
 export interface CreateCommentRequest {
@@ -750,4 +779,13 @@ export interface AlertEvaluationResult {
 
 export interface AlertEvaluationResponse {
   evaluation_results: AlertEvaluationResult[];
+}
+
+// 전문가 꿀정보 폼 데이터 타입
+export interface ExpertTipFormData {
+  title: string;
+  content: string;
+  introduction: string;
+  category: string;
+  tags: string[];
 }
