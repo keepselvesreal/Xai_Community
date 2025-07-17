@@ -1,36 +1,35 @@
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { useLoaderData, useNavigate, useParams } from "@remix-run/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import AppLayout from "~/components/layout/AppLayout";
+import DetailPageLayout from "~/components/common/DetailPageLayout";
 import SafeHTMLRenderer from "~/components/common/SafeHTMLRenderer";
-import CommentSection from "~/components/comment/CommentSection";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 import { apiClient } from "~/lib/api";
-import type { InfoItem, ContentType, Comment } from "~/types";
-import { convertPostToInfoItem } from "~/types";
+import type { Post, Comment } from "~/types";
 
 interface LoaderData {
-  infoItem: InfoItem | null;
+  post: Post | null;
   comments: Comment[];
   error?: string;
 }
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
   // Hybrid 방식에서는 loader가 의도적으로 null을 반환하므로 기본 메타데이터 제공
-  if (!data?.infoItem) {
+  if (!data?.post) {
     return [
       { title: "부동산 정보 | XAI 아파트 커뮤니티" },
       { name: "description", content: "XAI 아파트 커뮤니티의 부동산 정보를 확인하세요." },
     ];
   }
 
-  const { infoItem } = data;
+  const { post } = data;
   return [
-    { title: `${infoItem.title} | XAI 아파트 커뮤니티` },
-    { name: "description", content: infoItem.metadata.summary || infoItem.title },
-    { property: "og:title", content: infoItem.title },
-    { property: "og:description", content: infoItem.metadata.summary || infoItem.title },
+    { title: `${post.title} | XAI 아파트 커뮤니티` },
+    { name: "description", content: post.metadata?.summary || post.title },
+    { property: "og:title", content: post.title },
+    { property: "og:description", content: post.metadata?.summary || post.title },
     { property: "og:type", content: "article" },
   ];
 };
@@ -41,7 +40,7 @@ export const loader: LoaderFunction = async ({ params }) => {
   
   if (!slug) {
     return json<LoaderData>({ 
-      infoItem: null, 
+      post: null, 
       comments: [],
       error: "잘못된 요청입니다." 
     }, { status: 400 });
@@ -49,44 +48,13 @@ export const loader: LoaderFunction = async ({ params }) => {
 
   // ⚡ 즉시 응답: 데이터 없이 페이지 구조만 전송
   return json<LoaderData>({ 
-    infoItem: null, 
+    post: null, 
     comments: [],
     error: null 
   });
 };
 
-function getContentTypeLabel(contentType: ContentType): string {
-  const labels = {
-    'interactive_chart': '인터렉티브 차트',
-    'ai_article': 'AI 생성 글',
-    'data_visualization': '데이터 시각화',
-    'mixed_content': '혼합 콘텐츠'
-  };
-  return labels[contentType] || 'AI 생성 글';
-}
-
-function getContentTypeBadgeColor(contentType: ContentType): string {
-  const colors = {
-    'interactive_chart': 'bg-blue-100 text-blue-700 border-blue-200',
-    'ai_article': 'bg-green-100 text-green-700 border-green-200',
-    'data_visualization': 'bg-purple-100 text-purple-700 border-purple-200',
-    'mixed_content': 'bg-orange-100 text-orange-700 border-orange-200'
-  };
-  return colors[contentType] || 'bg-green-100 text-green-700 border-green-200';
-}
-
-function getCategoryLabel(category: string): string {
-  const labels = {
-    'market_analysis': '시세분석',
-    'legal_info': '법률정보',
-    'move_in_guide': '입주가이드',
-    'investment_trend': '투자동향'
-  };
-  return labels[category] || category;
-}
-
-
-export default function InfoDetail() {
+export default function PropertyInformationDetail() {
   const { slug } = useParams();
   const loaderData = useLoaderData<LoaderData>();
   const { user, logout } = useAuth();
@@ -94,10 +62,252 @@ export default function InfoDetail() {
   const navigate = useNavigate();
   
   // ⚡ Hybrid: 페이지 구조는 즉시 표시, 데이터는 빠르게 로드
-  const [infoItem, setInfoItem] = useState<InfoItem | null>(null);
+  const [post, setPost] = useState<Post | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
+  const [pendingReactions, setPendingReactions] = useState<Set<string>>(new Set());
+  const [userReactions, setUserReactions] = useState<{
+    liked: boolean;
+    disliked: boolean;
+    bookmarked: boolean;
+  }>({ liked: false, disliked: false, bookmarked: false });
+
+  const handleCommentAdded = async () => {
+    if (!slug) return;
+    
+    try {
+      // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 로드
+      const response = await apiClient.getCommentsBatch(slug);
+      if (response.success && response.data) {
+        // 배치 조회된 댓글 데이터 처리
+        let comments = [];
+        if (response.data.data?.comments) {
+          comments = response.data.data.comments;  // 배치 조회 응답 구조
+        } else if (response.data.comments) {
+          comments = response.data.comments;
+        } else if (Array.isArray(response.data)) {
+          comments = response.data;
+        }
+        
+        // 중첩된 댓글의 ID 필드 변환 (배치 조회된 데이터는 이미 작성자 정보 포함)
+        const processCommentsRecursive = (comments: any[]): Comment[] => {
+          return comments.map(comment => {
+            const processedComment = {
+              ...comment,
+              id: comment.id || comment._id
+            };
+            
+            if (processedComment.replies && Array.isArray(processedComment.replies)) {
+              processedComment.replies = processCommentsRecursive(processedComment.replies);
+            }
+            
+            return processedComment;
+          });
+        };
+        
+        const processedComments = processCommentsRecursive(comments);
+        setComments(processedComments);
+        
+        // 댓글 수 업데이트
+        if (post) {
+          const commentCount = processedComments.length;
+          setPost(prev => prev ? {
+            ...prev,
+            stats: {
+              view_count: prev.stats?.view_count || 0,
+              like_count: prev.stats?.like_count || 0,
+              dislike_count: prev.stats?.dislike_count || 0,
+              bookmark_count: prev.stats?.bookmark_count || 0,
+              comment_count: commentCount,
+              ...prev.stats
+            }
+          } : prev);
+        }
+      }
+    } catch (error) {
+      console.error('댓글 로드 실패:', error);
+    }
+  };
+
+  // 🚀 Optimistic UI: 즉시 UI 업데이트, API는 백그라운드 처리
+  const handleReactionChange = useCallback(async (reactionType: 'like' | 'dislike' | 'bookmark') => {
+    if (!user) {
+      showError('로그인이 필요합니다');
+      return;
+    }
+
+    if (!post || !slug) return;
+
+    // 중복 클릭 방지
+    if (pendingReactions.has(reactionType)) {
+      return;
+    }
+
+    setPendingReactions(prev => new Set([...prev, reactionType]));
+
+    // 현재 상태 백업 (실패 시 복원용)
+    const originalPost = post;
+
+    // 🚀 1단계: 즉시 UI 업데이트 (Optimistic) - 토글 로직 적용
+    let newUserReactions = { ...userReactions };
+    
+    setPost(prev => {
+      if (!prev?.stats) return prev;
+      
+      const currentStats = prev.stats;
+      let newStats = { ...currentStats };
+
+      if (reactionType === 'like') {
+        if (userReactions.liked) {
+          // 이미 추천한 상태에서 다시 클릭 = 취소
+          newStats.like_count = Math.max(0, (currentStats.like_count || 0) - 1);
+          newUserReactions.liked = false;
+        } else {
+          // 추천 안 한 상태에서 클릭 = 추천
+          newStats.like_count = (currentStats.like_count || 0) + 1;
+          newUserReactions.liked = true;
+          // 비추천이 있었다면 취소
+          if (userReactions.disliked) {
+            newStats.dislike_count = Math.max(0, (currentStats.dislike_count || 0) - 1);
+            newUserReactions.disliked = false;
+          }
+        }
+      } else if (reactionType === 'dislike') {
+        if (userReactions.disliked) {
+          // 이미 비추천한 상태에서 다시 클릭 = 취소
+          newStats.dislike_count = Math.max(0, (currentStats.dislike_count || 0) - 1);
+          newUserReactions.disliked = false;
+        } else {
+          // 비추천 안 한 상태에서 클릭 = 비추천
+          newStats.dislike_count = (currentStats.dislike_count || 0) + 1;
+          newUserReactions.disliked = true;
+          // 추천이 있었다면 취소
+          if (userReactions.liked) {
+            newStats.like_count = Math.max(0, (currentStats.like_count || 0) - 1);
+            newUserReactions.liked = false;
+          }
+        }
+      } else if (reactionType === 'bookmark') {
+        if (userReactions.bookmarked) {
+          // 이미 북마크한 상태에서 다시 클릭 = 취소
+          newStats.bookmark_count = Math.max(0, (currentStats.bookmark_count || 0) - 1);
+          newUserReactions.bookmarked = false;
+        } else {
+          // 북마크 안 한 상태에서 클릭 = 북마크
+          newStats.bookmark_count = (currentStats.bookmark_count || 0) + 1;
+          newUserReactions.bookmarked = true;
+        }
+      }
+
+      return {
+        ...prev,
+        stats: newStats
+      };
+    });
+    
+    // 사용자 반응 상태 업데이트
+    setUserReactions(newUserReactions);
+
+    // 🚀 2단계: 백그라운드에서 API 호출
+    try {
+      let response;
+      
+      switch (reactionType) {
+        case 'like':
+          response = await apiClient.likePost(slug);
+          break;
+        case 'dislike':
+          response = await apiClient.dislikePost(slug);
+          break;
+        case 'bookmark':
+          response = await apiClient.bookmarkPost(slug);
+          break;
+        default:
+          throw new Error('Invalid reaction type');
+      }
+      
+      if (response.success && response.data) {
+        // 서버 응답으로 정확한 상태 동기화
+        setPost(prev => prev ? {
+          ...prev,
+          stats: {
+            ...prev.stats,
+            like_count: response.data.like_count ?? prev.stats?.like_count ?? 0,
+            dislike_count: response.data.dislike_count ?? prev.stats?.dislike_count ?? 0,
+            bookmark_count: response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0,
+            view_count: prev.stats?.view_count ?? 0,
+            comment_count: prev.stats?.comment_count ?? 0,
+          }
+        } : prev);
+        
+        // 서버에서 사용자 반응 상태 동기화
+        if (response.data.user_reaction) {
+          setUserReactions({
+            liked: response.data.user_reaction.liked || false,
+            disliked: response.data.user_reaction.disliked || false,
+            bookmarked: response.data.user_reaction.bookmarked || false
+          });
+        }
+      } else {
+        // API 실패 시 원래 상태로 복원
+        setPost(originalPost);
+        setUserReactions(userReactions); // 원래 사용자 반응 상태로 복원
+        showError(response.error || '반응 처리에 실패했습니다');
+      }
+    } catch (error) {
+      // 오류 발생 시 원래 상태로 복원
+      setPost(originalPost);
+      setUserReactions(userReactions); // 원래 사용자 반응 상태로 복원
+      showError('반응 처리 중 오류가 발생했습니다');
+    } finally {
+      // 요청 완료 처리
+      setPendingReactions(prev => {
+        const next = new Set(prev);
+        next.delete(reactionType);
+        return next;
+      });
+    }
+  }, [user, post, slug, pendingReactions, userReactions, showError]);
+
+  // 작성자 권한 체크 함수
+  const isAuthor = () => {
+    if (!user || !post) return false;
+    
+    const userId = String(user.id);
+    const authorId = String(post.author_id);
+    
+    if (userId === authorId) return true;
+    
+    if (post.author && String(user.id) === String(post.author.id)) return true;
+    
+    if (post.author) {
+      if (user.email && user.email === post.author.email) return true;
+      if (user.user_handle && user.user_handle === post.author.user_handle) return true;
+    }
+    
+    return false;
+  };
+
+  const handleEditPost = () => {
+    navigate(`/property-information/${slug}/edit`);
+  };
+
+  const handleDeletePost = async () => {
+    if (!confirm('정말로 삭제하시겠습니까?')) return;
+    
+    try {
+      const response = await apiClient.deletePost(slug!);
+      if (response.success) {
+        showSuccess('정보가 삭제되었습니다');
+        navigate('/info');
+      } else {
+        showError(response.error || '정보 삭제에 실패했습니다');
+      }
+    } catch (error) {
+      showError('정보 삭제 중 오류가 발생했습니다');
+    }
+  };
 
   // ⚡ 페이지 마운트 후 즉시 데이터 로드 (Hybrid 방식)
   useEffect(() => {
@@ -107,24 +317,32 @@ export default function InfoDetail() {
       setIsLoading(true);
       try {
         // 🚀 병렬 로딩: 정보와 댓글을 동시에 호출 (배치 조회 적용)
-        const [infoResult, commentsResult] = await Promise.all([
+        const [postResult, commentsResult] = await Promise.all([
           apiClient.getPost(slug),
           apiClient.getCommentsBatch(slug)  // 🚀 2단계: 배치 조회 사용
         ]);
         
         // 정보 처리
-        if (infoResult.success && infoResult.data) {
-          const post = infoResult.data;
+        if (postResult.success && postResult.data) {
+          const postData = postResult.data;
           
           // property_information 타입인지 확인
-          if (post.metadata?.type !== 'property_information') {
+          if (postData.metadata?.type !== 'property_information') {
             setIsNotFound(true);
             showError('해당 정보를 찾을 수 없습니다');
             return;
           }
           
-          const convertedInfoItem = convertPostToInfoItem(post);
-          setInfoItem(convertedInfoItem);
+          setPost(postData);
+          
+          // 사용자 반응 상태 초기화 (로그인 사용자만)
+          if (user && postData.user_reaction) {
+            setUserReactions({
+              liked: postData.user_reaction.liked || false,
+              disliked: postData.user_reaction.disliked || false,
+              bookmarked: postData.user_reaction.bookmarked || false
+            });
+          }
         } else {
           setIsNotFound(true);
           showError('정보를 찾을 수 없습니다');
@@ -175,365 +393,103 @@ export default function InfoDetail() {
 
   if (isLoading) {
     return (
-      <AppLayout user={user} onLogout={logout}>
-        <div className="max-w-4xl mx-auto space-y-8">
-          {/* 스켈레톤 UI - 정보 헤더 */}
-          <div className="animate-pulse">
-            <div className="h-4 bg-gray-200 rounded w-32 mb-6"></div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="h-6 bg-gray-200 rounded w-20"></div>
-              <div className="h-6 bg-gray-200 rounded w-16"></div>
-              <div className="h-6 bg-gray-200 rounded w-10"></div>
-            </div>
-            <div className="h-10 bg-gray-200 rounded w-3/4 mb-4"></div>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-4">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                <div className="h-4 bg-gray-200 rounded w-20"></div>
-              </div>
-              <div className="flex items-center gap-4">
-                {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-4 bg-gray-200 rounded w-8"></div>
-                ))}
-              </div>
-            </div>
-            <div className="bg-gray-100 p-4 rounded-lg mb-6">
-              <div className="h-4 bg-gray-200 rounded w-16 mb-2"></div>
-              <div className="h-4 bg-gray-200 rounded w-full"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
-            </div>
-          </div>
-          
-          {/* 스켈레톤 UI - 콘텐츠 */}
-          <div className="animate-pulse">
-            <div className="space-y-3 mb-8">
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-              <div className="h-4 bg-gray-200 rounded w-4/6"></div>
-              <div className="h-4 bg-gray-200 rounded"></div>
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-            </div>
-          </div>
-          
-          {/* 스켈레톤 UI - 액션 버튼들 */}
-          <div className="animate-pulse">
-            <div className="flex items-center justify-center gap-4 p-6 bg-gray-100 rounded-lg mb-8">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-10 bg-gray-200 rounded w-20"></div>
-              ))}
-            </div>
-          </div>
-          
-          {/* 스켈레톤 UI - 댓글 섹션 */}
-          <div className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-32 mb-4"></div>
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="flex space-x-3">
-                  <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
-                  <div className="flex-1">
-                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
-                    <div className="h-4 bg-gray-200 rounded w-full"></div>
-                    <div className="h-4 bg-gray-200 rounded w-3/4 mt-1"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <AppLayout title="부동산 정보" user={user} onLogout={logout}>
+        <DetailPageLayout
+          post={{} as Post}
+          user={user}
+          comments={[]}
+          onReactionChange={handleReactionChange}
+          onCommentAdded={handleCommentAdded}
+          onEditPost={handleEditPost}
+          onDeletePost={handleDeletePost}
+          isLoading={true}
+          pendingReactions={pendingReactions}
+          userReactions={userReactions}
+          postSlug={slug}
+          pageType="property_information"
+        />
       </AppLayout>
     );
   }
 
-  // 에러 상태 처리
-  if (isNotFound || !infoItem) {
+  if (isNotFound || !post) {
     return (
-      <AppLayout user={user} onLogout={logout}>
-        <div className="flex flex-col items-center justify-center min-h-[60vh] text-center">
-          <div className="text-6xl mb-4">😞</div>
-          <h2 className="text-2xl font-bold text-var-primary mb-2">
-            정보를 찾을 수 없습니다
-          </h2>
-          <p className="text-var-secondary mb-6">
-            {loaderData.error || "요청하신 정보가 존재하지 않거나 삭제되었을 수 있습니다."}
-          </p>
-          <button
-            onClick={() => navigate('/info')}
-            className="px-6 py-3 bg-accent-primary text-white rounded-xl font-medium hover:bg-accent-hover transition-colors"
-          >
-            정보 목록으로 돌아가기
-          </button>
-        </div>
+      <AppLayout title="부동산 정보를 찾을 수 없음" user={user} onLogout={logout}>
+        <DetailPageLayout
+          post={null as any}
+          user={user}
+          comments={[]}
+          onReactionChange={handleReactionChange}
+          onCommentAdded={handleCommentAdded}
+          onEditPost={handleEditPost}
+          onDeletePost={handleDeletePost}
+          isLoading={false}
+          pendingReactions={pendingReactions}
+          userReactions={userReactions}
+          postSlug={slug}
+          pageType="property_information"
+        />
       </AppLayout>
     );
   }
 
-  const handleCommentAdded = async () => {
-    if (!slug) return;
-    
-    try {
-      // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 로드
-      const response = await apiClient.getCommentsBatch(slug);
-      if (response.success && response.data) {
-        // 배치 조회된 댓글 데이터 처리
-        let comments = [];
-        if (response.data.data?.comments) {
-          comments = response.data.data.comments;  // 배치 조회 응답 구조
-        } else if (response.data.comments) {
-          comments = response.data.comments;
-        } else if (Array.isArray(response.data)) {
-          comments = response.data;
-        }
-        
-        // 중첩된 댓글의 ID 필드 변환 (배치 조회된 데이터는 이미 작성자 정보 포함)
-        const processCommentsRecursive = (comments: any[]): Comment[] => {
-          return comments.map(comment => {
-            const processedComment = {
-              ...comment,
-              id: comment.id || comment._id
-            };
-            
-            if (processedComment.replies && Array.isArray(processedComment.replies)) {
-              processedComment.replies = processCommentsRecursive(processedComment.replies);
-            }
-            
-            return processedComment;
-          });
-        };
-        
-        const processedComments = processCommentsRecursive(comments);
-        setComments(processedComments);
-      }
-    } catch (error) {
-      console.error('댓글 로드 실패:', error);
-    }
-  };
+  // 부동산 정보 특성에 맞는 커스텀 섹션 정의
+  const getPropertyContentSections = () => {
+    if (!post) return {};
 
-  const handleReactionChange = async (reactionType: 'like' | 'dislike' | 'bookmark') => {
-    if (!user) {
-      showError('로그인이 필요합니다');
-      return;
+    const sections: { beforeContent?: React.ReactNode[]; afterContent?: React.ReactNode[]; afterReactions?: React.ReactNode[] } = {};
+
+    // 요약 섹션 (본문 이전)
+    if (post.metadata?.summary) {
+      sections.beforeContent = [
+        <div key="summary" className="bg-blue-50 p-4 rounded-lg mb-6">
+          <h3 className="font-semibold text-blue-800 mb-2">📋 요약</h3>
+          <p className="text-blue-700">{post.metadata.summary}</p>
+        </div>
+      ];
     }
 
-    if (!infoItem || !infoItem.slug) return;
+    // 콘텐츠 섹션 (본문 대신)
+    sections.afterContent = [
+      <div key="property-content" className="mb-6">
+        <SafeHTMLRenderer
+          content={post.content}
+          contentType={post.metadata?.content_type || 'ai_article'}
+          className="prose prose-lg max-w-none"
+        />
+      </div>
+    ];
 
-    try {
-      let response;
-      
-      // API v3 명세서에 따른 개별 엔드포인트 사용
-      switch (reactionType) {
-        case 'like':
-          response = await apiClient.likePost(infoItem.slug);
-          break;
-        case 'dislike':
-          response = await apiClient.dislikePost(infoItem.slug);
-          break;
-        case 'bookmark':
-          response = await apiClient.bookmarkPost(infoItem.slug);
-          break;
-        default:
-          throw new Error('Invalid reaction type');
-      }
-      
-      if (response.success) {
-        showSuccess(reactionType === 'like' ? '추천했습니다' : 
-                   reactionType === 'dislike' ? '비추천했습니다' : 
-                   '북마크에 추가했습니다');
-        
-        // 페이지 새로고침 대신 상태 업데이트
-        if (response.data && infoItem.stats) {
-          infoItem.stats.like_count = response.data.like_count ?? infoItem.stats.like_count;
-          infoItem.stats.dislike_count = response.data.dislike_count ?? infoItem.stats.dislike_count;
-          infoItem.stats.bookmark_count = response.data.bookmark_count ?? infoItem.stats.bookmark_count;
-        }
-      } else {
-        showError(response.error || '반응 처리에 실패했습니다');
-      }
-    } catch (error) {
-      showError('반응 처리 중 오류가 발생했습니다');
+    // 출처 정보 (반응 버튼 이후)
+    if (post.metadata?.data_source) {
+      sections.afterReactions = [
+        <div key="data-source" className="bg-gray-50 p-4 rounded-lg">
+          <h3 className="font-semibold text-gray-700 mb-2">📊 데이터 출처</h3>
+          <p className="text-gray-600">{post.metadata.data_source}</p>
+        </div>
+      ];
     }
-  };
 
-  const handleLike = () => {
-    handleReactionChange('like');
-  };
-
-  const handleDislike = () => {
-    handleReactionChange('dislike');
-  };
-
-  const handleBookmark = () => {
-    handleReactionChange('bookmark');
-  };
-
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: infoItem.title,
-        text: infoItem.metadata.summary || infoItem.title,
-        url: window.location.href
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      showSuccess('링크가 클립보드에 복사되었습니다.');
-    }
+    return sections;
   };
 
   return (
-    <AppLayout user={user} onLogout={logout}>
-      <div className="max-w-4xl mx-auto">
-        {/* 상단 네비게이션 */}
-        <div className="mb-6">
-          <button
-            onClick={() => navigate('/info')}
-            className="flex items-center gap-2 text-var-secondary hover:text-var-primary transition-colors"
-          >
-            <span>←</span>
-            <span>정보 목록으로 돌아가기</span>
-          </button>
-        </div>
-
-        {/* 헤더 */}
-        <header className="mb-8">
-          {/* 배지들 */}
-          <div className="flex items-center gap-3 mb-4">
-            <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium border ${getContentTypeBadgeColor(infoItem.content_type)}`}>
-              {getContentTypeLabel(infoItem.content_type)}
-            </span>
-            <span className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-sm font-medium">
-              {getCategoryLabel(infoItem.metadata.category)}
-            </span>
-            {new Date().getTime() - new Date(infoItem.created_at).getTime() < 7 * 24 * 60 * 60 * 1000 && (
-              <span className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-medium">
-                NEW
-              </span>
-            )}
-          </div>
-
-          {/* 제목 */}
-          <h1 className="text-3xl font-bold text-var-primary mb-4">
-            {infoItem.title}
-          </h1>
-
-          {/* 메타 정보 */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4 text-sm text-var-muted">
-              <span>작성일: {new Date(infoItem.created_at).toLocaleDateString('ko-KR')}</span>
-              {infoItem.metadata.data_source && (
-                <span>출처: {infoItem.metadata.data_source}</span>
-              )}
-            </div>
-
-            {/* 통계 */}
-            <div className="flex items-center gap-4 text-sm text-var-muted">
-              <span className="flex items-center gap-1">
-                👁️ {infoItem.stats?.view_count || 0}
-              </span>
-              <span className="flex items-center gap-1">
-                👍 {infoItem.stats?.like_count || 0}
-              </span>
-              <span className="flex items-center gap-1">
-                👎 {infoItem.stats?.dislike_count || 0}
-              </span>
-              <span className="flex items-center gap-1">
-                💬 {infoItem.stats?.comment_count || 0}
-              </span>
-              <span className="flex items-center gap-1">
-                🔖 {infoItem.stats?.bookmark_count || 0}
-              </span>
-            </div>
-          </div>
-
-          {/* 요약 */}
-          {infoItem.metadata.summary && (
-            <div className="bg-var-section p-4 rounded-lg mb-6">
-              <h3 className="font-semibold text-var-primary mb-2">📋 요약</h3>
-              <p className="text-var-secondary">{infoItem.metadata.summary}</p>
-            </div>
-          )}
-        </header>
-
-        {/* 콘텐츠 */}
-        <main className="mb-8">
-          <SafeHTMLRenderer
-            content={infoItem.content}
-            contentType={infoItem.content_type}
-            className="prose prose-lg max-w-none"
-          />
-        </main>
-
-        {/* 태그 */}
-        {infoItem.metadata.tags && infoItem.metadata.tags.length > 0 && (
-          <section className="mb-8">
-            <h3 className="font-semibold text-var-primary mb-3">🏷️ 태그</h3>
-            <div className="flex flex-wrap gap-2">
-              {infoItem.metadata.tags.map((tag, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-gray-50 text-gray-700 text-sm rounded-full font-medium hover:bg-gray-100 cursor-pointer"
-                  onClick={() => navigate(`/info?search=${encodeURIComponent(tag)}`)}
-                >
-                  #{tag}
-                </span>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* 액션 버튼들 */}
-        <section className="flex items-center justify-center gap-4 p-6 bg-var-section rounded-lg mb-8">
-          <button
-            onClick={handleLike}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg font-medium transition-colors"
-          >
-            <span>👍</span>
-            <span>추천</span>
-            <span className="text-sm">({infoItem.stats?.like_count || 0})</span>
-          </button>
-          
-          <button
-            onClick={handleDislike}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg font-medium transition-colors"
-          >
-            <span>👎</span>
-            <span>비추천</span>
-            <span className="text-sm">({infoItem.stats?.dislike_count || 0})</span>
-          </button>
-          
-          <button
-            onClick={handleBookmark}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg font-medium transition-colors"
-          >
-            <span>🔖</span>
-            <span>북마크</span>
-            <span className="text-sm">({infoItem.stats?.bookmark_count || 0})</span>
-          </button>
-          
-          <button
-            onClick={handleShare}
-            className="flex items-center gap-2 px-4 py-2 bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 rounded-lg font-medium transition-colors"
-          >
-            <span>🔗</span>
-            <span>공유</span>
-          </button>
-        </section>
-
-        {/* 댓글 섹션 */}
-        <CommentSection
-          postSlug={infoItem.slug!}
-          comments={comments}
-          onCommentAdded={handleCommentAdded}
-          pageType="property_information"
-        />
-
-        {/* 관련 정보 추천 */}
-        <section>
-          <h3 className="font-semibold text-var-primary mb-4">🔍 관련 정보</h3>
-          <div className="text-center py-8 bg-var-section rounded-lg">
-            <p className="text-var-secondary">관련 정보 기능을 준비 중입니다.</p>
-          </div>
-        </section>
-      </div>
+    <AppLayout title={post.title} user={user} onLogout={logout}>
+      <DetailPageLayout
+        post={post}
+        user={user}
+        comments={comments}
+        onReactionChange={handleReactionChange}
+        onCommentAdded={handleCommentAdded}
+        onEditPost={isAuthor() ? handleEditPost : undefined}
+        onDeletePost={isAuthor() ? handleDeletePost : undefined}
+        isLoading={isLoading}
+        pendingReactions={pendingReactions}
+        userReactions={userReactions}
+        postSlug={slug}
+        pageType="property_information"
+        sections={getPropertyContentSections()}
+      />
     </AppLayout>
   );
 }
