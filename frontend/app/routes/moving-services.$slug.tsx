@@ -292,16 +292,153 @@ export default function ServiceDetail() {
     }
   };
 
+  // 서비스 별점 재계산 함수
+  const recalculateServiceRating = (currentService: Service | null, comments: Comment[]): Service | null => {
+    if (!currentService) return null;
+    
+    try {
+      // 문의 댓글과 후기 댓글 분리
+      const inquiryComments = comments.filter(
+        comment => comment.metadata?.subtype === 'service_inquiry'
+      );
+      const reviewComments = comments.filter(
+        comment => comment.metadata?.subtype === 'service_review'
+      );
+      
+      let updatedService = { ...currentService };
+      
+      // 후기가 있으면 별점 계산
+      if (reviewComments.length > 0) {
+        const ratingsFromComments = reviewComments
+          .filter(comment => comment.metadata?.rating)
+          .map(comment => Number(comment.metadata.rating));
+        
+        if (ratingsFromComments.length > 0) {
+          const sum = ratingsFromComments.reduce((acc, rating) => acc + rating, 0);
+          const averageRating = sum / ratingsFromComments.length;
+          const roundedRating = Math.round(averageRating * 10) / 10; // 소수점 1자리까지
+          
+          updatedService.rating = roundedRating;
+        }
+      }
+      
+      // 서비스 통계 업데이트
+      updatedService.serviceStats = {
+        ...currentService.serviceStats,
+        inquiries: inquiryComments.length,
+        reviews: reviewComments.length,
+        review_count: reviewComments.length,
+        average_rating: updatedService.rating
+      };
+      
+      console.log('📊 서비스 별점 재계산 완료:', {
+        inquiryCount: inquiryComments.length,
+        reviewCount: reviewComments.length,
+        averageRating: updatedService.rating,
+        previousRating: currentService.rating
+      });
+      
+      return updatedService;
+    } catch (error) {
+      console.error('서비스 별점 재계산 오류:', error);
+      return currentService;
+    }
+  };
+
+  // Post 객체 통계 업데이트 함수
+  const updatePostStats = (currentPost: Post | null, comments: Comment[]): Post | null => {
+    if (!currentPost) return null;
+    
+    try {
+      // 문의 댓글과 후기 댓글 분리
+      const inquiryComments = comments.filter(
+        comment => comment.metadata?.subtype === 'service_inquiry'
+      );
+      const reviewComments = comments.filter(
+        comment => comment.metadata?.subtype === 'service_review'
+      );
+      
+      // Post 객체의 stats 업데이트
+      const updatedPost = {
+        ...currentPost,
+        stats: {
+          ...currentPost.stats,
+          comment_count: comments.length, // 총 댓글 수
+          inquiry_count: inquiryComments.length, // 문의 수
+          review_count: reviewComments.length, // 후기 수
+          // 기존 필드 유지
+          view_count: currentPost.stats?.view_count || 0,
+          like_count: currentPost.stats?.like_count || 0,
+          dislike_count: currentPost.stats?.dislike_count || 0,
+          bookmark_count: currentPost.stats?.bookmark_count || 0
+        }
+      };
+      
+      console.log('📊 Post 통계 업데이트 완료:', {
+        totalComments: comments.length,
+        inquiryCount: inquiryComments.length,
+        reviewCount: reviewComments.length
+      });
+      
+      return updatedPost;
+    } catch (error) {
+      console.error('Post 통계 업데이트 오류:', error);
+      return currentPost;
+    }
+  };
+
   // 댓글 추가 후 콜백 (새 댓글 작성 시)
   const handleCommentAdded = async () => {
+    console.log('🔄 댓글 추가 후 콜백 시작');
+    
+    // 1. 댓글 목록을 먼저 새로고침
     await refreshComments();
-    await refreshServiceStats(); // 통계 업데이트
+    
+    // 2. 서버에서 통계 정보 새로고침
+    await refreshServiceStats();
+    
+    // 3. 새로고침된 댓글 목록으로 서비스와 포스트 통계 업데이트
+    setTimeout(() => {
+      // 서비스 통계 업데이트
+      const updatedService = recalculateServiceRating(service, comments);
+      if (updatedService) {
+        setService(updatedService);
+        console.log('📊 실시간 서비스 별점 업데이트 완료:', {
+          newRating: updatedService.rating,
+          reviewCount: updatedService.serviceStats?.review_count
+        });
+      }
+      
+      // 포스트 통계 업데이트 (게시글 헤더용)
+      const updatedPost = updatePostStats(post, comments);
+      if (updatedPost) {
+        setPost(updatedPost);
+        console.log('📊 실시간 포스트 통계 업데이트 완료:', {
+          totalComments: updatedPost.stats?.comment_count,
+          inquiryCount: updatedPost.stats?.inquiry_count,
+          reviewCount: updatedPost.stats?.review_count
+        });
+      }
+    }, 100); // 댓글 상태 업데이트 후 통계 재계산
   };
 
   // 댓글 반응 후 콜백 (추천/비추천 시)
   const handleCommentReaction = async () => {
     // 댓글 반응 시에는 로딩 없이 댓글만 새로고침
     await refreshComments();
+    
+    // 댓글 반응 후에도 통계 업데이트
+    setTimeout(() => {
+      const updatedService = recalculateServiceRating(service, comments);
+      if (updatedService) {
+        setService(updatedService);
+      }
+      
+      const updatedPost = updatePostStats(post, comments);
+      if (updatedPost) {
+        setPost(updatedPost);
+      }
+    }, 100);
   };
 
   // 수정 버튼 핸들러
@@ -392,7 +529,7 @@ export default function ServiceDetail() {
 
   return (
     <AppLayout 
-      user={user}
+      user={user || undefined}
       onLogout={logout}
     >
       <div className="max-w-4xl mx-auto">
@@ -409,7 +546,7 @@ export default function ServiceDetail() {
         {/* DetailPageLayout 사용 - 일반 댓글 섹션 제외 */}
         <DetailPageLayout
           post={post}
-          user={user}
+          user={user || undefined}
           comments={[]} // 빈 배열로 전달하여 일반 댓글 섹션 숨김
           onReactionChange={handleReactionChange}
           onCommentAdded={handleCommentAdded}

@@ -188,7 +188,13 @@ const Sidebar = ({ isOpen = true, onClose, isAuthenticated = false, user, onLogo
                     <Link
                       key={item.id}
                       to={item.path}
-                      onClick={onClose}
+                      onClick={() => {
+                        console.log(`🔗 Sidebar: ${item.name}(${item.path}) 클릭됨`);
+                        // 모바일에서만 사이드바 닫기
+                        if (window.innerWidth < 1024 && onClose) {
+                          onClose();
+                        }
+                      }}
                       className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
                         active
                           ? 'bg-accent-primary text-white shadow-lg'

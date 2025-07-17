@@ -90,6 +90,10 @@ export interface PostStats {
   comment_count: number; // 댓글수
   bookmark_count: number; // 북마크수
   
+  // 서비스 페이지 전용 통계 필드
+  inquiry_count?: number;  // 문의수
+  review_count?: number;   // 후기수
+  
   // 프론트엔드 호환성을 위한 alias (옵셔널)
   views?: number;        // view_count의 alias
   likes?: number;        // like_count의 alias
@@ -378,6 +382,8 @@ export interface ServiceStats {
   inquiries: number;
   reviews: number;
   bookmarks: number;
+  review_count?: number;  // 실시간 후기 수 (별점 통계 업데이트용)
+  average_rating?: number;  // 평균 별점
 }
 
 export interface ServiceItem {

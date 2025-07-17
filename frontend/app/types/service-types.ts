@@ -466,11 +466,25 @@ export function convertPostToService(post: any): Service | null {
       bookmark_count: post.bookmark_count
     });
     
-    // metadata.type이 "moving services" 또는 "moving_services"인지 확인
-    if (post.metadata?.type !== 'moving services' && post.metadata?.type !== 'moving_services') {
-      console.warn('Post metadata.type is not "moving services" or "moving_services":', post.metadata?.type);
+    // metadata.type 확인 및 서비스 포스트만 필터링
+    const metadataType = post.metadata?.type;
+    console.log('📋 Post metadata.type:', metadataType, 'for post:', post.title);
+    
+    // 서비스 관련 타입만 허용
+    const isServicePost = metadataType && (
+      metadataType === 'moving services' ||
+      metadataType === 'moving_services' ||
+      metadataType === 'service' ||
+      metadataType.includes('서비스') ||
+      metadataType.includes('업체')
+    );
+    
+    if (!isServicePost) {
+      console.log('❌ Skipping non-service post:', post.title, 'type:', metadataType);
       return null;
     }
+    
+    console.log('✅ Processing service post:', post.title, 'type:', metadataType);
     
     // Post의 content를 ServicePost로 파싱
     console.log('Attempting to parse service post content...');

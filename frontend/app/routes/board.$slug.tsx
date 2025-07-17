@@ -19,6 +19,8 @@ interface LoaderData {
 export const loader: LoaderFunction = async ({ params }) => {
   const { slug } = params;
   
+  console.log('🔍 board.$slug.tsx 로더 호출됨, slug:', slug);
+  
   if (!slug) {
     return json<LoaderData>({ 
       post: null, 

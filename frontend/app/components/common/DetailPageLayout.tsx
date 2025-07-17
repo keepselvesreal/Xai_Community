@@ -236,11 +236,29 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   </div>
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <span>문의</span>
-                    <span>{post.stats?.comment_count || 0}</span>
+                    <span 
+                      className="transition-all duration-300"
+                      key={`inquiry-${post.stats?.inquiry_count || 0}`}
+                    >
+                      {(() => {
+                        const count = post.stats?.inquiry_count || 0;
+                        console.log('📊 헤더 문의 통계 렌더링:', { count });
+                        return count;
+                      })()}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <span>후기</span>
-                    <span>{post.stats?.review_count || 0}</span>
+                    <span 
+                      className="transition-all duration-300"
+                      key={`review-${post.stats?.review_count || 0}`}
+                    >
+                      {(() => {
+                        const count = post.stats?.review_count || 0;
+                        console.log('📊 헤더 후기 통계 렌더링:', { count });
+                        return count;
+                      })()}
+                    </span>
                   </div>
                 </>
               ) : (

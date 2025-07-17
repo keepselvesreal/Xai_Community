@@ -305,6 +305,14 @@ export const ServiceReviewSection: React.FC<{
   };
 
   const actualAverageRating = calculateAverageRating();
+  
+  // 실시간 별점 업데이트 로그
+  console.log('🌟 ServiceReviewSection 별점 상태:', {
+    reviewCommentsCount: reviewComments.length,
+    calculatedRating: actualAverageRating,
+    serviceAverageRating: averageRating,
+    ratingsFromComments: reviewComments.map(c => c.metadata?.rating)
+  });
 
   // 별점 렌더링 (로컬 함수)
   const renderReviewStars = (rating: number) => {
