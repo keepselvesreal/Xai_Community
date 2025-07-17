@@ -152,7 +152,23 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 relative">
+      {/* 우측 하단 고정 북마크 버튼 - moving_services인 경우에만 표시 */}
+      {pageType === 'moving_services' && (
+        <button
+          onClick={() => handleReactionClick('bookmark')}
+          disabled={pendingReactions.has('bookmark')}
+          className={`fixed top-1/2 right-5 transform -translate-y-1/2 z-50 p-3 rounded-xl shadow-lg transition-all duration-200 ${
+            userReactions.bookmarked
+              ? 'bg-blue-50 border-2 border-blue-400 text-blue-700'
+              : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+          } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-110'}`}
+          style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}
+        >
+          <span className="text-2xl">🔖</span>
+        </button>
+      )}
+
       {/* 메인 컨테이너 - 프로토타입 스타일 적용 */}
       <div className="bg-white rounded-xl shadow-sm overflow-hidden">
         {/* 헤더 섹션 */}
