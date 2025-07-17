@@ -60,6 +60,12 @@ export default function ServiceDetail() {
   const [comments, setComments] = useState<Comment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isNotFound, setIsNotFound] = useState(false);
+  const [pendingReactions, setPendingReactions] = useState<Set<string>>(new Set());
+  const [userReactions, setUserReactions] = useState<{
+    liked: boolean;
+    disliked: boolean;
+    bookmarked: boolean;
+  }>({ liked: false, disliked: false, bookmarked: false });
   
   // 🔄 서버에서 최신 통계 데이터 재로드 함수
   const refreshServiceStats = async (): Promise<void> => {
@@ -98,6 +104,15 @@ export default function ServiceDetail() {
           setService(serviceData);
           setPost(serviceResult.data);
           
+          // 사용자 반응 상태 초기화 (로그인 사용자만)
+          if (user && serviceResult.data.user_reaction) {
+            setUserReactions({
+              liked: serviceResult.data.user_reaction.liked || false,
+              disliked: serviceResult.data.user_reaction.disliked || false,
+              bookmarked: serviceResult.data.user_reaction.bookmarked || false
+            });
+          }
+          
         } else {
           setIsNotFound(true);
           showError('서비스 데이터 변환에 실패했습니다');
@@ -133,9 +148,122 @@ export default function ServiceDetail() {
     loadData();
   }, [slug]);
 
-  // 반응 처리 함수 (주석 기능만 유지)
-  const handleReactionChange = async () => {
-    // 반응 기능 비활성화됨
+  // 반응 처리 함수 (북마크만 활성화)
+  const handleReactionChange = async (reactionType: 'like' | 'dislike' | 'bookmark') => {
+    console.log('🔖 입주 서비스 반응 처리 시작:', {
+      reactionType,
+      user: !!user,
+      postSlug: slug,
+      currentBookmarked: userReactions.bookmarked
+    });
+    
+    if (!user) {
+      showError('로그인이 필요합니다');
+      return;
+    }
+
+    if (!post || !slug) return;
+
+    // 북마크만 처리
+    if (reactionType !== 'bookmark') {
+      console.log('⚠️ 입주 서비스에서는 북마크만 지원됩니다');
+      return;
+    }
+
+    // 중복 클릭 방지
+    if (pendingReactions.has(reactionType)) {
+      return;
+    }
+
+    setPendingReactions(prev => new Set([...prev, reactionType]));
+
+    // 현재 상태 백업 (실패 시 복원용)
+    const originalPost = post;
+    const originalUserReactions = userReactions;
+
+    // 🚀 1단계: 즉시 UI 업데이트 (Optimistic)
+    let newUserReactions = { ...userReactions };
+    
+    setPost(prev => {
+      if (!prev?.stats) return prev;
+      
+      const currentStats = prev.stats;
+      let newStats = { ...currentStats };
+
+      if (userReactions.bookmarked) {
+        // 이미 북마크한 상태에서 다시 클릭 = 취소
+        newStats.bookmark_count = Math.max(0, (currentStats.bookmark_count || 0) - 1);
+        newUserReactions.bookmarked = false;
+      } else {
+        // 북마크 안 한 상태에서 클릭 = 북마크
+        newStats.bookmark_count = (currentStats.bookmark_count || 0) + 1;
+        newUserReactions.bookmarked = true;
+      }
+
+      console.log('🔄 Optimistic UI 업데이트:', {
+        이전북마크수: currentStats.bookmark_count,
+        새북마크수: newStats.bookmark_count,
+        북마크상태: newUserReactions.bookmarked
+      });
+
+      return {
+        ...prev,
+        stats: newStats
+      };
+    });
+    
+    // 사용자 반응 상태 업데이트
+    setUserReactions(newUserReactions);
+
+    // 🚀 2단계: 백그라운드에서 API 호출
+    try {
+      const response = await apiClient.bookmarkPost(slug);
+      
+      if (response.success && response.data) {
+        console.log('✅ 북마크 API 성공:', response.data);
+        
+        // 서버 응답으로 정확한 상태 동기화
+        setPost(prev => prev ? {
+          ...prev,
+          stats: {
+            ...prev.stats,
+            bookmark_count: response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0,
+            view_count: prev.stats?.view_count ?? 0,
+            comment_count: prev.stats?.comment_count ?? 0,
+            like_count: prev.stats?.like_count ?? 0,
+            dislike_count: prev.stats?.dislike_count ?? 0,
+          }
+        } : prev);
+        
+        // 서버에서 사용자 반응 상태 동기화
+        if (response.data.user_reaction) {
+          setUserReactions({
+            liked: response.data.user_reaction.liked || false,
+            disliked: response.data.user_reaction.disliked || false,
+            bookmarked: response.data.user_reaction.bookmarked || false
+          });
+        }
+      } else {
+        console.log('❌ 북마크 API 실패:', response);
+        // API 실패 시 원래 상태로 복원
+        setPost(originalPost);
+        setUserReactions(originalUserReactions);
+        showError(response.error || '북마크 처리에 실패했습니다');
+      }
+    } catch (error) {
+      console.error('❌ 북마크 처리 중 오류:', error);
+      // 오류 발생 시 원래 상태로 복원
+      setPost(originalPost);
+      setUserReactions(originalUserReactions);
+      showError('북마크 처리 중 오류가 발생했습니다');
+    } finally {
+      // 요청 완료 처리
+      setPendingReactions(prev => {
+        const next = new Set(prev);
+        next.delete(reactionType);
+        return next;
+      });
+    }
   };
 
   // 댓글 목록 새로고침 유틸리티 함수
@@ -287,11 +415,8 @@ export default function ServiceDetail() {
           onCommentAdded={handleCommentAdded}
           onEditPost={handleEditPost}
           onDeletePost={handleDeletePost}
-          userReactions={{
-            liked: false,
-            disliked: false,
-            bookmarked: false,
-          }}
+          pendingReactions={pendingReactions}
+          userReactions={userReactions}
           sections={serviceDetailSections}
           // postSlug 제거하여 일반 댓글 섹션 비활성화
           pageType="moving_services"

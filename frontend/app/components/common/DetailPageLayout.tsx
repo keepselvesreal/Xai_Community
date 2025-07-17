@@ -156,16 +156,31 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
       {/* 우측 하단 고정 북마크 버튼 - moving_services인 경우에만 표시 */}
       {pageType === 'moving_services' && (
         <button
-          onClick={() => handleReactionClick('bookmark')}
+          onClick={() => {
+            console.log('💾 저장 버튼 클릭됨:', { 
+              현재상태: userReactions.bookmarked,
+              요청중: pendingReactions.has('bookmark'),
+              북마크수: post.stats?.bookmark_count 
+            });
+            handleReactionClick('bookmark');
+          }}
           disabled={pendingReactions.has('bookmark')}
-          className={`fixed top-1/2 right-5 transform -translate-y-1/2 z-50 p-3 rounded-xl shadow-lg transition-all duration-200 ${
+          className={`fixed top-1/2 right-5 transform -translate-y-1/2 z-50 px-4 py-3 rounded-xl font-medium text-sm transition-all duration-300 ${
             userReactions.bookmarked
-              ? 'bg-blue-50 border-2 border-blue-400 text-blue-700'
-              : 'bg-gray-50 border border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-          } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:scale-110'}`}
-          style={{ boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)' }}
+              ? 'bg-blue-600 border-2 border-blue-600 text-white'
+              : 'bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 hover:border-gray-400'
+          } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+          style={{ 
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            minWidth: '80px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
         >
-          <span className="text-2xl">🔖</span>
+          <span className={`transition-opacity duration-200 ${pendingReactions.has('bookmark') ? 'opacity-70' : ''}`}>
+            저장
+          </span>
         </button>
       )}
 
@@ -204,7 +219,20 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                 <>
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <span>관심</span>
-                    <span>{post.stats?.bookmark_count || 0}</span>
+                    <span 
+                      className={`transition-all duration-300 ${userReactions.bookmarked ? 'text-blue-600 font-semibold' : ''}`}
+                      key={`bookmark-${post.stats?.bookmark_count || 0}`}
+                    >
+                      {(() => {
+                        const count = post.stats?.bookmark_count || 0;
+                        console.log('📊 헤더 관심 통계 렌더링:', { 
+                          count, 
+                          bookmarked: userReactions.bookmarked,
+                          pending: pendingReactions.has('bookmark')
+                        });
+                        return count;
+                      })()}
+                    </span>
                   </div>
                   <div className="flex items-center gap-1 text-sm text-gray-600">
                     <span>문의</span>
