@@ -15,6 +15,8 @@ export interface PostWriteFormConfig {
   guidelines: string[];
   titleMaxLength?: number;
   contentMaxLength?: number;
+  titleLabel?: string; // 제목 필드 라벨 커스터마이징
+  contentLabel?: string; // 내용 필드 라벨 커스터마이징
 }
 
 export interface PostWriteFormProps<T = Record<string, unknown>> {
@@ -27,6 +29,7 @@ export interface PostWriteFormProps<T = Record<string, unknown>> {
   
   // 확장 필드
   extendedFields?: React.ReactNode;
+  afterTitleFields?: React.ReactNode; // 제목 뒤에 올 필드들
   afterContentFields?: React.ReactNode;
   
   // 이벤트 핸들러
@@ -43,6 +46,7 @@ export default function PostWriteForm<T extends { title: string; content: string
   initialData,
   onDataChange,
   extendedFields,
+  afterTitleFields,
   afterContentFields,
   onSubmit,
   onCancel,
@@ -58,6 +62,8 @@ export default function PostWriteForm<T extends { title: string; content: string
     guidelines,
     titleMaxLength = 200,
     contentMaxLength = 10000,
+    titleLabel = "제목",
+    contentLabel = "내용",
   } = config;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -83,7 +89,7 @@ export default function PostWriteForm<T extends { title: string; content: string
 
   return (
     <AppLayout 
-      user={user || { id: 'test', email: 'test@test.com', name: '테스트사용자' }}
+      user={user}
       onLogout={logout}
     >
       <div className="max-w-4xl mx-auto">
@@ -103,8 +109,8 @@ export default function PostWriteForm<T extends { title: string; content: string
 
             {/* 제목 입력 */}
             <div>
-              <label htmlFor="title" className="block text-sm font-medium text-var-primary mb-2">
-                제목 <span className="text-red-500">*</span>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-3">
+                {titleLabel} <span className="text-red-500">*</span>
               </label>
               <input
                 id="title"
@@ -112,31 +118,34 @@ export default function PostWriteForm<T extends { title: string; content: string
                 name="title"
                 value={initialData.title}
                 onChange={handleInputChange}
-                placeholder="제목을 입력하세요"
-                className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+                placeholder={titleLabel === "업체명" ? "업체명을 입력하세요" : "제목을 입력하세요"}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 maxLength={titleMaxLength}
               />
-              <div className="mt-1 text-xs text-var-muted text-right">
+              <div className="mt-2 text-xs text-gray-500 text-right">
                 {initialData.title.length}/{titleMaxLength.toLocaleString()}자
               </div>
             </div>
 
+            {/* 제목 후 필드 (연락처, 서비스 목록 등) */}
+            {afterTitleFields}
+
             {/* 내용 입력 */}
             <div>
-              <label htmlFor="content" className="block text-sm font-medium text-var-primary mb-2">
-                내용 <span className="text-red-500">*</span>
+              <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-3">
+                {contentLabel}
               </label>
               <textarea
                 id="content"
                 name="content"
                 value={initialData.content}
                 onChange={handleInputChange}
-                placeholder="내용을 입력하세요"
-                rows={12}
-                className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent resize-vertical"
+                placeholder={contentLabel === "업체 소개" ? "업체 소개를 입력하세요..." : "내용을 입력하세요"}
+                rows={6}
+                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
                 maxLength={contentMaxLength}
               />
-              <div className="mt-1 text-xs text-var-muted text-right">
+              <div className="mt-2 text-xs text-gray-500 text-right">
                 {initialData.content.length}/{contentMaxLength.toLocaleString()}자
               </div>
             </div>
@@ -144,20 +153,32 @@ export default function PostWriteForm<T extends { title: string; content: string
             {/* 내용 후 필드 (예: 태그 입력) */}
             {afterContentFields}
 
+            {/* 가이드라인 */}
+            {guidelines.length > 0 && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">📝 작성 가이드라인</h4>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  {guidelines.map((guideline, index) => (
+                    <li key={index}>• {guideline}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* 버튼 영역 */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-var-color">
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
               <button
                 type="button"
                 onClick={onCancel}
                 disabled={isSubmitting}
-                className="px-6 py-3 border border-var-color rounded-lg text-var-secondary hover:bg-var-hover transition-colors duration-200 disabled:opacity-50"
+                className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors duration-200 disabled:opacity-50"
               >
                 취소
               </button>
               <button
                 type="submit"
                 disabled={isSubmitDisabled}
-                className="px-6 py-3 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
                 {isSubmitting ? (
                   <>
@@ -166,7 +187,8 @@ export default function PostWriteForm<T extends { title: string; content: string
                   </>
                 ) : (
                   <>
-                    ✏️ {submitButtonText}
+                    <span>📝</span>
+                    <span>{submitButtonText}</span>
                   </>
                 )}
               </button>

@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "@remix-run/react";
 import { type MetaFunction } from "@remix-run/node";
-import AppLayout from "~/components/layout/AppLayout";
+import PostWriteForm, { type PostWriteFormConfig } from "~/components/common/PostWriteForm";
+import CategoryField from "~/components/service/CategoryField";
+import ContactFields from "~/components/service/ContactFields";
+import ServiceListField, { type ServiceItem } from "~/components/service/ServiceListField";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 import { apiClient } from "~/lib/api";
@@ -15,41 +18,40 @@ export const meta: MetaFunction = () => {
   ];
 };
 
-const categories = [
-  { value: "moving", label: "이사" },
-  { value: "cleaning", label: "청소" },
-  { value: "aircon", label: "에어컨" }
-];
+interface ServiceWriteData {
+  title: string; // 업체명 (PostWriteForm 호환)
+  content: string; // 업체 소개 (PostWriteForm 호환)
+  category: string;
+  contact: string;
+  availableHours: string;
+}
 
 export default function ServicesWrite() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, logout } = useAuth();
   const { showSuccess, showError } = useNotification();
   
   // 수정 모드 확인
   const editSlug = searchParams.get('edit');
   const isEditMode = !!editSlug;
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ServiceWriteData>({
+    title: "", // 업체명
+    content: "", // 업체 소개
     category: "moving",
-    companyName: "",
     contact: "",
-    availableHours: "",
-    description: ""
+    availableHours: ""
   });
-  const [services, setServices] = useState([
+  const [services, setServices] = useState<ServiceItem[]>([
     { serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [originalPost, setOriginalPost] = useState<any>(null);
 
   // 수정 모드일 때 기존 데이터 로드
   const loadExistingService = async () => {
     if (!isEditMode || !editSlug) return;
     
-    setIsLoading(true);
     try {
       console.log('🔍 Loading existing service for edit:', editSlug);
       
@@ -79,11 +81,11 @@ export default function ServicesWrite() {
           
           // 폼 데이터 설정
           setFormData({
+            title: serviceData.company.name, // 업체명 -> title
+            content: serviceData.company.description, // 업체 소개 -> content
             category,
-            companyName: serviceData.company.name,
             contact: serviceData.company.contact,
-            availableHours: serviceData.company.availableHours,
-            description: serviceData.company.description
+            availableHours: serviceData.company.availableHours
           });
           
           // 서비스 목록 설정 (문자열 기반 가격 처리)
@@ -98,19 +100,7 @@ export default function ServicesWrite() {
             { serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }
           ]);
           
-          console.log('✅ Form data loaded successfully:', {
-            formData: {
-              category,
-              companyName: serviceData.company.name,
-              contact: serviceData.company.contact,
-              availableHours: serviceData.company.availableHours,
-              description: serviceData.company.description
-            },
-            services: mappedServices,
-            // 🔍 숫자 정밀도 디버깅
-            originalPrices: serviceData.services.map(s => ({ name: s.name, price: s.price, type: typeof s.price })),
-            mappedPrices: mappedServices.map(s => ({ name: s.serviceName, price: s.price, type: typeof s.price }))
-          });
+          console.log('✅ Form data loaded successfully');
           
         } catch (parseError) {
           console.error('❌ Failed to parse service content:', parseError);
@@ -127,8 +117,6 @@ export default function ServicesWrite() {
       console.error('🚨 Error loading existing service:', error);
       showError('업체 정보를 불러오는 중 오류가 발생했습니다.');
       navigate('/services');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -139,62 +127,39 @@ export default function ServicesWrite() {
     }
   }, [isEditMode, editSlug]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+  // PostWriteForm 호환 데이터 변경 핸들러
+  const handleDataChange = (data: Partial<ServiceWriteData>) => {
+    setFormData(prev => ({ ...prev, ...data }));
   };
 
-  const handleServiceChange = (index: number, field: string, value: string) => {
-    // 가격 필드는 숫자만 허용
-    if (field === 'price' || field === 'specialPrice') {
-      // 숫자만 남기고 문자열로 저장 (정밀도 보장)
-      const cleanedValue = value.replace(/[^\d]/g, '');
-      setServices(prev => prev.map((service, i) => 
-        i === index ? { ...service, [field]: cleanedValue } : service
-      ));
-    } else {
-      setServices(prev => prev.map((service, i) => 
-        i === index ? { ...service, [field]: value } : service
-      ));
-    }
+  // 카테고리 변경 핸들러
+  const handleCategoryChange = (category: string) => {
+    setFormData(prev => ({ ...prev, category }));
   };
 
-  const handleSpecialPriceToggle = (index: number, checked: boolean) => {
-    setServices(prev => prev.map((service, i) => 
-      i === index 
-        ? { ...service, hasSpecialPrice: checked, specialPrice: checked ? service.specialPrice : "" }
-        : service
-    ));
+  // 연락처 변경 핸들러
+  const handleContactChange = (contact: string) => {
+    setFormData(prev => ({ ...prev, contact }));
   };
 
-  const addService = () => {
-    setServices(prev => [...prev, { serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }]);
+  // 문의 가능시간 변경 핸들러
+  const handleAvailableHoursChange = (availableHours: string) => {
+    setFormData(prev => ({ ...prev, availableHours }));
   };
 
-  const removeService = (index: number) => {
-    if (services.length > 1) {
-      setServices(prev => prev.filter((_, i) => i !== index));
-    }
+  // 서비스 목록 변경 핸들러
+  const handleServicesChange = (newServices: ServiceItem[]) => {
+    setServices(newServices);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async (data: ServiceWriteData) => {
     // 입력 검증
-    if (!formData.companyName.trim()) {
-      showError("업체명을 입력해주세요.");
-      return;
-    }
-    
-    if (!formData.contact.trim()) {
+    if (!data.contact.trim()) {
       showError("연락처를 입력해주세요.");
       return;
     }
     
-    if (!formData.availableHours.trim()) {
+    if (!data.availableHours.trim()) {
       showError("문의 가능시간을 입력해주세요.");
       return;
     }
@@ -222,10 +187,10 @@ export default function ServicesWrite() {
       // 업체 데이터를 ServicePost 형식으로 구성
       const servicePostData = {
         company: {
-          name: formData.companyName.trim(),
-          contact: formData.contact.trim(),
-          availableHours: formData.availableHours.trim(),
-          description: formData.description.trim()
+          name: data.title.trim(), // title -> name
+          contact: data.contact.trim(),
+          availableHours: data.availableHours.trim(),
+          description: data.content.trim() // content -> description
         },
         services: services
           .filter(s => s.serviceName.trim() && s.price.trim())
@@ -238,8 +203,8 @@ export default function ServicesWrite() {
           }))
       };
 
-      const categoryKorean = formData.category === 'moving' ? '이사' : 
-                            formData.category === 'cleaning' ? '청소' : '에어컨';
+      const categoryKorean = data.category === 'moving' ? '이사' : 
+                            data.category === 'cleaning' ? '청소' : '에어컨';
 
       if (isEditMode && originalPost) {
         // 수정 모드: PUT 요청
@@ -283,11 +248,11 @@ export default function ServicesWrite() {
           
           // 폼 리셋
           setFormData({
+            title: "",
+            content: "",
             category: "moving",
-            companyName: "",
             contact: "",
-            availableHours: "",
-            description: ""
+            availableHours: ""
           });
           setServices([{ serviceName: "", price: "", specialPrice: "", hasSpecialPrice: false }]);
           
@@ -308,8 +273,8 @@ export default function ServicesWrite() {
   };
 
   const handleCancel = () => {
-    const hasContent = formData.companyName.trim() || 
-                      formData.description.trim() || 
+    const hasContent = formData.title.trim() || 
+                      formData.content.trim() || 
                       services.some(s => s.serviceName.trim() || s.price.trim());
     
     const cancelMessage = isEditMode 
@@ -333,271 +298,63 @@ export default function ServicesWrite() {
     }
   };
 
-  // 로딩 중일 때 표시할 컴포넌트
-  if (isLoading) {
-    return (
-      <AppLayout 
-        user={user || { id: 'test', email: 'test@test.com', name: '테스트사용자' }}
-        onLogout={logout}
-      >
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-center items-center h-64">
-            <div className="text-center">
-              <div className="text-4xl mb-4">⏳</div>
-              <p className="text-var-secondary">업체 정보를 불러오는 중...</p>
-            </div>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
+  // PostWriteForm 설정
+  const config: PostWriteFormConfig = {
+    pageTitle: isEditMode ? '업체 정보 수정' : '업체 등록',
+    pageDescription: isEditMode 
+      ? '등록된 업체 정보를 수정할 수 있습니다.'
+      : '아파트 주민들에게 유용한 서비스를 제공하는 업체를 등록해보세요.',
+    submitButtonText: isEditMode ? '업체 정보 수정' : '업체 등록',
+    successMessage: isEditMode ? '업체 정보가 성공적으로 수정되었습니다!' : '업체가 성공적으로 등록되었습니다!',
+    guidelines: [
+      '정확하고 신뢰할 수 있는 업체 정보를 제공해주세요',
+      '서비스 내용과 가격을 명확하게 기재해주세요',
+      '연락처와 문의 가능시간을 정확히 입력해주세요',
+      '아파트 주민들에게 도움이 되는 서비스를 등록해주세요',
+      '허위 정보나 과장된 내용은 피해주세요'
+    ],
+    titleMaxLength: 100,
+    contentMaxLength: 1000,
+    titleLabel: "업체명",
+    contentLabel: "업체 소개"
+  };
+
+  // 카테고리 필드 (extendedFields) - 업체명 위에 위치
+  const extendedFields = (
+    <CategoryField
+      value={formData.category}
+      onChange={handleCategoryChange}
+    />
+  );
+
+  // 연락처와 서비스 목록을 업체명 뒤에 위치 (afterTitleFields)
+  const afterTitleFields = (
+    <>
+      <ContactFields
+        contact={formData.contact}
+        availableHours={formData.availableHours}
+        onContactChange={handleContactChange}
+        onAvailableHoursChange={handleAvailableHoursChange}
+      />
+      
+      <ServiceListField
+        services={services}
+        onServicesChange={handleServicesChange}
+      />
+    </>
+  );
 
   return (
-    <AppLayout 
-      user={user || { id: 'test', email: 'test@test.com', name: '테스트사용자' }}
-      onLogout={logout}
-    >
-      <div className="max-w-4xl mx-auto">
-        {/* 헤더 */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-var-primary mb-2">
-            {isEditMode ? '업체 정보 수정' : '업체 등록'}
-          </h1>
-          <p className="text-var-secondary">
-            {isEditMode 
-              ? '등록된 업체 정보를 수정할 수 있습니다.'
-              : '아파트 주민들에게 유용한 서비스를 제공하는 업체를 등록해보세요.'
-            }
-          </p>
-        </div>
-
-        {/* 업체 등록 폼 */}
-        <div className="bg-var-card border border-var-color rounded-xl p-6">
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* 카테고리 선택 */}
-            <div>
-              <label className="block text-sm font-medium text-var-primary mb-2">
-                카테고리 <span className="text-red-500">*</span>
-              </label>
-              <select
-                name="category"
-                value={formData.category}
-                onChange={handleInputChange}
-                className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-              >
-                {categories.map((category) => (
-                  <option key={category.value} value={category.value}>
-                    {category.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 업체명 입력 */}
-            <div>
-              <label className="block text-sm font-medium text-var-primary mb-2">
-                업체명 <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="companyName"
-                value={formData.companyName}
-                onChange={handleInputChange}
-                placeholder="업체명을 입력하세요"
-                className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                maxLength={100}
-              />
-            </div>
-
-            {/* 연락처와 문의 가능시간 - 같은 행 */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-var-primary mb-2">
-                  연락처 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  name="contact"
-                  value={formData.contact}
-                  onChange={handleInputChange}
-                  placeholder="연락처를 입력하세요"
-                  className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-var-primary mb-2">
-                  문의 가능시간 <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="availableHours"
-                  value={formData.availableHours}
-                  onChange={handleInputChange}
-                  placeholder="예: 09:00~18:00"
-                  className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
-                />
-              </div>
-            </div>
-
-            {/* 서비스 목록 라벨과 추가 버튼 */}
-            <div className="flex items-center justify-between">
-              <label className="block text-sm font-medium text-var-primary">
-                서비스 목록 <span className="text-red-500">*</span>
-              </label>
-              <button
-                type="button"
-                onClick={addService}
-                className="px-4 py-2 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors duration-200 flex items-center gap-2 text-sm"
-              >
-                ➕ 추가
-              </button>
-            </div>
-
-            {/* 서비스 목록 섹션 */}
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-              <div className="space-y-4">
-                {services.map((service, index) => (
-                  <div key={index} className="bg-white border border-gray-200 rounded-lg p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="block text-xs font-medium text-gray-600">
-                            서비스{index + 1} 이름
-                          </label>
-                          {services.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeService(index)}
-                              className="text-red-500 hover:text-red-700 text-xs"
-                            >
-                              🗑️ 삭제
-                            </button>
-                          )}
-                        </div>
-                        <input
-                          type="text"
-                          value={service.serviceName}
-                          onChange={(e) => handleServiceChange(index, 'serviceName', e.target.value)}
-                          placeholder="서비스 이름을 입력하세요"
-                          className="w-full px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm"
-                          maxLength={100}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-2">
-                          서비스{index + 1} 가격
-                        </label>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="number"
-                              value={service.price}
-                              onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
-                              placeholder={service.hasSpecialPrice ? "기존 가격" : "가격을 입력하세요"}
-                              className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                              min="0"
-                            />
-                            <label className="flex items-center gap-1 text-xs text-var-primary">
-                              <input
-                                type="checkbox"
-                                checked={service.hasSpecialPrice}
-                                onChange={(e) => handleSpecialPriceToggle(index, e.target.checked)}
-                                className="w-3 h-3 text-accent-primary bg-var-section border-var-color rounded focus:ring-accent-primary focus:ring-1"
-                              />
-                              특가
-                            </label>
-                          </div>
-                          
-                          {service.hasSpecialPrice && (
-                            <div className="flex items-center gap-3">
-                              <input
-                                type="number"
-                                value={service.specialPrice}
-                                onChange={(e) => handleServiceChange(index, 'specialPrice', e.target.value)}
-                                placeholder="특가 가격"
-                                className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                                min="0"
-                              />
-                              <div className="w-10"></div>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* 업체 소개 */}
-            <div>
-              <label className="block text-sm font-medium text-var-primary mb-2">
-                업체 소개
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleInputChange}
-                placeholder="업체 소개를 입력하세요..."
-                rows={6}
-                className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent resize-vertical"
-                maxLength={1000}
-              />
-              <div className="mt-1 text-xs text-var-muted text-right">
-                {formData.description.length}/1,000자
-              </div>
-            </div>
-
-            {/* 등록 가이드라인 */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h4 className="font-medium text-blue-900 mb-2">📝 업체 등록 가이드라인</h4>
-              <ul className="text-sm text-blue-800 space-y-1">
-                <li>• 정확하고 신뢰할 수 있는 업체 정보를 제공해주세요</li>
-                <li>• 서비스 내용과 가격을 명확하게 기재해주세요</li>
-                <li>• 연락처와 문의 가능시간을 정확히 입력해주세요</li>
-                <li>• 아파트 주민들에게 도움이 되는 서비스를 등록해주세요</li>
-                <li>• 허위 정보나 과장된 내용은 피해주세요</li>
-              </ul>
-            </div>
-
-            {/* 버튼 영역 */}
-            <div className="flex justify-end gap-3 pt-4 border-t border-var-color">
-              <button
-                type="button"
-                onClick={handleCancel}
-                disabled={isSubmitting}
-                className="px-6 py-3 border border-var-color rounded-lg text-var-secondary hover:bg-var-hover transition-colors duration-200 disabled:opacity-50"
-              >
-                취소
-              </button>
-              <button
-                type="submit"
-                disabled={
-                  isSubmitting || 
-                  !formData.companyName.trim() || 
-                  !formData.contact.trim() || 
-                  !formData.availableHours.trim() ||
-                  !services.some(s => s.serviceName.trim() && s.price.trim())
-                }
-                className="px-6 py-3 bg-accent-primary text-white rounded-lg hover:bg-accent-primary/90 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    {isEditMode ? '수정 중...' : '등록 중...'}
-                  </>
-                ) : (
-                  <>
-                    {isEditMode ? '✅ 업체 정보 수정' : '📝 업체 등록'}
-                  </>
-                )}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </AppLayout>
+    <PostWriteForm<ServiceWriteData>
+      config={config}
+      initialData={formData}
+      onDataChange={handleDataChange}
+      extendedFields={extendedFields}
+      afterTitleFields={afterTitleFields}
+      onSubmit={handleSubmit}
+      onCancel={handleCancel}
+      isSubmitting={isSubmitting}
+      isEditMode={isEditMode}
+    />
   );
 }

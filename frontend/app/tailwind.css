@@ -18,6 +18,13 @@
   --bg-hover: #F0F8E8;
   --bg-section: #F8F9FA;
   --shadow-card: rgba(107, 142, 35, 0.15);
+  
+  /* HTML 프로토타입 호환 변수들 */
+  --var-section: #f8fafc;
+  --var-color: #e2e8f0;
+  --var-primary: #1e293b;
+  --var-muted: #94a3b8;
+  --accent-primary: #3b82f6;
 }
 
 [data-theme="dark"] {
@@ -48,8 +55,27 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
-  line-height: 1.6;
-  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* HTML 프로토타입 호환 클래스들 */
+.bg-var-section { 
+  background-color: var(--var-section); 
+}
+
+.border-var-color { 
+  border-color: var(--var-color); 
+}
+
+.text-var-primary { 
+  color: var(--var-primary); 
+}
+
+.placeholder-var-muted::placeholder { 
+  color: var(--var-muted); 
+}
+
+.focus\:ring-accent-primary:focus { 
+  --tw-ring-color: var(--accent-primary); 
 }
 
 /* 커스텀 유틸리티 클래스 */
@@ -223,12 +249,24 @@ body {
     background: var(--accent-hover);
   }
 
-  /* 게시글 아이템 스타일 */
+  /* 게시글 아이템 - 완전 고정 레이아웃 (현업 베스트 프랙티스) */
   .post-item {
-    padding: 16px 20px;
     margin: 0;
     border-bottom: 1px solid var(--border-light);
     transition: background-color 0.2s ease;
+    width: 100%;
+    box-sizing: border-box;
+    height: 88px; /* 고정 높이 - min-height 대신 height 사용 */
+    position: relative;
+    display: grid;
+    grid-template-areas: 
+      "category title badge"
+      "tags meta meta";
+    grid-template-columns: 120px 1fr 60px; /* 완전 고정된 컬럼 */
+    grid-template-rows: 40px 48px; /* 완전 고정된 행 */
+    padding: 12px 20px;
+    align-items: center;
+    gap: 0;
   }
 
   .post-item:hover {
@@ -239,15 +277,354 @@ body {
     border-bottom: none;
   }
 
-  /* 게시글 제목 */
-  .post-title {
-    margin-bottom: 8px;
+  /* Grid Areas 정의 */
+  .post-category-area {
+    grid-area: category;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .post-title-area {
+    grid-area: title;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    overflow: hidden;
+  }
+
+  .post-badge-area {
+    grid-area: badge;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+
+  .post-tags-area {
+    grid-area: tags;
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    max-width: 100%;
+  }
+
+  .post-meta-area {
+    grid-area: meta;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  /* 게시글 제목 텍스트 - 완전 고정 */
+  .post-title-text {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 18px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap; /* 1줄로 고정 */
+    width: 100%;
+  }
+
+  /* 카테고리 태그 - 완전 고정 */
+  .post-tag {
+    width: 100px; /* 고정 너비 */
+    height: 24px; /* 고정 높이 */
+    padding: 0;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .post-tag-info {
+    background-color: #fbbf24;
+    color: #ffffff;
+  }
+
+  .post-tag-life {
+    background-color: #10b981;
+    color: #ffffff;
+  }
+
+  .post-tag-story {
+    background-color: #8b5cf6;
+    color: #ffffff;
+  }
+
+  /* 사용자 태그 - 완전 고정 */
+  .user-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    background: #6b7280;
+    color: #ffffff;
+    border: 1px solid #9ca3af;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 20px; /* 고정 높이 */
+    width: 70px; /* 고정 너비 */
+    justify-content: center;
+  }
+
+  /* 사용자 태그 컨테이너 */
+  .user-tags-container {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    overflow: hidden;
+    height: 20px;
+  }
+
+  /* 추가 태그 카운터 */
+  .tag-counter {
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-left: 4px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  /* NEW 배지 - 완전 고정 */
+  .badge-new {
+    background-color: #2196f3;
+    color: white;
+    padding: 0;
+    border-radius: 8px;
+    font-size: 9px;
+    font-weight: bold;
+    white-space: nowrap;
+    width: 32px; /* 고정 너비 */
+    height: 16px; /* 고정 높이 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* 통계 아이콘 - 완전 고정 */
+  .stat-icon {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    width: 42px; /* 고정 너비 */
+    height: 16px; /* 고정 높이 */
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* 메타 정보 구분자 */
+  .meta-separator {
+    color: var(--text-muted);
+    font-size: 10px;
+    margin: 0 2px;
+  }
+
+  /* 작성자명 고정 */
+  .author-name {
+    font-size: 11px;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 60px; /* 고정 너비 */
+  }
+
+  /* 시간 정보 고정 */
+  .time-info {
+    font-size: 11px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    width: 50px; /* 고정 너비 */
+    text-align: center;
+  }
+
+  /* 게시판 목록 레이아웃 (HTML 프로토타입과 완전히 동일) */
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* 검색 및 글쓰기 섹션 */
+  .search-write-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .write-button-top {
+    width: 100%;
+    max-width: 320px;
+    padding: 12px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+
+  .write-button-top:hover {
+    border-color: #10b981;
+    background: #ecfdf5;
+    color: #059669;
+  }
+
+  .search-bar-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    padding: 12px 16px;
+    width: 100%;
+    max-width: 320px;
+    transition: all 0.2s ease;
+  }
+
+  .search-bar-top:focus-within {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+  }
+
+  .search-icon {
+    color: #6366f1;
+    font-size: 16px;
+  }
+
+  .search-input-top {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: var(--text-primary);
+    font-size: 16px;
+  }
+
+  .search-input-top::placeholder {
+    color: var(--text-muted);
+  }
+
+  /* 필터 및 정렬 섹션 */
+  .filter-sort-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .filter-buttons {
+    display: flex;
+    gap: 8px;
+  }
+
+  .filter-button {
+    padding: 8px 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 50px;
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .filter-button:hover {
+    border-color: var(--accent-primary);
+    color: var(--accent-primary);
+  }
+
+  .filter-button.active {
+    border-color: #3b82f6;
+    background: #3b82f6;
+    color: white;
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
+
+  .sort-section {
     display: flex;
     align-items: center;
     gap: 8px;
   }
 
-  /* 게시글 메타정보 */
+  .sort-label {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .sort-select {
+    padding: 6px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    background: var(--bg-card);
+    color: var(--text-primary);
+    transition: all 0.2s ease;
+  }
+
+  .sort-select:focus {
+    outline: none;
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1);
+  }
+
+  /* 게시글 목록 스타일 (HTML 프로토타입과 완전히 동일) */
+  .post-list {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    margin-bottom: 32px;
+  }
+
+  .post-item {
+    padding: 16px 20px;
+    margin: 0;
+    border-bottom: 1px solid var(--border-light);
+    transition: background-color 0.2s ease;
+    cursor: pointer;
+  }
+
+  .post-item:hover {
+    background-color: var(--bg-hover);
+  }
+
+  .post-item:last-child {
+    border-bottom: none;
+  }
+
+  .post-title {
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+
   .post-meta {
     font-size: 12px;
     color: var(--text-muted);
@@ -256,47 +633,172 @@ body {
     align-items: center;
   }
 
-  /* 게시글 태그 */
   .post-tag {
-    padding: 3px 8px;
+    padding: 4px 10px;
     border-radius: 12px;
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 500;
     white-space: nowrap;
   }
 
   .post-tag-info {
-    background-color: #e3f2fd;
-    color: #1976d2;
+    background-color: #fbbf24;
+    color: #ffffff;
   }
 
   .post-tag-life {
-    background-color: #e8f5e8;
-    color: #388e3c;
+    background-color: #10b981;
+    color: #ffffff;
   }
 
   .post-tag-story {
-    background-color: #f3e5f5;
-    color: #7b1fa2;
+    background-color: #8b5cf6;
+    color: #ffffff;
   }
 
-  /* NEW 배지 */
   .badge-new {
-    background-color: #2196f3;
-    color: white;
-    padding: 3px 8px;
-    border-radius: 12px;
-    font-size: 10px;
-    font-weight: bold;
-    white-space: nowrap;
+    display: none;
   }
 
-  /* 통계 아이콘 */
   .stat-icon {
     display: flex;
     align-items: center;
     gap: 3px;
     font-size: 11px;
     color: var(--text-muted);
+  }
+
+  .post-title-text {
+    color: var(--text-primary);
+    font-weight: 500;
+    font-size: 18px;
+  }
+
+  .post-meta-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .post-meta-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .user-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    background: #6b7280;
+    color: #ffffff;
+    border: 1px solid #9ca3af;
+  }
+
+
+
+  /* 레이아웃 안정성을 위한 추가 스타일 */
+  .post-item * {
+    box-sizing: border-box;
+  }
+
+  /* 반응형 스타일 - 고정 그리드 구조 유지 */
+  @media (max-width: 768px) {
+    .container {
+      padding: 16px;
+    }
+
+    .search-write-section {
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .write-button-top, .search-bar-top {
+      max-width: 100%;
+    }
+
+    .filter-sort-section {
+      flex-direction: column;
+      gap: 16px;
+      align-items: flex-start;
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .filter-buttons {
+      flex-wrap: wrap;
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    /* 모바일용 고정 그리드 구조 */
+    .post-item {
+      height: 100px; /* 모바일에서 높이 증가 */
+      grid-template-areas: 
+        "category title"
+        "tags meta"
+        ". meta2";
+      grid-template-columns: 100px 1fr; /* 2컬럼으로 변경 */
+      grid-template-rows: 30px 35px 35px; /* 3행으로 변경 */
+      padding: 8px 16px;
+    }
+
+    .post-badge-area {
+      grid-area: title;
+      justify-content: flex-end;
+      align-items: flex-start;
+      padding-top: 2px;
+    }
+
+    .post-meta-area {
+      grid-area: meta;
+      justify-content: flex-start;
+      gap: 4px;
+    }
+
+    /* 모바일에서 추가 메타 정보 영역 */
+    .post-meta-area-2 {
+      grid-area: meta2;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 4px;
+      font-size: 9px;
+    }
+
+    .post-tag {
+      width: 80px; /* 모바일에서 카테고리 태그 너비 축소 */
+      height: 20px;
+      font-size: 10px;
+    }
+
+    .user-tag {
+      width: 50px; /* 모바일에서 사용자 태그 너비 축소 */
+      height: 18px;
+      font-size: 9px;
+    }
+
+    .stat-icon {
+      width: 32px; /* 모바일에서 통계 아이콘 너비 축소 */
+      font-size: 9px;
+      gap: 1px;
+    }
+
+    .author-name {
+      width: 45px;
+      font-size: 10px;
+    }
+
+    .time-info {
+      width: 40px;
+      font-size: 9px;
+    }
+
+    .post-title-text {
+      font-size: 16px; /* 모바일에서 제목 크기 축소 */
+    }
   }
 }
