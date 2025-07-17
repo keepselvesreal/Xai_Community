@@ -55,6 +55,7 @@ body {
   font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
   background: var(--bg-primary);
   color: var(--text-primary);
+  overflow-y: scroll; /* 항상 세로 스크롤바 표시하여 너비 일정하게 유지 */
 }
 
 /* HTML 프로토타입 호환 클래스들 */
@@ -465,6 +466,7 @@ body {
     max-width: 800px; /* 약간 축소하여 카드가 너무 넓지 않게 */
     margin: 0 auto;
     padding: 20px;
+    width: calc(100% - 40px); /* 고정 너비로 스크롤바 영향 제거 */
   }
 
   /* 검색 및 글쓰기 섹션 */
@@ -607,6 +609,8 @@ body {
     border: 1px solid var(--border-light);
     margin-bottom: 32px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05); /* 약간의 그림자 추가 */
+    width: 100%; /* 명시적 너비 설정 */
+    box-sizing: border-box; /* 패딩/보더 포함한 크기 계산 */
   }
 
   .post-item {

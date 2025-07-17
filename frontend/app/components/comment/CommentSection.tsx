@@ -299,32 +299,39 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, pageType = 'board'
                 별점 평가 *
               </label>
               <div className="rating-input flex items-center gap-1">
-                {Array.from({ length: 5 }, (_, i) => {
-                  const currentRating = hoveredRating || rating;
-                  const isActive = i < currentRating;
-                  console.log(`🌟 별점 렌더링 - 별 ${i + 1}: rating=${rating}, hoveredRating=${hoveredRating}, currentRating=${currentRating}, isActive=${isActive}`);
+                {/* 5개 별이 항상 표시, 선택한 개수만큼 노란색 */}
+                {[1, 2, 3, 4, 5].map((starNumber) => {
+                  const isHovered = hoveredRating > 0;
+                  const isStarActive = isHovered 
+                    ? starNumber <= hoveredRating 
+                    : (rating > 0 && starNumber <= rating);
+                  
+                  console.log(`🌟 별 ${starNumber}: rating=${rating}, hoveredRating=${hoveredRating}, isActive=${isStarActive}`);
                   
                   return (
                     <span
-                      key={i}
+                      key={starNumber}
                       onClick={() => {
-                        console.log(`🌟 별점 클릭 - ${i + 1}점 선택`);
-                        setRating(i + 1);
+                        console.log(`🌟 별점 클릭 - ${starNumber}점 선택`);
+                        setRating(starNumber);
                       }}
-                      onMouseEnter={() => setHoveredRating(i + 1)}
+                      onMouseEnter={() => setHoveredRating(starNumber)}
                       onMouseLeave={() => setHoveredRating(0)}
-                      className={`cursor-pointer text-2xl transition-colors duration-200 ${
-                        isActive ? 'text-yellow-400' : 'text-gray-300'
-                      }`}
+                      className="cursor-pointer text-2xl transition-colors duration-200"
+                      style={{
+                        color: isStarActive ? '#FBBF24' : '#E5E7EB'
+                      }}
                     >
                       ⭐
                     </span>
                   );
                 })}
               </div>
-              <span style={{ fontSize: '14px', color: '#64748b' }}>
-                {rating > 0 ? `(${rating}점)` : '(0점)'}
-              </span>
+              <div style={{ fontSize: '14px', color: '#64748b', marginTop: '8px' }}>
+                <div>현재 선택: {rating > 0 ? `${rating}점` : '0점'}</div>
+                <div>마우스 호버: {hoveredRating > 0 ? `${hoveredRating}점` : '없음'}</div>
+                <div>디버그: rating={rating}, hoveredRating={hoveredRating}</div>
+              </div>
             </div>
           )}
           
