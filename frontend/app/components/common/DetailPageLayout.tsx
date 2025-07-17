@@ -184,18 +184,41 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                 <span>👁️</span>
                 <span>{post.stats?.view_count || 0}</span>
               </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <span>관심</span>
-                <span>{post.stats?.bookmark_count || 0}</span>
-              </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <span>문의</span>
-                <span>{post.stats?.comment_count || 0}</span>
-              </div>
-              <div className="flex items-center gap-1 text-sm text-gray-600">
-                <span>후기</span>
-                <span>{post.stats?.review_count || 0}</span>
-              </div>
+              {pageType === 'moving_services' ? (
+                <>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <span>관심</span>
+                    <span>{post.stats?.bookmark_count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <span>문의</span>
+                    <span>{post.stats?.comment_count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <span>후기</span>
+                    <span>{post.stats?.review_count || 0}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <span>👍</span>
+                    <span>{post.stats?.like_count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <span>👎</span>
+                    <span>{post.stats?.dislike_count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <span>🔖</span>
+                    <span>{post.stats?.bookmark_count || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                    <span>💬</span>
+                    <span>{post.stats?.comment_count || 0}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -244,12 +267,70 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
             </div>
           ))}
 
+          {/* 태그 섹션 - moving_services가 아닌 경우에만 표시 */}
+          {pageType !== 'moving_services' && post.metadata?.tags && post.metadata.tags.length > 0 && (
+            <div className="mb-6">
+              <div className="flex flex-wrap gap-2">
+                {post.metadata.tags.map((tag, index) => (
+                  <span
+                    key={index}
+                    className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-full text-sm font-medium border border-gray-200 hover:bg-gray-200 hover:border-gray-300 cursor-pointer transition-all duration-200"
+                  >
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* 태그 이후 커스텀 섹션 */}
           {sections.afterTags?.map((section, index) => (
             <div key={`after-tags-${index}`} className="mb-6">
               {section}
             </div>
           ))}
+
+          {/* 반응 버튼 섹션 - moving_services가 아닌 경우에만 표시 */}
+          {pageType !== 'moving_services' && (
+            <div className="flex justify-center gap-2 pb-2">
+              <button
+                onClick={() => handleReactionClick('like')}
+                disabled={pendingReactions.has('like')}
+                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
+                  userReactions.liked
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                } ${pendingReactions.has('like') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span>👍</span>
+                <span>{post.stats?.like_count || 0}</span>
+              </button>
+              <button
+                onClick={() => handleReactionClick('dislike')}
+                disabled={pendingReactions.has('dislike')}
+                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
+                  userReactions.disliked
+                    ? 'bg-red-50 border-red-300 text-red-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                } ${pendingReactions.has('dislike') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span>👎</span>
+                <span>{post.stats?.dislike_count || 0}</span>
+              </button>
+              <button
+                onClick={() => handleReactionClick('bookmark')}
+                disabled={pendingReactions.has('bookmark')}
+                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
+                  userReactions.bookmarked
+                    ? 'bg-blue-50 border-blue-300 text-blue-700'
+                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <span>🔖</span>
+                <span>{post.stats?.bookmark_count || 0}</span>
+              </button>
+            </div>
+          )}
 
           {/* 반응 이후 커스텀 섹션 */}
           {sections.afterReactions?.map((section, index) => (

@@ -138,10 +138,42 @@ export default function ServiceDetail() {
     // 반응 기능 비활성화됨
   };
 
-  // 댓글 추가 후 콜백
+  // 댓글 목록 새로고침 유틸리티 함수
+  const refreshComments = async () => {
+    if (!slug) return;
+    
+    try {
+      // 댓글 목록만 새로고침 (로딩 상태 변경 없음)
+      const response = await apiClient.getCommentsBatch(slug);
+      
+      if (response.success && response.data) {
+        let comments = [];
+        if (response.data.data?.comments) {
+          comments = response.data.data.comments;
+        } else if (response.data.comments) {
+          comments = response.data.comments;
+        } else if (Array.isArray(response.data)) {
+          comments = response.data;
+        }
+        
+        setComments(comments);
+        console.log('🔄 댓글 목록만 업데이트 완료:', comments.length);
+      }
+    } catch (error) {
+      console.error('댓글 새로고침 오류:', error);
+    }
+  };
+
+  // 댓글 추가 후 콜백 (새 댓글 작성 시)
   const handleCommentAdded = async () => {
-    await loadData(); // 댓글 추가 후 전체 데이터 새로고침
+    await refreshComments();
     await refreshServiceStats(); // 통계 업데이트
+  };
+
+  // 댓글 반응 후 콜백 (추천/비추천 시)
+  const handleCommentReaction = async () => {
+    // 댓글 반응 시에는 로딩 없이 댓글만 새로고침
+    await refreshComments();
   };
 
   // 수정 버튼 핸들러
@@ -226,7 +258,8 @@ export default function ServiceDetail() {
     handleInquiry,
     slug,
     comments,
-    handleCommentAdded
+    handleCommentAdded,
+    handleCommentReaction // 댓글 반응 전용 콜백 추가
   );
 
   return (

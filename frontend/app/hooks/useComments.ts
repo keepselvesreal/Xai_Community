@@ -6,9 +6,10 @@ import { apiClient } from '~/lib/api';
 interface UseCommentsProps {
   postSlug: string;
   onCommentAdded: () => void;
+  onCommentReaction?: () => void; // 댓글 반응 전용 콜백
 }
 
-export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
+export const useComments = ({ postSlug, onCommentAdded, onCommentReaction }: UseCommentsProps) => {
   const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -209,8 +210,12 @@ export const useComments = ({ postSlug, onCommentAdded }: UseCommentsProps) => {
         console.log('반응 API 응답:', response);
 
         if (response.success) {
-          // 댓글 목록 새로고침 (반응 수 업데이트)
-          onCommentAdded(); 
+          // 댓글 반응 전용 콜백이 있으면 사용, 없으면 기본 콜백 사용
+          if (onCommentReaction) {
+            onCommentReaction();
+          } else {
+            onCommentAdded();
+          }
         } else {
           showError(response.error || '반응 처리에 실패했습니다');
         }

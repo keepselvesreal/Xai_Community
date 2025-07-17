@@ -154,14 +154,14 @@ const CommentItem = ({
                   <>
                     {Array.from({ length: 5 }, (_, i) => {
                       const rating = Number(comment.metadata.rating);
-                      const isActive = i < rating;
+                      const starNumber = i + 1; // 1부터 5까지
+                      const isActive = starNumber <= rating; // 별점 이하면 활성화
                       return (
                         <span 
                           key={i} 
-                          className={isActive ? "text-yellow-400" : "text-gray-300"}
-                          style={{ fontSize: '12px' }}
+                          className={`${isActive ? "text-yellow-400" : "text-gray-300"} text-base`}
                         >
-                          ⭐
+                          ★
                         </span>
                       );
                     })}
@@ -185,12 +185,14 @@ const CommentItem = ({
             {isOwner() && (
               <div className="flex space-x-2">
                 <button
+                  type="button"
                   onClick={() => setIsEditing(true)}
                   className="text-xs text-gray-500 hover:text-blue-600"
                 >
                   수정
                 </button>
                 <button
+                  type="button"
                   onClick={handleDelete}
                   className="text-xs text-gray-500 hover:text-red-600"
                 >
@@ -247,6 +249,7 @@ const CommentItem = ({
           {onReaction && (
             <>
               <button
+                type="button"
                 onClick={() => handleReaction("like")}
                 className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition-colors"
                 disabled={!currentUser}
@@ -255,6 +258,7 @@ const CommentItem = ({
                 <span>{formatNumber(comment.like_count || comment.stats?.like_count || 0)}</span>
               </button>
               <button
+                type="button"
                 onClick={() => handleReaction("dislike")}
                 className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition-colors"
                 disabled={!currentUser}
@@ -267,6 +271,7 @@ const CommentItem = ({
           
           {onReply && depth < maxDepth && (
             <button
+              type="button"
               onClick={() => setIsReplying(!isReplying)}
               className="text-gray-500 hover:text-blue-600"
             >
@@ -411,6 +416,7 @@ const CommentItem = ({
           {onReaction && (
             <>
               <button
+                type="button"
                 onClick={() => handleReaction("like")}
                 className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition-colors"
                 disabled={!currentUser}
@@ -419,6 +425,7 @@ const CommentItem = ({
                 <span>{formatNumber(comment.like_count || comment.stats?.like_count || 0)}</span>
               </button>
               <button
+                type="button"
                 onClick={() => handleReaction("dislike")}
                 className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition-colors"
                 disabled={!currentUser}
@@ -431,6 +438,7 @@ const CommentItem = ({
           
           {onReply && depth < maxDepth && (
             <button
+              type="button"
               onClick={() => setIsReplying(!isReplying)}
               className="text-gray-500 hover:text-blue-600"
             >

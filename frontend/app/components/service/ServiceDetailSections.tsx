@@ -21,14 +21,19 @@ const formatNumber = (num: number): string => {
 
 // 별점 렌더링 유틸리티
 const renderStars = (rating: number): React.ReactElement[] => {
-  return Array.from({ length: 5 }, (_, i) => (
-    <span 
-      key={i} 
-      className={i < rating ? "text-yellow-400" : "text-gray-300"}
-    >
-      ⭐
-    </span>
-  ));
+  return Array.from({ length: 5 }, (_, i) => {
+    const starNumber = i + 1;
+    // 소수점이 있으면 올림 처리 (3.5 → 4개 별 표시)
+    const isActive = starNumber <= Math.ceil(rating);
+    return (
+      <span 
+        key={i} 
+        className={`text-lg ${isActive ? "text-yellow-400" : "text-gray-300"}`}
+      >
+        ★
+      </span>
+    );
+  });
 };
 
 /**
@@ -238,7 +243,8 @@ export const ServiceInquirySection: React.FC<{
   postSlug: string;
   comments: Comment[];
   onCommentAdded: () => void;
-}> = ({ postSlug, comments, onCommentAdded }) => {
+  onCommentReaction?: () => void;
+}> = ({ postSlug, comments, onCommentAdded, onCommentReaction }) => {
   // 문의 댓글만 필터링 (subtype이 service_inquiry인 것들)
   const inquiryComments = comments.filter(
     comment => comment.metadata?.subtype === 'service_inquiry'
@@ -260,6 +266,7 @@ export const ServiceInquirySection: React.FC<{
             postSlug={postSlug}
             comments={inquiryComments}
             onCommentAdded={onCommentAdded}
+            onCommentReaction={onCommentReaction}
             pageType="moving_services"
             subtype="service_inquiry"
           />
@@ -277,8 +284,9 @@ export const ServiceReviewSection: React.FC<{
   postSlug: string;
   comments: Comment[];
   onCommentAdded: () => void;
+  onCommentReaction?: () => void;
   averageRating?: number;
-}> = ({ postSlug, comments, onCommentAdded, averageRating = 0 }) => {
+}> = ({ postSlug, comments, onCommentAdded, onCommentReaction, averageRating = 0 }) => {
   // 후기 댓글만 필터링 (subtype이 service_review인 것들)
   const reviewComments = comments.filter(
     comment => comment.metadata?.subtype === 'service_review'
@@ -298,16 +306,21 @@ export const ServiceReviewSection: React.FC<{
 
   const actualAverageRating = calculateAverageRating();
 
-  // 별점 렌더링
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }, (_, i) => (
-      <span 
-        key={i} 
-        className={i < rating ? "text-yellow-400" : "text-gray-300"}
-      >
-        ⭐
-      </span>
-    ));
+  // 별점 렌더링 (로컬 함수)
+  const renderReviewStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => {
+      const starNumber = i + 1;
+      // 소수점이 있으면 올림 처리 (3.5 → 4개 별 표시)
+      const isActive = starNumber <= Math.ceil(rating);
+      return (
+        <span 
+          key={i} 
+          className={`text-lg ${isActive ? "text-yellow-400" : "text-gray-300"}`}
+        >
+          ★
+        </span>
+      );
+    });
   };
 
   return (
@@ -322,15 +335,12 @@ export const ServiceReviewSection: React.FC<{
             </h3>
           </div>
           
-          {/* 평점 요약 - HTML 프로토타입 스타일 */}
+          {/* 평점 요약 - 숫자만 표시 */}
           {actualAverageRating > 0 && (
             <div className="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-200">
               <div className="flex items-center justify-center gap-2">
                 <span className="text-sm text-gray-600">평점:</span>
-                <div className="flex items-center gap-1">
-                  {renderStars(actualAverageRating)}
-                </div>
-                <span className="text-gray-900 font-semibold">({actualAverageRating})</span>
+                <span className="text-gray-900 font-semibold text-lg">{actualAverageRating}점</span>
               </div>
             </div>
           )}
@@ -339,6 +349,7 @@ export const ServiceReviewSection: React.FC<{
             postSlug={postSlug}
             comments={reviewComments}
             onCommentAdded={onCommentAdded}
+            onCommentReaction={onCommentReaction}
             pageType="moving_services"
             subtype="service_review"
           />
@@ -381,7 +392,8 @@ export const createServiceDetailSections = (
   // 문의/후기 섹션을 위한 추가 props
   postSlug?: string,
   comments?: Comment[],
-  onCommentAdded?: () => void
+  onCommentAdded?: () => void,
+  onCommentReaction?: () => void
 ) => {
   return {
     beforeContent: [
@@ -399,12 +411,14 @@ export const createServiceDetailSections = (
         postSlug={postSlug}
         comments={comments}
         onCommentAdded={onCommentAdded}
+        onCommentReaction={onCommentReaction}
       />,
       <ServiceReviewSection 
         key="review"
         postSlug={postSlug}
         comments={comments}
         onCommentAdded={onCommentAdded}
+        onCommentReaction={onCommentReaction}
         averageRating={service.rating}
       />
     ] : undefined,

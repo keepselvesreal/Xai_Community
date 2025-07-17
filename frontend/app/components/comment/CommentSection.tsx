@@ -11,12 +11,13 @@ interface CommentSectionProps {
   postSlug: string;
   comments: Comment[];
   onCommentAdded: () => void;
+  onCommentReaction?: () => void; // 댓글 반응 전용 콜백
   pageType?: 'board' | 'property_information' | 'expert_tips' | 'moving_services';
   subtype?: 'inquiry' | 'review' | 'service_inquiry' | 'service_review';
   className?: string;
 }
 
-const CommentSection = ({ postSlug, comments, onCommentAdded, pageType = 'board', subtype, className = "" }: CommentSectionProps) => {
+const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction, pageType = 'board', subtype, className = "" }: CommentSectionProps) => {
   const [newComment, setNewComment] = useState('');
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
@@ -47,7 +48,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, pageType = 'board'
     editComment,
     deleteComment,
     reactToComment
-  } = useComments({ postSlug, onCommentAdded });
+  } = useComments({ postSlug, onCommentAdded, onCommentReaction });
 
   const handleSubmitComment = async () => {
     // 후기인 경우 별점이 필수
@@ -299,38 +300,41 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, pageType = 'board'
                 별점 평가 *
               </label>
               <div className="rating-input flex items-center gap-1">
-                {/* 5개 별이 항상 표시, 선택한 개수만큼 노란색 */}
                 {[1, 2, 3, 4, 5].map((starNumber) => {
-                  const isHovered = hoveredRating > 0;
-                  const isStarActive = isHovered 
-                    ? starNumber <= hoveredRating 
-                    : (rating > 0 && starNumber <= rating);
+                  // 매우 간단한 로직: 
+                  // 1. 호버 중이면 hoveredRating 기준으로 색칠
+                  // 2. 호버 중이 아니면 rating 기준으로 색칠
+                  // 3. 둘 다 0이면 회색
                   
-                  console.log(`🌟 별 ${starNumber}: rating=${rating}, hoveredRating=${hoveredRating}, isActive=${isStarActive}`);
+                  const shouldBeYellow = hoveredRating > 0 
+                    ? starNumber <= hoveredRating
+                    : starNumber <= rating;
+                  
                   
                   return (
-                    <span
+                    <button
                       key={starNumber}
+                      type="button"
                       onClick={() => {
-                        console.log(`🌟 별점 클릭 - ${starNumber}점 선택`);
                         setRating(starNumber);
                       }}
                       onMouseEnter={() => setHoveredRating(starNumber)}
                       onMouseLeave={() => setHoveredRating(0)}
-                      className="cursor-pointer text-2xl transition-colors duration-200"
-                      style={{
-                        color: isStarActive ? '#FBBF24' : '#E5E7EB'
-                      }}
+                      className="p-1 focus:outline-none"
                     >
-                      ⭐
-                    </span>
+                      <span 
+                        className={`text-3xl cursor-pointer select-none ${
+                          shouldBeYellow ? 'text-yellow-400' : 'text-gray-300'
+                        }`}
+                      >
+                        ★
+                      </span>
+                    </button>
                   );
                 })}
-              </div>
-              <div style={{ fontSize: '14px', color: '#64748b', marginTop: '8px' }}>
-                <div>현재 선택: {rating > 0 ? `${rating}점` : '0점'}</div>
-                <div>마우스 호버: {hoveredRating > 0 ? `${hoveredRating}점` : '없음'}</div>
-                <div>디버그: rating={rating}, hoveredRating={hoveredRating}</div>
+                <span className="ml-3 text-sm text-gray-600">
+                  {rating === 0 ? '별점을 선택해주세요' : `${rating}점 선택됨`}
+                </span>
               </div>
             </div>
           )}
@@ -351,6 +355,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, pageType = 'board'
           
           <div className={subtype === 'service_review' ? 'form-group' : 'comment-form-actions flex justify-center mt-3'} style={{ display: 'flex', justifyContent: 'center' }}>
             <button
+              type="button"
               onClick={handleSubmitComment}
               disabled={
                 !newComment.trim() || 
