@@ -41,6 +41,9 @@ export default defineConfig({
     }),
     tsconfigPaths(),
   ],
+  optimizeDeps: {
+    include: ["lucide-react"]
+  },
   define: {
     'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
     'process.env.VERCEL_ENV': JSON.stringify(process.env.VERCEL_ENV),
