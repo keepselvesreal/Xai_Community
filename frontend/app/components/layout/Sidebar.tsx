@@ -7,35 +7,24 @@ const navigationItems = [
     id: 'board', 
     name: '게시판', 
     path: '/board',
-    icon: '📝',
     section: 'main'
   },
   { 
     id: 'info', 
     name: '정보', 
     path: '/info',
-    icon: 'ℹ️',
     section: 'main'
   },
   { 
     id: 'services', 
     name: '입주 업체 서비스', 
     path: '/services',
-    icon: '🏢',
     section: 'main'
   },
   { 
     id: 'tips', 
     name: '전문가 꿀정보', 
     path: '/tips',
-    icon: '💡',
-    section: 'main'
-  },
-  { 
-    id: 'mypage', 
-    name: '회원정보', 
-    path: '/mypage',
-    icon: '👤',
     section: 'main'
   },
 ];
@@ -43,19 +32,12 @@ const navigationItems = [
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
-  isAuthenticated?: boolean;
-  user?: any;
-  onLogout?: () => void;
+  onToggleCollapse?: () => void;
+  isCollapsed?: boolean;
 }
 
-const Sidebar = ({ isOpen = true, onClose, isAuthenticated = false, user, onLogout }: SidebarProps) => {
+const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false }: SidebarProps) => {
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const { theme, toggleTheme } = useTheme();
-  
-  // 디버깅을 위한 로그
-  console.log('Sidebar: isAuthenticated:', isAuthenticated);
-  console.log('Sidebar: user:', user);
 
   const groupedItems = navigationItems.reduce((acc, item) => {
     if (!acc[item.section]) {
@@ -85,147 +67,58 @@ const Sidebar = ({ isOpen = true, onClose, isAuthenticated = false, user, onLogo
       
       {/* Sidebar */}
       <aside 
-        className={`fixed left-0 top-0 z-50 h-screen transform bg-var-card border-r border-var-color transition-all duration-300 ease-in-out lg:static lg:translate-x-0 ${
-          isCollapsed ? 'w-16' : 'w-64'
-        } ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        className="fixed left-0 top-[120px] z-50 h-[calc(100vh-120px)] w-[280px] bg-white border-r border-[#e5e5e7] shadow-[2px_0_8px_rgba(0,0,0,0.1)] flex flex-col lg:block"
       >
-        {/* Header */}
-        <div className="p-4 border-b border-var-color bg-gradient-to-r from-accent-primary to-accent-secondary">
-          {/* Top row: Logo and Toggle */}
-          <div className="flex items-center justify-between mb-3">
-            {!isCollapsed && (
-              <div className="flex items-center space-x-2">
-                <span className="text-2xl">🏠</span>
-                <h1 className="text-lg font-semibold text-white">XAI 커뮤니티</h1>
-              </div>
-            )}
-            
-            <div className="flex items-center gap-2">
-              {/* Toggle button */}
-              <button
-                onClick={() => setIsCollapsed(!isCollapsed)}
-                className="text-white hover:text-gray-200 transition-colors p-1 rounded"
-              >
-                {isCollapsed ? '👉' : '👈'}
-              </button>
-              
-              {/* Mobile close button */}
-              <button
-                onClick={onClose}
-                className="lg:hidden text-white hover:text-gray-200 transition-colors"
-              >
-                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          {/* User controls row */}
-          {!isCollapsed && (
-            <div className="space-y-2">
-              {/* Theme toggle */}
-              <button
-                onClick={toggleTheme}
-                className="w-full bg-black/20 hover:bg-black/30 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-white border border-white/20"
-              >
-                {theme === 'light' ? '🌙' : '☀️'} 
-                {theme === 'light' ? ' 다크' : ' 라이트'}
-              </button>
-              
-              {/* User authentication */}
-              {user ? (
-                <div className="space-y-2">
-                  <div className="text-white text-sm px-3 py-1 font-medium">
-                    {user.email}님
-                  </div>
-                  <button
-                    onClick={() => {
-                      console.log('Sidebar: Logout button clicked');
-                      if (onLogout) {
-                        onLogout();
-                      }
-                    }}
-                    className="w-full bg-black/20 hover:bg-black/30 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-white border border-white/20"
-                  >
-                    로그아웃
-                  </button>
-                </div>
-              ) : (
-                <div className="flex gap-2">
-                  <a
-                    href="/auth/login"
-                    className="flex-1 bg-black/20 hover:bg-black/30 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-white text-center border border-white/20"
-                  >
-                    로그인
-                  </a>
-                  <a
-                    href="/auth/register"
-                    className="flex-1 bg-black/20 hover:bg-black/30 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-white text-center border border-white/20"
-                  >
-                    회원가입
-                  </a>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-2 py-4 space-y-6 overflow-y-auto">
-          {Object.entries(groupedItems).map(([section, items]) => (
-            <div key={section}>
-              {!isCollapsed && (
-                <h3 className="px-3 text-xs font-semibold text-var-muted uppercase tracking-wider mb-3">
-                  {sectionNames[section as keyof typeof sectionNames] || section}
-                </h3>
-              )}
-              <div className="space-y-1">
-                {items.map((item) => {
-                  const active = isActive(item.path);
-                  
-                  return (
-                    <Link
-                      key={item.id}
-                      to={item.path}
-                      onClick={() => {
-                        console.log(`🔗 Sidebar: ${item.name}(${item.path}) 클릭됨`);
-                        // 모바일에서만 사이드바 닫기
-                        if (window.innerWidth < 1024 && onClose) {
-                          onClose();
-                        }
-                      }}
-                      className={`flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                        active
-                          ? 'bg-accent-primary text-white shadow-lg'
-                          : 'text-var-secondary hover:bg-var-hover hover:text-var-primary'
-                      }`}
-                      title={isCollapsed ? item.name : undefined}
-                    >
-                      <span className="text-lg">{item.icon}</span>
-                      {!isCollapsed && (
-                        <>
-                          <span className="ml-3">{item.name}</span>
-                          {active && (
-                            <div className="ml-auto w-2 h-2 bg-white rounded-full" />
-                          )}
-                        </>
-                      )}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+        <nav className="flex-1 pt-10 pb-0 px-0 overflow-y-auto flex flex-col justify-start bg-gradient-to-b from-[rgba(107,142,35,0.02)] to-transparent">
+          <div className="px-4 flex flex-col justify-start gap-4">
+            {navigationItems.map((item) => {
+              const active = isActive(item.path);
+              
+              return (
+                <Link
+                  key={item.id}
+                  to={item.path}
+                  onClick={() => {
+                    console.log(`🔗 Sidebar: ${item.name}(${item.path}) 클릭됨`);
+                    // 모바일에서만 사이드바 닫기
+                    if (window.innerWidth < 1024 && onClose) {
+                      onClose();
+                    }
+                  }}
+                  className={`flex items-center justify-center px-5 py-[18px] m-0 text-[#595959] no-underline rounded-xl text-lg font-semibold transition-all duration-200 relative text-center border-b border-black/10 min-h-[52px] ${
+                    active
+                      ? 'bg-gradient-to-br from-[#6B8E23] to-[#556B2F] text-white'
+                      : 'hover:bg-[#F0F8E8] hover:text-[#6B8E23]'
+                  }`}
+                  title={item.name}
+                >
+                  <span>{item.name}</span>
+                  {active && (
+                    <div className="ml-auto w-2 h-2 bg-white rounded-full absolute right-5" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
         </nav>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-var-color">
-          {!isCollapsed && (
-            <div className="text-xs text-var-muted text-center">
-              © 2024 XAI 아파트 커뮤니티
-            </div>
-          )}
+        {/* Menu Toggle Area - bottom: 80px로 푸터와 간격 늘림 */}
+        <div className="absolute bottom-[80px] left-0 w-full h-[50px] bg-transparent flex items-center justify-center z-[1001]">
+          <button
+            onClick={onToggleCollapse}
+            className="px-4 py-2 bg-gradient-to-br from-[#6B8E23] to-[#556B2F] border border-[#556B2F] rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 shadow-[0_2px_8px_rgba(107,142,35,0.2)] hover:bg-gradient-to-br hover:from-[#556B2F] hover:to-[#6B8E23] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(107,142,35,0.3)]"
+          >
+            메뉴 숨김
+          </button>
+        </div>
+
+        {/* Footer - 맨 하단에 위치 */}
+        <div className="absolute bottom-0 left-0 w-full p-6 border-t border-[#e5e5e7] text-center bg-white">
+          <div className="text-[11px] text-[#86868b]">
+            © 2024 XAI 아파트 커뮤니티
+          </div>
         </div>
       </aside>
     </>

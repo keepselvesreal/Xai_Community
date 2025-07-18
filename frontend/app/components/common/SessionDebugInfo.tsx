@@ -40,7 +40,7 @@ export default function SessionDebugInfo() {
   };
 
   return (
-    <div className="fixed bottom-4 left-4 z-50">
+    <div className="fixed bottom-4 right-[330px] z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors shadow-lg"
