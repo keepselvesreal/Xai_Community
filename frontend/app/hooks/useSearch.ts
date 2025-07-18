@@ -1,7 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useDebounce } from './useDebounce';
 import { apiClient } from '~/lib/api';
 import type { Post, PostFilters } from '~/types';
+
+// 간단한 debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export interface UseSearchOptions {
   apiFilters?: Partial<PostFilters>;

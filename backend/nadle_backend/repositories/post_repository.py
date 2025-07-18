@@ -642,3 +642,218 @@ class PostRepository:
             import traceback
             print(f"Traceback: {traceback.format_exc()}")
             return False
+    
+    # 관리자 전용 메서드들
+    async def get_inquiries_list(
+        self,
+        inquiry_type: Optional[str] = None,
+        status: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """관리자용 문의/신고 목록 조회.
+        
+        Args:
+            inquiry_type: 문의 타입 필터
+            status: 상태 필터
+            page: 페이지 번호
+            page_size: 페이지 크기
+            
+        Returns:
+            Tuple of (문의 리스트, 총 개수)
+        """
+        # 문의/신고 타입 필터링
+        inquiry_types = [
+            "moving-services-register-inquiry",
+            "expert-tips-register-inquiry", 
+            "suggestions",
+            "report"
+        ]
+        
+        # 기본 매치 조건
+        match_stage = {
+            "metadata.type": {"$in": inquiry_types}
+        }
+        
+        # 타입별 필터링
+        if inquiry_type:
+            match_stage["metadata.type"] = inquiry_type
+            
+        # 상태별 필터링
+        if status:
+            match_stage["status"] = status
+        
+        # Aggregation 파이프라인
+        pipeline = [
+            {"$match": match_stage},
+            {"$sort": {"created_at": -1}},  # 최신순 정렬
+            {"$facet": {
+                "inquiries": [
+                    {"$skip": (page - 1) * page_size},
+                    {"$limit": page_size}
+                ],
+                "total": [
+                    {"$count": "count"}
+                ]
+            }}
+        ]
+        
+        try:
+            result = await Post.aggregate(pipeline).to_list()
+            
+            if not result:
+                return [], 0
+            
+            inquiries = result[0].get("inquiries", [])
+            total_result = result[0].get("total", [])
+            total = total_result[0]["count"] if total_result else 0
+            
+            return inquiries, total
+            
+        except Exception as e:
+            print(f"Error in get_inquiries_list: {e}")
+            return [], 0
+    
+    async def get_all_posts_for_admin(
+        self,
+        status: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """관리자용 모든 게시글 조회 (삭제된 것 포함).
+        
+        Args:
+            status: 상태 필터
+            page: 페이지 번호
+            page_size: 페이지 크기
+            
+        Returns:
+            Tuple of (게시글 리스트, 총 개수)
+        """
+        # 기본 매치 조건 (삭제된 것도 포함)
+        match_stage = {}
+        
+        # 상태별 필터링
+        if status:
+            match_stage["status"] = status
+        
+        # Aggregation 파이프라인
+        pipeline = [
+            {"$match": match_stage},
+            {"$sort": {"created_at": -1}},  # 최신순 정렬
+            
+            # 작성자 정보 조회
+            {"$lookup": {
+                "from": "users",
+                "let": {"author_id": {"$toObjectId": "$author_id"}},
+                "pipeline": [
+                    {"$match": {"$expr": {"$eq": ["$_id", "$$author_id"]}}}
+                ],
+                "as": "author_info"
+            }},
+            
+            # 작성자 정보 처리
+            {"$addFields": {
+                "author": {"$arrayElemAt": ["$author_info", 0]}
+            }},
+            
+            # 민감한 정보 제거
+            {"$project": {
+                "author_info": 0,
+                "author.password": 0,
+                "author.email": 0
+            }},
+            
+            {"$facet": {
+                "posts": [
+                    {"$skip": (page - 1) * page_size},
+                    {"$limit": page_size}
+                ],
+                "total": [
+                    {"$count": "count"}
+                ]
+            }}
+        ]
+        
+        try:
+            result = await Post.aggregate(pipeline).to_list()
+            
+            if not result:
+                return [], 0
+            
+            posts = result[0].get("posts", [])
+            total_result = result[0].get("total", [])
+            total = total_result[0]["count"] if total_result else 0
+            
+            return posts, total
+            
+        except Exception as e:
+            print(f"Error in get_all_posts_for_admin: {e}")
+            return [], 0
+    
+    async def update_status(
+        self,
+        post_id: str,
+        new_status: str,
+        resolved_at: Optional[datetime] = None
+    ) -> Post:
+        """게시글 상태 업데이트.
+        
+        Args:
+            post_id: 게시글 ID
+            new_status: 새로운 상태
+            resolved_at: 해결 시간 (선택적)
+            
+        Returns:
+            업데이트된 게시글
+            
+        Raises:
+            PostNotFoundError: 게시글을 찾을 수 없는 경우
+        """
+        try:
+            from beanie import PydanticObjectId
+            
+            # 업데이트할 필드들
+            update_fields = {
+                "status": new_status,
+                "updated_at": datetime.utcnow()
+            }
+            
+            # resolved_at이 제공된 경우 추가
+            if resolved_at is not None:
+                update_fields["resolved_at"] = resolved_at
+            
+            # 게시글 업데이트
+            result = await Post.get_motor_collection().update_one(
+                {"_id": PydanticObjectId(post_id)},
+                {"$set": update_fields}
+            )
+            
+            if result.matched_count == 0:
+                raise PostNotFoundError(f"Post with ID {post_id} not found")
+            
+            # 업데이트된 게시글 반환
+            updated_post = await Post.get(PydanticObjectId(post_id))
+            return updated_post
+            
+        except Exception as e:
+            if isinstance(e, PostNotFoundError):
+                raise
+            print(f"Error updating post status: {e}")
+            raise PostNotFoundError(f"Failed to update post {post_id}")
+    
+    async def get_by_id(self, post_id: str) -> Optional[Post]:
+        """ID로 게시글 조회.
+        
+        Args:
+            post_id: 게시글 ID
+            
+        Returns:
+            게시글 인스턴스 또는 None
+        """
+        try:
+            from beanie import PydanticObjectId
+            post = await Post.get(PydanticObjectId(post_id))
+            return post
+        except Exception:
+            return None

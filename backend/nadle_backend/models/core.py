@@ -10,7 +10,7 @@ from ..config import settings
 
 # Enums and Types
 ServiceType = Literal["residential_community"]
-PostStatus = Literal["draft", "published", "archived", "deleted"]
+PostStatus = Literal["draft", "published", "archived", "deleted", "pending", "resolved", "rejected"]
 UserStatus = Literal["active", "inactive", "suspended"]
 CommentStatus = Literal["active", "deleted", "hidden", "pending"]
 TargetType = Literal["post", "comment"]
@@ -156,6 +156,7 @@ class Post(Document, PostBase):
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     published_at: Optional[datetime] = None
+    resolved_at: Optional[datetime] = None  # 문의/신고 처리 완료 시간
     
     # Content processing fields
     content_type: ContentType = "text"

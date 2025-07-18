@@ -1,9 +1,25 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFilterAndSort } from './useFilterAndSort';
-import { useDebounce } from './useDebounce';
 import { apiClient } from '~/lib/api';
 import { CacheManager, CACHE_KEYS } from '~/lib/cache';
 import type { ListPageConfig, BaseListItem } from '~/types/listTypes';
+
+// 간단한 debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 export interface UseListDataResult<T extends BaseListItem> {
   // 데이터

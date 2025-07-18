@@ -26,13 +26,39 @@ import type {
   CreateAlertRuleRequest,
   UpdateAlertRuleRequest,
 } from "~/types";
-import { validateJWTFormat, decodeJWTPayload, isTokenExpired } from './jwt-utils';
 import { 
   STORAGE_KEYS, 
   SESSION_CONFIG, 
   SESSION_EXPIRY_REASONS,
   SESSION_MESSAGES
 } from './constants';
+
+// 간단한 JWT 유틸리티 함수들
+function validateJWTFormat(token: string): boolean {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.split('.');
+  return parts.length === 3;
+}
+
+function decodeJWTPayload(token: string): any {
+  try {
+    const payload = token.split('.')[1];
+    const decoded = atob(payload);
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+function isTokenExpired(token: string): boolean {
+  try {
+    const payload = decodeJWTPayload(token);
+    if (!payload || !payload.exp) return true;
+    return payload.exp * 1000 < Date.now();
+  } catch {
+    return true;
+  }
+}
 
 // 환경별 API URL 설정
 function getApiBaseUrl(): string {
@@ -287,7 +313,7 @@ class ApiClient {
 
       // 3. 토큰 만료 체크 및 갱신
       const thresholdMinutes = SESSION_CONFIG.TOKEN_REFRESH_THRESHOLD_MINUTES;
-      if (this.isTokenExpired(this.token) || this.isTokenExpiringSoon(this.token, thresholdMinutes * 60)) {
+      if (isTokenExpired(this.token) || this.isTokenExpiringSoon(this.token, thresholdMinutes * 60)) {
         console.log('ApiClient: Token is expired or expiring soon, refreshing...');
         await this.refreshAccessToken();
       }
@@ -298,7 +324,7 @@ class ApiClient {
 
   private isTokenExpiringSoon(token: string, secondsBeforeExpiry: number): boolean {
     try {
-      const payload = this.decodeJWTPayload(token);
+      const payload = decodeJWTPayload(token);
       const now = Math.floor(Date.now() / 1000);
       const expiresAt = payload.exp;
       
@@ -617,7 +643,7 @@ class ApiClient {
 
   // 인증 상태 확인
   isAuthenticated(): boolean {
-    return !!this.token && !this.isTokenExpired(this.token);
+    return !!this.token && !isTokenExpired(this.token);
   }
 
   // 테스트를 위한 public 메서드들 (원래는 private이지만 테스트 접근을 위해 public으로 노출)
@@ -690,9 +716,9 @@ class ApiClient {
       if (storedToken) {
         try {
           console.log('Token valid format:', this.isValidJWTFormat(storedToken));
-          console.log('Token expired:', this.isTokenExpired(storedToken));
+          console.log('Token expired:', isTokenExpired(storedToken));
           
-          const payload = this.decodeJWTPayload(storedToken);
+          const payload = decodeJWTPayload(storedToken);
           console.log('Token payload:', payload);
           console.log('Token expires at:', new Date(payload.exp * 1000));
           console.log('Current time:', new Date());

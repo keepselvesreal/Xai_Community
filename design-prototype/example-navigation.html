@@ -32,6 +32,7 @@
             padding: 16px 20px;
             z-index: 1002;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .top-navbar-row1 {
@@ -203,7 +204,7 @@
         /* 메뉴 숨김/보기 버튼 영역 - 배경 제거 */
         .menu-toggle-area {
             position: absolute;
-            bottom: 60px;
+            bottom: 40px;
             left: 0;
             width: 100%;
             height: 50px;
@@ -251,22 +252,14 @@
             flex-direction: column;
             z-index: 1000;
             transition: transform 0.3s ease;
+            box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
         }
 
         .sidebar.collapsed {
             transform: translateX(-100%);
         }
 
-        /* 상단 헤더 영역 - 고정 높이 */
-        .sidebar-header {
-            padding: 20px 24px;
-            border-bottom: 1px solid #e5e5e7;
-            background: linear-gradient(135deg, #6B8E23 0%, #556B2F 100%);
-            min-height: 80px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-        }
+        /* 상단 헤더 영역 제거 - 통합된 네비게이션 사용 */
 
         /* 사이드바 헤더 - 다크모드 버튼만 포함 */
         .sidebar-header-content {
@@ -309,18 +302,19 @@
         /* 내비게이션 영역 */
         .sidebar-nav {
             flex: 1;
-            padding: 0;
+            padding: 40px 0 0 0;
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
+            background: linear-gradient(to bottom, rgba(107, 142, 35, 0.02), transparent);
         }
 
         .nav-items {
             padding: 0 16px;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             gap: 16px;
         }
 
@@ -328,18 +322,18 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            padding: 16px 20px;
+            padding: 18px 20px;
             margin: 0;
             color: #595959;
             text-decoration: none;
             border-radius: 12px;
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             transition: all 0.2s ease;
             position: relative;
             text-align: center;
             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-            min-height: 48px;
+            min-height: 52px;
         }
 
         .nav-item:hover {
@@ -364,7 +358,7 @@
 
         /* 푸터 */
         .sidebar-footer {
-            padding: 20px 24px;
+            padding: 12px 24px;
             border-top: 1px solid #e5e5e7;
             text-align: center;
         }
@@ -550,6 +544,98 @@
             opacity: 1;
             box-shadow: 0 4px 16px rgba(107, 142, 35, 0.3);
         }
+
+        /* 건의/문의 섹션 스타일 */
+        .contact-section {
+            margin-top: 20px;
+            padding: 12px 16px;
+            background: linear-gradient(135deg, #6B8E23, rgba(107, 142, 35, 0.9));
+            border-radius: 16px;
+            border: none;
+            position: relative;
+            width: calc(100% - 16px);
+            margin-left: 8px;
+            margin-right: 8px;
+        }
+
+        .contact-section::before {
+            content: '';
+            position: absolute;
+            top: 8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 20px;
+            background: url('../references/paper-plane.png') no-repeat center;
+            background-size: 16px 16px;
+            filter: brightness(0) invert(1);
+        }
+
+        .contact-items-container {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+        }
+
+        .contact-item {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 12px;
+            border-radius: 10px;
+            transition: all 0.15s ease;
+            cursor: pointer;
+            position: relative;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        .contact-item:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        .contact-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+        }
+
+        .contact-label-only {
+            font-size: 13px;
+            font-weight: 600;
+            color: white;
+            text-align: center;
+        }
+
+        /* 다크모드에서 건의/문의 섹션 */
+        body.dark .contact-section {
+            background: linear-gradient(135deg, #52C41A, rgba(82, 196, 26, 0.9));
+        }
+
+        body.dark .contact-section::before {
+            filter: brightness(0) invert(1);
+        }
+
+        body.dark .contact-item {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+        }
+
+        body.dark .contact-item:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.35);
+        }
+
+        body.dark .contact-label,
+        body.dark .contact-label-only {
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -578,6 +664,18 @@
                     <a href="#" class="nav-item">정보</a>
                     <a href="#" class="nav-item">입주 업체 서비스</a>
                     <a href="#" class="nav-item">전문가 꿀정보</a>
+                    
+                    <!-- 건의/문의 섹션 -->
+                    <div class="contact-section">
+                        <div class="contact-items-container">
+                            <div class="contact-item">
+                                <span class="contact-label">건의하기</span>
+                            </div>
+                            <div class="contact-item">
+                                <span class="contact-label-only">문의하기</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

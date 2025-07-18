@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>입주업체 서비스 - 수정된 디자인 프로토타입</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* 행별 테두리 색상 시스템 */
+        .row-border-1 {
+            border-color: #3b82f6; /* 파란색 */
+        }
+        .row-border-2 {
+            border-color: #10b981; /* 초록색 */
+        }
+        .row-border-3 {
+            border-color: #dc2626; /* 빨간색 */
+        }
+        .row-border-4 {
+            border-color: #e11d48; /* 핑크/로즈 */
+        }
+        .row-border-5 {
+            border-color: #8b5cf6; /* 보라색 */
+        }
+        .row-border-6 {
+            border-color: #06b6d4; /* 청록색 */
+        }
+
+        /* 카드 높이 통일 */
+        .service-card {
+            height: 335px; /* 고정 높이 조정 */
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* 호버 효과 */
+        .service-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        /* 3열 그리드 시스템 */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* 태블릿에서는 2열 */
+        @media (max-width: 1024px) {
+            .services-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        /* 모바일에서는 1열 */
+        @media (max-width: 640px) {
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* 서비스 목록 영역 고정 */
+        .services-section {
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* 서비스 항목 최대 3개 표시 */
+        .services-list {
+            min-height: 140px; /* 3개 항목 기본 높이 고정 */
+            max-height: 140px; /* 3개 항목 표시 */
+            overflow: hidden;
+        }
+
+        /* 통계 영역 하단 고정 */
+        .stats-section {
+            margin-top: auto;
+            padding-top: 0.5rem;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        /* 더보기 버튼 스타일 (expert-tips와 동일) */
+        .load-more-btn {
+            padding: 16px 32px;
+            background: white;
+            border: 2px solid #6B8E23;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #6B8E23;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .load-more-btn:hover {
+            background: #6B8E23;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(107, 142, 35, 0.3);
+        }
+
+        /* 로딩 스피너 */
+        .loading-spinner {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* 카드 배경 흰색 통일 */
+        .service-card {
+            background: white;
+        }
+
+        /* 행별 태그 색상 시스템 - 테두리 색과 다른 색상 조합 */
+        .row-1 .category-tag {
+            background: #db2777;
+            color: white;
+        }
+        .row-2 .category-tag {
+            background: #7c3aed;
+            color: white;
+        }
+        .row-3 .category-tag {
+            background: #059669;
+            color: white;
+        }
+        .row-4 .category-tag {
+            background: #0891b2;
+            color: white;
+        }
+        .row-5 .category-tag {
+            background: #1f2937;
+            color: white;
+        }
+        .row-6 .category-tag {
+            background: #2563eb;
+            color: white;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+
+    <!-- 메인 콘텐츠 -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- 업체 등록 버튼 + 검색창 섹션 (프론트엔드와 동일) -->
+        <div class="flex justify-center items-center gap-4 mb-6">
+            <button class="w-full max-w-xs px-6 py-3 bg-white border border-gray-300 rounded-full hover:border-blue-500 hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 flex items-center justify-center gap-2">
+                📝 업체 등록하기
+            </button>
+            
+            <div class="flex items-center gap-3 bg-white border border-gray-300 rounded-full px-4 py-3 w-full max-w-xs">
+                <span class="text-gray-500">🔍</span>
+                <input
+                    type="text"
+                    placeholder="서비스 검색..."
+                    class="flex-1 bg-transparent border-none outline-none text-gray-700 placeholder-gray-400"
+                >
+            </div>
+        </div>
+        
+        <!-- 필터링 + 정렬 섹션 (프론트엔드와 동일) -->
+        <div class="flex justify-between items-center mb-4">
+            <!-- 필터 바 -->
+            <div class="flex gap-2">
+                <button class="filter-btn px-4 py-2 border border-blue-500 bg-blue-500 text-white rounded-full text-sm font-medium transition-all duration-200" data-filter="all">
+                    전체
+                </button>
+                <button class="filter-btn px-4 py-2 border border-gray-300 bg-white text-gray-600 rounded-full text-sm font-medium hover:border-blue-500 hover:text-blue-500 transition-all duration-200" data-filter="이사">
+                    이사
+                </button>
+                <button class="filter-btn px-4 py-2 border border-gray-300 bg-white text-gray-600 rounded-full text-sm font-medium hover:border-blue-500 hover:text-blue-500 transition-all duration-200" data-filter="청소">
+                    청소
+                </button>
+                <button class="filter-btn px-4 py-2 border border-gray-300 bg-white text-gray-600 rounded-full text-sm font-medium hover:border-blue-500 hover:text-blue-500 transition-all duration-200" data-filter="에어컨">
+                    에어컨
+                </button>
+                <button class="filter-btn px-4 py-2 border border-gray-300 bg-white text-gray-600 rounded-full text-sm font-medium hover:border-blue-500 hover:text-blue-500 transition-all duration-200" data-filter="가전">
+                    가전
+                </button>
+                <button class="filter-btn px-4 py-2 border border-gray-300 bg-white text-gray-600 rounded-full text-sm font-medium hover:border-blue-500 hover:text-blue-500 transition-all duration-200" data-filter="인테리어">
+                    인테리어
+                </button>
+                <button class="filter-btn px-4 py-2 border border-gray-300 bg-white text-gray-600 rounded-full text-sm font-medium hover:border-blue-500 hover:text-blue-500 transition-all duration-200" data-filter="방충망">
+                    방충망
+                </button>
+            </div>
+
+            <!-- 정렬 옵션 -->
+            <div class="flex items-center gap-2">
+                <span class="text-gray-500 text-sm">정렬:</span>
+                <select class="bg-white border border-gray-300 rounded-lg px-3 py-1 text-sm text-gray-700">
+                    <option>최신순</option>
+                    <option>조회수</option>
+                    <option>관심순</option>
+                    <option>후기순</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- 서비스 카드 컨테이너 -->
+        <div id="servicesContainer">
+            <!-- 처음 6개 카드 (2행 3열) -->
+            <div class="services-grid row-1" id="row-1">
+                <!-- 1행 카드들 -->
+            </div>
+            <div class="services-grid row-2" id="row-2">
+                <!-- 2행 카드들 -->
+            </div>
+        </div>
+
+        <!-- 더보기 버튼 -->
+        <div class="flex justify-center mt-8">
+            <button 
+                id="loadMoreBtn" 
+                class="load-more-btn"
+                onclick="loadMore()"
+            >
+                <span id="loadMoreText">더보기</span>
+                <span id="loadingSpinner" class="loading-spinner hidden">⏳</span>
+            </button>
+        </div>
+
+        <!-- 로딩 상태 표시 -->
+        <div id="loadingIndicator" class="hidden text-center py-8">
+            <div class="inline-block loading-spinner text-2xl">⏳</div>
+            <p class="text-gray-600 mt-2">더 많은 서비스를 불러오는 중...</p>
+        </div>
+    </main>
+
+    <script>
+        // Mock 데이터 확장 - 더 많은 서비스 추가
+        const mockServices = [
+            {
+                id: 1,
+                name: "깔끔한 이사 서비스",
+                category: "이사",
+                verified: true,
+                services: [
+                    { name: "원룸 이사", price: 80000, specialPrice: 60000 },
+                    { name: "투룸 이사", price: 120000, specialPrice: null },
+                    { name: "포장 서비스", price: 50000, specialPrice: 40000 }
+                ],
+                contact: {
+                    phone: "010-1234-5678",
+                    hours: "09:00-18:00"
+                },
+                stats: {
+                    views: 1250,
+                    bookmarks: 89,
+                    inquiries: 23,
+                    reviews: 45
+                }
+            },
+            {
+                id: 2,
+                name: "프리미엄 청소 전문",
+                category: "청소",
+                verified: false,
+                services: [
+                    { name: "입주 청소", price: 150000, specialPrice: 120000 },
+                    { name: "거주 청소", price: 80000, specialPrice: null },
+                    { name: "새집 증후군 케어", price: 100000, specialPrice: 80000 }
+                ],
+                contact: {
+                    phone: "010-9876-5432",
+                    hours: "08:00-19:00"
+                },
+                stats: {
+                    views: 890,
+                    bookmarks: 67,
+                    inquiries: 18,
+                    reviews: 34
+                }
+            },
+            {
+                id: 3,
+                name: "시원한 에어컨 설치",
+                category: "에어컨",
+                verified: true,
+                services: [
+                    { name: "벽걸이 에어컨", price: 200000, specialPrice: 180000 },
+                    { name: "스탠드 에어컨", price: 250000, specialPrice: null },
+                    { name: "시스템 에어컨", price: 500000, specialPrice: 450000 }
+                ],
+                contact: {
+                    phone: "010-5555-7777",
+                    hours: "09:00-17:00"
+                },
+                stats: {
+                    views: 2100,
+                    bookmarks: 156,
+                    inquiries: 42,
+                    reviews: 78
+                }
+            },
+            {
+                id: 4,
+                name: "안전한 가전 설치",
+                category: "가전",
+                verified: true,
+                services: [
+                    { name: "세탁기 설치", price: 30000, specialPrice: 25000 },
+                    { name: "냉장고 설치", price: 40000, specialPrice: null },
+                    { name: "TV 벽걸이", price: 60000, specialPrice: 50000 }
+                ],
+                contact: {
+                    phone: "010-3333-4444",
+                    hours: "10:00-18:00"
+                },
+                stats: {
+                    views: 756,
+                    bookmarks: 45,
+                    inquiries: 12,
+                    reviews: 28
+                }
+            },
+            {
+                id: 5,
+                name: "완벽한 인테리어",
+                category: "인테리어",
+                verified: false,
+                services: [
+                    { name: "도배/장판", price: 300000, specialPrice: 250000 },
+                    { name: "타일 시공", price: 200000, specialPrice: null },
+                    { name: "몰딩 시공", price: 150000, specialPrice: 120000 }
+                ],
+                contact: {
+                    phone: "010-7777-8888",
+                    hours: "09:00-18:00"
+                },
+                stats: {
+                    views: 1680,
+                    bookmarks: 123,
+                    inquiries: 35,
+                    reviews: 67
+                }
+            },
+            {
+                id: 6,
+                name: "믿을 수 있는 방충망",
+                category: "방충망",
+                verified: true,
+                services: [
+                    { name: "방충망 설치", price: 80000, specialPrice: 70000 },
+                    { name: "방충망 교체", price: 60000, specialPrice: null },
+                    { name: "방충망 수리", price: 30000, specialPrice: 25000 }
+                ],
+                contact: {
+                    phone: "010-2222-3333",
+                    hours: "08:00-17:00"
+                },
+                stats: {
+                    views: 432,
+                    bookmarks: 28,
+                    inquiries: 8,
+                    reviews: 15
+                }
+            },
+            // 추가 서비스들 (더보기용)
+            {
+                id: 7,
+                name: "빠른 수리 서비스",
+                category: "수리",
+                verified: true,
+                services: [
+                    { name: "타일 수리", price: 50000, specialPrice: 40000 },
+                    { name: "벽지 수리", price: 30000, specialPrice: null },
+                    { name: "문짝 수리", price: 70000, specialPrice: 60000 }
+                ],
+                contact: {
+                    phone: "010-1111-2222",
+                    hours: "09:00-18:00"
+                },
+                stats: {
+                    views: 645,
+                    bookmarks: 34,
+                    inquiries: 15,
+                    reviews: 21
+                }
+            },
+            {
+                id: 8,
+                name: "전문 페인트 시공",
+                category: "페인트",
+                verified: false,
+                services: [
+                    { name: "벽면 페인트", price: 180000, specialPrice: 150000 },
+                    { name: "천장 페인트", price: 120000, specialPrice: null },
+                    { name: "특수 페인트", price: 250000, specialPrice: 200000 }
+                ],
+                contact: {
+                    phone: "010-4444-5555",
+                    hours: "08:00-17:00"
+                },
+                stats: {
+                    views: 892,
+                    bookmarks: 52,
+                    inquiries: 19,
+                    reviews: 33
+                }
+            },
+            {
+                id: 9,
+                name: "안전한 전기 공사",
+                category: "전기",
+                verified: true,
+                services: [
+                    { name: "콘센트 설치", price: 40000, specialPrice: 35000 },
+                    { name: "조명 설치", price: 60000, specialPrice: null },
+                    { name: "전기 점검", price: 80000, specialPrice: 70000 }
+                ],
+                contact: {
+                    phone: "010-6666-7777",
+                    hours: "09:00-18:00"
+                },
+                stats: {
+                    views: 1345,
+                    bookmarks: 78,
+                    inquiries: 26,
+                    reviews: 41
+                }
+            }
+        ];
+
+        // 현재 표시된 서비스 수
+        let currentServicesCount = 6;
+        let isLoading = false;
+        let currentFilter = 'all'; // 현재 선택된 필터
+
+        // 카드 렌더링 함수
+        function renderServiceCard(service) {
+            // 서비스 최대 3개만 표시
+            const displayServices = service.services.slice(0, 3);
+            
+            const servicesHtml = displayServices.map(item => `
+                <div class="flex justify-between items-center py-2 px-3 rounded-md" style="background-color: #E6F7FF;">
+                    <span class="text-gray-700 text-base font-medium">${item.name}</span>
+                    <div class="flex items-center gap-2">
+                        ${item.specialPrice ? `<span class="text-gray-400 line-through text-sm">${item.price.toLocaleString()}원</span>` : ''}
+                        <span class="text-red-500 font-semibold text-base">
+                            ${item.specialPrice ? item.specialPrice.toLocaleString() : item.price.toLocaleString()}원
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+
+            return `
+                <div class="service-card border-2 rounded-lg p-5 cursor-pointer">
+                    <!-- 카테고리와 경험有 -->
+                    <div class="flex items-center gap-2 mb-2">
+                        <span class="category-tag px-4 py-2 rounded-full text-sm font-bold">
+                            ${service.category}
+                        </span>
+                        ${service.verified ? '<span class="bg-amber-500 text-white px-4 py-2 rounded-full text-sm font-bold">경험有</span>' : ''}
+                    </div>
+
+                    <!-- 업체명 -->
+                    <h3 class="text-lg font-bold text-gray-900 mb-3">${service.name} ⭐</h3>
+
+                    <!-- 서비스 목록 (최대 3개) -->
+                    <div class="services-section">
+                        <div class="services-list space-y-2">
+                            ${servicesHtml}
+                        </div>
+                    </div>
+
+                    <!-- 연락처 -->
+                    <div class="flex items-center justify-center gap-4 mb-2 text-sm text-gray-600 -mt-4">
+                        <div class="flex items-center gap-1">
+                            <span class="text-pink-500">📞</span>
+                            <span>${service.contact.phone}</span>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <span class="text-orange-500">⏰</span>
+                            <span>${service.contact.hours}</span>
+                        </div>
+                    </div>
+
+                    <!-- 통계 (하단 고정, 가운데 정렬) -->
+                    <div class="stats-section">
+                        <div class="flex items-center justify-center text-sm text-gray-500">
+                            <div class="flex items-center gap-4">
+                                <span class="flex items-center gap-1">
+                                    👁️ ${service.stats.views}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    관심 ${service.stats.bookmarks}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    문의 ${service.stats.inquiries}
+                                </span>
+                                <span class="flex items-center gap-1">
+                                    후기 ${service.stats.reviews}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 행별 테두리 색상 적용
+        function getRowBorderClass(rowIndex) {
+            const borderClasses = [
+                'row-border-1', 'row-border-2', 'row-border-3', 
+                'row-border-4', 'row-border-5', 'row-border-6'
+            ];
+            return borderClasses[rowIndex % borderClasses.length];
+        }
+
+        // 초기 6개 카드 렌더링 (2행 3열)
+        function renderInitialServices() {
+            const row1 = document.getElementById('row-1');
+            const row2 = document.getElementById('row-2');
+            
+            // 1행 (첫 3개 카드)
+            const firstRowServices = mockServices.slice(0, 3);
+            row1.innerHTML = firstRowServices.map(service => renderServiceCard(service)).join('');
+            
+            // 각 카드에 행별 테두리 색상 적용
+            row1.querySelectorAll('.service-card').forEach(card => {
+                card.classList.add('row-border-1');
+            });
+            
+            // 2행 (다음 3개 카드)
+            const secondRowServices = mockServices.slice(3, 6);
+            row2.innerHTML = secondRowServices.map(service => renderServiceCard(service)).join('');
+            
+            // 각 카드에 행별 테두리 색상 적용
+            row2.querySelectorAll('.service-card').forEach(card => {
+                card.classList.add('row-border-2');
+            });
+        }
+
+        // 더보기 기능
+        function loadMore() {
+            if (isLoading || currentServicesCount >= mockServices.length) return;
+            
+            isLoading = true;
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            const loadMoreText = document.getElementById('loadMoreText');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            // 로딩 상태 표시
+            loadMoreText.textContent = '로딩 중...';
+            loadingSpinner.classList.remove('hidden');
+            loadMoreBtn.disabled = true;
+            
+            // 실제 API 호출 시뮬레이션
+            setTimeout(() => {
+                const servicesContainer = document.getElementById('servicesContainer');
+                const remainingServices = mockServices.slice(currentServicesCount);
+                const nextBatch = remainingServices.slice(0, 3); // 한 번에 3개씩 추가
+                
+                if (nextBatch.length > 0) {
+                    const rowIndex = Math.floor(currentServicesCount / 3) + 1;
+                    const newRow = document.createElement('div');
+                    newRow.className = `services-grid row-${rowIndex}`;
+                    newRow.id = `row-${rowIndex}`;
+                    
+                    newRow.innerHTML = nextBatch.map(service => renderServiceCard(service)).join('');
+                    
+                    // 행별 테두리 색상 적용
+                    const borderClass = getRowBorderClass(rowIndex - 1);
+                    newRow.querySelectorAll('.service-card').forEach(card => {
+                        card.classList.add(borderClass);
+                    });
+                    
+                    servicesContainer.appendChild(newRow);
+                    currentServicesCount += nextBatch.length;
+                }
+                
+                // 로딩 상태 해제
+                isLoading = false;
+                loadMoreText.textContent = '더보기';
+                loadingSpinner.classList.add('hidden');
+                loadMoreBtn.disabled = false;
+                
+                // 모든 서비스를 다 불러왔으면 버튼 숨기기
+                if (currentServicesCount >= mockServices.length) {
+                    loadMoreBtn.style.display = 'none';
+                }
+            }, 800); // 로딩 시뮬레이션
+        }
+
+        // 필터 기능 추가
+        function handleFilterClick(filterValue, buttonElement) {
+            // 모든 필터 버튼에서 active 클래스 제거
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'bg-blue-500', 'text-white');
+                btn.classList.add('border-gray-300', 'bg-white', 'text-gray-600');
+            });
+            
+            // 클릭된 버튼에 active 클래스 추가
+            buttonElement.classList.remove('border-gray-300', 'bg-white', 'text-gray-600');
+            buttonElement.classList.add('border-blue-500', 'bg-blue-500', 'text-white');
+            
+            currentFilter = filterValue;
+            
+            // 필터 적용 (여기서는 시뮬레이션)
+            console.log(`필터 적용: ${filterValue}`);
+        }
+        
+        // 필터 버튼 이벤트 리스너 추가
+        document.addEventListener('DOMContentLoaded', function() {
+            const filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const filterValue = this.dataset.filter;
+                    handleFilterClick(filterValue, this);
+                });
+            });
+        });
+
+        // 초기 렌더링
+        renderInitialServices();
+    </script>
+</body>
+</html>

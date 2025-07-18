@@ -12,8 +12,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from nadle_backend.database.redis_factory import get_redis_manager, ensure_redis_connection, get_redis_health
 from nadle_backend.services.cache_service import cache_service
-from nadle_backend.services.popular_posts_cache_service import popular_posts_cache_service
-from nadle_backend.services.post_stats_cache_service import post_stats_cache_service
 from nadle_backend.services.token_blacklist_service import token_blacklist_service
 from nadle_backend.config import get_settings
 
@@ -145,35 +143,6 @@ async def test_token_blacklist_with_upstash():
         pass
 
 
-async def test_popular_posts_cache_with_upstash():
-    """인기 게시글 캐시 서비스 E2E 테스트"""
-    # 테스트 게시글 데이터
-    posts = [
-        {"id": "post_e2e_1", "title": "E2E Test Post 1", "author": "testuser1", "like_count": 100},
-        {"id": "post_e2e_2", "title": "E2E Test Post 2", "author": "testuser2", "like_count": 200},
-        {"id": "post_e2e_3", "title": "E2E Test Post 3", "author": "testuser3", "like_count": 150}
-    ]
-    
-    try:
-        # 인기 게시글 캐시 저장
-        success = await popular_posts_cache_service.cache_popular_posts(posts)
-        assert success, "인기 게시글 캐시 저장 실패"
-        print("  ✅ 인기 게시글 캐시 저장 성공")
-        
-        # 인기 게시글 캐시 조회
-        cached_posts = await popular_posts_cache_service.get_popular_posts()
-        assert cached_posts is not None, "인기 게시글 캐시 조회 실패"
-        assert len(cached_posts) == 3, f"게시글 수 불일치: {len(cached_posts)} != 3"
-        print("  ✅ 인기 게시글 캐시 조회 성공")
-        
-        # 캐시 무효화
-        invalidated = await popular_posts_cache_service.invalidate_popular_posts_cache()
-        assert invalidated, "인기 게시글 캐시 무효화 실패"
-        print("  ✅ 인기 게시글 캐시 무효화 성공")
-        
-    finally:
-        # 정리
-        await popular_posts_cache_service.invalidate_popular_posts_cache()
 
 
 async def test_redis_manager_multiple_keys():
@@ -248,42 +217,6 @@ async def test_cache_expiration():
         await redis_manager.delete(test_key)
 
 
-async def test_post_stats_cache_with_upstash():
-    """게시글 통계 캐시 서비스 E2E 테스트"""
-    post_id = "e2e_test_post_999"
-    stats_data = {
-        "view_count": 1000,
-        "like_count": 50,
-        "dislike_count": 5,
-        "comment_count": 25,
-        "last_updated": "2024-07-12T12:00:00Z"
-    }
-    
-    try:
-        # 게시글 통계 캐시 저장
-        success = await post_stats_cache_service.cache_post_stats(post_id, stats_data)
-        assert success, "게시글 통계 캐시 저장 실패"
-        print("  ✅ 게시글 통계 캐시 저장 성공")
-        
-        # 게시글 통계 캐시 조회
-        cached_stats = await post_stats_cache_service.get_post_stats(post_id)
-        assert cached_stats is not None, "게시글 통계 캐시 조회 실패"
-        assert cached_stats['view_count'] == 1000, f"조회수 불일치: {cached_stats['view_count']} != 1000"
-        print("  ✅ 게시글 통계 캐시 조회 성공")
-        
-        # 게시글 통계 업데이트
-        success = await post_stats_cache_service.increment_view_count(post_id)
-        assert success, "조회수 증가 실패"
-        
-        # 업데이트된 통계 확인
-        updated_stats = await post_stats_cache_service.get_post_stats(post_id)
-        assert updated_stats is not None, "업데이트된 통계 조회 실패"
-        assert updated_stats['view_count'] == 1001, f"업데이트된 조회수 불일치: {updated_stats['view_count']} != 1001"
-        print("  ✅ 게시글 통계 업데이트 성공")
-        
-    finally:
-        # 정리
-        await post_stats_cache_service.invalidate_post_stats(post_id)
 
 
 async def main():

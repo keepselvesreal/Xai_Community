@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전문가 꿀정보 - 클래식 & 모던 스타일</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #FAFAFA;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #262626;
+            margin-bottom: 40px;
+            font-size: 32px;
+            font-weight: 700;
+        }
+        
+        /* 그리드 레이아웃 - 1행에 3개씩 */
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            margin-bottom: 50px;
+        }
+        
+        /* 카드 기본 스타일 - 클래식 & 모던 스타일 강조 */
+        .tip-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            cursor: pointer;
+            height: 380px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+        
+        .tip-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border-radius: 20px;
+            padding: 2px;
+            background: linear-gradient(135deg, transparent, rgba(255,255,255,0.8), transparent);
+            mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .tip-card:hover::before {
+            opacity: 1;
+        }
+        
+        .tip-card:hover {
+            transform: translateY(-12px) scale(1.02);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        
+        /* 카드 헤더 - 더 높고 임팩트 있게 */
+        .card-header {
+            height: 140px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            color: white;
+            overflow: hidden;
+        }
+        
+        .card-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: radial-gradient(circle at 30% 20%, rgba(255,255,255,0.2) 0%, transparent 50%);
+        }
+        
+        .card-header::after {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        
+        .category-badge {
+            background: rgba(255,255,255,0.25);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-size: 13px;
+            font-weight: 700;
+            display: inline-block;
+            width: fit-content;
+            backdrop-filter: blur(15px);
+            border: 2px solid rgba(255,255,255,0.3);
+            position: relative;
+            z-index: 2;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .new-badge {
+            background: linear-gradient(135deg, #FF4757, #FF3742);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 15px;
+            font-size: 11px;
+            font-weight: 700;
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 3;
+            box-shadow: 0 4px 12px rgba(255, 71, 87, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        /* 카드 본문 */
+        .card-content {
+            padding: 28px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(248,250,252,1) 100%);
+        }
+        
+        .tip-title {
+            font-size: 19px;
+            font-weight: 800;
+            color: #1a1a1a;
+            line-height: 1.3;
+            margin-bottom: 16px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            letter-spacing: -0.3px;
+        }
+        
+        .expert-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: #4a5568;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .expert-icon {
+            font-size: 18px;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
+        }
+        
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: auto;
+            padding-top: 20px;
+            border-top: 2px solid #f1f5f9;
+            font-size: 13px;
+            color: #64748b;
+        }
+        
+        .stats-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+        
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-weight: 600;
+        }
+        
+        .date-info {
+            font-size: 12px;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        
+        /* 태그 영역 */
+        .tags-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .tag {
+            background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+            color: #475569;
+            padding: 6px 12px;
+            border-radius: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            border: 1px solid #e2e8f0;
+            text-transform: uppercase;
+            letter-spacing: 0.2px;
+        }
+        
+        /* 색상 조합 - 브랜드 하모니 조합 (행 1) */
+        .row-1 .tip-card:nth-child(1) .card-header { 
+            background: linear-gradient(135deg, #6B8E23 0%, #8FBC8F 50%, #9ACD32 100%); 
+        }
+        .row-1 .tip-card:nth-child(2) .card-header { 
+            background: linear-gradient(135deg, #556B2F 0%, #6B8E23 50%, #52C41A 100%); 
+        }
+        .row-1 .tip-card:nth-child(3) .card-header { 
+            background: linear-gradient(135deg, #2F4F2F 0%, #556B2F 50%, #8FBC8F 100%); 
+        }
+        
+        /* 색상 조합 - 감정 표현 조합 (행 2) */
+        .row-2 .tip-card:nth-child(1) .card-header { 
+            background: linear-gradient(135deg, #52C41A 0%, #73D13D 50%, #95DE64 100%); 
+        }
+        .row-2 .tip-card:nth-child(2) .card-header { 
+            background: linear-gradient(135deg, #FAAD14 0%, #FFC53D 50%, #FFD666 100%); 
+        }
+        .row-2 .tip-card:nth-child(3) .card-header { 
+            background: linear-gradient(135deg, #1890FF 0%, #40A9FF 50%, #69C0FF 100%); 
+        }
+        
+        /* 색상 조합 - 대비 강조 조합 (행 3) */
+        .row-3 .tip-card:nth-child(1) .card-header { 
+            background: linear-gradient(135deg, #FA8C16 0%, #FF7A45 50%, #13C2C2 100%); 
+        }
+        .row-3 .tip-card:nth-child(2) .card-header { 
+            background: linear-gradient(135deg, #EB2F96 0%, #F759AB 50%, #69C0FF 100%); 
+        }
+        .row-3 .tip-card:nth-child(3) .card-header { 
+            background: linear-gradient(135deg, #722ED1 0%, #9254DE 50%, #FAAD14 100%); 
+        }
+        
+        /* 색상 조합 - 중성 조화 조합 (행 4) */
+        .row-4 .tip-card:nth-child(1) .card-header { 
+            background: linear-gradient(135deg, #262626 0%, #434343 50%, #595959 100%); 
+        }
+        .row-4 .tip-card:nth-child(2) .card-header { 
+            background: linear-gradient(135deg, #8C8C8C 0%, #BFBFBF 50%, #D9D9D9 100%); 
+            color: #262626;
+        }
+        .row-4 .tip-card:nth-child(3) .card-header { 
+            background: linear-gradient(135deg, #595959 0%, #8C8C8C 50%, #BFBFBF 100%); 
+            color: #262626;
+        }
+        
+        /* 색상별 태그 색상 조정 */
+        .row-1 .tip-card:nth-child(1) .tag { 
+            background: linear-gradient(135deg, rgba(107, 142, 35, 0.1), rgba(154, 205, 50, 0.2)); 
+            color: #6B8E23; 
+            border-color: rgba(107, 142, 35, 0.3);
+        }
+        .row-1 .tip-card:nth-child(2) .tag { 
+            background: linear-gradient(135deg, rgba(82, 196, 26, 0.1), rgba(115, 209, 61, 0.2)); 
+            color: #52C41A; 
+            border-color: rgba(82, 196, 26, 0.3);
+        }
+        .row-1 .tip-card:nth-child(3) .tag { 
+            background: linear-gradient(135deg, rgba(85, 107, 47, 0.1), rgba(143, 188, 143, 0.2)); 
+            color: #556B2F; 
+            border-color: rgba(85, 107, 47, 0.3);
+        }
+        
+        .row-2 .tip-card:nth-child(1) .tag { 
+            background: linear-gradient(135deg, rgba(82, 196, 26, 0.1), rgba(115, 209, 61, 0.2)); 
+            color: #52C41A; 
+            border-color: rgba(82, 196, 26, 0.3);
+        }
+        .row-2 .tip-card:nth-child(2) .tag { 
+            background: linear-gradient(135deg, rgba(250, 173, 20, 0.1), rgba(255, 197, 61, 0.2)); 
+            color: #FAAD14; 
+            border-color: rgba(250, 173, 20, 0.3);
+        }
+        .row-2 .tip-card:nth-child(3) .tag { 
+            background: linear-gradient(135deg, rgba(24, 144, 255, 0.1), rgba(64, 169, 255, 0.2)); 
+            color: #1890FF; 
+            border-color: rgba(24, 144, 255, 0.3);
+        }
+        
+        .row-3 .tip-card:nth-child(1) .tag { 
+            background: linear-gradient(135deg, rgba(250, 140, 22, 0.1), rgba(255, 122, 69, 0.2)); 
+            color: #FA8C16; 
+            border-color: rgba(250, 140, 22, 0.3);
+        }
+        .row-3 .tip-card:nth-child(2) .tag { 
+            background: linear-gradient(135deg, rgba(235, 47, 150, 0.1), rgba(247, 89, 171, 0.2)); 
+            color: #EB2F96; 
+            border-color: rgba(235, 47, 150, 0.3);
+        }
+        .row-3 .tip-card:nth-child(3) .tag { 
+            background: linear-gradient(135deg, rgba(114, 46, 209, 0.1), rgba(146, 84, 222, 0.2)); 
+            color: #722ED1; 
+            border-color: rgba(114, 46, 209, 0.3);
+        }
+        
+        .row-4 .tip-card:nth-child(1) .tag { 
+            background: linear-gradient(135deg, rgba(38, 38, 38, 0.1), rgba(67, 67, 67, 0.2)); 
+            color: #262626; 
+            border-color: rgba(38, 38, 38, 0.3);
+        }
+        .row-4 .tip-card:nth-child(2) .tag { 
+            background: linear-gradient(135deg, rgba(140, 140, 140, 0.1), rgba(191, 191, 191, 0.2)); 
+            color: #8C8C8C; 
+            border-color: rgba(140, 140, 140, 0.3);
+        }
+        .row-4 .tip-card:nth-child(3) .tag { 
+            background: linear-gradient(135deg, rgba(89, 89, 89, 0.1), rgba(140, 140, 140, 0.2)); 
+            color: #595959; 
+            border-color: rgba(89, 89, 89, 0.3);
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 1024px) {
+            .tips-grid {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 24px;
+            }
+            
+            .tip-card {
+                height: 360px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .tips-grid {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .tip-card {
+                height: auto;
+                min-height: 340px;
+            }
+            
+            .card-header {
+                height: 120px;
+                padding: 20px;
+            }
+            
+            .card-content {
+                padding: 24px;
+            }
+            
+            .tip-title {
+                font-size: 17px;
+            }
+        }
+        
+        /* 섹션 제목 */
+        .section-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 70px 0 16px 0;
+            text-align: center;
+            letter-spacing: -0.5px;
+        }
+        
+        .section-desc {
+            text-align: center;
+            color: #4a5568;
+            margin-bottom: 40px;
+            font-size: 16px;
+            font-weight: 500;
+            letter-spacing: -0.2px;
+        }
+        
+        /* 추가 시각적 효과 */
+        .tip-card:hover .card-header::after {
+            animation-duration: 4s;
+        }
+        
+        .tip-card:hover .tip-title {
+            color: #0f172a;
+        }
+        
+        .tip-card:hover .expert-info {
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>전문가 꿀정보 - 클래식 & 모던 스타일</h1>
+        
+        <!-- 브랜드 하모니 조합 -->
+        <div class="section-title">🌿 브랜드 하모니 조합</div>
+        <div class="section-desc">안정적이고 신뢰할 수 있는 브랜드 색상의 우아한 조합</div>
+        <div class="tips-grid row-1">
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">청소/정리</div>
+                    <div class="new-badge">NEW</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">욕실 곰팡이 완벽 제거하는 천연 세제 만들기</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">👨‍🔬</span>
+                        <span>청소 전문가 김정리</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">곰팡이제거</span>
+                        <span class="tag">천연세제</span>
+                        <span class="tag">욕실청소</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>1,234</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>89</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>23</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-15</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">인테리어</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">작은 공간을 넓어 보이게 하는 조명 배치 노하우</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">💡</span>
+                        <span>인테리어 디자이너 박설계</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">조명</span>
+                        <span class="tag">공간활용</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>856</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>67</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>15</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-14</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">생활</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">전기요금 50% 절약하는 가전제품 사용법</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">⚡</span>
+                        <span>에너지 컨설턴트 이절약</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">절약</span>
+                        <span class="tag">전기요금</span>
+                        <span class="tag">가전제품</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>2,156</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>145</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>34</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-13</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 감정 표현 조합 -->
+        <div class="section-title">✨ 감정 표현 조합</div>
+        <div class="section-desc">각 상황과 감정에 맞는 생동감 넘치는 색상 조합</div>
+        <div class="tips-grid row-2">
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">반려동물</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">강아지 털 빠짐 90% 줄이는 브러싱 기술</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">🐕</span>
+                        <span>동물 미용사 최애견</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">강아지</span>
+                        <span class="tag">털관리</span>
+                        <span class="tag">브러싱</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>1,445</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>98</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>27</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-12</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">원예</div>
+                    <div class="new-badge">NEW</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">베란다에서 키우기 쉬운 허브 5가지 추천</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">🌱</span>
+                        <span>원예 전문가 정식물</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">허브</span>
+                        <span class="tag">베란다</span>
+                        <span class="tag">식물</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>789</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>54</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>12</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-11</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">절약</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">냉장고 정리로 식비 30% 절약하는 방법</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">🏠</span>
+                        <span>가정 경제 전문가 김살림</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">냉장고정리</span>
+                        <span class="tag">식비절약</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>1,678</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>112</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>29</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-10</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 대비 강조 조합 -->
+        <div class="section-title">🔥 대비 강조 조합</div>
+        <div class="section-desc">강한 대비로 시선을 끄는 역동적이고 혁신적인 색상 조합</div>
+        <div class="tips-grid row-3">
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">청소/정리</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">30분 만에 집 전체를 깨끗하게 만드는 루틴</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">🧹</span>
+                        <span>정리 컨설턴트 한깔끔</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">청소루틴</span>
+                        <span class="tag">정리</span>
+                        <span class="tag">시간관리</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>3,245</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>201</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>56</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-09</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">인테리어</div>
+                    <div class="new-badge">NEW</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">5만원으로 방 분위기 완전히 바꾸는 DIY</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">🎨</span>
+                        <span>DIY 크리에이터 손만능</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">DIY</span>
+                        <span class="tag">저예산</span>
+                        <span class="tag">인테리어</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>2,567</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>178</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>42</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-08</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">생활</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">세탁기 없이도 깔끔하게 빨래하는 법</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">👕</span>
+                        <span>세탁 전문가 옷깔끔</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">세탁</span>
+                        <span class="tag">손빨래</span>
+                        <span class="tag">생활팁</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>1,892</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>134</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>38</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-07</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 중성 조화 조합 -->
+        <div class="section-title">🎨 중성 조화 조합</div>
+        <div class="section-desc">차분하고 세련된 중성 색상의 전문적이고 우아한 조합</div>
+        <div class="tips-grid row-4">
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">절약</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">월 생활비 50만원으로 4인 가족 생활하기</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">💰</span>
+                        <span>가계부 전문가 돈관리</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">가계부</span>
+                        <span class="tag">생활비</span>
+                        <span class="tag">절약</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>4,567</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>289</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>78</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-06</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">반려동물</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">고양이 털 알레르기 줄이는 공기정화 방법</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">🐱</span>
+                        <span>수의사 김동물</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">고양이</span>
+                        <span class="tag">알레르기</span>
+                        <span class="tag">공기정화</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>1,234</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>87</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>19</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-05</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="tip-card">
+                <div class="card-header">
+                    <div class="category-badge">원예</div>
+                    <div class="new-badge">NEW</div>
+                </div>
+                <div class="card-content">
+                    <h3 class="tip-title">물 주기 실패 없는 식물 관리 달력</h3>
+                    <div class="expert-info">
+                        <span class="expert-icon">🌿</span>
+                        <span>식물학자 나잎새</span>
+                    </div>
+                    <div class="tags-container">
+                        <span class="tag">식물관리</span>
+                        <span class="tag">물주기</span>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stats-left">
+                            <div class="stat-item">
+                                <span>👁️</span>
+                                <span>967</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>👍</span>
+                                <span>73</span>
+                            </div>
+                            <div class="stat-item">
+                                <span>💬</span>
+                                <span>16</span>
+                            </div>
+                        </div>
+                        <div class="date-info">2024-01-04</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
