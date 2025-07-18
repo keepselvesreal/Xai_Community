@@ -81,10 +81,10 @@ jobs:
         
     - name: 🧹 Clean install dependencies
       run: |
-        # node_modules와 package-lock.json 완전 정리
-        rm -rf node_modules package-lock.json
-        # 클린 설치
-        npm install --no-audit --no-fund
+        # node_modules 정리 후 의존성 설치
+        rm -rf node_modules
+        # package-lock.json을 유지하고 npm ci 사용
+        npm ci --no-audit --no-fund
         
     - name: 🧪 Run basic type tests
       run: |
