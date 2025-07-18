@@ -22,6 +22,26 @@ ShoppingPostType = Literal["상품 문의", "배송 문의", "교환/환불", "�
 ApartmentPostType = Literal["입주 정보", "생활 정보", "이야기"]
 CommunityPostType = Literal["자유게시판", "질문답변", "공지사항", "후기"]
 
+# 새로운 문의/신고 관련 타입들
+InquiryReportType = Literal[
+    "moving-services-register-inquiry",    # 입주 서비스 업체 등록 문의
+    "expert-tips-register-inquiry",        # 전문가의 꿀정보 등록 문의
+    "suggestions",                         # 건의함
+    "report"                              # 신고
+]
+
+# 모든 가능한 post type들 통합 (확장성을 위해)
+AllPostType = Literal[
+    "board",                              # 일반 게시판 (기본값)
+    "moving services",                    # 입주 서비스 
+    "property_information",               # 부동산 정보
+    "expert_tips",                        # 전문가 꿀정보
+    "moving-services-register-inquiry",   # 입주 서비스 업체 등록 문의
+    "expert-tips-register-inquiry",       # 전문가의 꿀정보 등록 문의
+    "suggestions",                        # 건의함
+    "report"                             # 신고
+]
+
 
 # Pydantic Models for Requests/Responses
 class UserBase(BaseModel):

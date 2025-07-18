@@ -232,3 +232,268 @@ class TestPostsService:
             page=1,
             page_size=20
         )
+    
+    # 새로운 문의/신고 타입들에 대한 TDD 테스트
+    async def test_create_moving_services_inquiry(self, posts_service, mock_post_repository, sample_user):
+        """Test creating moving services inquiry post."""
+        # Arrange
+        inquiry_data = PostCreate(
+            title="입주 서비스 업체 등록 문의",
+            content='{"content": "저희 업체를 등록하고 싶습니다", "contact": "010-1234-5678", "website_url": "https://example.com"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="moving-services-register-inquiry",
+                editor_type="plain"
+            )
+        )
+        
+        created_post = Mock()
+        created_post.id = "507f1f77bcf86cd799439013"
+        created_post.title = inquiry_data.title
+        created_post.content = inquiry_data.content
+        created_post.metadata = inquiry_data.metadata
+        created_post.author_id = sample_user.id
+        mock_post_repository.create.return_value = created_post
+        
+        # Act
+        result = await posts_service.create_post(inquiry_data, sample_user)
+        
+        # Assert
+        assert result is not None
+        assert result.title == "입주 서비스 업체 등록 문의"
+        assert '"contact": "010-1234-5678"' in result.content
+        assert '"website_url": "https://example.com"' in result.content
+        assert result.metadata.type == "moving-services-register-inquiry"
+        
+        # Verify repository was called
+        mock_post_repository.create.assert_called_once()
+    
+    async def test_create_expert_tips_inquiry(self, posts_service, mock_post_repository, sample_user):
+        """Test creating expert tips inquiry post."""
+        # Arrange
+        inquiry_data = PostCreate(
+            title="전문가 꿀정보 등록 문의",
+            content='{"content": "전문가로 등록하고 싶습니다", "contact": "010-9876-5432", "website_url": "https://expert.com"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="expert-tips-register-inquiry",
+                editor_type="plain"
+            )
+        )
+        
+        created_post = Mock()
+        created_post.id = "507f1f77bcf86cd799439014"
+        created_post.title = inquiry_data.title
+        created_post.content = inquiry_data.content
+        created_post.metadata = inquiry_data.metadata
+        created_post.author_id = sample_user.id
+        mock_post_repository.create.return_value = created_post
+        
+        # Act
+        result = await posts_service.create_post(inquiry_data, sample_user)
+        
+        # Assert
+        assert result is not None
+        assert result.title == "전문가 꿀정보 등록 문의"
+        assert '"contact": "010-9876-5432"' in result.content
+        assert '"website_url": "https://expert.com"' in result.content
+        assert result.metadata.type == "expert-tips-register-inquiry"
+        
+        # Verify repository was called
+        mock_post_repository.create.assert_called_once()
+    
+    async def test_create_suggestions(self, posts_service, mock_post_repository, sample_user):
+        """Test creating suggestions post."""
+        # Arrange
+        suggestion_data = PostCreate(
+            title="건의사항",
+            content='{"content": "앱에 다크모드를 추가해주세요"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="suggestions",
+                editor_type="plain"
+            )
+        )
+        
+        created_post = Mock()
+        created_post.id = "507f1f77bcf86cd799439015"
+        created_post.title = suggestion_data.title
+        created_post.content = suggestion_data.content
+        created_post.metadata = suggestion_data.metadata
+        created_post.author_id = sample_user.id
+        mock_post_repository.create.return_value = created_post
+        
+        # Act
+        result = await posts_service.create_post(suggestion_data, sample_user)
+        
+        # Assert
+        assert result is not None
+        assert result.title == "건의사항"
+        assert '"content": "앱에 다크모드를 추가해주세요"' in result.content
+        assert result.metadata.type == "suggestions"
+        
+        # Verify repository was called
+        mock_post_repository.create.assert_called_once()
+    
+    async def test_create_report(self, posts_service, mock_post_repository, sample_user):
+        """Test creating report post."""
+        # Arrange
+        report_data = PostCreate(
+            title="신고",
+            content='{"content": "부적절한 게시물을 신고합니다"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="report",
+                editor_type="plain"
+            )
+        )
+        
+        created_post = Mock()
+        created_post.id = "507f1f77bcf86cd799439016"
+        created_post.title = report_data.title
+        created_post.content = report_data.content
+        created_post.metadata = report_data.metadata
+        created_post.author_id = sample_user.id
+        mock_post_repository.create.return_value = created_post
+        
+        # Act
+        result = await posts_service.create_post(report_data, sample_user)
+        
+        # Assert
+        assert result is not None
+        assert result.title == "신고"
+        assert '"content": "부적절한 게시물을 신고합니다"' in result.content
+        assert result.metadata.type == "report"
+        
+        # Verify repository was called
+        mock_post_repository.create.assert_called_once()
+    
+    async def test_create_inquiry_anonymous_user(self, posts_service, mock_post_repository):
+        """Test creating inquiry post with anonymous user (None user)."""
+        # Arrange
+        inquiry_data = PostCreate(
+            title="익명 문의",
+            content='{"content": "비회원 문의입니다", "contact": "010-1111-2222", "website_url": "https://test.com"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="moving-services-register-inquiry",
+                editor_type="plain"
+            )
+        )
+        
+        created_post = Mock()
+        created_post.id = "507f1f77bcf86cd799439017"
+        created_post.title = inquiry_data.title
+        created_post.content = inquiry_data.content
+        created_post.metadata = inquiry_data.metadata
+        # 익명 사용자의 경우 임시 ID가 생성되어야 함
+        created_post.author_id = "anonymous_507f1f77bcf86cd799439017"
+        mock_post_repository.create.return_value = created_post
+        
+        # Act
+        result = await posts_service.create_post(inquiry_data, None)  # None user for anonymous
+        
+        # Assert
+        assert result is not None
+        assert result.title == "익명 문의"
+        assert result.author_id.startswith("anonymous_")
+        assert len(result.author_id) > 10  # Should be a valid anonymous ID
+        
+        # Verify repository was called
+        mock_post_repository.create.assert_called_once()
+    
+    async def test_anonymous_author_id_generation(self, posts_service, mock_post_repository):
+        """Test that anonymous author IDs are properly generated."""
+        # Arrange
+        inquiry_data = PostCreate(
+            title="테스트 문의",
+            content='{"content": "테스트 내용"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="suggestions",
+                editor_type="plain"
+            )
+        )
+        
+        # Mock the create method to capture the author_id being passed
+        captured_author_ids = []
+        def capture_author_id(post_data, author_id):
+            captured_author_ids.append(author_id)
+            # Return a mock post object
+            mock_post = Mock()
+            mock_post.author_id = author_id
+            return mock_post
+        
+        mock_post_repository.create.side_effect = capture_author_id
+        
+        # Act
+        await posts_service.create_post(inquiry_data, None)
+        
+        # Assert
+        assert len(captured_author_ids) == 1
+        author_id = captured_author_ids[0]
+        assert author_id.startswith("anonymous_")
+        # 익명 ID는 'anonymous_' + UUID 형태여야 함
+        anonymous_part = author_id.replace("anonymous_", "")
+        assert len(anonymous_part) >= 8  # UUID 형태의 최소 길이
+    
+    async def test_content_field_json_validation_for_inquiries(self, posts_service, mock_post_repository, sample_user):
+        """Test that inquiry posts have proper JSON structure in content field."""
+        # Arrange - Valid JSON content for inquiry
+        valid_inquiry = PostCreate(
+            title="유효한 문의",
+            content='{"content": "문의 내용", "contact": "010-1234-5678", "website_url": "https://example.com"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="moving-services-register-inquiry",
+                editor_type="plain"
+            )
+        )
+        
+        created_post = Mock()
+        created_post.content = valid_inquiry.content
+        created_post.metadata = valid_inquiry.metadata
+        mock_post_repository.create.return_value = created_post
+        
+        # Act
+        result = await posts_service.create_post(valid_inquiry, sample_user)
+        
+        # Assert
+        import json
+        content_data = json.loads(result.content)
+        assert "content" in content_data
+        assert "contact" in content_data
+        assert "website_url" in content_data
+        assert content_data["content"] == "문의 내용"
+        assert content_data["contact"] == "010-1234-5678"
+        assert content_data["website_url"] == "https://example.com"
+    
+    async def test_content_field_json_validation_for_suggestions_and_reports(self, posts_service, mock_post_repository, sample_user):
+        """Test that suggestions and reports have simpler JSON structure in content field."""
+        # Arrange - Valid JSON content for suggestions/reports
+        valid_suggestion = PostCreate(
+            title="유효한 건의",
+            content='{"content": "건의 내용입니다"}',
+            service="residential_community",
+            metadata=PostMetadata(
+                type="suggestions",
+                editor_type="plain"
+            )
+        )
+        
+        created_post = Mock()
+        created_post.content = valid_suggestion.content
+        created_post.metadata = valid_suggestion.metadata
+        mock_post_repository.create.return_value = created_post
+        
+        # Act
+        result = await posts_service.create_post(valid_suggestion, sample_user)
+        
+        # Assert
+        import json
+        content_data = json.loads(result.content)
+        assert "content" in content_data
+        assert content_data["content"] == "건의 내용입니다"
+        # 건의/신고는 contact, website_url 필드가 없어야 함
+        assert "contact" not in content_data
+        assert "website_url" not in content_data

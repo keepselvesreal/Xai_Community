@@ -1,5 +1,7 @@
 """Posts service layer for business logic."""
 
+import uuid
+import json
 from typing import List, Dict, Any, Optional
 from nadle_backend.models.core import User, Post, PostCreate, PostUpdate, PostResponse, PaginatedResponse, PostMetadata, UserReaction, Comment
 from nadle_backend.repositories.post_repository import PostRepository
@@ -38,12 +40,57 @@ class PostsService:
         """댓글 배치 캐시 키 생성 (환경별 프리픽스 적용)"""
         return get_prefixed_key(f"comments_batch_v2:{post_slug}")
     
-    async def create_post(self, post_data: PostCreate, current_user: User) -> Post:
-        """Create a new post.
+    def _generate_anonymous_author_id(self) -> str:
+        """Generate anonymous author ID for non-authenticated users.
+        
+        Returns:
+            Anonymous author ID with format: anonymous_{uuid}
+        """
+        return f"anonymous_{uuid.uuid4().hex[:16]}"
+    
+    def _validate_inquiry_content(self, content: str, post_type: str) -> None:
+        """Validate content structure for inquiry/report posts.
+        
+        Args:
+            content: Content string (should be JSON for inquiries)
+            post_type: Type of the post
+            
+        Raises:
+            ValueError: If content structure is invalid
+        """
+        inquiry_types = ["moving-services-register-inquiry", "expert-tips-register-inquiry"]
+        simple_types = ["suggestions", "report"]
+        
+        if post_type in inquiry_types or post_type in simple_types:
+            try:
+                content_data = json.loads(content)
+                
+                # 모든 타입에 content 필드는 필수
+                if "content" not in content_data:
+                    raise ValueError(f"Missing required 'content' field for {post_type}")
+                
+                # 등록 문의는 contact, website_url 필드가 추가로 필요
+                if post_type in inquiry_types:
+                    if "contact" not in content_data:
+                        raise ValueError(f"Missing required 'contact' field for {post_type}")
+                    if "website_url" not in content_data:
+                        raise ValueError(f"Missing required 'website_url' field for {post_type}")
+                
+                # 건의/신고는 추가 필드가 없어야 함
+                elif post_type in simple_types:
+                    invalid_fields = set(content_data.keys()) - {"content"}
+                    if invalid_fields:
+                        raise ValueError(f"Invalid fields {invalid_fields} for {post_type}")
+                        
+            except json.JSONDecodeError:
+                raise ValueError(f"Content must be valid JSON for {post_type}")
+
+    async def create_post(self, post_data: PostCreate, current_user: Optional[User] = None) -> Post:
+        """Create a new post with support for anonymous users.
         
         Args:
             post_data: Post creation data
-            current_user: Current authenticated user
+            current_user: Current authenticated user (None for anonymous)
             
         Returns:
             Created post instance
@@ -55,9 +102,25 @@ class PostsService:
             post_data.metadata.type = "board"
             if not post_data.metadata.category:
                 post_data.metadata.category = "입주 정보"
+        
+        # 새로운 문의/신고 타입들에 대한 content 검증
+        if post_data.metadata.type in [
+            "moving-services-register-inquiry", 
+            "expert-tips-register-inquiry", 
+            "suggestions", 
+            "report"
+        ]:
+            self._validate_inquiry_content(post_data.content, post_data.metadata.type)
+        
+        # Determine author ID
+        if current_user is not None:
+            author_id = str(current_user.id)
+        else:
+            # Generate anonymous author ID for non-authenticated users
+            author_id = self._generate_anonymous_author_id()
             
-        # Create post with current user as author
-        post = await self.post_repository.create(post_data, str(current_user.id))
+        # Create post
+        post = await self.post_repository.create(post_data, author_id)
         return post
     
     async def get_post(self, slug_or_id: str, current_user: Optional[User] = None) -> Post:
