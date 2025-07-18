@@ -192,12 +192,19 @@ export default function Dashboard() {
         {user && (user.is_admin === true || user.email === "admin@example.com" || user.role === "admin") && (
           <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
             <h3 className="text-lg font-semibold text-gray-900 mb-3">🔧 관리자 도구</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/monitoring')}>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/analytics')}>
                 <Card.Content className="text-center py-4">
                   <div className="text-3xl mb-2">📊</div>
-                  <div className="font-semibold text-gray-900">모니터링 대시보드</div>
-                  <div className="text-sm text-gray-500 mt-1">시스템 성능 및 에러 추적</div>
+                  <div className="font-semibold text-gray-900">사용자 분석</div>
+                  <div className="text-sm text-gray-500 mt-1">GA4 및 커뮤니티 분석</div>
+                </Card.Content>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/monitoring')}>
+                <Card.Content className="text-center py-4">
+                  <div className="text-3xl mb-2">🖥️</div>
+                  <div className="font-semibold text-gray-900">시스템 모니터링</div>
+                  <div className="text-sm text-gray-500 mt-1">성능 및 에러 추적</div>
                 </Card.Content>
               </Card>
               <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/alerts')}>
