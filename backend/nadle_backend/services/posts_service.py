@@ -40,19 +40,19 @@ class PostsService:
         """댓글 배치 캐시 키 생성 (환경별 프리픽스 적용)"""
         return get_prefixed_key(f"comments_batch_v2:{post_slug}")
     
-    def _generate_anonymous_author_id(self) -> str:
-        """Generate anonymous author ID for non-authenticated users.
+    def _generate_guest_inquiry_author_id(self) -> str:
+        """Generate guest inquiry author ID for non-authenticated users.
         
         Returns:
-            Anonymous author ID with format: anonymous_{uuid}
+            Guest inquiry author ID with format: guest_inquiry_{uuid}
         """
-        return f"anonymous_{uuid.uuid4().hex[:16]}"
+        return f"guest_inquiry_{uuid.uuid4().hex[:16]}"
     
     def _validate_inquiry_content(self, content: str, post_type: str) -> None:
         """Validate content structure for inquiry/report posts.
         
         Args:
-            content: Content string (should be JSON for inquiries)
+            content: Content string (JSON for inquiries, plain text for suggestions/report)
             post_type: Type of the post
             
         Raises:
@@ -61,29 +61,29 @@ class PostsService:
         inquiry_types = ["moving-services-register-inquiry", "expert-tips-register-inquiry"]
         simple_types = ["suggestions", "report"]
         
-        if post_type in inquiry_types or post_type in simple_types:
+        # 등록 문의 타입만 JSON 검증
+        if post_type in inquiry_types:
             try:
                 content_data = json.loads(content)
                 
-                # 모든 타입에 content 필드는 필수
+                # content 필드는 필수
                 if "content" not in content_data:
                     raise ValueError(f"Missing required 'content' field for {post_type}")
                 
                 # 등록 문의는 contact, website_url 필드가 추가로 필요
-                if post_type in inquiry_types:
-                    if "contact" not in content_data:
-                        raise ValueError(f"Missing required 'contact' field for {post_type}")
-                    if "website_url" not in content_data:
-                        raise ValueError(f"Missing required 'website_url' field for {post_type}")
-                
-                # 건의/신고는 추가 필드가 없어야 함
-                elif post_type in simple_types:
-                    invalid_fields = set(content_data.keys()) - {"content"}
-                    if invalid_fields:
-                        raise ValueError(f"Invalid fields {invalid_fields} for {post_type}")
+                if "contact" not in content_data:
+                    raise ValueError(f"Missing required 'contact' field for {post_type}")
+                if "website_url" not in content_data:
+                    raise ValueError(f"Missing required 'website_url' field for {post_type}")
                         
             except json.JSONDecodeError:
                 raise ValueError(f"Content must be valid JSON for {post_type}")
+        
+        # 건의/신고는 일반 텍스트이므로 별도 검증 없음
+        elif post_type in simple_types:
+            # 일반 텍스트는 비어있지 않으면 OK
+            if not content or not content.strip():
+                raise ValueError(f"Content cannot be empty for {post_type}")
 
     async def create_post(self, post_data: PostCreate, current_user: Optional[User] = None) -> Post:
         """Create a new post with support for anonymous users.
@@ -116,8 +116,8 @@ class PostsService:
         if current_user is not None:
             author_id = str(current_user.id)
         else:
-            # Generate anonymous author ID for non-authenticated users
-            author_id = self._generate_anonymous_author_id()
+            # Generate guest inquiry author ID for non-authenticated users
+            author_id = self._generate_guest_inquiry_author_id()
             
         # Create post
         post = await self.post_repository.create(post_data, author_id)

@@ -235,7 +235,7 @@ async def get_post(
 @router.post("/", response_model=PostResponse, status_code=status.HTTP_201_CREATED)
 async def create_post(
     post_data: PostCreate,
-    current_user: User = Depends(get_current_active_user),
+    current_user: Optional[User] = Depends(get_optional_current_active_user),
     posts_service: PostsService = Depends(get_posts_service)
 ):
     """Create a new post."""
