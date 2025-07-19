@@ -144,6 +144,7 @@ def create_app() -> FastAPI:
     logger.info("🛣️ Routers 추가 테스트 시작...")
     try:
         from nadle_backend.routers import auth, posts, comments, users, file_upload, content, health, monitoring, alerts, admin
+        from nadle_backend.logging.routers import logging_router
         
         # API 라우터들 추가
         app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
@@ -156,8 +157,9 @@ def create_app() -> FastAPI:
         app.include_router(monitoring.router, tags=["monitoring"])  # HetrixTools 모니터링 라우터 추가
         app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])  # 지능형 알림 라우터 추가
         app.include_router(admin.router, prefix="/api", tags=["admin"])  # 관리자 라우터 추가
+        app.include_router(logging_router, prefix="/api", tags=["logging"])  # 로깅 시스템 라우터 추가
         
-        logger.info("✅ Routers 추가 성공 (HetrixTools 모니터링 포함)")
+        logger.info("✅ Routers 추가 성공 (HetrixTools 모니터링 및 로깅 시스템 포함)")
         routers_status = "added"
     except Exception as e:
         logger.error(f"❌ Routers 추가 실패: {e}")
@@ -242,7 +244,25 @@ def create_app() -> FastAPI:
         sentry_status = "add_failed"
         sentry_error = str(e)
     
-    # 8. CORS 및 기타 설정 추가 (최종 단계)
+    # 8. LoggingMiddleware 추가 테스트
+    logging_middleware_status = "not_tested"
+    logging_middleware_error = None
+    
+    logger.info("📝 LoggingMiddleware 추가 중...")
+    try:
+        from nadle_backend.middleware.logging_middleware import LoggingMiddleware
+        
+        # LoggingMiddleware 추가 (API 요청 자동 로깅)
+        app.add_middleware(LoggingMiddleware)
+        
+        logger.info("✅ LoggingMiddleware 추가 성공")
+        logging_middleware_status = "added"
+    except Exception as e:
+        logger.error(f"❌ LoggingMiddleware 추가 실패: {e}")
+        logging_middleware_status = "add_failed"
+        logging_middleware_error = str(e)
+    
+    # 9. CORS 및 기타 설정 추가 (최종 단계)
     final_setup_status = "not_tested"
     final_setup_error = None
     
