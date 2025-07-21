@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import AppLayout from "~/components/layout/AppLayout";
 import Card from "~/components/ui/Card";
 import { PostCardSkeleton } from "~/components/common/PostCardSkeleton";
+import InquiryManagement from "~/components/admin/InquiryManagement";
 import { useAuth } from "~/contexts/AuthContext";
 import { apiClient } from "~/lib/api";
 import { CacheManager, CACHE_KEYS } from "~/lib/cache";
@@ -171,6 +172,24 @@ export default function Home() {
           ))}
         </div>
       </div>
+
+      {/* 관리자 전용 문의 관리 섹션 */}
+      {(() => {
+        console.log('🔍 사용자 정보:', user);
+        console.log('🔍 is_admin 체크:', user?.is_admin);
+        console.log('🔍 user?.email:', user?.email);
+        
+        // 임시로 ktsfrank@naver.com 또는 is_admin 체크
+        const isAdmin = user?.is_admin || user?.email === 'ktsfrank@naver.com';
+        console.log('🔍 최종 관리자 체크:', isAdmin);
+        
+        return isAdmin && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">👑 관리자 - 등록 문의 관리</h2>
+            <InquiryManagement />
+          </div>
+        );
+      })()}
 
       {/* 최근 게시글 */}
       <div className="mb-8">

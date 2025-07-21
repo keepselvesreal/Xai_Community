@@ -9,6 +9,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
     size = "md", 
     disabled = false,
     loading = false,
+    isLoading = false,
+    loadingText,
     children, 
     ...props 
   }, ref) => {
@@ -27,6 +29,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       lg: "h-12 px-6 text-base",
     };
     
+    const isButtonLoading = loading || isLoading;
+    
     return (
       <button
         className={cn(
@@ -36,13 +40,13 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           className
         )}
         ref={ref}
-        disabled={disabled || loading}
+        disabled={disabled || isButtonLoading}
         {...props}
       >
-        {loading && (
+        {isButtonLoading && (
           <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
         )}
-        {children}
+        {isButtonLoading && loadingText ? loadingText : children}
       </button>
     );
   }

@@ -143,7 +143,7 @@ def create_app() -> FastAPI:
     
     logger.info("🛣️ Routers 추가 테스트 시작...")
     try:
-        from nadle_backend.routers import auth, posts, comments, users, file_upload, content, health, monitoring, alerts, admin
+        from nadle_backend.routers import auth, posts, comments, users, file_upload, content, health, monitoring, alerts, admin, analytics, reports
         from nadle_backend.logging.routers import logging_router
         
         # API 라우터들 추가
@@ -157,6 +157,8 @@ def create_app() -> FastAPI:
         app.include_router(monitoring.router, tags=["monitoring"])  # HetrixTools 모니터링 라우터 추가
         app.include_router(alerts.router, prefix="/api/alerts", tags=["alerts"])  # 지능형 알림 라우터 추가
         app.include_router(admin.router, prefix="/api", tags=["admin"])  # 관리자 라우터 추가
+        app.include_router(analytics.router, prefix="/api", tags=["analytics"])  # 분석 라우터 추가
+        app.include_router(reports.router, prefix="/api/reports", tags=["reports"])  # 신고 라우터 추가
         app.include_router(logging_router, prefix="/api", tags=["logging"])  # 로깅 시스템 라우터 추가
         
         logger.info("✅ Routers 추가 성공 (HetrixTools 모니터링 및 로깅 시스템 포함)")

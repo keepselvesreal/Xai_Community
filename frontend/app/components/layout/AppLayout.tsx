@@ -1,6 +1,5 @@
 import { useState } from "react";
 import Sidebar from "./Sidebar";
-import TopNavbar from "./TopNavbar";
 import { useTheme } from "~/contexts/ThemeContext";
 import { useAuth } from "~/contexts/AuthContext";
 import SessionWarningModal from "~/components/common/SessionWarningModal";
@@ -30,39 +29,36 @@ const AppLayout = ({
   return (
     <div className="min-h-screen bg-var-primary flex">
       {/* Navigation Area - 전체가 함께 토글됨 */}
-      <div className={`fixed top-0 left-0 w-[280px] h-screen z-[1002] transition-transform duration-300 ease-in-out ${
+      <div className={`fixed top-0 left-0 w-[240px] h-screen z-[1002] transition-transform duration-300 ease-in-out ${
         isNavigationCollapsed ? '-translate-x-full' : 'translate-x-0'
       }`}>
-        {/* Top Navbar */}
-        <TopNavbar 
-          user={user}
-          onLogout={onLogout}
-        />
-        
-        {/* Sidebar */}
+        {/* Sidebar - 통합된 사이드바 */}
         <Sidebar 
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
           onToggleCollapse={() => setIsNavigationCollapsed(!isNavigationCollapsed)}
           isCollapsed={isNavigationCollapsed}
+          user={user}
+          onLogout={onLogout}
         />
       </div>
 
-      {/* Menu Show Button (when collapsed) - 메뉴 숨김 버튼과 동일한 스타일과 위치 */}
+      {/* 사이드바 숨김 시 나타나는 토글 버튼 - 기존 메뉴 표시 버튼과 동일한 중앙 위치 */}
       {isNavigationCollapsed && (
-        <div className="fixed left-2.5 bottom-[80px] w-auto h-[50px] bg-transparent flex items-center justify-center z-[1001]">
-          <button
-            onClick={() => setIsNavigationCollapsed(false)}
-            className="px-4 py-2 bg-gradient-to-br from-[#6B8E23] to-[#556B2F] border border-[#556B2F] rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 shadow-[0_2px_8px_rgba(107,142,35,0.2)] hover:bg-gradient-to-br hover:from-[#556B2F] hover:to-[#6B8E23] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(107,142,35,0.3)]"
-          >
-            메뉴 보기
-          </button>
-        </div>
+        <button
+          onClick={() => setIsNavigationCollapsed(false)}
+          className="fixed left-0 top-1/2 transform -translate-y-1/2 z-[1002] bg-gradient-to-br from-[#ff4757] to-[#ff3742] hover:from-[#ff3742] hover:to-[#ff2f3a] border-none rounded-r-lg py-6 px-1.5 text-white font-bold cursor-pointer transition-all duration-300 shadow-[2px_0_12px_rgba(255,71,87,0.3)] hover:shadow-[4px_0_16px_rgba(255,71,87,0.4)] hover:scale-110"
+        >
+          <div className="flex items-center gap-1">
+            <div className="w-1 h-10 bg-white rounded-sm opacity-80"></div>
+            <div className="w-0 h-0 border-l-[12px] border-l-white border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent opacity-80"></div>
+          </div>
+        </button>
       )}
 
       {/* Main content area */}
       <div className={`flex-1 flex flex-col relative transition-all duration-300 ease-in-out ${
-        isNavigationCollapsed ? 'ml-0' : 'ml-[280px]'
+        isNavigationCollapsed ? 'ml-0' : 'ml-[240px]'
       }`}>
         {/* Mobile menu button (floating) */}
         <button

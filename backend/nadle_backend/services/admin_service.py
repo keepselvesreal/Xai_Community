@@ -43,7 +43,7 @@ class AdminService:
         # Define allowed transitions
         allowed_transitions = {
             "pending": ["resolved", "rejected"],
-            "published": ["archived", "deleted"],
+            "published": ["resolved", "rejected", "archived", "deleted"],  # 등록 문의를 위해 resolved, rejected 추가
             "draft": ["published", "deleted"],
             "archived": ["published", "deleted"],
         }

@@ -108,11 +108,14 @@ const InquiryModal = ({ isOpen, onClose, config, onSubmit, isLoading = false }: 
         contentData = formData.content || "";
       }
 
-      // 제목 생성 (이름 필드가 있으면 사용, 없으면 기본 제목)
-      const titleSuffix = formData.name ? ` - ${formData.name}` : "";
+      // 제목 생성 (등록 문의는 name 필드를 제목으로 사용)
+      let title = config.title; // 기본값
+      if (hasExtraFields && formData.name) {
+        title = formData.name; // 등록 문의의 경우 name 필드가 제목
+      }
       
       const submissionData: InquirySubmissionData = {
-        title: `${config.title}${titleSuffix}`,
+        title: title,
         content: contentData,
         service: "residential_community",
         metadata: {

@@ -138,7 +138,7 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ className = '' }) => 
   // 필터링된 규칙 목록
   const filteredRules = rules.filter(rule => {
     const matchesSearch = rule.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         rule.description.toLowerCase().includes(searchTerm.toLowerCase());
+                         (rule.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false);
     const matchesSeverity = severityFilter === 'all' || rule.severity === severityFilter;
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'active' && rule.enabled) ||
@@ -245,15 +245,19 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ className = '' }) => 
     setSelectedRule(rule);
     setFormData({
       name: rule.name,
-      description: rule.description,
+      description: rule.description || '',
       condition: rule.condition,
-      threshold: rule.threshold,
+      threshold: {
+        metric: rule.threshold.metric,
+        value: rule.threshold.value,
+        duration_minutes: rule.threshold.duration_minutes || 5
+      },
       severity: rule.severity,
       channels: rule.channels,
-      cooldown_minutes: rule.cooldown_minutes,
-      escalation_minutes: rule.escalation_minutes,
+      cooldown_minutes: rule.cooldown_minutes || 30,
+      escalation_minutes: rule.escalation_minutes || 60,
       enabled: rule.enabled,
-      tags: rule.tags
+      tags: rule.tags || {}
     });
     setShowEditModal(true);
   };
@@ -399,7 +403,7 @@ const AlertManagement: React.FC<AlertManagementProps> = ({ className = '' }) => 
                       <span className={`text-xs capitalize ${
                         status === 'healthy' ? 'text-green-700' :
                         status === 'degraded' ? 'text-yellow-700' : 'text-red-700'
-                      }`}>{status}</span>
+                      }`}>{String(status)}</span>
                     </div>
                   </div>
                 ))}

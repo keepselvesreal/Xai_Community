@@ -1,0 +1,53 @@
+[
+  {
+    "log_type": "mongod",
+    "status_code": 406,
+    "headers": {
+      "date": "Sat, 19 Jul 2025 02:30:10 GMT",
+      "strict-transport-security": "max-age=31536000; includeSubdomains;",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "x-permitted-cross-domain-policies": "none",
+      "x-content-type-options": "nosniff",
+      "content-type": "application/json",
+      "deprecation": "Wed, 1 Feb 2023 00:00:00 GMT",
+      "sunset": "Mon, 30 Nov 2026 00:00:00 GMT",
+      "content-length": "210",
+      "server": "mdbws",
+      "x-envoy-upstream-service-time": "10"
+    },
+    "content_length": 210,
+    "is_gzipped": false,
+    "start_time": 1752838208,
+    "end_time": 1752859808,
+    "error_response": "{\"detail\":\"The Atlas Administration API doesn't support media-type json. Please use: gzip.\",\"error\":406,\"errorCode\":\"MEDIA_TYPE_NOT_SUPPORTED_FOR_VERSION\",\"parameters\":[\"json\",\"gzip\"],\"reason\":\"Not Acceptable\"}"
+  },
+  {
+    "log_type": "mongos",
+    "status_code": 406,
+    "headers": {
+      "date": "Sat, 19 Jul 2025 02:30:11 GMT",
+      "strict-transport-security": "max-age=31536000; includeSubdomains;",
+      "referrer-policy": "strict-origin-when-cross-origin",
+      "x-permitted-cross-domain-policies": "none",
+      "x-content-type-options": "nosniff",
+      "content-type": "application/json",
+      "deprecation": "Wed, 1 Feb 2023 00:00:00 GMT",
+      "sunset": "Mon, 30 Nov 2026 00:00:00 GMT",
+      "content-length": "210",
+      "server": "mdbws",
+      "x-envoy-upstream-service-time": "15"
+    },
+    "content_length": 210,
+    "is_gzipped": false,
+    "start_time": 1752838208,
+    "end_time": 1752859808,
+    "error_response": "{\"detail\":\"The Atlas Administration API doesn't support media-type json. Please use: gzip.\",\"error\":406,\"errorCode\":\"MEDIA_TYPE_NOT_SUPPORTED_FOR_VERSION\",\"parameters\":[\"json\",\"gzip\"],\"reason\":\"Not Acceptable\"}"
+  },
+  {
+    "log_type": "access_history",
+    "status_code": 200,
+    "response": {
+      "accessLogs": []
+    }
+  }
+]

@@ -18,29 +18,34 @@ from .database.connection import database
 from .database.manager import IndexManager
 
 # Models
-from .models.core import (
-    User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
-)
+from .models.core import User, Post, Comment, PostStats, UserReaction, Stats, FileRecord
 
 # Note: Specific classes can be imported individually as needed
 # Example: from nadle_backend.services.auth_service import AuthService
 
 __all__ = [
     # Version and metadata
-    "__version__", "__author__", "__license__",
-    
+    "__version__",
+    "__author__",
+    "__license__",
     # Configuration
-    "settings", "get_settings",
-    
+    "settings",
+    "get_settings",
     # Database
-    "database", "IndexManager",
-    
+    "database",
+    "IndexManager",
     # Models
-    "User", "Post", "Comment", "PostStats", "UserReaction", "Stats", "FileRecord",
-    
+    "User",
+    "Post",
+    "Comment",
+    "PostStats",
+    "UserReaction",
+    "Stats",
+    "FileRecord",
     # Package info
     "get_package_info",
 ]
+
 
 # Package information
 def get_package_info():

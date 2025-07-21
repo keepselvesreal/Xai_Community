@@ -1,7 +1,7 @@
 """
 통합 모니터링 API 라우터
 
-HetrixTools 업타임 모니터링과 인프라 모니터링(Cloud Run, Vercel, Atlas, Upstash)을 
+HetrixTools 업타임 모니터링과 인프라 모니터링(Cloud Run, Vercel, Atlas, Upstash)을
 통합하여 제공하는 API 엔드포인트
 """
 
@@ -13,10 +13,10 @@ from datetime import datetime
 
 # 기존 HetrixTools 모니터링
 from ..services.hetrix_monitoring import (
-    HetrixMonitoringService, 
+    HetrixMonitoringService,
     HealthCheckService,
     Monitor,
-    UptimeStatus
+    UptimeStatus,
 )
 
 # 새로운 인프라 모니터링
@@ -25,7 +25,7 @@ from ..models.monitoring import (
     InfrastructureType,
     ServiceStatus,
     UnifiedMonitoringResponse,
-    HealthCheckResponse
+    HealthCheckResponse,
 )
 
 # 새로운 Sentry 및 엔드포인트 모니터링
@@ -44,8 +44,7 @@ def get_hetrix_service() -> HetrixMonitoringService:
     settings = get_settings()
     if not settings.hetrixtools_api_token:
         raise HTTPException(
-            status_code=503, 
-            detail="HetrixTools API 토큰이 설정되지 않았습니다"
+            status_code=503, detail="HetrixTools API 토큰이 설정되지 않았습니다"
         )
     return HetrixMonitoringService(api_token=settings.hetrixtools_api_token)
 
@@ -75,19 +74,19 @@ async def monitoring_status() -> Dict[str, Any]:
     """모니터링 시스템 전체 상태 조회"""
     try:
         health_service = get_health_service()
-        
+
         # 간단한 헬스체크와 HetrixTools 상태 확인
         simple_health = await health_service.simple_health_check()
         hetrix_health = await health_service._check_hetrix_monitoring()
-        
+
         return {
             "status": "operational",
             "timestamp": datetime.utcnow().isoformat(),
             "monitoring_service": "hetrixtools",
             "api_health": simple_health,
-            "hetrix_monitoring": hetrix_health
+            "hetrix_monitoring": hetrix_health,
         }
-        
+
     except Exception as e:
         logger.error(f"모니터링 상태 조회 실패: {e}")
         raise HTTPException(status_code=500, detail=f"상태 조회 실패: {str(e)}")
@@ -95,8 +94,10 @@ async def monitoring_status() -> Dict[str, Any]:
 
 @router.get("/hetrix/monitors")
 async def get_monitors(
-    environment: Optional[str] = Query(None, description="환경 필터 (development, staging, production)"),
-    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service)
+    environment: Optional[str] = Query(
+        None, description="환경 필터 (development, staging, production)"
+    ),
+    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
 ) -> Dict[str, Any]:
     """HetrixTools 모니터 목록 조회"""
     # 환경 검증
@@ -104,10 +105,10 @@ async def get_monitors(
         valid_environments = ["development", "staging", "production"]
         if environment not in valid_environments:
             raise HTTPException(
-                status_code=400, 
-                detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}"
+                status_code=400,
+                detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}",
             )
-    
+
     try:
         async with hetrix_service as service:
             if environment:
@@ -118,31 +119,33 @@ async def get_monitors(
                 # 모든 모니터 조회
                 monitors = await service.get_monitors_async()
                 logger.info(f"전체 모니터 {len(monitors)}개 조회")
-            
+
             # Monitor 객체를 dict로 변환
             monitors_data = []
             for monitor in monitors:
-                monitors_data.append({
-                    "id": monitor.id,
-                    "name": monitor.name,
-                    "url": monitor.url,
-                    "status": monitor.status.value,
-                    "uptime": monitor.uptime,
-                    "monitor_type": monitor.monitor_type,
-                    "created_at": monitor.created_at,
-                    "last_check": monitor.last_check,
-                    "last_status_change": monitor.last_status_change,
-                    "response_time": monitor.response_time,
-                    "locations": monitor.locations
-                })
-            
+                monitors_data.append(
+                    {
+                        "id": monitor.id,
+                        "name": monitor.name,
+                        "url": monitor.url,
+                        "status": monitor.status.value,
+                        "uptime": monitor.uptime,
+                        "monitor_type": monitor.monitor_type,
+                        "created_at": monitor.created_at,
+                        "last_check": monitor.last_check,
+                        "last_status_change": monitor.last_status_change,
+                        "response_time": monitor.response_time,
+                        "locations": monitor.locations,
+                    }
+                )
+
             return {
                 "total": len(monitors_data),
                 "environment": environment or "all",
                 "monitors": monitors_data,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
-            
+
     except Exception as e:
         logger.error(f"모니터 목록 조회 실패: {e}")
         raise HTTPException(status_code=500, detail=f"모니터 목록 조회 실패: {str(e)}")
@@ -151,16 +154,19 @@ async def get_monitors(
 @router.get("/hetrix/monitors/{monitor_id}")
 async def get_monitor_by_id(
     monitor_id: str,
-    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service)
+    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
 ) -> Dict[str, Any]:
     """특정 모니터 상세 정보 조회"""
     try:
         async with hetrix_service as service:
             monitor = await service.client.get_monitor_by_id(monitor_id)
-            
+
             if not monitor:
-                raise HTTPException(status_code=404, detail=f"모니터 ID '{monitor_id}'를 찾을 수 없습니다")
-            
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"모니터 ID '{monitor_id}'를 찾을 수 없습니다",
+                )
+
             return {
                 "monitor": {
                     "id": monitor.id,
@@ -173,11 +179,11 @@ async def get_monitor_by_id(
                     "last_check": monitor.last_check,
                     "last_status_change": monitor.last_status_change,
                     "response_time": monitor.response_time,
-                    "locations": monitor.locations
+                    "locations": monitor.locations,
                 },
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -188,16 +194,19 @@ async def get_monitor_by_id(
 @router.get("/hetrix/monitors/name/{monitor_name}")
 async def get_monitor_by_name(
     monitor_name: str,
-    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service)
+    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
 ) -> Dict[str, Any]:
     """모니터 이름으로 특정 모니터 조회"""
     try:
         async with hetrix_service as service:
             monitor = await service.client.get_monitor_by_name(monitor_name)
-            
+
             if not monitor:
-                raise HTTPException(status_code=404, detail=f"모니터 '{monitor_name}'를 찾을 수 없습니다")
-            
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"모니터 '{monitor_name}'를 찾을 수 없습니다",
+                )
+
             return {
                 "monitor": {
                     "id": monitor.id,
@@ -210,11 +219,11 @@ async def get_monitor_by_name(
                     "last_check": monitor.last_check,
                     "last_status_change": monitor.last_status_change,
                     "response_time": monitor.response_time,
-                    "locations": monitor.locations
+                    "locations": monitor.locations,
                 },
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
-            
+
     except HTTPException:
         raise
     except Exception as e:
@@ -224,65 +233,69 @@ async def get_monitor_by_name(
 
 @router.get("/hetrix/current-environment")
 async def get_current_environment_monitors(
-    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service)
+    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
 ) -> Dict[str, Any]:
     """현재 환경의 모니터 목록 조회"""
     try:
         async with hetrix_service as service:
             monitors = await service.get_current_environment_monitors()
-            
+
             # Monitor 객체를 dict로 변환
             monitors_data = []
             for monitor in monitors:
-                monitors_data.append({
-                    "id": monitor.id,
-                    "name": monitor.name,
-                    "url": monitor.url,
-                    "status": monitor.status.value,
-                    "uptime": monitor.uptime,
-                    "monitor_type": monitor.monitor_type,
-                    "created_at": monitor.created_at,
-                    "last_check": monitor.last_check,
-                    "last_status_change": monitor.last_status_change,
-                    "response_time": monitor.response_time,
-                    "locations": monitor.locations
-                })
-            
+                monitors_data.append(
+                    {
+                        "id": monitor.id,
+                        "name": monitor.name,
+                        "url": monitor.url,
+                        "status": monitor.status.value,
+                        "uptime": monitor.uptime,
+                        "monitor_type": monitor.monitor_type,
+                        "created_at": monitor.created_at,
+                        "last_check": monitor.last_check,
+                        "last_status_change": monitor.last_status_change,
+                        "response_time": monitor.response_time,
+                        "locations": monitor.locations,
+                    }
+                )
+
             settings = get_settings()
-            current_env = getattr(settings, 'environment', 'development')
-            
+            current_env = getattr(settings, "environment", "development")
+
             return {
                 "environment": current_env,
                 "total": len(monitors_data),
                 "monitors": monitors_data,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
-            
+
     except Exception as e:
         logger.error(f"현재 환경 모니터 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"현재 환경 모니터 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"현재 환경 모니터 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/hetrix/logs/{monitor_id}")
 async def get_monitor_logs(
     monitor_id: str,
     days: int = Query(1, ge=1, le=30, description="조회할 일수 (1-30일)"),
-    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service)
+    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
 ) -> Dict[str, Any]:
     """모니터 로그 조회 (현재 HetrixTools v3 API에서 미지원)"""
     try:
         async with hetrix_service as service:
             logs = await service.client.get_monitor_logs(monitor_id, days)
-            
+
             return {
                 "monitor_id": monitor_id,
                 "days": days,
                 "logs": logs,
                 "total": len(logs),
                 "note": "HetrixTools v3 API에서 로그 조회 기능이 현재 미지원됩니다",
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.utcnow().isoformat(),
             }
-            
+
     except Exception as e:
         logger.error(f"모니터 로그 조회 실패 (ID: {monitor_id}): {e}")
         raise HTTPException(status_code=500, detail=f"모니터 로그 조회 실패: {str(e)}")
@@ -290,13 +303,13 @@ async def get_monitor_logs(
 
 @router.get("/health/comprehensive")
 async def comprehensive_health_check(
-    health_service: HealthCheckService = Depends(get_health_service)
+    health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """종합 헬스체크 (데이터베이스, Redis, 외부 API, HetrixTools 포함)"""
     try:
         result = await health_service.comprehensive_health_check()
         return result
-        
+
     except Exception as e:
         logger.error(f"종합 헬스체크 실패: {e}")
         raise HTTPException(status_code=500, detail=f"종합 헬스체크 실패: {str(e)}")
@@ -304,13 +317,13 @@ async def comprehensive_health_check(
 
 @router.get("/health/simple")
 async def simple_health_check(
-    health_service: HealthCheckService = Depends(get_health_service)
+    health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """간단한 헬스체크 (외부 모니터링 서비스용)"""
     try:
         result = await health_service.simple_health_check()
         return result
-        
+
     except Exception as e:
         logger.error(f"간단한 헬스체크 실패: {e}")
         # 간단한 헬스체크는 실패하더라도 기본 응답 반환
@@ -319,21 +332,21 @@ async def simple_health_check(
             "timestamp": datetime.utcnow().isoformat(),
             "service": "nadle-backend-api",
             "error": str(e),
-            "monitoring_service": "hetrixtools"
+            "monitoring_service": "hetrixtools",
         }
 
 
 @router.get("/summary")
 async def monitoring_summary(
     hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
-    health_service: HealthCheckService = Depends(get_health_service)
+    health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """모니터링 시스템 요약 정보"""
     try:
         # 모든 모니터 조회
         async with hetrix_service as service:
             all_monitors = await service.get_monitors_async()
-            
+
         # 상태별 집계
         status_counts = {}
         total_uptime = 0
@@ -341,72 +354,74 @@ async def monitoring_summary(
             status = monitor.status.value
             status_counts[status] = status_counts.get(status, 0) + 1
             total_uptime += monitor.uptime
-        
+
         avg_uptime = total_uptime / len(all_monitors) if all_monitors else 0
-        
+
         # HetrixTools 모니터링 상태
         hetrix_health = await health_service._check_hetrix_monitoring()
-        
+
         return {
             "total_monitors": len(all_monitors),
             "status_breakdown": status_counts,
             "average_uptime": round(avg_uptime, 2),
             "hetrix_api_status": hetrix_health.get("status", "unknown"),
             "monitoring_service": "hetrixtools_v3",
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"모니터링 요약 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"모니터링 요약 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"모니터링 요약 조회 실패: {str(e)}"
+        )
 
 
 # 기존 UptimeRobot 호환성을 위한 별칭 엔드포인트들
 @router.get("/uptime/monitors", deprecated=True)
 async def get_uptime_monitors_legacy(
-    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service)
+    hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
 ) -> Dict[str, Any]:
     """기존 UptimeRobot API 호환성을 위한 엔드포인트 (deprecated)"""
-    logger.warning("레거시 /uptime/monitors 엔드포인트 사용됨. /hetrix/monitors 사용 권장")
-    
+    logger.warning(
+        "레거시 /uptime/monitors 엔드포인트 사용됨. /hetrix/monitors 사용 권장"
+    )
+
     try:
         async with hetrix_service as service:
             monitors = await service.get_monitors_async()
-            
+
             # UptimeRobot 형식으로 변환
             uptime_monitors = []
             for monitor in monitors:
-                uptime_monitors.append({
-                    "id": monitor.id,
-                    "friendly_name": monitor.name,
-                    "url": monitor.url,
-                    "status": 2 if monitor.status == UptimeStatus.UP else 1,  # UptimeRobot 형식
-                    "type": 1,  # HTTP(s)
-                    "create_datetime": str(monitor.created_at)
-                })
-            
-            return {
-                "stat": "ok",
-                "monitors": uptime_monitors
-            }
-            
+                uptime_monitors.append(
+                    {
+                        "id": monitor.id,
+                        "friendly_name": monitor.name,
+                        "url": monitor.url,
+                        "status": (
+                            2 if monitor.status == UptimeStatus.UP else 1
+                        ),  # UptimeRobot 형식
+                        "type": 1,  # HTTP(s)
+                        "create_datetime": str(monitor.created_at),
+                    }
+                )
+
+            return {"stat": "ok", "monitors": uptime_monitors}
+
     except Exception as e:
         logger.error(f"레거시 모니터 목록 조회 실패: {e}")
-        return {
-            "stat": "fail",
-            "error": {
-                "type": "api_error",
-                "message": str(e)
-            }
-        }
+        return {"stat": "fail", "error": {"type": "api_error", "message": str(e)}}
 
 
 # === 새로운 인프라 모니터링 엔드포인트들 ===
 
+
 @router.get("/infrastructure/status", response_model=UnifiedMonitoringResponse)
 async def get_infrastructure_status(
-    environment: Optional[str] = Query(None, description="환경 필터 (development, staging, production)"),
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    environment: Optional[str] = Query(
+        None, description="환경 필터 (development, staging, production)"
+    ),
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> UnifiedMonitoringResponse:
     """모든 인프라의 통합 상태 조회"""
     # 환경 검증
@@ -414,27 +429,29 @@ async def get_infrastructure_status(
         valid_environments = ["development", "staging", "production"]
         if environment not in valid_environments:
             raise HTTPException(
-                status_code=400, 
-                detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}"
+                status_code=400,
+                detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}",
             )
-    
+
     try:
         logger.info(f"인프라 통합 상태 조회 요청 (환경: {environment or 'all'})")
         result = await unified_service.get_all_infrastructure_status()
-        
+
         # 환경 정보를 응답에 추가
-        if hasattr(result, 'model_dump'):
+        if hasattr(result, "model_dump"):
             result_dict = result.model_dump()
-        elif hasattr(result, 'dict'):
+        elif hasattr(result, "dict"):
             result_dict = result.dict()
         else:
             result_dict = result.__dict__
-        
+
         result_dict["environment"] = environment or "all"
-        
-        logger.info(f"인프라 통합 상태 조회 완료: {result.infrastructure_count}개 서비스")
+
+        logger.info(
+            f"인프라 통합 상태 조회 완료: {result.infrastructure_count}개 서비스"
+        )
         return result_dict
-        
+
     except Exception as e:
         logger.error(f"인프라 상태 조회 실패: {e}")
         raise HTTPException(status_code=500, detail=f"인프라 상태 조회 실패: {str(e)}")
@@ -442,7 +459,7 @@ async def get_infrastructure_status(
 
 @router.get("/infrastructure/health", response_model=HealthCheckResponse)
 async def infrastructure_health_check(
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> HealthCheckResponse:
     """인프라 통합 헬스체크 (빠른 상태 확인)"""
     try:
@@ -450,7 +467,7 @@ async def infrastructure_health_check(
         result = await unified_service.health_check()
         logger.info(f"인프라 헬스체크 완료: {result.status.value}")
         return result
-        
+
     except Exception as e:
         logger.error(f"인프라 헬스체크 실패: {e}")
         raise HTTPException(status_code=500, detail=f"인프라 헬스체크 실패: {str(e)}")
@@ -458,25 +475,25 @@ async def infrastructure_health_check(
 
 @router.get("/infrastructure/services")
 async def get_configured_services(
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> Dict[str, Any]:
     """설정된 인프라 서비스 목록 조회"""
     try:
         configured_services = unified_service.get_configured_services()
-        
+
         return {
             "total_services": len(configured_services),
             "configured_services": [service.value for service in configured_services],
             "service_details": {
                 service.value: {
-                    "name": service.value.replace('_', ' ').title(),
-                    "type": service.value
+                    "name": service.value.replace("_", " ").title(),
+                    "type": service.value,
                 }
                 for service in configured_services
             },
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"설정된 서비스 목록 조회 실패: {e}")
         raise HTTPException(status_code=500, detail=f"서비스 목록 조회 실패: {str(e)}")
@@ -485,32 +502,32 @@ async def get_configured_services(
 @router.get("/infrastructure/{infrastructure_type}/metrics")
 async def get_service_metrics(
     infrastructure_type: InfrastructureType,
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> Dict[str, Any]:
     """특정 인프라 서비스의 상세 메트릭 조회"""
     try:
         logger.info(f"{infrastructure_type.value} 메트릭 조회 요청")
-        
+
         metrics = await unified_service.get_service_metrics(infrastructure_type)
-        
+
         if metrics is None:
             raise HTTPException(
-                status_code=404, 
-                detail=f"{infrastructure_type.value} 서비스가 설정되지 않았거나 메트릭을 가져올 수 없습니다"
+                status_code=404,
+                detail=f"{infrastructure_type.value} 서비스가 설정되지 않았거나 메트릭을 가져올 수 없습니다",
             )
-        
+
         # 메트릭을 딕셔너리로 변환
-        metrics_dict = metrics.dict() if hasattr(metrics, 'dict') else metrics.__dict__
-        
+        metrics_dict = metrics.dict() if hasattr(metrics, "dict") else metrics.__dict__
+
         result = {
             "infrastructure_type": infrastructure_type.value,
             "metrics": metrics_dict,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
         logger.info(f"{infrastructure_type.value} 메트릭 조회 완료")
         return result
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -520,15 +537,19 @@ async def get_service_metrics(
 
 @router.get("/infrastructure/cloud-run/status")
 async def get_cloud_run_status(
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> Dict[str, Any]:
     """Google Cloud Run 상태 조회"""
     try:
-        metrics = await unified_service.get_service_metrics(InfrastructureType.CLOUD_RUN)
-        
+        metrics = await unified_service.get_service_metrics(
+            InfrastructureType.CLOUD_RUN
+        )
+
         if metrics is None:
-            raise HTTPException(status_code=404, detail="Cloud Run 서비스가 설정되지 않았습니다")
-        
+            raise HTTPException(
+                status_code=404, detail="Cloud Run 서비스가 설정되지 않았습니다"
+            )
+
         return {
             "service": "cloud_run",
             "status": metrics.status.value,
@@ -539,29 +560,33 @@ async def get_cloud_run_status(
                 "memory_utilization": metrics.memory_utilization,
                 "instance_count": metrics.instance_count,
                 "request_count": metrics.request_count,
-                "response_time_ms": metrics.response_time_ms
+                "response_time_ms": metrics.response_time_ms,
             },
-            "timestamp": metrics.timestamp.isoformat()
+            "timestamp": metrics.timestamp.isoformat(),
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Cloud Run 상태 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"Cloud Run 상태 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Cloud Run 상태 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/infrastructure/vercel/status")
 async def get_vercel_status(
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> Dict[str, Any]:
     """Vercel 상태 조회"""
     try:
         metrics = await unified_service.get_service_metrics(InfrastructureType.VERCEL)
-        
+
         if metrics is None:
-            raise HTTPException(status_code=404, detail="Vercel 서비스가 설정되지 않았습니다")
-        
+            raise HTTPException(
+                status_code=404, detail="Vercel 서비스가 설정되지 않았습니다"
+            )
+
         return {
             "service": "vercel",
             "status": metrics.status.value,
@@ -571,11 +596,11 @@ async def get_vercel_status(
                 "deployment_url": metrics.deployment_url,
                 "function_invocations": metrics.function_invocations,
                 "core_web_vitals_score": metrics.core_web_vitals_score,
-                "response_time_ms": metrics.response_time_ms
+                "response_time_ms": metrics.response_time_ms,
             },
-            "timestamp": metrics.timestamp.isoformat()
+            "timestamp": metrics.timestamp.isoformat(),
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
@@ -585,15 +610,19 @@ async def get_vercel_status(
 
 @router.get("/infrastructure/atlas/status")
 async def get_atlas_status(
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> Dict[str, Any]:
     """MongoDB Atlas 상태 조회"""
     try:
-        metrics = await unified_service.get_service_metrics(InfrastructureType.MONGODB_ATLAS)
-        
+        metrics = await unified_service.get_service_metrics(
+            InfrastructureType.MONGODB_ATLAS
+        )
+
         if metrics is None:
-            raise HTTPException(status_code=404, detail="MongoDB Atlas 서비스가 설정되지 않았습니다")
-        
+            raise HTTPException(
+                status_code=404, detail="MongoDB Atlas 서비스가 설정되지 않았습니다"
+            )
+
         return {
             "service": "mongodb_atlas",
             "status": metrics.status.value,
@@ -604,29 +633,35 @@ async def get_atlas_status(
                 "cpu_usage_percent": metrics.cpu_usage_percent,
                 "memory_usage_percent": metrics.memory_usage_percent,
                 "operations_per_second": metrics.operations_per_second,
-                "response_time_ms": metrics.response_time_ms
+                "response_time_ms": metrics.response_time_ms,
             },
-            "timestamp": metrics.timestamp.isoformat()
+            "timestamp": metrics.timestamp.isoformat(),
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"MongoDB Atlas 상태 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"MongoDB Atlas 상태 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"MongoDB Atlas 상태 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/infrastructure/upstash/status")
 async def get_upstash_status(
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service)
+    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
 ) -> Dict[str, Any]:
     """Upstash Redis 상태 조회"""
     try:
-        metrics = await unified_service.get_service_metrics(InfrastructureType.UPSTASH_REDIS)
-        
+        metrics = await unified_service.get_service_metrics(
+            InfrastructureType.UPSTASH_REDIS
+        )
+
         if metrics is None:
-            raise HTTPException(status_code=404, detail="Upstash Redis 서비스가 설정되지 않았습니다")
-        
+            raise HTTPException(
+                status_code=404, detail="Upstash Redis 서비스가 설정되지 않았습니다"
+            )
+
         return {
             "service": "upstash_redis",
             "status": metrics.status.value,
@@ -637,19 +672,22 @@ async def get_upstash_status(
                 "memory_usage_percent": metrics.memory_usage_percent,
                 "connection_count": metrics.connection_count,
                 "operations_per_second": metrics.operations_per_second,
-                "response_time_ms": metrics.response_time_ms
+                "response_time_ms": metrics.response_time_ms,
             },
-            "timestamp": metrics.timestamp.isoformat()
+            "timestamp": metrics.timestamp.isoformat(),
         }
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Upstash Redis 상태 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"Upstash Redis 상태 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Upstash Redis 상태 조회 실패: {str(e)}"
+        )
 
 
 # === 새로운 통합 API들 ===
+
 
 @router.get("/environments")
 async def get_environments() -> Dict[str, Any]:
@@ -657,7 +695,7 @@ async def get_environments() -> Dict[str, Any]:
     return {
         "environments": ["development", "staging", "production"],
         "default": "production",
-        "description": "모니터링 가능한 환경 목록"
+        "description": "모니터링 가능한 환경 목록",
     }
 
 
@@ -666,54 +704,56 @@ async def get_unified_dashboard(
     environment: str,
     hetrix_service: HetrixMonitoringService = Depends(get_hetrix_service),
     unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
-    health_service: HealthCheckService = Depends(get_health_service)
+    health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """환경별 통합 대시보드 API - 모든 모니터링 데이터를 하나의 엔드포인트에서 제공"""
-    
+
     # 환경 검증
     valid_environments = ["development", "staging", "production"]
     if environment not in valid_environments:
         raise HTTPException(
-            status_code=400, 
-            detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}"
+            status_code=400,
+            detail=f"유효하지 않은 환경입니다. 사용 가능한 환경: {', '.join(valid_environments)}",
         )
-    
+
     try:
         logger.info(f"환경 '{environment}' 통합 대시보드 조회 시작")
-        
+
         # 1. 외부 모니터링 (HetrixTools)
         external_monitoring = {}
         try:
             async with hetrix_service as service:
                 monitors = await service.client.get_monitors_by_environment(environment)
-                
+
                 monitors_data = []
                 for monitor in monitors:
-                    monitors_data.append({
-                        "id": monitor.id,
-                        "name": monitor.name,
-                        "url": monitor.url,
-                        "status": monitor.status.value,
-                        "uptime": monitor.uptime,
-                        "response_time": monitor.response_time,
-                        "last_check": monitor.last_check
-                    })
-                
+                    monitors_data.append(
+                        {
+                            "id": monitor.id,
+                            "name": monitor.name,
+                            "url": monitor.url,
+                            "status": monitor.status.value,
+                            "uptime": monitor.uptime,
+                            "response_time": monitor.response_time,
+                            "last_check": monitor.last_check,
+                        }
+                    )
+
                 external_monitoring = {
                     "service": "hetrixtools",
                     "total_monitors": len(monitors_data),
-                    "monitors": monitors_data
+                    "monitors": monitors_data,
                 }
-                
+
         except Exception as e:
             logger.warning(f"외부 모니터링 조회 실패: {e}")
             external_monitoring = {
                 "service": "hetrixtools",
                 "error": str(e),
                 "total_monitors": 0,
-                "monitors": []
+                "monitors": [],
             }
-        
+
         # 2. 애플리케이션 모니터링 (헬스체크)
         application_monitoring = {}
         try:
@@ -721,56 +761,57 @@ async def get_unified_dashboard(
             application_monitoring = {
                 "health_status": health_result.get("status", "unknown"),
                 "service": health_result.get("service", "nadle-backend-api"),
-                "timestamp": health_result.get("timestamp", datetime.utcnow().isoformat())
+                "timestamp": health_result.get(
+                    "timestamp", datetime.utcnow().isoformat()
+                ),
             }
         except Exception as e:
             logger.warning(f"애플리케이션 모니터링 조회 실패: {e}")
             application_monitoring = {
                 "health_status": "unhealthy",
                 "error": str(e),
-                "service": "nadle-backend-api"
+                "service": "nadle-backend-api",
             }
-        
+
         # 3. 인프라 모니터링 (4개 서비스)
         infrastructure_monitoring = {}
         try:
             infra_result = await unified_service.get_all_infrastructure_status()
             # Pydantic 모델을 딕셔너리로 변환
-            if hasattr(infra_result, 'model_dump'):
+            if hasattr(infra_result, "model_dump"):
                 infrastructure_monitoring = infra_result.model_dump()
-            elif hasattr(infra_result, 'dict'):
+            elif hasattr(infra_result, "dict"):
                 infrastructure_monitoring = infra_result.dict()
             else:
                 infrastructure_monitoring = infra_result.__dict__
         except Exception as e:
             logger.warning(f"인프라 모니터링 조회 실패: {e}")
-            infrastructure_monitoring = {
-                "error": str(e),
-                "services": {}
-            }
-        
+            infrastructure_monitoring = {"error": str(e), "services": {}}
+
         # 통합 응답 구성
         response = {
             "environment": environment,
             "timestamp": datetime.utcnow().isoformat(),
             "external_monitoring": external_monitoring,
             "application_monitoring": application_monitoring,
-            "infrastructure_monitoring": infrastructure_monitoring
+            "infrastructure_monitoring": infrastructure_monitoring,
         }
-        
+
         logger.info(f"환경 '{environment}' 통합 대시보드 조회 완료")
         return response
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"통합 대시보드 조회 실패 (환경: {environment}): {e}")
-        raise HTTPException(status_code=500, detail=f"통합 대시보드 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"통합 대시보드 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/health/cache")
 async def cache_health_check(
-    health_service: HealthCheckService = Depends(get_health_service)
+    health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """Redis 캐시 상태 확인 (통합 API)"""
     try:
@@ -783,7 +824,7 @@ async def cache_health_check(
 
 @router.get("/version")
 async def version_info(
-    health_service: HealthCheckService = Depends(get_health_service)
+    health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
     """버전 정보 조회 (통합 API)"""
     try:
@@ -798,48 +839,63 @@ async def version_info(
 async def debug_config() -> Dict[str, Any]:
     """외부 인프라 API 키 설정 상태 디버깅"""
     settings = get_settings()
-    
+
     return {
         "vercel": {
             "api_token_configured": bool(settings.vercel_api_token),
             "team_id_configured": bool(settings.vercel_team_id),
             "project_id_configured": bool(settings.vercel_project_id),
-            "api_token_preview": settings.vercel_api_token[:8] + "..." if settings.vercel_api_token else None
+            "api_token_preview": (
+                settings.vercel_api_token[:8] + "..."
+                if settings.vercel_api_token
+                else None
+            ),
         },
         "atlas": {
             "public_key_configured": bool(settings.atlas_public_key),
             "private_key_configured": bool(settings.atlas_private_key),
             "group_id_configured": bool(settings.atlas_group_id),
             "cluster_name_configured": bool(settings.atlas_cluster_name),
-            "public_key_preview": settings.atlas_public_key[:4] + "..." if settings.atlas_public_key else None
+            "public_key_preview": (
+                settings.atlas_public_key[:4] + "..."
+                if settings.atlas_public_key
+                else None
+            ),
         },
         "upstash": {
             "api_key_configured": bool(settings.upstash_api_key),
             "email_configured": bool(settings.upstash_email),
             "database_id_configured": bool(settings.upstash_database_id),
-            "email_preview": settings.upstash_email[:5] + "..." if settings.upstash_email else None
+            "email_preview": (
+                settings.upstash_email[:5] + "..." if settings.upstash_email else None
+            ),
         },
         "hetrix": {
             "api_token_configured": bool(settings.hetrixtools_api_token),
-            "api_token_preview": settings.hetrixtools_api_token[:8] + "..." if settings.hetrixtools_api_token else None
+            "api_token_preview": (
+                settings.hetrixtools_api_token[:8] + "..."
+                if settings.hetrixtools_api_token
+                else None
+            ),
         },
         "environment": settings.environment,
-        "env_file_loaded": getattr(settings, "_env_file", "unknown")
+        "env_file_loaded": getattr(settings, "_env_file", "unknown"),
     }
 
 
 # === 새로운 Sentry 및 엔드포인트 모니터링 API들 ===
 
+
 @router.get("/sentry/errors")
 async def get_sentry_errors(
-    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service),
 ) -> Dict[str, Any]:
     """Sentry 에러 통계 조회 (1시간/24시간/3일)"""
     try:
         logger.info("Sentry 에러 통계 조회 요청")
-        
+
         error_stats = await sentry_service.get_error_statistics()
-        
+
         response = {
             "last_hour_errors": error_stats.last_hour_errors,
             "last_24h_errors": error_stats.last_24h_errors,
@@ -855,34 +911,36 @@ async def get_sentry_errors(
                     "timestamp": error.timestamp,
                     "error_type": error.error_type,
                     "file_path": error.file_path,
-                    "line_number": error.line_number
+                    "line_number": error.line_number,
                 }
                 for error in error_stats.recent_errors
             ],
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
         logger.info(f"Sentry 에러 통계 조회 완료: {error_stats.status} 상태")
         return response
-        
+
     except Exception as e:
         logger.error(f"Sentry 에러 통계 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"Sentry 에러 통계 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Sentry 에러 통계 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/sentry/health")
 async def get_sentry_health(
-    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service),
 ) -> Dict[str, Any]:
     """Sentry 연결 상태 확인"""
     try:
         health_info = await sentry_service.check_sentry_health()
-        
+
         return {
             "sentry_health": health_info,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Sentry 상태 확인 실패: {e}")
         raise HTTPException(status_code=500, detail=f"Sentry 상태 확인 실패: {str(e)}")
@@ -891,41 +949,43 @@ async def get_sentry_health(
 @router.get("/sentry/trends")
 async def get_sentry_trends(
     hours: int = Query(24, ge=1, le=168, description="조회할 시간 (1-168시간)"),
-    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service),
 ) -> Dict[str, Any]:
     """Sentry 에러 트렌드 조회"""
     try:
         logger.info(f"Sentry 에러 트렌드 조회 요청 ({hours}시간)")
-        
+
         trends = await sentry_service.get_error_trends(hours)
-        
+
         return {
             "hours": hours,
             "trends": trends,
             "total_data_points": len(trends),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"Sentry 에러 트렌드 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"Sentry 에러 트렌드 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Sentry 에러 트렌드 조회 실패: {str(e)}"
+        )
 
 
 @router.post("/sentry/test-error")
 async def send_test_error(
-    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service)
+    sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service),
 ) -> Dict[str, Any]:
     """테스트 에러를 Sentry에 전송"""
     try:
         result = await sentry_service.capture_test_error()
-        
-        if result['success']:
+
+        if result["success"]:
             logger.info("테스트 에러 전송 성공")
             return result
         else:
             logger.warning(f"테스트 에러 전송 실패: {result['message']}")
-            raise HTTPException(status_code=400, detail=result['message'])
-            
+            raise HTTPException(status_code=400, detail=result["message"])
+
     except HTTPException:
         raise
     except Exception as e:
@@ -935,14 +995,16 @@ async def send_test_error(
 
 @router.get("/endpoints/status")
 async def get_endpoints_status(
-    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+    endpoint_service: EndpointMonitoringService = Depends(
+        get_endpoint_monitoring_service
+    ),
 ) -> Dict[str, Any]:
     """API 엔드포인트 상태 체크"""
     try:
         logger.info("API 엔드포인트 상태 체크 요청")
-        
+
         monitoring_result = await endpoint_service.check_all_endpoints()
-        
+
         response = {
             "overall_status": monitoring_result.overall_status,
             "total_endpoints": monitoring_result.total_endpoints,
@@ -958,36 +1020,45 @@ async def get_endpoints_status(
                     "response_time": ep.response_time,
                     "status_code": ep.status_code,
                     "last_check": ep.last_check,
-                    "error_message": ep.error_message
+                    "error_message": ep.error_message,
                 }
                 for ep in monitoring_result.endpoints
             ],
             "last_check": monitoring_result.last_check,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
-        logger.info(f"API 엔드포인트 상태 체크 완료: {monitoring_result.overall_status}")
+
+        logger.info(
+            f"API 엔드포인트 상태 체크 완료: {monitoring_result.overall_status}"
+        )
         return response
-        
+
     except Exception as e:
         logger.error(f"API 엔드포인트 상태 체크 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"API 엔드포인트 상태 체크 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"API 엔드포인트 상태 체크 실패: {str(e)}"
+        )
 
 
 @router.get("/endpoints/{endpoint_name}/status")
 async def get_endpoint_status(
     endpoint_name: str,
-    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+    endpoint_service: EndpointMonitoringService = Depends(
+        get_endpoint_monitoring_service
+    ),
 ) -> Dict[str, Any]:
     """특정 엔드포인트 상태 체크"""
     try:
         logger.info(f"특정 엔드포인트 상태 체크 요청: {endpoint_name}")
-        
+
         endpoint_status = await endpoint_service.check_specific_endpoint(endpoint_name)
-        
+
         if not endpoint_status:
-            raise HTTPException(status_code=404, detail=f"엔드포인트 '{endpoint_name}'를 찾을 수 없습니다")
-        
+            raise HTTPException(
+                status_code=404,
+                detail=f"엔드포인트 '{endpoint_name}'를 찾을 수 없습니다",
+            )
+
         response = {
             "endpoint": endpoint_status.endpoint,
             "name": endpoint_status.name,
@@ -996,134 +1067,147 @@ async def get_endpoint_status(
             "status_code": endpoint_status.status_code,
             "last_check": endpoint_status.last_check,
             "error_message": endpoint_status.error_message,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
-        logger.info(f"특정 엔드포인트 상태 체크 완료: {endpoint_name} - {endpoint_status.status}")
+
+        logger.info(
+            f"특정 엔드포인트 상태 체크 완료: {endpoint_name} - {endpoint_status.status}"
+        )
         return response
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"특정 엔드포인트 상태 체크 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"특정 엔드포인트 상태 체크 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"특정 엔드포인트 상태 체크 실패: {str(e)}"
+        )
 
 
 @router.get("/endpoints/{endpoint_name}/history")
 async def get_endpoint_history(
     endpoint_name: str,
     hours: int = Query(24, ge=1, le=168, description="조회할 시간 (1-168시간)"),
-    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+    endpoint_service: EndpointMonitoringService = Depends(
+        get_endpoint_monitoring_service
+    ),
 ) -> Dict[str, Any]:
     """특정 엔드포인트의 히스토리 조회"""
     try:
         logger.info(f"엔드포인트 히스토리 조회 요청: {endpoint_name} ({hours}시간)")
-        
+
         history = await endpoint_service.get_endpoint_history(endpoint_name, hours)
-        
+
         return {
             "endpoint_name": endpoint_name,
             "hours": hours,
             "history": history,
             "total_data_points": len(history),
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"엔드포인트 히스토리 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"엔드포인트 히스토리 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"엔드포인트 히스토리 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/endpoints/list")
 async def get_monitored_endpoints(
-    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+    endpoint_service: EndpointMonitoringService = Depends(
+        get_endpoint_monitoring_service
+    ),
 ) -> Dict[str, Any]:
     """모니터링 대상 엔드포인트 목록 조회"""
     try:
         endpoints = endpoint_service.get_monitored_endpoints()
-        
+
         return {
             "total_endpoints": len(endpoints),
             "endpoints": endpoints,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
-        
+
     except Exception as e:
         logger.error(f"모니터링 엔드포인트 목록 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"모니터링 엔드포인트 목록 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"모니터링 엔드포인트 목록 조회 실패: {str(e)}"
+        )
 
 
 @router.get("/advanced/status")
 async def get_advanced_monitoring_status(
     sentry_service: SentryMonitoringService = Depends(get_sentry_monitoring_service),
-    endpoint_service: EndpointMonitoringService = Depends(get_endpoint_monitoring_service)
+    endpoint_service: EndpointMonitoringService = Depends(
+        get_endpoint_monitoring_service
+    ),
 ) -> Dict[str, Any]:
     """고급 모니터링 상태 (Sentry + 엔드포인트) 통합 조회"""
     try:
         logger.info("고급 모니터링 상태 통합 조회 요청")
-        
+
         # 병렬로 데이터 수집
         sentry_stats_task = asyncio.create_task(sentry_service.get_error_statistics())
-        endpoint_status_task = asyncio.create_task(endpoint_service.check_all_endpoints())
-        
-        sentry_stats, endpoint_status = await asyncio.gather(
-            sentry_stats_task, 
-            endpoint_status_task,
-            return_exceptions=True
+        endpoint_status_task = asyncio.create_task(
+            endpoint_service.check_all_endpoints()
         )
-        
+
+        sentry_stats, endpoint_status = await asyncio.gather(
+            sentry_stats_task, endpoint_status_task, return_exceptions=True
+        )
+
         # 결과 처리
         response = {
             "timestamp": datetime.utcnow().isoformat(),
-            "overall_health": "unknown"
+            "overall_health": "unknown",
         }
-        
+
         # Sentry 데이터 처리
         if isinstance(sentry_stats, Exception):
             logger.error(f"Sentry 데이터 수집 실패: {sentry_stats}")
-            response["sentry"] = {
-                "status": "error",
-                "error": str(sentry_stats)
-            }
+            response["sentry"] = {"status": "error", "error": str(sentry_stats)}
         else:
             response["sentry"] = {
                 "status": sentry_stats.status,
                 "last_hour_errors": sentry_stats.last_hour_errors,
                 "last_24h_errors": sentry_stats.last_24h_errors,
                 "last_3d_errors": sentry_stats.last_3d_errors,
-                "error_rate_per_hour": sentry_stats.error_rate_per_hour
+                "error_rate_per_hour": sentry_stats.error_rate_per_hour,
             }
-        
+
         # 엔드포인트 데이터 처리
         if isinstance(endpoint_status, Exception):
             logger.error(f"엔드포인트 데이터 수집 실패: {endpoint_status}")
-            response["endpoints"] = {
-                "status": "error",
-                "error": str(endpoint_status)
-            }
+            response["endpoints"] = {"status": "error", "error": str(endpoint_status)}
         else:
             response["endpoints"] = {
                 "overall_status": endpoint_status.overall_status,
                 "healthy_count": endpoint_status.healthy_count,
                 "degraded_count": endpoint_status.degraded_count,
                 "down_count": endpoint_status.down_count,
-                "average_response_time": endpoint_status.average_response_time
+                "average_response_time": endpoint_status.average_response_time,
             }
-        
+
         # 전체 상태 결정
         sentry_healthy = response["sentry"].get("status") in ["healthy", "warning"]
-        endpoints_healthy = response["endpoints"].get("overall_status") in ["healthy", "degraded"]
-        
+        endpoints_healthy = response["endpoints"].get("overall_status") in [
+            "healthy",
+            "degraded",
+        ]
+
         if sentry_healthy and endpoints_healthy:
             response["overall_health"] = "healthy"
         elif sentry_healthy or endpoints_healthy:
             response["overall_health"] = "degraded"
         else:
             response["overall_health"] = "unhealthy"
-        
+
         logger.info(f"고급 모니터링 상태 통합 조회 완료: {response['overall_health']}")
         return response
-        
+
     except Exception as e:
         logger.error(f"고급 모니터링 상태 조회 실패: {e}")
-        raise HTTPException(status_code=500, detail=f"고급 모니터링 상태 조회 실패: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"고급 모니터링 상태 조회 실패: {str(e)}"
+        )

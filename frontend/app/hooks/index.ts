@@ -1,4 +1,5 @@
 // 기존 훅들
+export { default as useDebounce } from './useDebounce';
 export { default as useLocalStorage } from './useLocalStorage';
 export { default as usePagination } from './usePagination';
 

@@ -1,0 +1,81 @@
+[
+  {
+    "command": "ping",
+    "url": "https://gusc1-accepted-mongoose-32152.upstash.io/ping",
+    "status_code": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "content-length": "17",
+      "content-type": "application/json; charset=utf-8",
+      "date": "Sat, 19 Jul 2025 02:30:14 GMT",
+      "server": "Upstash Redis Database (1.13.3)",
+      "upstash-sync-token": "0"
+    },
+    "response_raw": "{\"result\":\"PONG\"}",
+    "timestamp": "2025-07-19T02:30:12.074917",
+    "response_json": {
+      "result": "PONG"
+    }
+  },
+  {
+    "command": "info",
+    "url": "https://gusc1-accepted-mongoose-32152.upstash.io/info",
+    "status_code": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "content-length": "948",
+      "content-type": "application/json; charset=utf-8",
+      "date": "Sat, 19 Jul 2025 02:30:14 GMT",
+      "server": "Upstash Redis Database (1.13.3)",
+      "upstash-sync-token": "0"
+    },
+    "response_raw": "{\"result\":\"# Server\\r\\nupstash_version:1.13.3\\r\\nredis_version:6.2.6\\r\\nredis_git_sha1:b8ef06c\\r\\nredis_build_id:20250422\\r\\nredis_mode:standalone\\r\\n\\r\\n# Clients\\r\\nconnected_clients:0\\r\\nmaxclients:10000\\r\\n\\r\\n# Memory\\r\\nused_memory:0\\r\\nused_memory_human:0.000B\\r\\nmaxmemory:67108864\\r\\nmaxmemory_human:64.000MB\\r\\nmaxmemory_policy:noeviction\\r\\n\\r\\n# Persistence\\r\\ntotal_keys:0\\r\\ntotal_data_size:0\\r\\ntotal_data_size_human:0.000B\\r\\nmax_data_size:268435456\\r\\nmax_data_size_human:256.000MB\\r\\n\\r\\n# Stats\\r\\ntotal_connections_received:0\\r\\ntotal_commands_processed:527\\r\\ninstantaneous_ops_per_sec:0\\r\\nmax_ops_per_sec:10000\\r\\nevicted_clients:17\\r\\nexpired_keys:1\\r\\nevicted_keys:0\\r\\nkeyspace_hits:106\\r\\nkeyspace_misses:170\\r\\ntotal_reads_processed:391\\r\\ntotal_writes_processed:136\\r\\n\\r\\n# Keyspace\\r\\ndb0:keys=0,expires=0,avg_ttl=0\\r\\n\\r\\n# Cluster\\r\\ncluster_enabled:0\\r\\nlocal_member:10.16.8.4\\r\\nprimary_member:10.16.8.4\\r\\n\\r\\n\"}",
+    "timestamp": "2025-07-19T02:30:12.244749",
+    "response_json": {
+      "result": "# Server\r\nupstash_version:1.13.3\r\nredis_version:6.2.6\r\nredis_git_sha1:b8ef06c\r\nredis_build_id:20250422\r\nredis_mode:standalone\r\n\r\n# Clients\r\nconnected_clients:0\r\nmaxclients:10000\r\n\r\n# Memory\r\nused_memory:0\r\nused_memory_human:0.000B\r\nmaxmemory:67108864\r\nmaxmemory_human:64.000MB\r\nmaxmemory_policy:noeviction\r\n\r\n# Persistence\r\ntotal_keys:0\r\ntotal_data_size:0\r\ntotal_data_size_human:0.000B\r\nmax_data_size:268435456\r\nmax_data_size_human:256.000MB\r\n\r\n# Stats\r\ntotal_connections_received:0\r\ntotal_commands_processed:527\r\ninstantaneous_ops_per_sec:0\r\nmax_ops_per_sec:10000\r\nevicted_clients:17\r\nexpired_keys:1\r\nevicted_keys:0\r\nkeyspace_hits:106\r\nkeyspace_misses:170\r\ntotal_reads_processed:391\r\ntotal_writes_processed:136\r\n\r\n# Keyspace\r\ndb0:keys=0,expires=0,avg_ttl=0\r\n\r\n# Cluster\r\ncluster_enabled:0\r\nlocal_member:10.16.8.4\r\nprimary_member:10.16.8.4\r\n\r\n"
+    }
+  },
+  {
+    "command": "dbsize",
+    "url": "https://gusc1-accepted-mongoose-32152.upstash.io/dbsize",
+    "status_code": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "content-length": "12",
+      "content-type": "application/json; charset=utf-8",
+      "date": "Sat, 19 Jul 2025 02:30:14 GMT",
+      "server": "Upstash Redis Database (1.13.3)",
+      "upstash-sync-token": "0"
+    },
+    "response_raw": "{\"result\":0}",
+    "timestamp": "2025-07-19T02:30:12.414480",
+    "response_json": {
+      "result": 0
+    }
+  },
+  {
+    "command": "memory_usage_key",
+    "url": "https://gusc1-accepted-mongoose-32152.upstash.io/memory/usage/*",
+    "status_code": 200,
+    "headers": {
+      "access-control-allow-credentials": "true",
+      "content-length": "15",
+      "content-type": "application/json; charset=utf-8",
+      "date": "Sat, 19 Jul 2025 02:30:14 GMT",
+      "server": "Upstash Redis Database (1.13.3)",
+      "upstash-sync-token": "0"
+    },
+    "response_raw": "{\"result\":null}",
+    "timestamp": "2025-07-19T02:30:12.582531",
+    "response_json": {
+      "result": null
+    }
+  },
+  {
+    "command": "keys_cache_pattern",
+    "status_code": 200,
+    "response": {
+      "result": []
+    }
+  }
+]

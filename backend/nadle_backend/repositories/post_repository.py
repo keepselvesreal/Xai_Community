@@ -503,6 +503,9 @@ class PostRepository:
             List of posts by the author with pagination (excluding deleted posts)
         """
         try:
+            # Debug: Log specific post IDs that should appear
+            debug_post_ids = ["6867b9406ec8a1b04c9c1166", "6867b9566ec8a1b04c9c1167"]
+            
             posts = (
                 await Post.find({"author_id": author_id, "status": {"$ne": "deleted"}})
                 .sort("-created_at")
@@ -510,6 +513,26 @@ class PostRepository:
                 .limit(limit)
                 .to_list()
             )
+            
+            # Debug: Check if specific posts exist for this author
+            for debug_id in debug_post_ids:
+                try:
+                    debug_post = await Post.find_one({"_id": PydanticObjectId(debug_id)})
+                    if debug_post:
+                        print(f"🔍 DEBUG Post {debug_id}: author_id={debug_post.author_id}, status={debug_post.status}, metadata.type={getattr(debug_post.metadata, 'type', None) if debug_post.metadata else None}")
+                        if debug_post.author_id == author_id:
+                            print(f"✅ Post {debug_id} belongs to user {author_id}")
+                            if debug_post.status != "deleted":
+                                print(f"✅ Post {debug_id} is not deleted")
+                            else:
+                                print(f"❌ Post {debug_id} is DELETED")
+                        else:
+                            print(f"❌ Post {debug_id} belongs to different user: {debug_post.author_id}")
+                    else:
+                        print(f"❌ Post {debug_id} NOT FOUND in database")
+                except Exception as e:
+                    print(f"❌ Error checking post {debug_id}: {e}")
+            
             return posts
         except Exception:
             return []
@@ -731,7 +754,7 @@ class PostRepository:
         ]
 
         try:
-            # 간단한 find 쿼리로 변경
+            # 간단한 find 쿼리로 먼저 기본 데이터 조회
             query = {"metadata.type": {"$in": inquiry_types}}
             
             # 타입별 필터링
@@ -748,12 +771,36 @@ class PostRepository:
             # 페이징된 결과 조회
             inquiries = await Post.find(query).sort("-created_at").skip((page - 1) * page_size).limit(page_size).to_list()
             
-            # 딕셔너리로 변환
+            # User 컬렉션에서 author 정보 별도 조회
+            from nadle_backend.models.core import User
+            from bson import ObjectId
+            
             inquiries_dict = []
             for inquiry in inquiries:
                 inquiry_dict = inquiry.model_dump()
                 inquiry_dict["id"] = str(inquiry.id)
                 inquiry_dict["author_id"] = str(inquiry.author_id)
+                
+                # author 정보 조회 (guest_inquiry_가 아닌 경우만)
+                if not str(inquiry.author_id).startswith('guest_inquiry_'):
+                    try:
+                        author = await User.get(inquiry.author_id)
+                        if author:
+                            inquiry_dict["author"] = {
+                                "id": str(author.id),
+                                "email": author.email,
+                                "user_handle": author.user_handle,
+                                "display_name": getattr(author, 'display_name', None),
+                                "name": getattr(author, 'name', None)
+                            }
+                        else:
+                            inquiry_dict["author"] = None
+                    except Exception as e:
+                        print(f"Author 조회 실패 for {inquiry.author_id}: {e}")
+                        inquiry_dict["author"] = None
+                else:
+                    inquiry_dict["author"] = None
+                
                 inquiries_dict.append(inquiry_dict)
 
             return inquiries_dict, total

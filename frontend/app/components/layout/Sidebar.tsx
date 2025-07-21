@@ -7,6 +7,7 @@ import { useInquiry } from "~/hooks/useInquiry";
 import { InquiryType } from "~/types/inquiry";
 import Modal from "~/components/ui/Modal";
 import Button from "~/components/ui/Button";
+import type { User } from "~/types";
 
 const navigationItems = [
   { 
@@ -40,13 +41,16 @@ interface SidebarProps {
   onClose?: () => void;
   onToggleCollapse?: () => void;
   isCollapsed?: boolean;
+  user?: User | null;
+  onLogout?: () => void;
 }
 
-const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false }: SidebarProps) => {
+const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false, user, onLogout }: SidebarProps) => {
   const location = useLocation();
   const [openModal, setOpenModal] = useState<InquiryType | null>(null);
   const [showInquiryOptions, setShowInquiryOptions] = useState(false);
   const { submitInquiry, getInquiryConfig, isLoading } = useInquiry();
+  const { theme, toggleTheme } = useTheme();
 
   const groupedItems = navigationItems.reduce((acc, item) => {
     if (!acc[item.section]) {
@@ -104,8 +108,57 @@ const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false
       
       {/* Sidebar */}
       <aside 
-        className="fixed left-0 top-[120px] z-50 h-[calc(100vh-120px)] w-[280px] bg-white border-r border-[#e5e5e7] shadow-[2px_0_8px_rgba(0,0,0,0.1)] flex flex-col"
+        className="fixed left-0 top-0 z-50 h-screen w-[240px] bg-white border-r border-[#e5e5e7] shadow-[2px_0_8px_rgba(0,0,0,0.1)] flex flex-col"
       >
+        {/* Top Header - 통합된 상단 영역 */}
+        <div className="w-full h-[120px] bg-gradient-to-br from-[#6B8E23] to-[#556B2F] flex flex-col justify-center items-center px-5 py-4 border-b border-white/10">
+          {/* Row 1: Brand and Dark Mode Toggle */}
+          <div className="flex items-center justify-between w-full mb-4">
+            <div className="flex items-center">
+              <div className="text-[28px] font-bold text-white tracking-wide drop-shadow-sm">
+                Xai
+              </div>
+            </div>
+            <button
+              onClick={toggleTheme}
+              className="px-2 py-1.5 bg-white/10 border border-white/20 rounded-md text-white text-sm cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px"
+            >
+              {theme === 'light' ? '🌙' : '☀️'}
+            </button>
+          </div>
+
+          {/* Row 2: User Controls */}
+          <div className="flex items-center justify-center w-full gap-3 mb-3">
+            {user ? (
+              <>
+                <a
+                  href="/mypage"
+                  className="text-white text-sm font-medium px-4 py-2.5 bg-white/10 rounded-lg border border-white/20 cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px text-center"
+                >
+                  회원정보
+                </a>
+                <button
+                  onClick={() => {
+                    console.log('Sidebar: Logout button clicked');
+                    if (onLogout) {
+                      onLogout();
+                    }
+                  }}
+                  className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px"
+                >
+                  로그아웃
+                </button>
+              </>
+            ) : (
+              <a
+                href="/auth/login"
+                className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px text-center"
+              >
+                로그인
+              </a>
+            )}
+          </div>
+        </div>
 
         {/* Navigation */}
         <nav className="flex-1 pt-10 pb-0 px-0 overflow-y-auto flex flex-col justify-start bg-gradient-to-b from-[rgba(107,142,35,0.02)] to-transparent">
@@ -133,7 +186,7 @@ const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false
                 >
                   <span>{item.name}</span>
                   {active && (
-                    <div className="ml-auto w-2 h-2 bg-white rounded-full absolute right-5" />
+                    <div className="mr-auto w-2 h-2 bg-white rounded-full absolute left-5" />
                   )}
                 </Link>
               );
@@ -165,15 +218,16 @@ const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false
           </div>
         </nav>
 
-        {/* Menu Toggle Area - bottom: 50px로 위치 조정 */}
-        <div className="absolute bottom-[50px] left-0 w-full h-[50px] bg-transparent flex items-center justify-center z-[1001]">
-          <button
-            onClick={onToggleCollapse}
-            className="px-4 py-2 bg-gradient-to-br from-[#6B8E23] to-[#556B2F] border border-[#556B2F] rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 shadow-[0_2px_8px_rgba(107,142,35,0.2)] hover:bg-gradient-to-br hover:from-[#556B2F] hover:to-[#6B8E23] hover:-translate-y-px hover:shadow-[0_4px_12px_rgba(107,142,35,0.3)]"
-          >
-            메뉴 숨김
-          </button>
-        </div>
+        {/* Menu Toggle Area - 전체 화면 기준 우측 중앙에 대칭적으로 배치 */}
+        <button
+          onClick={onToggleCollapse}
+          className="fixed right-0 top-1/2 transform -translate-y-1/2 z-[1002] bg-gradient-to-bl from-[#ff4757] to-[#ff3742] hover:from-[#ff3742] hover:to-[#ff2f3a] border-none rounded-l-lg py-6 px-1.5 text-white font-bold cursor-pointer transition-all duration-300 shadow-[-2px_0_12px_rgba(255,71,87,0.3)] hover:shadow-[-4px_0_16px_rgba(255,71,87,0.4)] hover:scale-110"
+        >
+          <div className="flex items-center gap-1">
+            <div className="w-0 h-0 border-r-[12px] border-r-white border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent opacity-80"></div>
+            <div className="w-1 h-10 bg-white rounded-sm opacity-80"></div>
+          </div>
+        </button>
 
         {/* Footer - 맨 하단에 위치, 높이 줄임 */}
         <div className="absolute bottom-0 left-0 w-full p-3 border-t border-[#e5e5e7] text-center bg-white">

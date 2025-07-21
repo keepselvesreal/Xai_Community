@@ -1,0 +1,314 @@
+[
+  {
+    "timestamp": "2025-07-18T02:30:18.723959+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1ba000b2fa7f34c88e7",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "NoneType",
+    "payload": "None",
+    "http_request": {
+      "request_method": null,
+      "request_url": null,
+      "request_size": null,
+      "status": null,
+      "response_size": null,
+      "user_agent": null,
+      "remote_ip": null,
+      "server_ip": null,
+      "referer": null,
+      "latency": "None",
+      "cache_lookup": null,
+      "cache_hit": null
+    },
+    "trace": "projects/xai-community/traces/c4a91ba24e09ea503af1625359e2e8db",
+    "span_id": "02e9a71872c63c08",
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:18.732372+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1ba000b2cd465a9da98",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "str",
+    "payload": "2025-07-18 02:30:18,733 - nadle_backend.middleware.monitoring - ERROR - Failed to store metrics: Error 111 connecting to localhost:6379. Connection refused.",
+    "http_request": null,
+    "trace": null,
+    "span_id": null,
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:18.732549+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1ba000b2d852a4047bc",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "str",
+    "payload": "INFO:     169.254.169.126:40036 - \"GET /health HTTP/1.1\" 200 OK",
+    "http_request": null,
+    "trace": null,
+    "span_id": null,
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:18.778137+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1ba000bf62649b24a37",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "NoneType",
+    "payload": "None",
+    "http_request": {
+      "request_method": null,
+      "request_url": null,
+      "request_size": null,
+      "status": null,
+      "response_size": null,
+      "user_agent": null,
+      "remote_ip": null,
+      "server_ip": null,
+      "referer": null,
+      "latency": "None",
+      "cache_lookup": null,
+      "cache_hit": null
+    },
+    "trace": "projects/xai-community/traces/10efb42d8c764d630d691a721b577c16",
+    "span_id": "87e4c84605d4c1f1",
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:18.783132+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1ba000bf31cebc38b16",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "str",
+    "payload": "2025-07-18 02:30:18,784 - nadle_backend.middleware.monitoring - ERROR - Failed to store metrics: Error 111 connecting to localhost:6379. Connection refused.",
+    "http_request": null,
+    "trace": null,
+    "span_id": null,
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:18.783283+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1ba000bf3b353a7c856",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "str",
+    "payload": "INFO:     169.254.169.126:40042 - \"GET /health HTTP/1.1\" 200 OK",
+    "http_request": null,
+    "trace": null,
+    "span_id": null,
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:21.604715+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1bd0009507f124beb7d",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "NoneType",
+    "payload": "None",
+    "http_request": {
+      "request_method": null,
+      "request_url": null,
+      "request_size": null,
+      "status": null,
+      "response_size": null,
+      "user_agent": null,
+      "remote_ip": null,
+      "server_ip": null,
+      "referer": null,
+      "latency": "None",
+      "cache_lookup": null,
+      "cache_hit": null
+    },
+    "trace": "projects/xai-community/traces/917c6b262786111b6e8e14ae3e7cb758",
+    "span_id": "d9c50ad629870cf3",
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:21.609712+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1bd00094db09a554c34",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "str",
+    "payload": "2025-07-18 02:30:21,610 - nadle_backend.middleware.monitoring - ERROR - Failed to store metrics: Error 111 connecting to localhost:6379. Connection refused.",
+    "http_request": null,
+    "trace": null,
+    "span_id": null,
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:21.609892+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1bd00094e64fed94fbe",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "str",
+    "payload": "INFO:     169.254.169.126:40046 - \"GET /health HTTP/1.1\" 200 OK",
+    "http_request": null,
+    "trace": null,
+    "span_id": null,
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  },
+  {
+    "timestamp": "2025-07-18T02:30:21.831611+00:00",
+    "severity": "INFO",
+    "insert_id": "6879b1bd000cc3556ef2e10d",
+    "resource": {
+      "type": "cloud_run_revision",
+      "labels": {
+        "revision_name": "xai-community-backend-00010-kb7",
+        "configuration_name": "xai-community-backend",
+        "service_name": "xai-community-backend",
+        "project_id": "xai-community",
+        "location": "asia-northeast3"
+      }
+    },
+    "payload_type": "NoneType",
+    "payload": "None",
+    "http_request": {
+      "request_method": null,
+      "request_url": null,
+      "request_size": null,
+      "status": null,
+      "response_size": null,
+      "user_agent": null,
+      "remote_ip": null,
+      "server_ip": null,
+      "referer": null,
+      "latency": "None",
+      "cache_lookup": null,
+      "cache_hit": null
+    },
+    "trace": "projects/xai-community/traces/559a02be180b43febacc8f4203c3c8f6",
+    "span_id": "7ebb963e1b191972",
+    "source_location": null,
+    "operation": null,
+    "labels": {
+      "instanceId": "0069c7a98871a594bc6b2d445f662d1f3a561e217d7a17ca6930d70b90c95c1cae77525436fb0712589f9160720caeefe1a473f86f02344681da1c9510ba81051c66d0eb1966ddb7432729f087c362a871ce"
+    },
+    "receive_timestamp": null
+  }
+]

@@ -37,33 +37,34 @@ _external_log_collector: Optional[ExternalLogCollectorService] = None
 
 
 async def get_log_repository(
-    database: AsyncIOMotorDatabase = Depends(get_database)
+    database: AsyncIOMotorDatabase = Depends(get_database),
 ) -> LogRepositoryInterface:
     """
     Get log repository instance.
-    
+
     Creates and configures MongoDB log repository with proper indexing.
     """
     global _log_repository
-    
+
     if _log_repository is None:
         _log_repository = MongoLogRepository(database)
         await _log_repository.setup_indexes()
         logger.info("Log repository initialized")
-    
+
     return _log_repository
 
 
 async def get_cache_service() -> Optional[CacheServiceInterface]:
     """
     Get cache service instance.
-    
-    Returns the existing cache service if available, None otherwise.
+
+    Returns the logging cache adapter if available, None otherwise.
     """
     try:
         # Import here to avoid circular dependencies
-        from ..dependencies.auth import get_cache_service as get_auth_cache_service
-        return await get_auth_cache_service()
+        from .adapters.cache_adapter import get_logging_cache_adapter
+
+        return await get_logging_cache_adapter()
     except Exception as e:
         logger.warning(f"Cache service not available: {e}")
         return None
@@ -71,40 +72,40 @@ async def get_cache_service() -> Optional[CacheServiceInterface]:
 
 async def get_log_service(
     log_repository: LogRepositoryInterface = Depends(get_log_repository),
-    cache_service: Optional[CacheServiceInterface] = Depends(get_cache_service)
+    cache_service: Optional[CacheServiceInterface] = Depends(get_cache_service),
 ) -> LogService:
     """
     Get log service instance.
-    
+
     Creates log service with repository and optional caching.
     """
     global _log_service
-    
+
     if _log_service is None:
         _log_service = LogService(
             log_repository=log_repository,
             cache_service=cache_service,
-            cache_ttl=300  # 5 minutes
+            cache_ttl=300,  # 5 minutes
         )
         await _log_service.setup()
         logger.info("Log service initialized")
-    
+
     return _log_service
 
 
 def _create_external_adapters() -> Dict[str, ExternalLogAdapterInterface]:
     """
     Create external log adapters based on environment configuration.
-    
+
     Returns:
         Dictionary of adapter name to adapter instance
     """
     adapters = {}
-    
+
     # Vercel adapter
     vercel_token = os.getenv("VERCEL_API_TOKEN")
     vercel_project_id = os.getenv("VERCEL_PROJECT_ID")
-    
+
     if vercel_token:
         adapters["vercel"] = VercelLogAdapter(
             api_token=vercel_token,
@@ -120,11 +121,11 @@ def _create_external_adapters() -> Dict[str, ExternalLogAdapterInterface]:
             use_mock=True,
         )
         logger.info("Vercel log adapter configured with mock data")
-    
+
     # Upstash adapter
     upstash_url = os.getenv("UPSTASH_REDIS_REST_URL")
     upstash_token = os.getenv("UPSTASH_REDIS_REST_TOKEN")
-    
+
     if upstash_url and upstash_token:
         adapters["upstash"] = UpstashLogAdapter(
             rest_url=upstash_url,
@@ -140,11 +141,11 @@ def _create_external_adapters() -> Dict[str, ExternalLogAdapterInterface]:
             use_mock=True,
         )
         logger.info("Upstash log adapter configured with mock data")
-    
+
     # Cloud Run adapter
     gcp_project_id = os.getenv("GCP_PROJECT_ID", "xai-community")
     gcp_credentials_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
-    
+
     adapters["cloud_run"] = CloudRunLogAdapter(
         project_id=gcp_project_id,
         service_name="xai-community-backend",
@@ -153,12 +154,12 @@ def _create_external_adapters() -> Dict[str, ExternalLogAdapterInterface]:
         use_mock=True,  # Use mock due to API complexity
     )
     logger.info("Cloud Run log adapter configured with mock data")
-    
+
     # Atlas adapter
     atlas_api_key = os.getenv("ATLAS_API_KEY")
     atlas_group_id = os.getenv("ATLAS_GROUP_ID")
     atlas_cluster_name = os.getenv("ATLAS_CLUSTER_NAME", "Cluster0")
-    
+
     adapters["atlas"] = AtlasLogAdapter(
         api_key=atlas_api_key or "mock-key",
         group_id=atlas_group_id or "mock-group",
@@ -166,45 +167,46 @@ def _create_external_adapters() -> Dict[str, ExternalLogAdapterInterface]:
         use_mock=True,  # Use mock due to API complexity
     )
     logger.info("Atlas log adapter configured with mock data")
-    
+
     return adapters
 
 
 async def get_external_log_collector(
-    log_repository: LogRepositoryInterface = Depends(get_log_repository)
+    log_repository: LogRepositoryInterface = Depends(get_log_repository),
 ) -> ExternalLogCollectorService:
     """
     Get external log collector service.
-    
+
     Creates external log collector with all configured adapters.
     """
     global _external_log_collector
-    
+
     if _external_log_collector is None:
         adapters = _create_external_adapters()
-        
+
         _external_log_collector = ExternalLogCollectorService(
             log_repository=log_repository,
             adapters=adapters,
             max_concurrent_collections=3,
-            collection_timeout=300  # 5 minutes
+            collection_timeout=300,  # 5 minutes
         )
-        
+
         logger.info(f"External log collector initialized with {len(adapters)} adapters")
-    
+
     return _external_log_collector
 
 
 async def get_current_user_optional():
     """
     Get current user (optional for logging endpoints).
-    
+
     Most logging endpoints don't require authentication for internal use,
     but may want to log who is accessing the logs for audit purposes.
     """
     try:
         # Import here to avoid circular dependencies
         from ..dependencies.auth import get_current_user_optional as get_auth_user
+
         return await get_auth_user()
     except Exception:
         # If auth is not available or fails, allow anonymous access
@@ -212,6 +214,7 @@ async def get_current_user_optional():
 
 
 # Utility functions for testing and development
+
 
 async def reset_log_repository():
     """Reset log repository instance (for testing)."""
@@ -233,7 +236,7 @@ async def reset_external_log_collector():
 
 async def get_log_service_with_mock_adapters(
     log_repository: LogRepositoryInterface = Depends(get_log_repository),
-    cache_service: Optional[CacheServiceInterface] = Depends(get_cache_service)
+    cache_service: Optional[CacheServiceInterface] = Depends(get_cache_service),
 ) -> LogService:
     """
     Get log service with forced mock adapters (for testing).
@@ -241,14 +244,14 @@ async def get_log_service_with_mock_adapters(
     service = LogService(
         log_repository=log_repository,
         cache_service=cache_service,
-        cache_ttl=60  # Shorter TTL for testing
+        cache_ttl=60,  # Shorter TTL for testing
     )
     await service.setup()
     return service
 
 
 async def get_external_log_collector_with_mock_adapters(
-    log_repository: LogRepositoryInterface = Depends(get_log_repository)
+    log_repository: LogRepositoryInterface = Depends(get_log_repository),
 ) -> ExternalLogCollectorService:
     """
     Get external log collector with forced mock adapters (for testing).
@@ -275,10 +278,10 @@ async def get_external_log_collector_with_mock_adapters(
             use_mock=True,
         ),
     }
-    
+
     return ExternalLogCollectorService(
         log_repository=log_repository,
         adapters=adapters,
         max_concurrent_collections=2,
-        collection_timeout=30  # Shorter timeout for testing
+        collection_timeout=30,  # Shorter timeout for testing
     )

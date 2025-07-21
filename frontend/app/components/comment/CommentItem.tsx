@@ -1,7 +1,9 @@
 import { useState } from "react";
 import Button from "~/components/ui/Button";
 import Textarea from "~/components/ui/Textarea";
+import ReportModal from "~/components/common/ReportModal";
 import { formatRelativeTime, formatNumber } from "~/lib/utils";
+import { apiClient } from "~/lib/api";
 import type { Comment, User } from "~/types";
 
 interface CommentItemProps {
@@ -34,6 +36,10 @@ const CommentItem = ({
   const [replyContent, setReplyContent] = useState("");
   const [editContent, setEditContent] = useState(comment.content);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // 신고 모달 상태
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
 
   // 소유자 권한 체크
   const isOwner = () => {
@@ -104,6 +110,25 @@ const CommentItem = ({
     if (!onReaction) return;
     
     onReaction(comment.id, type);
+  };
+
+  // 신고 제출 핸들러
+  const handleReportSubmit = async (content: string) => {
+    setReportLoading(true);
+    try {
+      const response = await apiClient.reportComment(comment.id, content);
+      if (response.success) {
+        alert('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+        setIsReportModalOpen(false);
+      } else {
+        throw new Error(response.error || '신고 접수에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('신고 실패:', error);
+      alert('신고 접수 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   // 서비스 페이지용 스타일 클래스
@@ -278,6 +303,14 @@ const CommentItem = ({
               답글
             </button>
           )}
+          
+          <button
+            type="button"
+            onClick={() => setIsReportModalOpen(true)}
+            className="text-gray-500 hover:text-red-600"
+          >
+            신고
+          </button>
         </div>
 
         {/* 답글 작성 폼 */}
@@ -445,6 +478,14 @@ const CommentItem = ({
               답글
             </button>
           )}
+          
+          <button
+            type="button"
+            onClick={() => setIsReportModalOpen(true)}
+            className="text-gray-500 hover:text-red-600"
+          >
+            신고
+          </button>
         </div>
 
         {/* 답글 작성 폼 */}
@@ -497,6 +538,16 @@ const CommentItem = ({
           />
         ))}
       </div>
+
+      {/* 신고 모달 */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetType="comment"
+        targetId={comment.id}
+        onSubmit={handleReportSubmit}
+        isLoading={reportLoading}
+      />
     </div>
   );
 };

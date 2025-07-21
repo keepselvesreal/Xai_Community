@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import AppLayout from "~/components/layout/AppLayout";
 import { MonitoringDashboard } from "~/components/monitoring/MonitoringDashboard";
 import { UnifiedMonitoringDashboard } from "~/components/monitoring/UnifiedMonitoringDashboard";
+import ReportManagement from "~/components/admin/ReportManagement";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 
@@ -117,6 +118,52 @@ export default function AdminMonitoring() {
           <MonitoringDashboard />
         )}
 
+        {/* 관리자 네비게이션 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">🚀 관리자 메뉴</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+            <a
+              href="/admin/monitoring"
+              className="group bg-blue-50 border border-blue-200 rounded-lg p-4 hover:bg-blue-100 transition-colors cursor-pointer"
+            >
+              <div className="text-blue-600 text-xl mb-2">🖥️</div>
+              <h3 className="font-semibold text-blue-900 group-hover:text-blue-700">모니터링</h3>
+              <p className="text-sm text-blue-700 mt-1">시스템 상태 및 성능 모니터링</p>
+            </a>
+            
+            <a
+              href="/admin/logging"
+              className="group bg-green-50 border border-green-200 rounded-lg p-4 hover:bg-green-100 transition-colors cursor-pointer"
+            >
+              <div className="text-green-600 text-xl mb-2">🔍</div>
+              <h3 className="font-semibold text-green-900 group-hover:text-green-700">로그 관리</h3>
+              <p className="text-sm text-green-700 mt-1">시스템 로그 조회 및 분석</p>
+            </a>
+
+            <a
+              href="/admin/alerts"
+              className="group bg-purple-50 border border-purple-200 rounded-lg p-4 hover:bg-purple-100 transition-colors cursor-pointer"
+            >
+              <div className="text-purple-600 text-xl mb-2">🚨</div>
+              <h3 className="font-semibold text-purple-900 group-hover:text-purple-700">알림 관리</h3>
+              <p className="text-sm text-purple-700 mt-1">알림 시스템 설정 및 관리</p>
+            </a>
+
+            <div className="group bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="text-red-600 text-xl mb-2">📝</div>
+              <h3 className="font-semibold text-red-900">신고 관리</h3>
+              <p className="text-sm text-red-700 mt-1">사용자 신고 처리 및 관리</p>
+            </div>
+
+            <div className="group bg-orange-50 border border-orange-200 rounded-lg p-4">
+              <div className="text-orange-600 text-xl mb-2">⚙️</div>
+              <h3 className="font-semibold text-orange-900">시스템 설정</h3>
+              <p className="text-sm text-orange-700 mt-1">시스템 구성 및 설정 관리</p>
+              <div className="text-xs text-orange-600 mt-2">개발 예정</div>
+            </div>
+          </div>
+        </div>
+
         {/* 추가 관리자 도구 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">🔧 관리자 도구</h2>
@@ -138,6 +185,9 @@ export default function AdminMonitoring() {
             </div>
           </div>
         </div>
+
+        {/* 신고 관리 섹션 */}
+        <ReportManagement />
       </div>
     </AppLayout>
   );

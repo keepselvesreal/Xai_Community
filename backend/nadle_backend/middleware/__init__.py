@@ -7,10 +7,10 @@ Contains custom middleware components for:
 """
 
 __all__ = [
-    "MonitoringMiddleware", 
+    "MonitoringMiddleware",
     "PerformanceTracker",
     "SentryRequestMiddleware",
-    "SentryUserMiddleware"
+    "SentryUserMiddleware",
 ]
 
 from .monitoring import MonitoringMiddleware, PerformanceTracker

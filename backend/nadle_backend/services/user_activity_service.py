@@ -168,6 +168,9 @@ class UserActivityService:
         posts = await self.post_repository.find_by_author_paginated(
             user_id, limit, skip
         )
+        
+        # Debug: Log posts retrieval
+        print(f"🔍 UserActivityService: Retrieved {len(posts)} posts for user {user_id}")
 
         # Initialize result with DB-native page types (Phase 5: unified)
         result = {

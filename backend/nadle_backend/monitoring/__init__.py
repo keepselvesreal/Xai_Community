@@ -11,5 +11,5 @@ __all__ = [
     "init_sentry",
     "capture_error",
     "set_user_context",
-    "set_request_context"
+    "set_request_context",
 ]

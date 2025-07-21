@@ -38,9 +38,8 @@ from .exceptions import (
 __all__ = [
     # Enums
     "LogLevel",
-    "LogServiceType", 
+    "LogServiceType",
     "LogSource",
-    
     # Entities
     "LogEntry",
     "LogContext",
@@ -53,12 +52,10 @@ __all__ = [
     "TimeSeriesData",
     "TopEndpoint",
     "PerformanceSummary",
-    
     # Interfaces
     "LogRepositoryInterface",
     "ExternalLogAdapterInterface",
     "CacheServiceInterface",
-    
     # Exceptions
     "LoggingSystemError",
     "RepositoryError",

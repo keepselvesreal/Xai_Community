@@ -4,15 +4,14 @@ import { useLoaderData } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
-import { analyticsDashboardService } from "~/lib/analytics-dashboard-service";
-import GA4Analytics from "~/components/analytics/GA4Analytics";
-import CommunityAnalytics from "~/components/analytics/CommunityAnalytics";
-import BusinessInsights from "~/components/analytics/BusinessInsights";
-import type { 
-  AnalyticsDashboard, 
-  DateRangeFilter, 
-  AnalyticsLoadingState 
-} from "~/types/analytics";
+import { 
+  analyticsDashboardService,
+  type UserStats,
+  type ConversionRate,
+  type EventStats,
+  type BounceRate,
+  type RealtimeActivity
+} from "~/lib/analytics-dashboard-service";
 
 export const meta: MetaFunction = () => {
   return [
@@ -22,12 +21,6 @@ export const meta: MetaFunction = () => {
 };
 
 export const loader: LoaderFunction = async ({ request }) => {
-  // TODO: 실제 환경에서는 관리자 권한 확인 필요
-  // const user = await getUser(request);
-  // if (!user || !user.isAdmin) {
-  //   throw redirect("/auth/login");
-  // }
-
   return json({
     timestamp: new Date().toISOString(),
   });
@@ -39,45 +32,71 @@ export default function Analytics() {
   const { showError, showSuccess } = useNotification();
 
   // 상태 관리
-  const [dateRange, setDateRange] = useState<DateRangeFilter>('7days');
-  const [dashboardData, setDashboardData] = useState<AnalyticsDashboard | null>(null);
-  const [loadingState, setLoadingState] = useState<AnalyticsLoadingState>({
-    isLoading: false,
-    error: null,
-    lastFetch: null
-  });
+  const [userStats, setUserStats] = useState<UserStats | null>(null);
+  const [conversionRate, setConversionRate] = useState<ConversionRate | null>(null);
+  const [eventStats, setEventStats] = useState<EventStats | null>(null);
+  const [bounceRate, setBounceRate] = useState<BounceRate | null>(null);
+  const [realtimeActivity, setRealtimeActivity] = useState<RealtimeActivity[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
 
   // 관리자 권한 확인 (클라이언트 사이드)
   const isAdmin = user?.is_admin === true || user?.email === "admin@example.com" || user?.role === "admin";
 
-  // 데이터 로드 함수
-  const loadDashboardData = async (selectedRange: DateRangeFilter = dateRange) => {
-    setLoadingState(prev => ({ ...prev, isLoading: true, error: null }));
-
+  // 모든 데이터 로드 함수
+  const loadAllData = async () => {
+    setLoading(true);
+    
     try {
-      const data = await analyticsDashboardService.getDashboardData(selectedRange);
-      setDashboardData(data);
-      setLoadingState(prev => ({
-        ...prev,
-        isLoading: false,
-        lastFetch: new Date().toISOString()
-      }));
-      showSuccess('분석 데이터를 업데이트했습니다.');
+      const [userStatsData, conversionData, eventStatsData, bounceRateData, activityData] = await Promise.all([
+        analyticsDashboardService.getUserStats(),
+        analyticsDashboardService.getConversionRate(),
+        analyticsDashboardService.getEventStats(),
+        analyticsDashboardService.getBounceRate(),
+        analyticsDashboardService.getRealtimeActivity(5)
+      ]);
+
+      setUserStats(userStatsData);
+      setConversionRate(conversionData);
+      setEventStats(eventStatsData);
+      setBounceRate(bounceRateData);
+      setRealtimeActivity(activityData);
+      console.log('🔍 실시간 활동 피드 데이터:', activityData);
+      setLastUpdate(new Date().toISOString());
+      
+      showSuccess('분석 데이터를 성공적으로 업데이트했습니다.');
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '데이터 로드 중 오류가 발생했습니다.';
-      setLoadingState(prev => ({
-        ...prev,
-        isLoading: false,
-        error: errorMessage
-      }));
       showError(errorMessage);
+      console.error('Analytics data load error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // 기간 변경 핸들러
-  const handleDateRangeChange = (newRange: DateRangeFilter) => {
-    setDateRange(newRange);
-    loadDashboardData(newRange);
+  // 테스트 도구 함수들
+  const handleSimulateActivity = async (activityType: string, count: number = 1) => {
+    try {
+      await analyticsDashboardService.simulateUserActivity(activityType, count);
+      showSuccess(`${activityType} 활동 ${count}건이 생성되었습니다.`);
+      // 데이터 새로고침
+      setTimeout(loadAllData, 1000);
+    } catch (error) {
+      showError('활동 시뮬레이션에 실패했습니다.');
+    }
+  };
+
+  const handleResetData = async () => {
+    if (!confirm('모든 테스트 데이터를 초기화하시겠습니까?')) return;
+    
+    try {
+      await analyticsDashboardService.resetTestData();
+      showSuccess('테스트 데이터가 초기화되었습니다.');
+      // 데이터 새로고침
+      setTimeout(loadAllData, 1000);
+    } catch (error) {
+      showError('데이터 초기화에 실패했습니다.');
+    }
   };
 
   // 권한 확인 및 초기 데이터 로드
@@ -88,8 +107,19 @@ export default function Analytics() {
     }
 
     if (user && isAdmin) {
-      loadDashboardData();
+      loadAllData();
     }
+  }, [user, isAdmin]);
+
+  // 5초마다 자동 새로고침
+  useEffect(() => {
+    if (!user || !isAdmin) return;
+
+    const interval = setInterval(() => {
+      loadAllData();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, [user, isAdmin]);
 
   // 로그인이 필요한 경우
@@ -135,7 +165,7 @@ export default function Analytics() {
   return (
     <AppLayout 
       title="사용자 분석 대시보드"
-      subtitle="사용자 행동 분석 및 커뮤니티 활동 통계"
+      subtitle="실제 데이터 기반 사용자 행동 분석"
       user={user}
       onLogout={logout}
     >
@@ -145,182 +175,310 @@ export default function Analytics() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold mb-2">📊 사용자 분석 대시보드</h1>
-              <p className="text-indigo-100">GA4 분석 및 커뮤니티 활동 인사이트</p>
+              <p className="text-indigo-100">실제 데이터 기반 커뮤니티 활동 분석</p>
               <div className="mt-4 text-sm text-indigo-100">
-                마지막 업데이트: {loadingState.lastFetch 
-                  ? new Date(loadingState.lastFetch).toLocaleString('ko-KR')
+                마지막 업데이트: {lastUpdate 
+                  ? new Date(lastUpdate).toLocaleString('ko-KR')
                   : '업데이트 필요'
-                }
+                } (5초마다 자동 갱신)
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              {/* 기간 선택 */}
-              <div className="flex bg-white/20 rounded-lg p-1">
-                {[
-                  { value: 'all' as DateRangeFilter, label: '전체' },
-                  { value: '7days' as DateRangeFilter, label: '최근 7일' },
-                  { value: '3days' as DateRangeFilter, label: '최근 3일' }
-                ].map(({ value, label }) => (
-                  <button
-                    key={value}
-                    onClick={() => handleDateRangeChange(value)}
-                    className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                      dateRange === value
-                        ? 'bg-white text-indigo-600'
-                        : 'text-white hover:bg-white/10'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              
-              {/* 새로고침 버튼 */}
               <button
-                onClick={() => loadDashboardData()}
-                disabled={loadingState.isLoading}
+                onClick={loadAllData}
+                disabled={loading}
                 className="bg-white/20 hover:bg-white/30 transition-colors text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
               >
-                {loadingState.isLoading ? '로딩 중...' : '새로고침'}
+                {loading ? '로딩 중...' : '수동 새로고침'}
               </button>
             </div>
           </div>
         </div>
 
-        {/* 에러 메시지 */}
-        {loadingState.error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <div className="flex items-center">
-              <div className="text-red-500 text-xl mr-3">⚠️</div>
-              <div>
-                <h3 className="font-semibold text-red-800">데이터 로드 오류</h3>
-                <p className="text-red-600 text-sm mt-1">{loadingState.error}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* 로딩 상태 */}
-        {loadingState.isLoading && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-8">
+        {loading && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
             <div className="flex items-center justify-center">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-4"></div>
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
               <span className="text-blue-800 font-medium">분석 데이터를 불러오는 중...</span>
             </div>
           </div>
         )}
 
-        {/* 대시보드 컨텐츠 */}
-        {dashboardData && !loadingState.isLoading && (
-          <div className="space-y-8">
-            {/* 주요 지표 카드 섹션 */}
+        {/* 주요 사용자 지표 */}
+        {userStats && bounceRate ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">✨ 주요 사용자 지표</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* 총 사용자 수 */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">총 사용자</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {dashboardData.ga4Analytics.totalUsers.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-3xl">👥</div>
+              {/* 신규 사용자 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-blue-900">👥 신규 사용자</h3>
+                  <div className="text-2xl">👥</div>
                 </div>
-                <div className="mt-4 text-sm text-gray-500">
-                  신규: {dashboardData.ga4Analytics.newUsers.toLocaleString()}명
+                <div className="space-y-1">
+                  <div className="text-lg font-bold text-blue-900">
+                    오늘: +{userStats.new_users_today}명
+                  </div>
+                  <div className="text-sm text-blue-700">
+                    최근 7일: +{userStats.new_users_weekly}명
+                  </div>
                 </div>
               </div>
 
-              {/* 페이지뷰 */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">페이지뷰</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {dashboardData.ga4Analytics.pageViews.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-3xl">📄</div>
+              {/* 일일 활성 사용자 */}
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-green-900">⚡ 일일 활성 사용자</h3>
+                  <div className="text-2xl">⚡</div>
                 </div>
-                <div className="mt-4 text-sm text-gray-500">
-                  세션: {dashboardData.ga4Analytics.sessions.toLocaleString()}
+                <div className="text-2xl font-bold text-green-900">
+                  {userStats.daily_active_users}명
                 </div>
+                <div className="text-sm text-green-700">(오늘)</div>
               </div>
 
-              {/* 총 게시글 */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">총 게시글</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {dashboardData.communityAnalytics.totalStats.totalPosts.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-3xl">📝</div>
+              {/* 총 사용자 */}
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-purple-900">📊 총 사용자</h3>
+                  <div className="text-2xl">📊</div>
                 </div>
-                <div className="mt-4 text-sm text-gray-500">
-                  댓글: {dashboardData.communityAnalytics.totalStats.totalComments.toLocaleString()}개
+                <div className="text-2xl font-bold text-purple-900">
+                  {userStats.total_users}명
                 </div>
+                <div className="text-sm text-purple-700">(전체)</div>
               </div>
 
-              {/* 활성 사용자 */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">활성 사용자</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {dashboardData.communityAnalytics.totalStats.activeUsers.toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-3xl">⚡</div>
+              {/* 전체 사이트 이탈률 */}
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-sm font-medium text-red-900">📉 전체 사이트 이탈률</h3>
+                  <div className="text-2xl">📉</div>
                 </div>
-                <div className="mt-4 text-sm text-gray-500">
-                  이탈률: {dashboardData.ga4Analytics.bounceRate.toFixed(1)}%
+                <div className="text-2xl font-bold text-red-900">
+                  {bounceRate.site_bounce_rate.toFixed(1)}%
                 </div>
+                <div className="text-sm text-red-700">(평균)</div>
               </div>
             </div>
-
-            {/* GA4 분석 섹션 */}
-            <GA4Analytics data={dashboardData.ga4Analytics} />
-
-            {/* 커뮤니티 활동 분석 섹션 */}
-            <CommunityAnalytics data={dashboardData.communityAnalytics} />
-
-            {/* 비즈니스 인사이트 섹션 */}
-            <BusinessInsights data={dashboardData.businessInsights} />
-
-            {/* 디버깅용 데이터 표시 (개발 환경에서만) */}
-            {process.env.NODE_ENV === 'development' && (
-              <details className="bg-gray-100 rounded-lg p-4">
-                <summary className="cursor-pointer font-medium text-gray-700 mb-2">
-                  디버깅: 로드된 데이터 (개발 환경에서만 표시)
-                </summary>
-                <pre className="text-xs text-gray-600 overflow-auto max-h-64">
-                  {JSON.stringify(dashboardData, null, 2)}
-                </pre>
-              </details>
-            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">✨ 주요 사용자 지표</h2>
+            <div className="text-center py-8">
+              <div className="text-gray-400 text-4xl mb-3">📊</div>
+              <div className="text-gray-600 font-medium">사용자 지표 데이터를 불러오는 중...</div>
+              <div className="text-gray-500 text-sm mt-2">관리자 권한으로 로그인되어 있는지 확인해주세요.</div>
+            </div>
           </div>
         )}
 
-        {/* 추가 도구 섹션 */}
+        {/* 가입 전환율 */}
+        {conversionRate ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">🎯 가입 전환율</h2>
+            <div className="flex items-center justify-center space-x-8">
+              <div className="text-center">
+                <div className="text-sm text-blue-700 mb-2">방문자 (오늘)</div>
+                <div className="text-3xl font-bold text-blue-900">{conversionRate.visitors_today}명</div>
+              </div>
+              
+              <div className="text-3xl text-gray-400">→</div>
+              
+              <div className="text-center">
+                <div className="text-sm text-green-700 mb-2">가입자 (오늘)</div>
+                <div className="text-3xl font-bold text-green-900">{conversionRate.signups_today}명</div>
+              </div>
+
+              <div className="bg-purple-100 border border-purple-300 rounded-lg px-4 py-2">
+                <div className="text-lg font-bold text-purple-900">
+                  {conversionRate.conversion_rate_today.toFixed(1)}%
+                </div>
+              </div>
+            </div>
+            
+            <div className="mt-4 text-center">
+              <span className="text-lg font-medium text-gray-700">
+                📈 어제 대비: 
+                <span className={`ml-2 ${conversionRate.conversion_rate_change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {conversionRate.conversion_rate_change >= 0 ? '+' : ''}
+                  {conversionRate.conversion_rate_change.toFixed(1)}%
+                </span>
+                <span className="ml-2 text-gray-500 text-base">
+                  (어제: {conversionRate.conversion_rate_yesterday.toFixed(1)}%)
+                </span>
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">🎯 가입 전환율</h2>
+            <div className="text-center py-8">
+              <div className="text-gray-400 text-4xl mb-3">📊</div>
+              <div className="text-gray-600 font-medium">가입 전환율 데이터를 불러오는 중...</div>
+              <div className="text-gray-500 text-sm mt-2">잠시 후 다시 시도해보세요.</div>
+            </div>
+          </div>
+        )}
+
+        {/* 주요 이벤트 활동 */}
+        {eventStats ? (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">🎮 주요 이벤트 활동</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="text-center">
+                <div className="text-3xl mb-2">📝</div>
+                <div className="text-sm text-gray-600 mb-1">게시글 작성</div>
+                <div className="text-2xl font-bold text-gray-900">{eventStats.post_creation.today}건</div>
+                <div className="text-sm text-gray-500">
+                  {eventStats.post_creation.yesterday_change >= 0 ? '+' : ''}
+                  {eventStats.post_creation.yesterday_change} vs 어제
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-3xl mb-2">👍</div>
+                <div className="text-sm text-gray-600 mb-1">게시글 추천</div>
+                <div className="text-2xl font-bold text-gray-900">{eventStats.post_likes.today}건</div>
+                <div className="text-sm text-gray-500">
+                  {eventStats.post_likes.yesterday_change >= 0 ? '+' : ''}
+                  {eventStats.post_likes.yesterday_change} vs 어제
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-3xl mb-2">💾</div>
+                <div className="text-sm text-gray-600 mb-1">게시글 저장</div>
+                <div className="text-2xl font-bold text-gray-900">{eventStats.post_bookmarks.today}건</div>
+                <div className="text-sm text-gray-500">
+                  {eventStats.post_bookmarks.yesterday_change >= 0 ? '+' : ''}
+                  {eventStats.post_bookmarks.yesterday_change} vs 어제
+                </div>
+              </div>
+
+              <div className="text-center">
+                <div className="text-3xl mb-2">💬</div>
+                <div className="text-sm text-gray-600 mb-1">댓글 작성</div>
+                <div className="text-2xl font-bold text-gray-900">{eventStats.comment_creation.today}건</div>
+                <div className="text-sm text-gray-500">
+                  {eventStats.comment_creation.yesterday_change >= 0 ? '+' : ''}
+                  {eventStats.comment_creation.yesterday_change} vs 어제
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">🎮 주요 이벤트 활동</h2>
+            <div className="text-center py-8">
+              <div className="text-gray-400 text-4xl mb-3">🎮</div>
+              <div className="text-gray-600 font-medium">이벤트 활동 데이터를 불러오는 중...</div>
+              <div className="text-gray-500 text-sm mt-2">사용자 활동이 없거나 데이터가 준비 중입니다.</div>
+            </div>
+          </div>
+        )}
+
+        {/* 실시간 활동 피드 */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">🔧 분석 도구</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="text-blue-600 text-xl mb-2">📊</div>
-              <h3 className="font-semibold text-blue-900">GA4 실시간 분석</h3>
-              <p className="text-sm text-blue-700 mt-1">Google Analytics 4 실시간 데이터</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">📊 실시간 활동 피드</h2>
+          {realtimeActivity.length > 0 ? (
+            <div className="space-y-3">
+              {realtimeActivity.map((activity, index) => (
+                <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm text-gray-500">
+                    {new Date(activity.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                  <div className="flex-1 text-sm text-gray-700">
+                    <span className="font-medium">{activity.user_name}</span>가 {activity.description}
+                  </div>
+                  <div className="text-xs text-gray-400 capitalize">
+                    {activity.activity_type}
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <div className="text-green-600 text-xl mb-2">👥</div>
-              <h3 className="font-semibold text-green-900">커뮤니티 활동</h3>
-              <p className="text-sm text-green-700 mt-1">사용자 참여도 및 컨텐츠 성과</p>
+          ) : (
+            <div className="text-center py-8">
+              <div className="text-gray-400 text-4xl mb-3">📋</div>
+              <div className="text-gray-600 font-medium">아직 활동이 없습니다</div>
+              <div className="text-gray-500 text-sm mt-2">사용자가 게시글이나 댓글을 작성하면 여기에 표시됩니다.</div>
             </div>
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <div className="text-purple-600 text-xl mb-2">💡</div>
-              <h3 className="font-semibold text-purple-900">비즈니스 인사이트</h3>
-              <p className="text-sm text-purple-700 mt-1">전환율 및 성장 지표 분석</p>
+          )}
+        </div>
+
+        {/* 개발환경 테스트 도구 */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">🔧 개발환경 테스트 도구</h2>
+          
+          {/* 실제 추적 중인 활동만 포함 */}
+          <div className="mb-6">
+            <h3 className="text-lg font-medium text-gray-700 mb-3">📈 추적 중인 활동 시뮬레이션</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              
+              {/* 사용자 가입 */}
+              <button
+                onClick={() => handleSimulateActivity('signup', 3)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
+              >
+                <div className="text-xl mb-1">👥</div>
+                <div>사용자 가입 (3명)</div>
+              </button>
+
+              {/* 게시글 작성 */}
+              <button
+                onClick={() => handleSimulateActivity('post_create', 5)}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
+              >
+                <div className="text-xl mb-1">📝</div>
+                <div>게시글 작성 (5건)</div>
+              </button>
+
+              {/* 댓글 작성 */}
+              <button
+                onClick={() => handleSimulateActivity('comment', 8)}
+                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
+              >
+                <div className="text-xl mb-1">💬</div>
+                <div>댓글 작성 (8건)</div>
+              </button>
+
+              {/* 좋아요 */}
+              <button
+                onClick={() => handleSimulateActivity('like', 10)}
+                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
+              >
+                <div className="text-xl mb-1">👍</div>
+                <div>좋아요 (10건)</div>
+              </button>
+
+              {/* 북마크 */}
+              <button
+                onClick={() => handleSimulateActivity('bookmark', 6)}
+                className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
+              >
+                <div className="text-xl mb-1">💾</div>
+                <div>북마크 (6건)</div>
+              </button>
+
+              {/* 테스트 데이터 초기화 */}
+              <button
+                onClick={handleResetData}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
+              >
+                <div className="text-xl mb-1">🗑️</div>
+                <div>테스트 데이터 초기화</div>
+              </button>
+            </div>
+          </div>
+
+          <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="font-medium text-blue-900 mb-2">📊 현재 추적 중인 지표</div>
+            <div className="space-y-1 text-blue-800">
+              <div>• <strong>사용자 통계:</strong> 신규 가입, 일일 활성 사용자, 총 사용자 수</div>
+              <div>• <strong>가입 전환율:</strong> 방문자 → 가입자 전환율 (오늘/어제 비교)</div>
+              <div>• <strong>이벤트 활동:</strong> 게시글 작성, 댓글 작성, 좋아요, 북마크</div>
+              <div>• <strong>실시간 피드:</strong> 최근 사용자 활동 타임라인</div>
             </div>
           </div>
         </div>
