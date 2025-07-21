@@ -337,6 +337,8 @@ export interface ButtonProps extends BaseComponentProps {
   size?: "sm" | "md" | "lg";
   disabled?: boolean;
   loading?: boolean;
+  isLoading?: boolean; // alias for loading
+  loadingText?: string; // loading text support
   onClick?: (event: React.MouseEvent<HTMLButtonElement>) => void;
   type?: "button" | "submit" | "reset";
 }
@@ -346,6 +348,7 @@ export interface InputProps extends BaseComponentProps {
   placeholder?: string;
   value?: string;
   defaultValue?: string;
+  maxLength?: number; // maxLength support
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   required?: boolean;

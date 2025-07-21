@@ -9,6 +9,7 @@ import Select from "~/components/ui/Select";
 import Textarea from "~/components/ui/Textarea";
 import PostCard from "~/components/post/PostCard";
 import GA4TestPanel from "~/components/dev/GA4TestPanel";
+import InquiryManagement from "~/components/admin/InquiryManagement";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 import { formatNumber, getMethodColor, getStatusColor } from "~/lib/utils";
@@ -189,35 +190,63 @@ export default function Dashboard() {
         </div>
 
         {/* 관리자 도구 섹션 */}
-        {user && (user.is_admin === true || user.email === "admin@example.com" || user.role === "admin") && (
-          <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">🔧 관리자 도구</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/analytics')}>
-                <Card.Content className="text-center py-4">
-                  <div className="text-3xl mb-2">📊</div>
-                  <div className="font-semibold text-gray-900">사용자 분석</div>
-                  <div className="text-sm text-gray-500 mt-1">GA4 및 커뮤니티 분석</div>
-                </Card.Content>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/monitoring')}>
-                <Card.Content className="text-center py-4">
-                  <div className="text-3xl mb-2">🖥️</div>
-                  <div className="font-semibold text-gray-900">시스템 모니터링</div>
-                  <div className="text-sm text-gray-500 mt-1">성능 및 에러 추적</div>
-                </Card.Content>
-              </Card>
-              <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/alerts')}>
-                <Card.Content className="text-center py-4">
-                  <div className="text-3xl mb-2">🚨</div>
-                  <div className="font-semibold text-gray-900">알림 관리</div>
-                  <div className="text-sm text-gray-500 mt-1">지능형 알림 시스템 설정</div>
-                </Card.Content>
-              </Card>
+        {(() => {
+          console.log('🔍 대시보드 사용자 정보:', user);
+          console.log('🔍 대시보드 is_admin 체크:', user?.is_admin);
+          console.log('🔍 대시보드 user?.email:', user?.email);
+          
+          // 임시로 ktsfrank@naver.com 또는 is_admin 체크
+          const isAdmin = user?.is_admin || user?.email === 'ktsfrank@naver.com' || user?.email === "admin@example.com" || user?.role === "admin";
+          console.log('🔍 대시보드 최종 관리자 체크:', isAdmin);
+          
+          return isAdmin && (
+            <div className="mt-8 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">🔧 관리자 도구</h3>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/analytics')}>
+                  <Card.Content className="text-center py-4">
+                    <div className="text-3xl mb-2">📊</div>
+                    <div className="font-semibold text-gray-900">사용자 분석</div>
+                    <div className="text-sm text-gray-500 mt-1">GA4 및 커뮤니티 분석</div>
+                  </Card.Content>
+                </Card>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/monitoring')}>
+                  <Card.Content className="text-center py-4">
+                    <div className="text-3xl mb-2">🖥️</div>
+                    <div className="font-semibold text-gray-900">시스템 모니터링</div>
+                    <div className="text-sm text-gray-500 mt-1">성능 및 에러 추적</div>
+                  </Card.Content>
+                </Card>
+                <Card className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => navigate('/admin/alerts')}>
+                  <Card.Content className="text-center py-4">
+                    <div className="text-3xl mb-2">🚨</div>
+                    <div className="font-semibold text-gray-900">알림 관리</div>
+                    <div className="text-sm text-gray-500 mt-1">지능형 알림 시스템 설정</div>
+                  </Card.Content>
+                </Card>
+                <Card className="bg-green-50 border-green-200">
+                  <Card.Content className="text-center py-4">
+                    <div className="text-3xl mb-2">📝</div>
+                    <div className="font-semibold text-gray-900">등록 문의 관리</div>
+                    <div className="text-sm text-gray-500 mt-1">사용자 권한 부여</div>
+                  </Card.Content>
+                </Card>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
       </div>
+
+      {/* 등록 문의 관리 섹션 (관리자 전용) */}
+      {(() => {
+        const isAdmin = user?.is_admin || user?.email === 'ktsfrank@naver.com' || user?.email === "admin@example.com" || user?.role === "admin";
+        return isAdmin && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">👑 등록 문의 관리</h2>
+            <InquiryManagement />
+          </div>
+        );
+      })()}
 
       {/* 최근 게시글 섹션 */}
       <div className="mb-8">

@@ -26,39 +26,13 @@ import type {
   CreateAlertRuleRequest,
   UpdateAlertRuleRequest,
 } from "~/types";
+import { validateJWTFormat, decodeJWTPayload, isTokenExpired } from './jwt-utils';
 import { 
   STORAGE_KEYS, 
   SESSION_CONFIG, 
   SESSION_EXPIRY_REASONS,
   SESSION_MESSAGES
 } from './constants';
-
-// 간단한 JWT 유틸리티 함수들
-function validateJWTFormat(token: string): boolean {
-  if (!token || typeof token !== 'string') return false;
-  const parts = token.split('.');
-  return parts.length === 3;
-}
-
-function decodeJWTPayload(token: string): any {
-  try {
-    const payload = token.split('.')[1];
-    const decoded = atob(payload);
-    return JSON.parse(decoded);
-  } catch {
-    return null;
-  }
-}
-
-function isTokenExpired(token: string): boolean {
-  try {
-    const payload = decodeJWTPayload(token);
-    if (!payload || !payload.exp) return true;
-    return payload.exp * 1000 < Date.now();
-  } catch {
-    return true;
-  }
-}
 
 // 환경별 API URL 설정
 function getApiBaseUrl(): string {
@@ -313,7 +287,7 @@ class ApiClient {
 
       // 3. 토큰 만료 체크 및 갱신
       const thresholdMinutes = SESSION_CONFIG.TOKEN_REFRESH_THRESHOLD_MINUTES;
-      if (isTokenExpired(this.token) || this.isTokenExpiringSoon(this.token, thresholdMinutes * 60)) {
+      if (this.isTokenExpired(this.token) || this.isTokenExpiringSoon(this.token, thresholdMinutes * 60)) {
         console.log('ApiClient: Token is expired or expiring soon, refreshing...');
         await this.refreshAccessToken();
       }
@@ -324,7 +298,7 @@ class ApiClient {
 
   private isTokenExpiringSoon(token: string, secondsBeforeExpiry: number): boolean {
     try {
-      const payload = decodeJWTPayload(token);
+      const payload = this.decodeJWTPayload(token);
       const now = Math.floor(Date.now() / 1000);
       const expiresAt = payload.exp;
       
@@ -427,11 +401,51 @@ class ApiClient {
     }
   }
 
-  private async request<T>(
+  private async makeRequest<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     return this.makeRequestWithRetry<T>(endpoint, options, false);
+  }
+
+  // Public request method for general use
+  async request<T>(
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
+    endpoint: string,
+    options?: {
+      params?: Record<string, any>;
+      body?: any;
+      headers?: Record<string, string>;
+    }
+  ): Promise<ApiResponse<T>> {
+    let finalEndpoint = endpoint;
+    
+    // Add query parameters if provided
+    if (options?.params) {
+      const params = new URLSearchParams();
+      Object.entries(options.params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          params.append(key, String(value));
+        }
+      });
+      if (params.toString()) {
+        finalEndpoint += `?${params.toString()}`;
+      }
+    }
+
+    const requestOptions: RequestInit = {
+      method,
+      ...options?.headers && { headers: { ...this.getHeaders(), ...options.headers } }
+    };
+
+    // Add body for non-GET requests
+    if (method !== 'GET' && options?.body) {
+      requestOptions.body = typeof options.body === 'string' 
+        ? options.body 
+        : JSON.stringify(options.body);
+    }
+
+    return this.makeRequestWithRetry<T>(finalEndpoint, requestOptions, false);
   }
 
   private async makeRequestWithRetry<T>(
@@ -602,7 +616,7 @@ class ApiClient {
   }
 
   async register(userData: RegisterRequest): Promise<ApiResponse<User>> {
-    return this.request<User>('/api/auth/register', {
+    return this.makeRequest<User>('/api/auth/register', {
       method: 'POST',
       body: JSON.stringify(userData),
     });
@@ -610,7 +624,7 @@ class ApiClient {
 
   async getCurrentUser(): Promise<ApiResponse<User>> {
     console.log('ApiClient: getCurrentUser called');
-    const result = await this.request<User>('/api/auth/profile');
+    const result = await this.makeRequest<User>('/api/auth/profile');
     console.log('ApiClient: getCurrentUser result:', result);
     return result;
   }
@@ -623,7 +637,7 @@ class ApiClient {
     queryParams.append('page', page.toString());
     queryParams.append('limit', limit.toString());
     
-    const result = await this.request<UserActivityResponse>(`/api/users/me/activity?${queryParams.toString()}`, {
+    const result = await this.makeRequest<UserActivityResponse>(`/api/users/me/activity?${queryParams.toString()}`, {
       method: 'GET',
     });
     
@@ -643,7 +657,7 @@ class ApiClient {
 
   // 인증 상태 확인
   isAuthenticated(): boolean {
-    return !!this.token && !isTokenExpired(this.token);
+    return !!this.token && !this.isTokenExpired(this.token);
   }
 
   // 테스트를 위한 public 메서드들 (원래는 private이지만 테스트 접근을 위해 public으로 노출)
@@ -716,9 +730,9 @@ class ApiClient {
       if (storedToken) {
         try {
           console.log('Token valid format:', this.isValidJWTFormat(storedToken));
-          console.log('Token expired:', isTokenExpired(storedToken));
+          console.log('Token expired:', this.isTokenExpired(storedToken));
           
-          const payload = decodeJWTPayload(storedToken);
+          const payload = this.decodeJWTPayload(storedToken);
           console.log('Token payload:', payload);
           console.log('Token expires at:', new Date(payload.exp * 1000));
           console.log('Current time:', new Date());
@@ -749,7 +763,7 @@ class ApiClient {
     
     console.log('📡 API 요청 - endpoint:', endpoint);
 
-    return this.request<PaginatedResponse<Post>>(endpoint);
+    return this.makeRequest<PaginatedResponse<Post>>(endpoint);
   }
 
   async searchPosts(filters: PostFilters = {}): Promise<ApiResponse<PaginatedResponse<Post>>> {
@@ -769,22 +783,22 @@ class ApiClient {
     const query = queryParams.toString();
     const endpoint = `/api/posts/search${query ? `?${query}` : ''}`;
 
-    return this.request<PaginatedResponse<Post>>(endpoint);
+    return this.makeRequest<PaginatedResponse<Post>>(endpoint);
   }
 
   async getPost(slug: string): Promise<ApiResponse<Post>> {
-    return this.request<Post>(`/api/posts/${slug}`);
+    return this.makeRequest<Post>(`/api/posts/${slug}`);
   }
 
 
   // 🚀 완전 통합 Aggregation으로 게시글 + 작성자 + 댓글 + 댓글작성자 + 사용자반응을 모두 한 번에 조회
   async getPostComplete(slug: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/api/posts/${slug}/complete`);
+    return this.makeRequest<any>(`/api/posts/${slug}/complete`);
   }
 
   async createPost(postData: CreatePostRequest): Promise<ApiResponse<Post>> {
     console.log('🚀 createPost 호출 - 전송할 데이터:', JSON.stringify(postData, null, 2));
-    return this.request<Post>('/api/posts/', {
+    return this.makeRequest<Post>('/api/posts/', {
       method: 'POST',
       body: JSON.stringify(postData),
     });
@@ -792,32 +806,32 @@ class ApiClient {
 
   async updatePost(slug: string, postData: Partial<CreatePostRequest>): Promise<ApiResponse<Post>> {
     console.log('🚀 updatePost 호출 - 전송할 데이터:', JSON.stringify(postData, null, 2));
-    return this.request<Post>(`/api/posts/${slug}`, {
+    return this.makeRequest<Post>(`/api/posts/${slug}`, {
       method: 'PUT',
       body: JSON.stringify(postData),
     });
   }
 
   async deletePost(slug: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/api/posts/${slug}`, {
+    return this.makeRequest<void>(`/api/posts/${slug}`, {
       method: 'DELETE',
     });
   }
 
   // 댓글 관련 API
   async getComments(postSlug: string, page: number = 1): Promise<ApiResponse<CommentListResponse>> {
-    return this.request<CommentListResponse>(`/api/posts/${postSlug}/comments?page=${page}`);
+    return this.makeRequest<CommentListResponse>(`/api/posts/${postSlug}/comments?page=${page}`);
   }
 
   // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 조회
   async getCommentsBatch(postSlug: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/api/posts/${postSlug}/comments`);
+    return this.makeRequest<any>(`/api/posts/${postSlug}/comments`);
   }
 
   async createComment(postSlug: string, commentData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
     console.log('🚀 댓글 작성 API 호출:', { postSlug, commentData });
     
-    const response = await this.request<Comment>(`/api/posts/${postSlug}/comments`, {
+    const response = await this.makeRequest<Comment>(`/api/posts/${postSlug}/comments`, {
       method: 'POST',
       body: JSON.stringify(commentData),
     });
@@ -837,7 +851,7 @@ class ApiClient {
     const endpoint = `/api/posts/${postSlug}/comments/${commentId}`;
     console.log('편집 요청 URL:', endpoint);
     
-    return this.request<Comment>(endpoint, {
+    return this.makeRequest<Comment>(endpoint, {
       method: 'PUT',
       body: JSON.stringify({ content }),
     });
@@ -848,14 +862,14 @@ class ApiClient {
     const endpoint = `/api/posts/${postSlug}/comments/${commentId}`;
     console.log('삭제 요청 URL:', endpoint);
     
-    return this.request<void>(endpoint, {
+    return this.makeRequest<void>(endpoint, {
       method: 'DELETE',
     });
   }
 
   // 답글 작성 API
   async createReply(postSlug: string, commentId: string, content: string): Promise<ApiResponse<Comment>> {
-    return this.request<Comment>(`/api/posts/${postSlug}/comments/${commentId}/replies`, {
+    return this.makeRequest<Comment>(`/api/posts/${postSlug}/comments/${commentId}/replies`, {
       method: 'POST',
       body: JSON.stringify({ content }),
     });
@@ -867,7 +881,7 @@ class ApiClient {
     const endpoint = `/api/posts/${postSlug}/comments/${commentId}/like`;
     console.log('좋아요 요청 URL:', endpoint);
     
-    return this.request<any>(endpoint, {
+    return this.makeRequest<any>(endpoint, {
       method: 'POST',
     });
   }
@@ -877,7 +891,7 @@ class ApiClient {
     const endpoint = `/api/posts/${postSlug}/comments/${commentId}/dislike`;
     console.log('싫어요 요청 URL:', endpoint);
     
-    return this.request<any>(endpoint, {
+    return this.makeRequest<any>(endpoint, {
       method: 'POST',
     });
   }
@@ -890,12 +904,12 @@ class ApiClient {
   ): Promise<ApiResponse<any>> {
     if (targetType === 'post') {
       // 게시글 반응은 slug 기반 개별 엔드포인트 사용
-      return this.request<any>(`/api/posts/${targetId}/${reactionType}`, {
+      return this.makeRequest<any>(`/api/posts/${targetId}/${reactionType}`, {
         method: 'POST',
       });
     } else {
       // 댓글 반응은 일반 reactions 엔드포인트 사용 (구현 예정)
-      return this.request<any>(`/api/reactions`, {
+      return this.makeRequest<any>(`/api/reactions`, {
         method: 'POST',
         body: JSON.stringify({
           target_id: targetId,
@@ -907,31 +921,31 @@ class ApiClient {
   }
 
   async getUserReactions(targetId: string, targetType: 'post' | 'comment'): Promise<ApiResponse<Reaction[]>> {
-    return this.request<Reaction[]>(`/api/reactions?target_id=${targetId}&target_type=${targetType}`);
+    return this.makeRequest<Reaction[]>(`/api/reactions?target_id=${targetId}&target_type=${targetType}`);
   }
 
   // 게시글 반응 개별 메서드들 (더 명확한 API)
   async likePost(slug: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/api/posts/${slug}/like`, {
+    return this.makeRequest<any>(`/api/posts/${slug}/like`, {
       method: 'POST',
     });
   }
 
   async dislikePost(slug: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/api/posts/${slug}/dislike`, {
+    return this.makeRequest<any>(`/api/posts/${slug}/dislike`, {
       method: 'POST',
     });
   }
 
   async bookmarkPost(slug: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/api/posts/${slug}/bookmark`, {
+    return this.makeRequest<any>(`/api/posts/${slug}/bookmark`, {
       method: 'POST',
     });
   }
 
   // 🆕 서비스 게시글 확장 통계 조회
   async getServicePostWithExtendedStats(slug: string): Promise<ApiResponse<any>> {
-    return this.request<any>(`/api/posts/services/${slug}`);
+    return this.makeRequest<any>(`/api/posts/services/${slug}`);
   }
 
   // 🆕 서비스 게시글 목록 확장 통계 조회
@@ -945,19 +959,19 @@ class ApiClient {
       size: size.toString(),
       sort_by: sortBy
     });
-    return this.request<any>(`/api/posts/services?${params.toString()}`);
+    return this.makeRequest<any>(`/api/posts/services?${params.toString()}`);
   }
 
   // 🆕 서비스 문의/후기 API
   async createServiceInquiry(postSlug: string, inquiryData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
-    return this.request<Comment>(`/api/posts/${postSlug}/comments/inquiry`, {
+    return this.makeRequest<Comment>(`/api/posts/${postSlug}/comments/inquiry`, {
       method: 'POST',
       body: JSON.stringify(inquiryData),
     });
   }
 
   async createServiceReview(postSlug: string, reviewData: CreateCommentRequest): Promise<ApiResponse<Comment>> {
-    return this.request<Comment>(`/api/posts/${postSlug}/comments/review`, {
+    return this.makeRequest<Comment>(`/api/posts/${postSlug}/comments/review`, {
       method: 'POST',
       body: JSON.stringify(reviewData),
     });
@@ -965,14 +979,14 @@ class ApiClient {
 
   // 이메일 인증 API
   async sendVerificationEmail(request: EmailVerificationRequest): Promise<ApiResponse<EmailVerificationResponse>> {
-    return this.request<EmailVerificationResponse>('/api/auth/send-verification-email', {
+    return this.makeRequest<EmailVerificationResponse>('/api/auth/send-verification-email', {
       method: 'POST',
       body: JSON.stringify(request),
     });
   }
 
   async verifyEmailCode(request: EmailVerificationCodeRequest): Promise<ApiResponse<EmailVerificationCodeResponse>> {
-    return this.request<EmailVerificationCodeResponse>('/api/auth/verify-email-code', {
+    return this.makeRequest<EmailVerificationCodeResponse>('/api/auth/verify-email-code', {
       method: 'POST',
       body: JSON.stringify(request),
     });
@@ -1027,35 +1041,35 @@ class ApiClient {
 
   // 알림 관련 API
   async getAlertRules(): Promise<ApiResponse<{ rules: AlertRule[] }>> {
-    return this.request<{ rules: AlertRule[] }>('/api/alerts/rules');
+    return this.makeRequest<{ rules: AlertRule[] }>('/api/alerts/rules');
   }
 
   async getAvailableMetrics(): Promise<ApiResponse<{ metrics: any[], categories: string[] }>> {
-    return this.request<{ metrics: any[], categories: string[] }>('/api/alerts/metrics');
+    return this.makeRequest<{ metrics: any[], categories: string[] }>('/api/alerts/metrics');
   }
 
   async createAlertRule(ruleData: CreateAlertRuleRequest): Promise<ApiResponse<AlertRule>> {
-    return this.request<AlertRule>('/api/alerts/rules', {
+    return this.makeRequest<AlertRule>('/api/alerts/rules', {
       method: 'POST',
       body: JSON.stringify(ruleData),
     });
   }
 
   async updateAlertRule(ruleId: string, ruleData: UpdateAlertRuleRequest): Promise<ApiResponse<AlertRule>> {
-    return this.request<AlertRule>(`/api/alerts/rules/${ruleId}`, {
+    return this.makeRequest<AlertRule>(`/api/alerts/rules/${ruleId}`, {
       method: 'PUT',
       body: JSON.stringify(ruleData),
     });
   }
 
   async deleteAlertRule(ruleId: string): Promise<ApiResponse<void>> {
-    return this.request<void>(`/api/alerts/rules/${ruleId}`, {
+    return this.makeRequest<void>(`/api/alerts/rules/${ruleId}`, {
       method: 'DELETE',
     });
   }
 
   async getAlertStatistics(): Promise<ApiResponse<AlertStatistics>> {
-    return this.request<AlertStatistics>('/api/alerts/statistics');
+    return this.makeRequest<AlertStatistics>('/api/alerts/statistics');
   }
 
   async getAlertHistory(
@@ -1072,34 +1086,98 @@ class ApiClient {
       params.append('rule_id', ruleId);
     }
     
-    return this.request<{ alerts: AlertHistory[], total: number }>(`/api/alerts/history?${params.toString()}`);
+    return this.makeRequest<{ alerts: AlertHistory[], total: number }>(`/api/alerts/history?${params.toString()}`);
   }
 
   async evaluateAlertRules(): Promise<ApiResponse<{ evaluated: number; triggered: number }>> {
-    return this.request<{ evaluated: number; triggered: number }>('/api/alerts/evaluate', {
+    return this.makeRequest<{ evaluated: number; triggered: number }>('/api/alerts/evaluate', {
       method: 'POST',
     });
   }
 
   async toggleAlertRule(ruleId: string): Promise<ApiResponse<AlertRule>> {
-    return this.request<AlertRule>(`/api/alerts/rules/${ruleId}/toggle`, {
+    return this.makeRequest<AlertRule>(`/api/alerts/rules/${ruleId}/toggle`, {
       method: 'POST',
     });
   }
 
   async testAlertRule(ruleId: string): Promise<ApiResponse<{ success: boolean; message: string }>> {
-    return this.request<{ success: boolean; message: string }>(`/api/alerts/rules/${ruleId}/test`, {
+    return this.makeRequest<{ success: boolean; message: string }>(`/api/alerts/rules/${ruleId}/test`, {
       method: 'POST',
     });
   }
 
   async getAlertSystemHealth(): Promise<ApiResponse<any>> {
-    return this.request<any>('/api/alerts/health');
+    return this.makeRequest<any>('/api/alerts/health');
   }
 
   async testAlertSystem(): Promise<ApiResponse<any>> {
-    return this.request<any>('/api/alerts/test', {
+    return this.makeRequest<any>('/api/alerts/test', {
       method: 'POST',
+    });
+  }
+
+  // 관리자 문의 관리 API
+  async getInquiries(
+    page: number = 1,
+    page_size: number = 20,
+    inquiry_type?: string,
+    status?: string
+  ): Promise<ApiResponse<{
+    items: any[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      page_size: page_size.toString(),
+    });
+    
+    if (inquiry_type) {
+      params.append('inquiry_type', inquiry_type);
+    }
+    
+    if (status) {
+      params.append('status', status);
+    }
+    
+    return this.makeRequest<{
+      items: any[];
+      total: number;
+      page: number;
+      page_size: number;
+      total_pages: number;
+    }>(`/api/admin/inquiries?${params.toString()}`);
+  }
+
+  async getInquiryById(inquiryId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/admin/inquiries/${inquiryId}`);
+  }
+
+  async updateInquiryStatus(inquiryId: string, status: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/admin/inquiries/${inquiryId}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    });
+  }
+
+  // 관리자 사용자 권한 관리 API
+  async getUserById(userId: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/admin/users/${userId}`);
+  }
+
+  async updateUserPermissions(
+    userId: string,
+    permissions: {
+      can_write_moving_services?: boolean;
+      can_write_expert_tips?: boolean;
+    }
+  ): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/admin/users/${userId}/permissions`, {
+      method: 'PUT',
+      body: JSON.stringify(permissions),
     });
   }
 }
