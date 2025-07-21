@@ -2,6 +2,7 @@ import { type MetaFunction } from "@remix-run/node";
 import { useNavigate } from "@remix-run/react";
 import GridPageLayout from "~/components/common/GridPageLayout";
 import { useAuth } from "~/contexts/AuthContext";
+import { useNotification } from "~/contexts/NotificationContext";
 import { useListData } from "~/hooks/useListData";
 import { tipsConfig } from "~/config/pageConfigs";
 import type { Post, Tip } from "~/types";
@@ -49,6 +50,7 @@ function getExpertIcon(category?: string) {
 
 export default function Tips() {
   const { user, logout } = useAuth();
+  const { showError } = useNotification();
   const navigate = useNavigate();
   
   // useListData 훅으로 API 통합 및 상태 관리
@@ -98,8 +100,26 @@ export default function Tips() {
     // 추후 페이징 구현 시 사용
   };
 
+  // 글쓰기 권한 체크 함수
+  const hasWritePermission = () => {
+    if (!user) return false;
+    if (user.is_admin) return true;
+    return user.can_write_expert_tips || false;
+  };
+
   // 액션 버튼 핸들러 (글쓰기)
   const handleActionClick = () => {
+    if (!user) {
+      showError("로그인이 필요합니다.");
+      navigate("/auth/login");
+      return;
+    }
+
+    if (!hasWritePermission()) {
+      showError("전문가 꿀정보를 작성할 권한이 없습니다. 관리자에게 문의해주세요.");
+      return;
+    }
+
     navigate('/tips/write');
   };
 

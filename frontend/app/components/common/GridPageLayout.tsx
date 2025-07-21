@@ -57,6 +57,20 @@ const GridPageLayout: React.FC<GridPageLayoutProps> = ({
     return pageType === 'moving-services' ? '📝 업체 등록하기' : '✏️ 글쓰기';
   };
 
+  // 글쓰기 권한 체크 함수
+  const hasWritePermission = () => {
+    if (!user) return false;
+    if (user.is_admin) return true;
+    
+    if (pageType === 'moving-services') {
+      return user.can_write_moving_services || false;
+    } else if (pageType === 'expert-tips') {
+      return user.can_write_expert_tips || false;
+    }
+    
+    return false;
+  };
+
   const getSearchPlaceholder = () => {
     return pageType === 'moving-services' ? '서비스 검색...' : '전문가 꿀정보를 검색하세요...';
   };
@@ -269,15 +283,17 @@ const GridPageLayout: React.FC<GridPageLayoutProps> = ({
     <AppLayout user={user} onLogout={onLogout}>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* 액션 버튼 + 검색창 섹션 */}
-        <div className="flex justify-center items-center gap-4 mb-6">
-          <button 
-            onClick={onActionClick}
-            className="w-full max-w-xs px-6 py-3 bg-white border border-gray-300 rounded-full hover:border-blue-500 hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 flex items-center justify-center gap-2"
-          >
-            {getActionButtonText()}
-          </button>
+        <div className={`flex justify-center items-center gap-4 mb-6 ${!hasWritePermission() ? 'justify-center' : ''}`}>
+          {hasWritePermission() && (
+            <button 
+              onClick={onActionClick}
+              className="w-full max-w-xs px-6 py-3 bg-white border border-gray-300 rounded-full hover:border-blue-500 hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 flex items-center justify-center gap-2"
+            >
+              {getActionButtonText()}
+            </button>
+          )}
           
-          <div className="flex items-center gap-3 bg-white border border-gray-300 rounded-full px-4 py-3 w-full max-w-xs">
+          <div className={`flex items-center gap-3 bg-white border border-gray-300 rounded-full px-4 py-3 w-full max-w-xs ${!hasWritePermission() ? 'mx-auto' : ''}`}>
             <span className="text-gray-500">🔍</span>
             <input
               type="text"
@@ -357,14 +373,19 @@ const GridPageLayout: React.FC<GridPageLayoutProps> = ({
               {pageType === 'moving-services' ? '등록된 서비스가 없습니다' : '작성된 꿀정보가 없습니다'}
             </h3>
             <p className="text-gray-500 mb-4">
-              {pageType === 'moving-services' ? '첫 번째 서비스를 등록해보세요!' : '첫 번째 꿀정보를 작성해보세요!'}
+              {hasWritePermission() 
+                ? (pageType === 'moving-services' ? '첫 번째 서비스를 등록해보세요!' : '첫 번째 꿀정보를 작성해보세요!')
+                : (pageType === 'moving-services' ? '아직 등록된 서비스가 없습니다' : '아직 작성된 꿀정보가 없습니다')
+              }
             </p>
-            <button
-              onClick={onActionClick}
-              className="px-6 py-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-            >
-              {getActionButtonText()}
-            </button>
+            {hasWritePermission() && (
+              <button
+                onClick={onActionClick}
+                className="px-6 py-3 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+              >
+                {getActionButtonText()}
+              </button>
+            )}
           </div>
         )}
       </main>

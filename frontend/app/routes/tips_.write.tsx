@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import * as React from "react";
 import { useNavigate } from "@remix-run/react";
 import { type MetaFunction } from "@remix-run/node";
 import PostWriteForm, { type PostWriteFormConfig } from "~/components/common/PostWriteForm";
@@ -34,6 +35,40 @@ export default function TipsWrite() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { showSuccess, showError } = useNotification();
+
+  // 글쓰기 권한 체크
+  const hasWritePermission = () => {
+    if (!user) return false;
+    if (user.is_admin) return true;
+    return user.can_write_expert_tips || false;
+  };
+
+  // 컴포넌트 마운트 시 권한 체크
+  React.useEffect(() => {
+    if (!user) {
+      showError("로그인이 필요합니다.");
+      navigate("/auth/login");
+      return;
+    }
+
+    if (!hasWritePermission()) {
+      showError("전문가 꿀정보를 작성할 권한이 없습니다. 관리자에게 문의해주세요.");
+      navigate("/tips");
+      return;
+    }
+  }, [user, navigate, showError]);
+
+  // 권한이 없으면 로딩 상태 표시
+  if (!user || !hasWritePermission()) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-500">권한을 확인하고 있습니다...</p>
+        </div>
+      </div>
+    );
+  }
   
   const [formData, setFormData] = useState<ExpertTipFormData>({
     title: "",

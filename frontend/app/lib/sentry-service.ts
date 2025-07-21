@@ -240,12 +240,13 @@ class FrontendSentryService {
   /**
    * 성능 트랜잭션 시작
    */
-  public startTransaction(name: string, op: string = 'navigation'): Sentry.Transaction | null {
+  public startTransaction(name: string, op: string = 'navigation'): any | null {
     if (!this.isInitialized) return null;
 
-    const transaction = Sentry.startTransaction({ name, op });
-    console.log('⏱️ Sentry 트랜잭션 시작:', name);
-    return transaction;
+    // Sentry v8의 새로운 API 사용 - startSpan으로 대체
+    const span = Sentry.startSpan({ name, op }, (span) => span);
+    console.log('⏱️ Sentry 스팬 시작:', name);
+    return span;
   }
 
   /**
@@ -418,38 +419,38 @@ export const withSentryProfiling = <T extends (...args: any[]) => any>(
   component?: string
 ): T => {
   return ((...args: any[]) => {
-    const transaction = sentryService.startTransaction(`${component || 'function'}.${name}`, 'function');
-    
-    try {
-      const result = fn(...args);
-      
-      // Promise인 경우 처리
-      if (result instanceof Promise) {
-        return result
-          .then((res) => {
-            transaction?.setStatus('ok');
-            transaction?.finish();
-            return res;
-          })
-          .catch((error) => {
-            transaction?.setStatus('internal_error');
-            transaction?.finish();
-            sentryService.captureError(error, { component, action: name });
-            throw error;
-          });
+    // Sentry v8의 새로운 API 사용
+    return Sentry.startSpan(
+      { name: `${component || 'function'}.${name}`, op: 'function' },
+      (span) => {
+        try {
+          const result = fn(...args);
+          
+          // Promise인 경우 처리
+          if (result instanceof Promise) {
+            return result
+              .then((res) => {
+                span?.setStatus({ code: 1 }); // ok
+                return res;
+              })
+              .catch((error) => {
+                span?.setStatus({ code: 2 }); // error
+                sentryService.captureError(error, { component, action: name });
+                throw error;
+              });
+          }
+          
+          // 동기 함수인 경우
+          span?.setStatus({ code: 1 }); // ok
+          return result;
+          
+        } catch (error) {
+          span?.setStatus({ code: 2 }); // error
+          sentryService.captureError(error as Error, { component, action: name });
+          throw error;
+        }
       }
-      
-      // 동기 함수인 경우
-      transaction?.setStatus('ok');
-      transaction?.finish();
-      return result;
-      
-    } catch (error) {
-      transaction?.setStatus('internal_error');
-      transaction?.finish();
-      sentryService.captureError(error as Error, { component, action: name });
-      throw error;
-    }
+    );
   }) as T;
 };
 

@@ -11,6 +11,8 @@ export interface User {
   avatar_url?: string;  // 백엔드 UserResponse 호환
   status?: "active" | "inactive" | "suspended";  // 백엔드 UserResponse 호환
   is_admin?: boolean;  // 관리자 권한 (백엔드 UserResponse 호환)
+  can_write_moving_services?: boolean;  // 입주 업체 서비스 글쓰기 권한
+  can_write_expert_tips?: boolean;  // 전문가 꿀정보 글쓰기 권한
   email_verified?: boolean;  // 이메일 인증 상태 (백엔드 UserResponse 호환)
   role?: string;  // 역할 (추가 호환성)
   created_at: string;
