@@ -8,6 +8,7 @@ export function cn(...inputs: ClassValue[]) {
 
 // 날짜 포맷팅 유틸리티
 export function formatDate(dateString: string): string {
+  // 서버에서 이미 KST로 보내므로 그대로 파싱
   const date = new Date(dateString);
   return date.toLocaleDateString('ko-KR', {
     year: 'numeric',
@@ -15,11 +16,12 @@ export function formatDate(dateString: string): string {
     day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'Asia/Seoul', // 한국 시간대 명시적 설정
+    // timezone 설정 제거 - 서버에서 이미 KST로 보냄
   });
 }
 
 export function formatRelativeTime(dateString: string): string {
+  // 서버에서 이미 KST로 보내므로 그대로 파싱
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);

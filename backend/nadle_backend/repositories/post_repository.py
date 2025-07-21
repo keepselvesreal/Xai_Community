@@ -13,6 +13,7 @@ from nadle_backend.models.core import (
     User,
 )
 from nadle_backend.exceptions.post import PostNotFoundError, PostSlugAlreadyExistsError
+from nadle_backend.utils.timezone import get_kst_now
 
 
 class PostRepository:
@@ -42,9 +43,9 @@ class PostRepository:
             slug=temp_slug,  # Temporary slug
             author_id=author_id,
             status="published",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
-            published_at=datetime.utcnow(),
+            created_at=get_kst_now(),
+            updated_at=get_kst_now(),
+            published_at=get_kst_now(),
             view_count=0,
             like_count=0,
             dislike_count=0,
@@ -126,7 +127,7 @@ class PostRepository:
         # Update fields
         update_dict = update_data.model_dump(exclude_unset=True)
         if update_dict:
-            update_dict["updated_at"] = datetime.utcnow()
+            update_dict["updated_at"] = get_kst_now()
 
             # If title is updated, update slug as well
             if "title" in update_dict:
@@ -163,7 +164,7 @@ class PostRepository:
 
         # Soft delete: update status to 'deleted' instead of physical deletion
         post.status = "deleted"
-        post.updated_at = datetime.utcnow()
+        post.updated_at = get_kst_now()
         await post.save()
 
         return True
@@ -360,26 +361,6 @@ class PostRepository:
             print(f"Error decrementing bookmark count for post {post_id}: {e}")
             return False
 
-    async def update_post_counts(
-        self, post_id: str, update_fields: Dict[str, int]
-    ) -> bool:
-        """Update post count fields using increment operations.
-
-        Args:
-            post_id: Post ID
-            update_fields: Dictionary of field names and increment values (can be negative)
-
-        Returns:
-            True if successful
-        """
-        try:
-            result = await Post.find({"_id": PydanticObjectId(post_id)}).update(
-                {"$inc": update_fields}
-            )
-            return True
-        except Exception as e:
-            print(f"Error updating post counts for post {post_id}: {e}")
-            return False
 
     async def get_user_reactions(
         self, user_id: str, post_ids: List[str]
@@ -586,6 +567,13 @@ class PostRepository:
             ]
         elif metadata_type:
             match_stage["metadata.type"] = metadata_type
+        else:
+            # metadata_type이 None이면 기본적으로 board 타입 게시글 반환
+            match_stage["$or"] = [
+                {"metadata.type": {"$exists": False}},
+                {"metadata.type": None},
+                {"metadata.type": "board"},
+            ]
 
         print(f"🔍 Repository match_stage: {match_stage}")
         print(f"📊 Searching for metadata_type: '{metadata_type}'")
@@ -601,11 +589,19 @@ class PostRepository:
             # 2. 정렬
             {"$sort": {sort_field: sort_direction}},
             # 3. 작성자 정보 조회 (User 컬렉션과 조인)
-            # author_id는 문자열이므로 ObjectId로 변환하여 조인
+            # guest_inquiry로 시작하는 경우는 ObjectId가 아니므로 조건부 변환
             {
                 "$lookup": {
                     "from": "users",
-                    "let": {"author_id": {"$toObjectId": "$author_id"}},
+                    "let": {
+                        "author_id": {
+                            "$cond": {
+                                "if": {"$regexMatch": {"input": "$author_id", "regex": "^guest_"}},
+                                "then": "$author_id",  # guest_ ID는 그대로 사용
+                                "else": {"$toObjectId": "$author_id"}  # 일반 ID는 ObjectId로 변환
+                            }
+                        }
+                    },
                     "pipeline": [
                         {"$match": {"$expr": {"$eq": ["$_id", "$$author_id"]}}}
                     ],
@@ -894,7 +890,7 @@ class PostRepository:
             from beanie import PydanticObjectId
 
             # 업데이트할 필드들
-            update_fields = {"status": new_status, "updated_at": datetime.utcnow()}
+            update_fields = {"status": new_status, "updated_at": get_kst_now()}
 
             # resolved_at이 제공된 경우 추가
             if resolved_at is not None:
@@ -918,19 +914,3 @@ class PostRepository:
             print(f"Error updating post status: {e}")
             raise PostNotFoundError(f"Failed to update post {post_id}")
 
-    async def get_by_id(self, post_id: str) -> Optional[Post]:
-        """ID로 게시글 조회.
-
-        Args:
-            post_id: 게시글 ID
-
-        Returns:
-            게시글 인스턴스 또는 None
-        """
-        try:
-            from beanie import PydanticObjectId
-
-            post = await Post.get(PydanticObjectId(post_id))
-            return post
-        except Exception:
-            return None

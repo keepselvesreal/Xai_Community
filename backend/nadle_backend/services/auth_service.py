@@ -2,6 +2,7 @@
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime
+from nadle_backend.utils.timezone import get_kst_now
 from nadle_backend.models.core import User, UserCreate, UserUpdate
 from nadle_backend.repositories.user_repository import UserRepository
 from nadle_backend.utils.jwt import JWTManager, TokenType
@@ -470,7 +471,7 @@ class AuthService:
             session_service = await get_session_service()
 
             # 토큰 만료 시간 계산
-            expires_at = datetime.now() + self.settings.refresh_token_expire
+            expires_at = get_kst_now() + self.settings.refresh_token_expire
 
             # 세션 데이터 생성
             session_data = SessionData(
@@ -517,8 +518,8 @@ class AuthService:
             session_service = await get_session_service()
 
             # 토큰 만료 시간 계산
-            access_expires_at = datetime.now() + self.settings.access_token_expire
-            refresh_expires_at = datetime.now() + self.settings.refresh_token_expire
+            access_expires_at = get_kst_now() + self.settings.access_token_expire
+            refresh_expires_at = get_kst_now() + self.settings.refresh_token_expire
 
             # Access token 블랙리스트 추가
             await blacklist_service.blacklist_token(
@@ -575,7 +576,7 @@ class AuthService:
             cache_service = await get_cache_service()
 
             # 사용자의 모든 토큰 블랙리스트 추가
-            expires_at = datetime.now() + self.settings.refresh_token_expire
+            expires_at = get_kst_now() + self.settings.refresh_token_expire
             blacklisted_count = await blacklist_service.blacklist_user_tokens(
                 user_id, expires_at, "logout_all_sessions"
             )
@@ -694,7 +695,7 @@ class AuthService:
 
             # CSRF 토큰 생성 (세션 기반)
             csrf_manager = CSRFProtectionManager()
-            session_id = f"session_{user.id}_{datetime.now().timestamp()}"
+            session_id = f"session_{user.id}_{get_kst_now().timestamp()}"
             csrf_token = csrf_manager.generate_csrf_token(session_id)
 
             # 보안 쿠키 응답 생성

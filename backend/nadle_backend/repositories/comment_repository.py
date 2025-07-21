@@ -3,6 +3,7 @@
 from typing import List, Dict, Optional, Tuple, Any, Literal
 from datetime import datetime
 from beanie import PydanticObjectId
+from nadle_backend.utils.timezone import get_kst_now
 from nadle_backend.models.core import (
     Comment,
     CommentCreate,
@@ -57,8 +58,8 @@ class CommentRepository:
             parent_comment_id=comment_data.parent_comment_id,
             author_id=author_id,
             status="active",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow(),
+            created_at=get_kst_now(),
+            updated_at=get_kst_now(),
             metadata=comment_data.metadata or {},
         )
 
@@ -102,7 +103,7 @@ class CommentRepository:
         comment = await self.get_by_id(comment_id)
 
         # Update content and timestamp
-        update_dict = {"content": content, "updated_at": datetime.utcnow()}
+        update_dict = {"content": content, "updated_at": get_kst_now()}
 
         await comment.update({"$set": update_dict})
 
@@ -125,7 +126,7 @@ class CommentRepository:
         comment = await self.get_by_id(comment_id)
 
         # Soft delete by updating status
-        update_dict = {"status": "deleted", "updated_at": datetime.utcnow()}
+        update_dict = {"status": "deleted", "updated_at": get_kst_now()}
 
         await comment.update({"$set": update_dict})
         return True

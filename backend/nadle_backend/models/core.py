@@ -6,6 +6,8 @@ from pymongo import ASCENDING, DESCENDING
 
 # Import settings for dynamic collection names
 from ..config import settings
+# Import timezone utilities
+from ..utils.timezone import get_kst_now
 
 
 # Enums and Types
@@ -128,8 +130,8 @@ class User(Document, UserBase):
     """User document model for MongoDB."""
 
     status: UserStatus = "active"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_kst_now)
+    updated_at: datetime = Field(default_factory=get_kst_now)
     last_login: Optional[datetime] = None
 
     # Password hash (not included in UserBase for security)
@@ -177,8 +179,8 @@ class Post(Document, PostBase):
     slug: str = Indexed(unique=True)
     author_id: str
     status: PostStatus = "published"
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_kst_now)
+    updated_at: datetime = Field(default_factory=get_kst_now)
     published_at: Optional[datetime] = None
     resolved_at: Optional[datetime] = None  # 문의/신고 처리 완료 시간
 
@@ -236,8 +238,8 @@ class Comment(Document, CommentBase):
     parent_type: Literal["post"] = "post"  # For extensibility
     parent_id: str  # Post ID (not slug)
     author_id: str
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_kst_now)
+    updated_at: datetime = Field(default_factory=get_kst_now)
     status: CommentStatus = "active"
     like_count: int = 0  # Aggregated count from UserReaction
     dislike_count: int = 0  # Aggregated count from UserReaction
@@ -276,7 +278,7 @@ class PostStats(Document):
     dislike_count: int = 0
     comment_count: int = 0
     bookmark_count: int = 0
-    last_viewed_at: datetime = Field(default_factory=datetime.utcnow)
+    last_viewed_at: datetime = Field(default_factory=get_kst_now)
 
     class Settings:
         name = settings.post_stats_collection
@@ -292,8 +294,8 @@ class UserReaction(Document):
     liked: bool = False
     disliked: bool = False
     bookmarked: bool = False  # Only applicable for posts
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=get_kst_now)
+    updated_at: datetime = Field(default_factory=get_kst_now)
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict
     )  # For route_path and target_title storage
@@ -322,7 +324,7 @@ class FileRecord(Document):
     attachment_type: Optional[str] = None
     attachment_id: Optional[str] = None
     uploaded_by: Optional[str] = None
-    upload_timestamp: datetime = Field(default_factory=datetime.utcnow)
+    upload_timestamp: datetime = Field(default_factory=get_kst_now)
     created_at: datetime = Field(default_factory=datetime.utcnow)
     status: str = "active"
 
@@ -351,8 +353,8 @@ class Stats(Document):
     hourly_distribution: Dict[int, int] = Field(default_factory=dict)
 
     # Metadata
-    last_calculated: datetime = Field(default_factory=datetime.utcnow)
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    last_calculated: datetime = Field(default_factory=get_kst_now)
+    last_updated: datetime = Field(default_factory=get_kst_now)
 
     class Settings:
         name = settings.stats_collection

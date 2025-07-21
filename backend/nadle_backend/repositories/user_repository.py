@@ -3,6 +3,7 @@
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from beanie.operators import In
+from nadle_backend.utils.timezone import get_kst_now
 from nadle_backend.models.core import User, UserCreate, UserUpdate
 from nadle_backend.exceptions.user import UserNotFoundError, DuplicateUserError
 
@@ -93,7 +94,7 @@ class UserRepository:
         for field, value in update_data.items():
             setattr(user, field, value)
 
-        user.updated_at = datetime.utcnow()
+        user.updated_at = get_kst_now()
         await user.save()
 
         return user
@@ -123,7 +124,7 @@ class UserRepository:
             UserNotFoundError: If user not found
         """
         user = await self.get_by_id(user_id)
-        user.last_login = datetime.utcnow()
+        user.last_login = get_kst_now()
         await user.save()
         return user
 
@@ -157,7 +158,7 @@ class UserRepository:
         user = await self.get_by_id(user_id)
         user.email_verification_token = token
         user.email_verification_expires = expires_at
-        user.updated_at = datetime.utcnow()
+        user.updated_at = get_kst_now()
         await user.save()
         return user
 
@@ -177,7 +178,7 @@ class UserRepository:
         user.email_verified = True
         user.email_verification_token = None
         user.email_verification_expires = None
-        user.updated_at = datetime.utcnow()
+        user.updated_at = get_kst_now()
         await user.save()
         return user
 
@@ -256,7 +257,7 @@ class UserRepository:
         """
         user = await self.get_by_id(user_id)
         user.status = status
-        user.updated_at = datetime.utcnow()
+        user.updated_at = get_kst_now()
         await user.save()
         return user
 
@@ -275,7 +276,7 @@ class UserRepository:
         """
         user = await self.get_by_id(user_id)
         user.password_hash = password_hash
-        user.updated_at = datetime.utcnow()
+        user.updated_at = get_kst_now()
         await user.save()
         return user
 

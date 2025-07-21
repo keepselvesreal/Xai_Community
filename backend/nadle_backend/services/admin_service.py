@@ -2,6 +2,7 @@
 
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from nadle_backend.utils.timezone import get_kst_now
 from nadle_backend.models.core import User, Post
 from nadle_backend.repositories.post_repository import PostRepository
 from nadle_backend.exceptions.post import PostNotFoundError
@@ -147,7 +148,7 @@ class AdminService:
         # Set resolved_at timestamp for resolved/rejected status
         resolved_at = None
         if new_status in ["resolved", "rejected"]:
-            resolved_at = datetime.utcnow()
+            resolved_at = get_kst_now()
 
         # Update status in repository
         updated_post = await self.post_repository.update_status(
@@ -255,7 +256,7 @@ class AdminService:
 
         # Update user permissions
         if update_data:
-            update_data["updated_at"] = datetime.utcnow()
+            update_data["updated_at"] = get_kst_now()
             await user.update({"$set": update_data})
 
         # Return updated user

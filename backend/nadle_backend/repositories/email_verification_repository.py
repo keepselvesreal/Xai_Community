@@ -3,6 +3,7 @@
 from typing import Optional
 from datetime import datetime, timedelta
 import logging
+from nadle_backend.utils.timezone import get_kst_now
 
 from ..models.email_verification import EmailVerification
 from ..config import settings
@@ -63,7 +64,7 @@ class EmailVerificationRepository:
     async def delete_expired(self) -> int:
         """Delete all expired email verifications."""
         try:
-            current_time = datetime.utcnow()
+            current_time = get_kst_now()
             result = await EmailVerification.find(
                 EmailVerification.expires_at < current_time
             ).delete()
@@ -81,7 +82,7 @@ class EmailVerificationRepository:
         """Count how many verifications were sent to this email today."""
         try:
             # Calculate start of today
-            today_start = datetime.utcnow().replace(
+            today_start = get_kst_now().replace(
                 hour=0, minute=0, second=0, microsecond=0
             )
 
@@ -98,7 +99,7 @@ class EmailVerificationRepository:
     async def cleanup_old_verifications(self, days_old: int = 1) -> int:
         """Clean up old verification records (beyond expiry)."""
         try:
-            cutoff_time = datetime.utcnow() - timedelta(days=days_old)
+            cutoff_time = get_kst_now() - timedelta(days=days_old)
             result = await EmailVerification.find(
                 EmailVerification.created_at < cutoff_time
             ).delete()

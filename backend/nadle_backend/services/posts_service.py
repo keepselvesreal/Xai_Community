@@ -662,9 +662,9 @@ class PostsService:
             user_reaction.bookmarked = not user_reaction.bookmarked
 
         # Update timestamp for real-time activity tracking
-        from datetime import datetime
+        from nadle_backend.utils.timezone import get_kst_now
 
-        user_reaction.updated_at = datetime.utcnow()
+        user_reaction.updated_at = get_kst_now()
 
         # Save user reaction
         await user_reaction.save()
