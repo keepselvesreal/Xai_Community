@@ -1,4 +1,5 @@
 import { useNavigate } from '@remix-run/react';
+import { useEffect } from 'react';
 import { useListData } from '~/hooks/useListData';
 import AppLayout from '~/components/layout/AppLayout';
 import LoadingSpinner from '~/components/common/LoadingSpinner';
@@ -7,6 +8,7 @@ import EmptyState from '~/components/common/EmptyState';
 import { SearchAndFilters } from './SearchAndFilters';
 import { FilterAndSort } from './FilterAndSort';
 import { UnifiedPostList } from './UnifiedPostList';
+import { UnifiedPagination } from './UnifiedPagination';
 import type { ListPageConfig } from '~/types/listTypes';
 import type { Post } from '~/types';
 import { getNavigationUrl } from '~/types/routingTypes';
@@ -31,6 +33,10 @@ export function UnifiedListPage({
     items,
     loading,
     error,
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
     currentFilter,
     sortBy,
     searchQuery,
@@ -39,8 +45,14 @@ export function UnifiedListPage({
     handleSort,
     handleSearch,
     handleSearchSubmit,
+    handlePageChange,
     refetch
   } = useListData(config, initialData, isServerRendered);
+
+  // 페이지 변경 시 스크롤 맨 위로
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [currentPage]);
 
   // Handle item click navigation using type-safe routing
   const handleItemClick = (item: Post) => {
@@ -109,10 +121,19 @@ export function UnifiedListPage({
       
       {/* 통합 게시글 목록 */}
       {!loading && !isSearching && !error && items.length > 0 && (
-        <UnifiedPostList
-          posts={items as Post[]}
-          onItemClick={handleItemClick}
-        />
+        <>
+          <UnifiedPostList
+            posts={items as Post[]}
+            onItemClick={handleItemClick}
+          />
+          
+          {/* 페이지네이션 */}
+          <UnifiedPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </>
       )}
       
       {/* 빈 상태 */}

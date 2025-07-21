@@ -11,6 +11,12 @@ export interface UseListDataResult<T extends BaseListItem> {
   loading: boolean;
   error: string | null;
   
+  // 페이지네이션
+  currentPage: number;
+  totalPages: number;
+  totalItems: number;
+  pageSize: number;
+  
   // 필터링/정렬 상태
   currentFilter: string;
   sortBy: string;
@@ -23,6 +29,7 @@ export interface UseListDataResult<T extends BaseListItem> {
   handleSort: (sortBy: string) => void;
   handleSearch: (query: string) => void;
   handleSearchSubmit: (e: React.FormEvent) => void;
+  handlePageChange: (page: number) => void;
   refetch: () => void;
 }
 
@@ -42,6 +49,12 @@ export function useListData<T extends BaseListItem>(
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchResults, setSearchResults] = useState<T[]>([]);
+  
+  // 페이지네이션 상태
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize] = useState(20); // 20개씩 보기
   
   const debouncedSearchQuery = useDebounce(searchQuery, 300);
   
@@ -79,25 +92,28 @@ export function useListData<T extends BaseListItem>(
   }, [config.apiEndpoint, config.apiFilters]);
 
   // API 호출 함수 (캐싱 적용)
-  const fetchData = useCallback(async () => {
-    const cacheKey = getCacheKey();
+  const fetchData = useCallback(async (page: number = 1) => {
+    const cacheKey = `${getCacheKey()}-page-${page}`;
     
-    // 캐시된 데이터 먼저 확인
-    const cachedData = CacheManager.getFromCache<T[]>(cacheKey);
-    if (cachedData) {
-      setRawData(cachedData);
+    // 페이지별 캐시 확인
+    const cachedPageData = CacheManager.getFromCache<{items: T[], total: number, page: number, pageSize: number}>(cacheKey);
+    if (cachedPageData) {
+      setRawData(cachedPageData.items);
+      setTotalItems(cachedPageData.total);
+      setTotalPages(Math.ceil(cachedPageData.total / pageSize));
+      setCurrentPage(cachedPageData.page);
       setLoading(false);
       
       // 백그라운드에서 최신 데이터 업데이트
-      updateDataInBackground(cacheKey);
+      updateDataInBackground(cacheKey, page);
       return;
     }
 
     // 캐시가 없으면 로딩 상태로 API 호출
-    await fetchAndCacheData(cacheKey);
-  }, [config.apiEndpoint, config.apiFilters, getCacheKey]);
+    await fetchAndCacheData(cacheKey, page);
+  }, [config.apiEndpoint, config.apiFilters, getCacheKey, pageSize]);
 
-  const fetchAndCacheData = useCallback(async (cacheKey: string) => {
+  const fetchAndCacheData = useCallback(async (cacheKey: string, page: number = 1) => {
     try {
       setLoading(true);
       setError(null);
@@ -106,8 +122,8 @@ export function useListData<T extends BaseListItem>(
       if (config.apiEndpoint === '/api/posts') {
         const response = await apiClient.getPosts({
           ...config.apiFilters,
-          page: 1,
-          size: 50
+          page: page,
+          size: pageSize
         });
         
         if (response.success && response.data) {
@@ -139,25 +155,41 @@ export function useListData<T extends BaseListItem>(
           }
           
           setRawData(items);
+          setTotalItems(response.data.total || 0);
+          setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+          setCurrentPage(response.data.page || page);
           
-          // 캐시에 저장 (5분 TTL)
-          CacheManager.saveToCache(cacheKey, items, 5 * 60 * 1000);
+          // 페이지별 캐시 저장 (5분 TTL)
+          CacheManager.saveToCache(cacheKey, {
+            items,
+            total: response.data.total || 0,
+            page: response.data.page || page,
+            pageSize
+          }, 5 * 60 * 1000);
         } else {
           console.error('❌ API 응답 실패:', response);
           throw new Error(response.error || '데이터를 불러올 수 없습니다');
         }
       } else if (config.apiEndpoint === '/api/posts/services') {
         // 서비스 확장 통계 API 사용
-        const response = await apiClient.getServicePostsWithExtendedStats(1, 50, 'created_at');
+        const response = await apiClient.getServicePostsWithExtendedStats(page, pageSize, 'created_at');
         
         if (response.success && response.data) {
           const items = config.transformData 
             ? config.transformData(response.data.items)
             : response.data.items as T[];
           setRawData(items);
+          setTotalItems(response.data.total || 0);
+          setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+          setCurrentPage(response.data.page || page);
           
-          // 캐시에 저장 (5분 TTL)
-          CacheManager.saveToCache(cacheKey, items, 5 * 60 * 1000);
+          // 페이지별 캐시 저장 (5분 TTL)
+          CacheManager.saveToCache(cacheKey, {
+            items,
+            total: response.data.total || 0,
+            page: response.data.page || page,
+            pageSize
+          }, 5 * 60 * 1000);
         } else {
           throw new Error(response.error || '데이터를 불러올 수 없습니다');
         }
@@ -167,8 +199,8 @@ export function useListData<T extends BaseListItem>(
           method: 'GET',
           params: {
             ...config.apiFilters,
-            page: 1,
-            size: 50
+            page: page,
+            size: pageSize
           }
         });
         
@@ -177,9 +209,17 @@ export function useListData<T extends BaseListItem>(
             ? config.transformData(response.data.items)
             : response.data.items;
           setRawData(items);
+          setTotalItems(response.data.total || 0);
+          setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+          setCurrentPage(response.data.page || page);
           
-          // 캐시에 저장 (5분 TTL)
-          CacheManager.saveToCache(cacheKey, items, 5 * 60 * 1000);
+          // 페이지별 캐시 저장 (5분 TTL)
+          CacheManager.saveToCache(cacheKey, {
+            items,
+            total: response.data.total || 0,
+            page: response.data.page || page,
+            pageSize
+          }, 5 * 60 * 1000);
         } else {
           throw new Error(response.error || '데이터를 불러올 수 없습니다');
         }
@@ -190,16 +230,16 @@ export function useListData<T extends BaseListItem>(
     } finally {
       setLoading(false);
     }
-  }, [config.apiEndpoint, config.apiFilters, config.transformData]);
+  }, [config.apiEndpoint, config.apiFilters, config.transformData, pageSize]);
 
-  const updateDataInBackground = useCallback(async (cacheKey: string) => {
+  const updateDataInBackground = useCallback(async (cacheKey: string, page: number = 1) => {
     try {
       // 백그라운드 업데이트는 로딩 상태를 변경하지 않음
       if (config.apiEndpoint === '/api/posts') {
         const response = await apiClient.getPosts({
           ...config.apiFilters,
-          page: 1,
-          size: 50
+          page: page,
+          size: pageSize
         });
         
         if (response.success && response.data) {
@@ -209,11 +249,20 @@ export function useListData<T extends BaseListItem>(
           
           // 새로운 데이터가 있으면 부드럽게 업데이트
           setRawData(items);
-          CacheManager.saveToCache(cacheKey, items, 5 * 60 * 1000);
+          setTotalItems(response.data.total || 0);
+          setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+          setCurrentPage(response.data.page || page);
+          
+          CacheManager.saveToCache(cacheKey, {
+            items,
+            total: response.data.total || 0,
+            page: response.data.page || page,
+            pageSize
+          }, 5 * 60 * 1000);
         }
       } else if (config.apiEndpoint === '/api/posts/services') {
         // 서비스 확장 통계 API 백그라운드 업데이트
-        const response = await apiClient.getServicePostsWithExtendedStats(1, 50, 'created_at');
+        const response = await apiClient.getServicePostsWithExtendedStats(page, pageSize, 'created_at');
         
         if (response.success && response.data) {
           const items = config.transformData 
@@ -222,13 +271,22 @@ export function useListData<T extends BaseListItem>(
           
           // 새로운 데이터가 있으면 부드럽게 업데이트
           setRawData(items);
-          CacheManager.saveToCache(cacheKey, items, 5 * 60 * 1000);
+          setTotalItems(response.data.total || 0);
+          setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+          setCurrentPage(response.data.page || page);
+          
+          CacheManager.saveToCache(cacheKey, {
+            items,
+            total: response.data.total || 0,
+            page: response.data.page || page,
+            pageSize
+          }, 5 * 60 * 1000);
         }
       }
     } catch (error) {
       console.warn('백그라운드 업데이트 실패:', error);
     }
-  }, [config.apiEndpoint, config.apiFilters, config.transformData]);
+  }, [config.apiEndpoint, config.apiFilters, config.transformData, pageSize]);
 
   // 검색 API 호출 함수
   const searchData = useCallback(async (query: string) => {
@@ -273,13 +331,18 @@ export function useListData<T extends BaseListItem>(
   // 초기 데이터 로드 (SSR 데이터가 없는 경우에만)
   useEffect(() => {
     if (!isServerRendered) {
-      fetchData();
+      fetchData(1);
     } else {
       // SSR 데이터가 있으면 백그라운드에서 최신 데이터 체크
-      const cacheKey = getCacheKey();
+      const cacheKey = `${getCacheKey()}-page-1`;
       if (initialData?.items) {
-        CacheManager.saveToCache(cacheKey, initialData.items, 5 * 60 * 1000);
-        updateDataInBackground(cacheKey);
+        CacheManager.saveToCache(cacheKey, {
+          items: initialData.items,
+          total: initialData.total || 0,
+          page: 1,
+          pageSize
+        }, 5 * 60 * 1000);
+        updateDataInBackground(cacheKey, 1);
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -294,22 +357,35 @@ export function useListData<T extends BaseListItem>(
     // 검색은 이미 디바운싱으로 처리되므로 별도 작업 불필요
   }, []);
   
+  // 페이지 변경 핸들러
+  const handlePageChange = useCallback((page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    fetchData(page);
+  }, [fetchData, totalPages]);
+  
   // refetch 함수
   const refetch = useCallback(() => {
     if (hasSearched) {
       searchData(searchQuery);
     } else {
-      const cacheKey = getCacheKey();
+      const cacheKey = `${getCacheKey()}-page-${currentPage}`;
       // refetch 시에는 캐시를 무시하고 새로운 데이터 가져오기
-      fetchAndCacheData(cacheKey);
+      fetchAndCacheData(cacheKey, currentPage);
     }
-  }, [searchData, hasSearched, searchQuery, getCacheKey, fetchAndCacheData]);
+  }, [searchData, hasSearched, searchQuery, getCacheKey, fetchAndCacheData, currentPage]);
   
   return {
     // 데이터
     items: filteredAndSortedData,
     loading,
     error,
+    
+    // 페이지네이션
+    currentPage,
+    totalPages,
+    totalItems,
+    pageSize,
     
     // 필터링/정렬 상태
     currentFilter,
@@ -323,6 +399,7 @@ export function useListData<T extends BaseListItem>(
     handleSort,
     handleSearch,
     handleSearchSubmit,
+    handlePageChange,
     refetch
   };
 }
