@@ -44,12 +44,12 @@ const SuggestionManagement: React.FC = () => {
       console.log('🔍 건의 조회 시작');
       console.log('🔍 필터:', { page, statusFilter });
 
-      // 모든 데이터를 가져와서 클라이언트에서 필터링
+      // 건의사항만 서버에서 필터링해서 가져오기
       const response = await apiClient.getInquiries(
         page,
-        20,
+        10,
         'suggestions',
-        undefined
+        statusFilter !== 'all' ? statusFilter : undefined
       );
       
       console.log('🔍 API 응답:', response);
@@ -62,26 +62,9 @@ const SuggestionManagement: React.FC = () => {
       const data: SuggestionResponse = response.data;
       console.log('🔍 API 응답 데이터:', data);
       
-      // 건의 타입 필터링
-      let suggestionItems = data.items.filter(item => 
-        item.metadata?.type === 'suggestions'
-      );
-
-      // 상태 필터링 (클라이언트 사이드)
-      if (statusFilter !== 'all') {
-        suggestionItems = suggestionItems.filter(item => {
-          if (statusFilter === 'pending') {
-            // "대기" 필터: pending 또는 published 상태
-            return item.status === 'pending' || item.status === 'published';
-          } else {
-            // 다른 상태들은 정확히 매칭
-            return item.status === statusFilter;
-          }
-        });
-      }
-
-      console.log('🔍 건의 목록:', suggestionItems);
-      setSuggestions(suggestionItems);
+      // 서버에서 이미 필터링된 데이터를 그대로 사용
+      console.log('🔍 건의 목록:', data.items);
+      setSuggestions(data.items);
       setTotalPages(data.total_pages);
     } catch (error) {
       console.error('❌ 건의 목록 조회 오류:', error);

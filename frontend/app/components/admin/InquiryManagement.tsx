@@ -41,6 +41,7 @@ const InquiryManagement: React.FC = () => {
   const getInquiryTypeParam = () => {
     if (filter === 'moving-services') return 'moving-services-register-inquiry';
     if (filter === 'expert-tips') return 'expert-tips-register-inquiry';
+    // 'all' 인 경우 null 반환 (서버에서 모든 데이터 가져온 후 클라이언트에서 필터링)
     return null;
   };
 
@@ -49,8 +50,8 @@ const InquiryManagement: React.FC = () => {
     try {
       setLoading(true);
       const params = new URLSearchParams({
-        page: page.toString(),
-        page_size: '20',
+        page: '1',  // 항상 첫 페이지부터 가져와서 모든 데이터 확보
+        page_size: '100',  // 충분한 데이터를 가져오기 위해 큰 수로 설정
       });
 
       const inquiryType = getInquiryTypeParam();
@@ -66,8 +67,8 @@ const InquiryManagement: React.FC = () => {
       console.log('🔍 필터:', { filter, statusFilter, inquiryType });
 
       const response = await apiClient.getInquiries(
-        page,
-        20,
+        1,  // 항상 첫 페이지부터
+        100,  // 충분한 데이터
         inquiryType || undefined,
         statusFilter !== 'all' ? statusFilter : undefined
       );
@@ -87,9 +88,28 @@ const InquiryManagement: React.FC = () => {
         item.metadata?.type === 'expert-tips-register-inquiry'
       );
 
-      console.log('🔍 등록 문의 목록:', registrationInquiries);
-      setInquiries(registrationInquiries);
-      setTotalPages(data.total_pages);
+      // 현재 페이지에 맞는 10개 데이터 추출
+      const itemsPerPage = 10;
+      const startIndex = (page - 1) * itemsPerPage;
+      const endIndex = startIndex + itemsPerPage;
+      const displayItems = registrationInquiries.slice(startIndex, endIndex);
+
+      // 전체 등록 문의 수를 기반으로 페이지 수 재계산
+      const totalRegistrationInquiries = registrationInquiries.length;
+      const calculatedTotalPages = Math.ceil(totalRegistrationInquiries / itemsPerPage);
+
+      console.log('🔍 등록 문의 목록:', {
+        total: totalRegistrationInquiries,
+        page: page,
+        itemsPerPage: itemsPerPage,
+        startIndex: startIndex,
+        endIndex: endIndex,
+        displayItems: displayItems.length,
+        calculatedTotalPages: calculatedTotalPages
+      });
+      
+      setInquiries(displayItems);
+      setTotalPages(calculatedTotalPages || 1);
     } catch (error) {
       console.error('❌ 문의 목록 조회 오류:', error);
       setInquiries([]);

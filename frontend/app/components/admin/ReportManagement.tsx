@@ -47,7 +47,7 @@ const ReportManagement: React.FC = () => {
 
       const response = await apiClient.getReports(
         page,
-        20,
+        10,
         statusFilter !== 'all' ? statusFilter : undefined,
         targetType
       );
