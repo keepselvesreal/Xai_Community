@@ -7,9 +7,11 @@ interface InquiryItem {
   content: string;
   author_id: string;
   author?: {
+    id?: string;
     name?: string;
     user_handle: string;
     display_name?: string;
+    email?: string;
   };
   created_at: string;
   status: string;
@@ -79,13 +81,13 @@ const InquiryManagement: React.FC = () => {
       const data: InquiryResponse = response.data;
       console.log('🔍 API 응답 데이터:', data);
       
-      // 등록 문의만 필터링 (클라이언트 사이드에서 추가 필터링)
+      // 등록 문의만 필터링 (신고 제외)
       const registrationInquiries = data.items.filter(item => 
         item.metadata?.type === 'moving-services-register-inquiry' || 
         item.metadata?.type === 'expert-tips-register-inquiry'
       );
 
-      console.log('🔍 필터링된 등록 문의:', registrationInquiries);
+      console.log('🔍 등록 문의 목록:', registrationInquiries);
       setInquiries(registrationInquiries);
       setTotalPages(data.total_pages);
     } catch (error) {
@@ -141,6 +143,10 @@ const InquiryManagement: React.FC = () => {
         return 'bg-green-100 text-green-800';
       case 'expert-tips-register-inquiry':
         return 'bg-orange-100 text-orange-800';
+      case 'suggestions':
+        return 'bg-blue-100 text-blue-800';
+      case 'report':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -150,9 +156,13 @@ const InquiryManagement: React.FC = () => {
   const getTagText = (type: string) => {
     switch (type) {
       case 'moving-services-register-inquiry':
-        return '입주 업체 서비스';
+        return '입주 서비스 업체 등록';
       case 'expert-tips-register-inquiry':
-        return '전문가 꿀정보';
+        return '전문가 꿀정보 등록';
+      case 'suggestions':
+        return '건의함';
+      case 'report':
+        return '신고';
       default:
         return '기타';
     }
@@ -165,6 +175,8 @@ const InquiryManagement: React.FC = () => {
         return '대기';
       case 'resolved':
         return '승인';
+      case 'published':
+        return '대기'; // published는 기본 상태로 대기로 처리
       case 'rejected':
         return '거부';
       default:
@@ -172,19 +184,65 @@ const InquiryManagement: React.FC = () => {
     }
   };
 
-  // 작성자 표시명 반환 (비로그인: JSON에서 name 추출, 로그인: 사용자 정보)
-  const getAuthorDisplayName = (inquiry: InquiryItem) => {
-    // 로그인한 사용자인 경우 사용자 정보 표시
-    if (inquiry.author && inquiry.author.user_handle && inquiry.author.user_handle !== '익명') {
-      return inquiry.author.display_name || inquiry.author.name || inquiry.author.user_handle;
+  // 실제 내용 반환 (등록 문의는 content.content, 일반 문의는 content)
+  const getActualContent = (inquiry: InquiryItem) => {
+    // 등록 문의인 경우 content JSON에서 content 필드 추출
+    if (inquiry.metadata?.type === 'moving-services-register-inquiry' || 
+        inquiry.metadata?.type === 'expert-tips-register-inquiry') {
+      try {
+        const contentData = JSON.parse(inquiry.content || '{}');
+        if (contentData.content) {
+          console.log('🔍 등록 문의 내용 (content.content):', contentData.content);
+          return contentData.content;
+        }
+      } catch {
+        // JSON 파싱 실패 시 기본 내용 사용
+      }
     }
     
-    // 비로그인 사용자인 경우 등록 문의 JSON에서 name 필드 추출
-    try {
-      const contentData = JSON.parse(inquiry.content || '{}');
-      return contentData.name || '알 수 없음';
-    } catch {
-      return '알 수 없음';
+    // 일반 문의이거나 content 필드가 없는 경우 content 사용
+    console.log('🔍 일반 내용 (content):', inquiry.content);
+    return inquiry.content;
+  };
+
+  // 작성자 표시명 반환 (로그인: 사용자 정보, 비로그인: content.name)
+  const getAuthorDisplayName = (inquiry: InquiryItem) => {
+    console.log('🔍 getAuthorDisplayName - inquiry:', {
+      id: inquiry.id,
+      author_id: inquiry.author_id,
+      author: inquiry.author
+    });
+    
+    // author_id로 로그인/비로그인 사용자 구분
+    const isGuestUser = inquiry.author_id.startsWith('guest_inquiry_');
+    
+    console.log('🔍 사용자 구분:', {
+      author_id: inquiry.author_id,
+      isGuestUser: isGuestUser
+    });
+    
+    if (!isGuestUser) {
+      // 로그인한 사용자: author 정보에서 사용자명 추출
+      if (inquiry.author) {
+        const displayName = inquiry.author.user_handle || inquiry.author.display_name || inquiry.author.name || '사용자';
+        console.log('✅ 로그인 사용자 - displayName:', displayName);
+        return displayName;
+      } else {
+        // author 정보가 없는 경우 (백엔드 조인 실패)
+        console.log('⚠️ 로그인 사용자인데 author 정보 없음');
+        return inquiry.author_id; // 임시로 author_id 표시
+      }
+    } else {
+      // 비로그인 사용자: content JSON에서 name 필드 추출
+      try {
+        const contentData = JSON.parse(inquiry.content || '{}');
+        const name = contentData.name || '익명 사용자';
+        console.log('✅ 비로그인 사용자 - name:', name);
+        return name;
+      } catch {
+        console.log('❌ JSON 파싱 실패');
+        return '익명 사용자';
+      }
     }
   };
 
@@ -217,8 +275,8 @@ const InquiryManagement: React.FC = () => {
               className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">전체</option>
-              <option value="moving-services">입주 업체 서비스</option>
-              <option value="expert-tips">전문가 꿀정보</option>
+              <option value="moving-services">입주 서비스 업체 등록 문의</option>
+              <option value="expert-tips">전문가의 꿀정보 등록 문의</option>
             </select>
           </div>
           
@@ -231,6 +289,7 @@ const InquiryManagement: React.FC = () => {
             >
               <option value="all">전체</option>
               <option value="pending">대기</option>
+              <option value="published">대기</option>
               <option value="resolved">승인</option>
               <option value="rejected">거부</option>
             </select>
@@ -249,7 +308,7 @@ const InquiryManagement: React.FC = () => {
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 font-medium text-gray-900">유형</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-900">제목</th>
+                <th className="text-left py-3 px-4 font-medium text-gray-900">내용</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">작성자</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">작성일</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-900">상태</th>
@@ -266,10 +325,10 @@ const InquiryManagement: React.FC = () => {
                     </span>
                   </td>
                   
-                  {/* 제목 */}
+                  {/* 내용 */}
                   <td className="py-3 px-4">
                     <div className="font-medium text-gray-900 truncate max-w-xs">
-                      {inquiry.title}
+                      {getActualContent(inquiry)}
                     </div>
                   </td>
                   
@@ -301,19 +360,24 @@ const InquiryManagement: React.FC = () => {
                   {/* 액션 버튼 */}
                   <td className="py-3 px-4">
                     {inquiry.status === 'resolved' ? (
-                      <span className="text-sm text-green-600 font-medium">승인</span>
+                      <span className="text-sm text-green-600 font-medium">승인완료</span>
                     ) : (
-                      <button
-                        onClick={() => grantPermission(inquiry)}
-                        disabled={grantingPermission === inquiry.id}
-                        className={`px-3 py-1 text-sm font-medium rounded-md ${
-                          grantingPermission === inquiry.id
-                            ? 'bg-gray-400 text-white cursor-not-allowed'
-                            : 'bg-blue-600 text-white hover:bg-blue-700'
-                        } transition-colors`}
-                      >
-                        {grantingPermission === inquiry.id ? '처리중...' : '권한 부여'}
-                      </button>
+                      // 로그인한 회원인지 확인 (author_id가 guest_inquiry_로 시작하지 않음)
+                      !inquiry.author_id.startsWith('guest_inquiry_') ? (
+                        <button
+                          onClick={() => grantPermission(inquiry)}
+                          disabled={grantingPermission === inquiry.id}
+                          className={`px-3 py-1 text-sm font-medium rounded-md ${
+                            grantingPermission === inquiry.id
+                              ? 'bg-gray-400 text-white cursor-not-allowed'
+                              : 'bg-blue-600 text-white hover:bg-blue-700'
+                          } transition-colors`}
+                        >
+                          {grantingPermission === inquiry.id ? '처리중...' : '권한 부여'}
+                        </button>
+                      ) : (
+                        <span className="text-sm text-gray-500">비회원 문의</span>
+                      )
                     )}
                   </td>
                 </tr>

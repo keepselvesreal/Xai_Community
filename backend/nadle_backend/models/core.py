@@ -85,6 +85,12 @@ class PostMetadata(BaseModel):
     editor_type: EditorType = "plain"
     thumbnail: Optional[str] = None
     visibility: Literal["public", "private"] = "public"
+    
+    # 신고용 필드들
+    target_type: Optional[str] = None  # "post" or "comment" for reports
+    target_id: Optional[str] = None  # Target post/comment ID for reports
+    target_title: Optional[str] = None  # Target title for reports
+    target_content: Optional[str] = None  # Target content snippet for reports
 
     @field_validator("tags")
     @classmethod

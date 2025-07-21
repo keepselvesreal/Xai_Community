@@ -1180,6 +1180,93 @@ class ApiClient {
       body: JSON.stringify(permissions),
     });
   }
+
+  // 신고 관리 API
+  async reportPost(postId: string, content: string): Promise<ApiResponse<{
+    id: string;
+    target_type: string;
+    target_id: string;
+    content: string;
+    reporter_id: string;
+    created_at: string;
+    status: string;
+  }>> {
+    return this.makeRequest<{
+      id: string;
+      target_type: string;
+      target_id: string;
+      content: string;
+      reporter_id: string;
+      created_at: string;
+      status: string;
+    }>(`/api/reports/post/${postId}`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async reportComment(commentId: string, content: string): Promise<ApiResponse<{
+    id: string;
+    target_type: string;
+    target_id: string;
+    content: string;
+    reporter_id: string;
+    created_at: string;
+    status: string;
+  }>> {
+    return this.makeRequest<{
+      id: string;
+      target_type: string;
+      target_id: string;
+      content: string;
+      reporter_id: string;
+      created_at: string;
+      status: string;
+    }>(`/api/reports/comment/${commentId}`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    });
+  }
+
+  async getReports(
+    page: number = 1,
+    page_size: number = 20,
+    status?: string,
+    target_type?: string
+  ): Promise<ApiResponse<{
+    items: any[];
+    total: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+  }>> {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      page_size: page_size.toString(),
+    });
+    
+    if (status) {
+      params.append('status', status);
+    }
+    
+    if (target_type) {
+      params.append('target_type', target_type);
+    }
+    
+    return this.makeRequest<{
+      items: any[];
+      total: number;
+      page: number;
+      page_size: number;
+      total_pages: number;
+    }>(`/api/reports?${params.toString()}`);
+  }
+
+  async updateReportStatus(reportId: string, status: string): Promise<ApiResponse<any>> {
+    return this.makeRequest<any>(`/api/reports/${reportId}/status?new_status=${status}`, {
+      method: 'PUT',
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
