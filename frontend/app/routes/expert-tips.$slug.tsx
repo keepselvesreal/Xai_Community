@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link, useLoaderData } from '@remix-run/react';
 import { json, type LoaderFunction, type MetaFunction } from '@remix-run/node';
 import AppLayout from '~/components/layout/AppLayout';
@@ -169,7 +169,7 @@ export default function ExpertTipDetail() {
   // 🗑️ 기존 loadTip 함수 제거 - 병렬 로딩으로 통합됨
   
 
-  const handleReactionChange = async (type: 'like' | 'dislike' | 'bookmark') => {
+  const handleReactionChange = useCallback(async (reactionType: 'like' | 'dislike' | 'bookmark') => {
     if (!user) {
       showError('로그인이 필요합니다');
       return;
@@ -177,13 +177,104 @@ export default function ExpertTipDetail() {
 
     if (!post || !slug) return;
 
-    if (pendingReactions.has(type)) return;
+    if (pendingReactions.has(reactionType)) return;
 
-    setPendingReactions(prev => new Set(prev).add(type));
+    setPendingReactions(prev => new Set(prev).add(reactionType));
 
+    // 🚀 1단계: 즉시 UI 업데이트 (낙관적 업데이트) - 게시판과 동일한 방식
+    const originalPost = post;
+    const originalUserReactions = userReactions;
+    
+    setPost(prev => {
+      if (!prev) return null;
+      
+      const currentStats = prev.stats || {};
+      const newStats = { ...currentStats };
+      const newUserReactions = { ...userReactions };
+      
+      if (reactionType === 'like') {
+        if (userReactions.liked) {
+          // 이미 추천한 상태에서 다시 클릭 = 취소
+          newStats.like_count = Math.max(0, (currentStats.like_count || 0) - 1);
+          newUserReactions.liked = false;
+        } else {
+          // 추천 안 한 상태에서 클릭 = 추천
+          newStats.like_count = (currentStats.like_count || 0) + 1;
+          newUserReactions.liked = true;
+          // 비추천이 있었다면 취소
+          if (userReactions.disliked) {
+            newStats.dislike_count = Math.max(0, (currentStats.dislike_count || 0) - 1);
+            newUserReactions.disliked = false;
+          }
+        }
+      } else if (reactionType === 'dislike') {
+        if (userReactions.disliked) {
+          // 이미 비추천한 상태에서 다시 클릭 = 취소
+          newStats.dislike_count = Math.max(0, (currentStats.dislike_count || 0) - 1);
+          newUserReactions.disliked = false;
+        } else {
+          // 비추천 안 한 상태에서 클릭 = 비추천
+          newStats.dislike_count = (currentStats.dislike_count || 0) + 1;
+          newUserReactions.disliked = true;
+          // 추천이 있었다면 취소
+          if (userReactions.liked) {
+            newStats.like_count = Math.max(0, (currentStats.like_count || 0) - 1);
+            newUserReactions.liked = false;
+          }
+        }
+      } else if (reactionType === 'bookmark') {
+        if (userReactions.bookmarked) {
+          // 이미 북마크한 상태에서 다시 클릭 = 취소
+          newStats.bookmark_count = Math.max(0, (currentStats.bookmark_count || 0) - 1);
+          newUserReactions.bookmarked = false;
+        } else {
+          // 북마크 안 한 상태에서 클릭 = 북마크 (추천/비추천과 독립적)
+          newStats.bookmark_count = (currentStats.bookmark_count || 0) + 1;
+          newUserReactions.bookmarked = true;
+        }
+      }
+
+      return {
+        ...prev,
+        stats: newStats
+      };
+    });
+    
+    // 사용자 반응 상태 즉시 업데이트
+    setUserReactions(prev => {
+      const newUserReactions = { ...prev };
+      
+      if (reactionType === 'like') {
+        if (prev.liked) {
+          newUserReactions.liked = false;
+        } else {
+          newUserReactions.liked = true;
+          if (prev.disliked) {
+            newUserReactions.disliked = false;
+          }
+        }
+      } else if (reactionType === 'dislike') {
+        if (prev.disliked) {
+          newUserReactions.disliked = false;
+        } else {
+          newUserReactions.disliked = true;
+          if (prev.liked) {
+            newUserReactions.liked = false;
+          }
+        }
+      } else if (reactionType === 'bookmark') {
+        newUserReactions.bookmarked = !prev.bookmarked;
+        // 북마크는 추천/비추천과 독립적이므로 다른 상태는 그대로 유지
+      }
+      
+      return newUserReactions;
+    });
+
+    // 🚀 2단계: 백그라운드에서 API 호출
     try {
       let response;
-      switch (type) {
+      
+      switch (reactionType) {
         case 'like':
           response = await apiClient.likePost(slug);
           break;
@@ -193,42 +284,52 @@ export default function ExpertTipDetail() {
         case 'bookmark':
           response = await apiClient.bookmarkPost(slug);
           break;
+        default:
+          throw new Error('Invalid reaction type');
       }
       
       if (response.success && response.data) {
-        // 상태 업데이트
+        // 서버 응답으로 정확한 상태 동기화
         setPost(prev => prev ? {
           ...prev,
           stats: {
             ...prev.stats,
-            like_count: response.data.like_count || 0,
-            dislike_count: response.data.dislike_count || 0,
-            bookmark_count: response.data.bookmark_count || 0,
-            view_count: prev.stats?.view_count || 0,
-            comment_count: prev.stats?.comment_count || 0
+            like_count: response.data.like_count ?? prev.stats?.like_count ?? 0,
+            dislike_count: response.data.dislike_count ?? prev.stats?.dislike_count ?? 0,
+            bookmark_count: response.data.bookmark_count ?? prev.stats?.bookmark_count ?? 0,
+            view_count: prev.stats?.view_count ?? 0,
+            comment_count: prev.stats?.comment_count ?? 0,
           }
-        } : null);
+        } : prev);
         
-        // 사용자 반응 상태 업데이트
-        setUserReactions(prev => ({
-          ...prev,
-          liked: response.data.user_liked || false,
-          disliked: response.data.user_disliked || false,
-          bookmarked: response.data.user_bookmarked || false
-        }));
+        // 서버에서 사용자 반응 상태 동기화
+        if (response.data.user_reaction) {
+          setUserReactions({
+            liked: response.data.user_reaction.liked || false,
+            disliked: response.data.user_reaction.disliked || false,
+            bookmarked: response.data.user_reaction.bookmarked || false
+          });
+        }
       } else {
-        showError(response.error || `${type === 'like' ? '추천' : type === 'dislike' ? '비추천' : '저장'} 처리에 실패했습니다`);
+        // API 실패 시 원래 상태로 복원
+        setPost(originalPost);
+        setUserReactions(originalUserReactions);
+        showError(response.error || `${reactionType === 'like' ? '추천' : reactionType === 'dislike' ? '비추천' : '저장'} 처리에 실패했습니다`);
       }
     } catch (error) {
-      showError(`${type === 'like' ? '추천' : type === 'dislike' ? '비추천' : '저장'} 처리 중 오류가 발생했습니다`);
+      // 오류 발생 시 원래 상태로 복원
+      setPost(originalPost);
+      setUserReactions(originalUserReactions);
+      showError(`${reactionType === 'like' ? '추천' : reactionType === 'dislike' ? '비추천' : '저장'} 처리 중 오류가 발생했습니다`);
     } finally {
+      // 요청 완료 처리
       setPendingReactions(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(type);
-        return newSet;
+        const next = new Set(prev);
+        next.delete(reactionType);
+        return next;
       });
     }
-  };
+  }, [user, post, slug, pendingReactions, userReactions, showError]);
 
   // 🗑️ 기존 loadComments 함수 제거 - 병렬 로딩으로 통합됨
 
