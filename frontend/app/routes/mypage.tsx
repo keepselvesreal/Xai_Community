@@ -9,6 +9,7 @@ import { extractPageTypeFromRoute, getPageTypeDisplayInfo, ALL_PAGE_TYPES } from
 import type { UserActivityResponse, ActivityItem } from "~/types";
 import { UserInfoSkeleton } from "~/components/mypage/UserInfoSkeleton";
 import { ActivitySectionSkeleton } from "~/components/mypage/ActivitySectionSkeleton";
+import { Pagination } from "~/components/common/Pagination";
 
 export const meta: MetaFunction = () => {
   return [
@@ -32,9 +33,27 @@ interface ActivityItemProps {
   items: ActivityItem[];
   onToggle: (type: string) => void;
   isExpanded: boolean;
+  currentPage?: number;
+  onPageChange?: (page: number) => void;
+  itemsPerPage?: number;
 }
 
-function ActivityItem({ type, icon, name, items, onToggle, isExpanded }: ActivityItemProps) {
+function ActivityItem({ 
+  type, 
+  icon, 
+  name, 
+  items, 
+  onToggle, 
+  isExpanded,
+  currentPage = 1,
+  onPageChange,
+  itemsPerPage = 10
+}: ActivityItemProps) {
+  // 페이지네이션 계산
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedItems = items.slice(startIndex, endIndex);
+  const totalPages = Math.ceil(items.length / itemsPerPage);
 
   return (
     <>
@@ -56,7 +75,7 @@ function ActivityItem({ type, icon, name, items, onToggle, isExpanded }: Activit
         <div className="ml-4 mt-2 space-y-2">
           <div className="bg-white border border-var-light rounded-lg p-4">
             <div className="space-y-3">
-              {items.map((item, index) => (
+              {paginatedItems.map((item, index) => (
                 <div key={item.id || index} className="border-b border-var-light pb-3 last:border-b-0 last:pb-0">
                   <Link 
                     to={item.route_path}
@@ -66,7 +85,7 @@ function ActivityItem({ type, icon, name, items, onToggle, isExpanded }: Activit
                     {item.target_type ? (
                       <>
                         <div className="font-medium text-var-primary text-sm mb-2">
-                          {item.title || item.target_title || "게시글 정보 없음"}
+                          {item.title || item.target_title || item.post_title || "게시글 정보 없음"}
                         </div>
                         
                         {/* 통계 정보 표시 - PostCard와 동일한 스타일 */}
@@ -95,7 +114,7 @@ function ActivityItem({ type, icon, name, items, onToggle, isExpanded }: Activit
                       /* 일반 게시글/댓글 표시 */
                       <>
                         <div className="font-medium text-var-primary text-sm mb-2">
-                          {item.title || (item.content ? "댓글 대상 게시글 정보 없음" : "게시글 제목 없음")}
+                          {item.title || item.post_title || (item.content ? item.content.slice(0, 50) + "..." : "게시글 제목 없음")}
                         </div>
                         
                         {/* 통계 정보 표시 - PostCard와 동일한 스타일 */}
@@ -134,6 +153,17 @@ function ActivityItem({ type, icon, name, items, onToggle, isExpanded }: Activit
                 </div>
               )}
             </div>
+            
+            {/* 페이지네이션 */}
+            {items.length > itemsPerPage && onPageChange && (
+              <Pagination
+                currentPage={currentPage}
+                totalItems={items.length}
+                itemsPerPage={itemsPerPage}
+                onPageChange={onPageChange}
+                className="mt-4"
+              />
+            )}
           </div>
         </div>
       )}
@@ -154,6 +184,9 @@ export default function MyPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // 각 카테고리별 페이지 상태 관리
+  const [categoryPages, setCategoryPages] = useState<Record<string, number>>({});
 
   // 댓글을 페이지 타입별로 분류하는 헬퍼 함수 (Phase 6: 유틸리티 사용으로 완전 단순화)
   const getCommentsByPageType = (comments: ActivityItem[], pageType: string): ActivityItem[] => {
@@ -185,44 +218,15 @@ export default function MyPage() {
     setError(null);
 
     try {
-      const activity = await apiClient.getUserActivity(1, 10); // 페이지네이션 파라미터 추가
+      const activity = await apiClient.getUserActivity(1, 100); // 더 많은 데이터를 가져오도록 limit 증가
       
-      // 디버깅: API 응답 구조 확인 (새로운 reaction-* 구조)
+      // 디버깅: API 응답 구조 확인
       console.log('🔍 Full User Activity Response:', JSON.stringify(activity, null, 2));
-      
-      // 새로운 reaction-* 구조 디버깅 (Phase 6: 유틸리티 사용)
-      const reactionTypes = ['reaction-likes', 'reaction-dislikes', 'reaction-bookmarks'] as const;
-      const pageTypes = ALL_PAGE_TYPES;
-      
-      // 실제 API 응답 구조 확인
-      console.log('🔍 API Response structure check:');
-      console.log('Activity keys:', Object.keys(activity));
-      console.log('Has reactions key:', 'reactions' in activity);
-      console.log('Has direct reaction keys:', reactionTypes.map(type => `${type}: ${type in activity}`));
-      
-      reactionTypes.forEach(reactionType => {
-        if (activity[reactionType]) {
-          console.log(`${reactionType}:`, activity[reactionType]);
-          
-          pageTypes.forEach(pageType => {
-            const reactions = activity[reactionType][pageType] || [];
-            console.log(`${reactionType}.${pageType} raw:`, reactions);
-            console.log(`${reactionType}.${pageType} length:`, reactions.length);
-            if (reactions.length > 0) {
-              console.log(`${reactionType}.${pageType} details:`, {
-                count: reactions.length,
-                items: reactions.map(r => ({
-                  id: r.id,
-                  route_path: r.route_path,
-                  target_title: r.target_title
-                }))
-              });
-            }
-          });
-        } else {
-          console.log(`${reactionType}: NOT FOUND`);
-        }
-      });
+      console.log('📊 Posts structure:', activity.posts);
+      console.log('💬 Comments structure:', activity.comments);
+      console.log('👍 reaction-likes:', activity['reaction-likes']);
+      console.log('👎 reaction-dislikes:', activity['reaction-dislikes']); 
+      console.log('📌 reaction-bookmarks:', activity['reaction-bookmarks']);
       
       setUserActivity(activity);
       // 새로운 API 구조에서는 pagination 정보에서 총 개수만 사용
@@ -263,9 +267,16 @@ export default function MyPage() {
         newSet.delete(activityType);
       } else {
         newSet.add(activityType);
+        // 새로 열릴 때 페이지를 1로 초기화
+        setCategoryPages(prev => ({ ...prev, [activityType]: 1 }));
       }
       return newSet;
     });
+  }
+  
+  // 카테고리별 페이지 변경 핸들러
+  function handlePageChange(categoryType: string, page: number) {
+    setCategoryPages(prev => ({ ...prev, [categoryType]: page }));
   }
 
   function handleChangeUserId() {
@@ -523,16 +534,32 @@ export default function MyPage() {
 
               {!isLoading && !error && activityTab === 'write' && (
                 <>
+                  {/* 작성 활동이 없는 경우 메시지 표시 */}
+                  {(!userActivity || 
+                    (!userActivity.posts?.board?.length && 
+                     !userActivity.posts?.property_information?.length && 
+                     !userActivity.posts?.moving_services?.length && 
+                     !userActivity.posts?.expert_tips?.length &&
+                     !userActivity.comments?.length)) && (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">✍️</div>
+                      <p className="text-var-muted text-lg mb-2">아직 작성한 게시물이 없습니다</p>
+                      <p className="text-var-secondary text-sm">
+                        커뮤니티에 글을 작성하거나 댓글을 남겨보세요!
+                      </p>
+                    </div>
+                  )}
+
                   {/* 게시판 활동 */}
-                  {userActivity && (
-                    (userActivity.posts.board?.length > 0 || getCommentsByPageType(userActivity.comments, 'board').length > 0)
+                  {userActivity && userActivity.posts && (
+                    (userActivity.posts.board?.length > 0 || getCommentsByPageType(userActivity.comments || [], 'board').length > 0)
                   ) && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
                         📝 게시판
                       </h4>
                       <div className="space-y-2">
-                        {userActivity?.posts.board?.length > 0 && (
+                        {userActivity?.posts?.board?.length > 0 && (
                           <ActivityItem 
                             type="board-posts" 
                             icon="📝" 
@@ -540,6 +567,8 @@ export default function MyPage() {
                             items={userActivity.posts.board}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('board-posts')}
+                            currentPage={categoryPages['board-posts'] || 1}
+                            onPageChange={(page) => handlePageChange('board-posts', page)}
                           />
                         )}
                         {getCommentsByPageType(userActivity?.comments || [], 'board').length > 0 && (
@@ -550,6 +579,8 @@ export default function MyPage() {
                             items={getCommentsByPageType(userActivity.comments, 'board')}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('board-comments')}
+                            currentPage={categoryPages['board-comments'] || 1}
+                            onPageChange={(page) => handlePageChange('board-comments', page)}
                           />
                         )}
                       </div>
@@ -557,15 +588,15 @@ export default function MyPage() {
                   )}
 
                   {/* 부동산 정보 활동 (DB 원시 타입: property_information) */}
-                  {userActivity && (
-                    (userActivity.posts.property_information?.length > 0 || getCommentsByPageType(userActivity.comments, 'property_information').length > 0)
+                  {userActivity && userActivity.posts && (
+                    (userActivity.posts.property_information?.length > 0 || getCommentsByPageType(userActivity.comments || [], 'property_information').length > 0)
                   ) && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
                         📋 부동산 정보
                       </h4>
                       <div className="space-y-2">
-                        {userActivity?.posts.property_information?.length > 0 && (
+                        {userActivity?.posts?.property_information?.length > 0 && (
                           <ActivityItem 
                             type="property-info-posts" 
                             icon="📝" 
@@ -573,6 +604,8 @@ export default function MyPage() {
                             items={userActivity.posts.property_information}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('property-info-posts')}
+                            currentPage={categoryPages['property-info-posts'] || 1}
+                            onPageChange={(page) => handlePageChange('property-info-posts', page)}
                           />
                         )}
                         {getCommentsByPageType(userActivity?.comments || [], 'property_information').length > 0 && (
@@ -583,6 +616,8 @@ export default function MyPage() {
                             items={getCommentsByPageType(userActivity.comments, 'property_information')}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('property-info-comments')}
+                            currentPage={categoryPages['property-info-comments'] || 1}
+                            onPageChange={(page) => handlePageChange('property-info-comments', page)}
                           />
                         )}
                       </div>
@@ -590,7 +625,7 @@ export default function MyPage() {
                   )}
 
                   {/* 입주 업체 서비스 (Phase 5: moving_services로 통일) */}
-                  {userActivity && (
+                  {userActivity && userActivity.posts && userActivity.comments && (
                     (userActivity.posts.moving_services?.length > 0 || 
                      getCommentsByPageType(userActivity.comments, 'moving_services').length > 0 ||
                      userActivity.comments.filter(c => c.subtype === 'service_inquiry').length > 0 ||
@@ -601,7 +636,7 @@ export default function MyPage() {
                         🏢 입주 업체 서비스
                       </h4>
                       <div className="space-y-2">
-                        {userActivity?.posts.moving_services?.length > 0 && (
+                        {userActivity?.posts?.moving_services?.length > 0 && (
                           <ActivityItem 
                             type="moving-services-posts" 
                             icon="📝" 
@@ -609,6 +644,8 @@ export default function MyPage() {
                             items={userActivity.posts.moving_services}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('moving-services-posts')}
+                            currentPage={categoryPages['moving-services-posts'] || 1}
+                            onPageChange={(page) => handlePageChange('moving-services-posts', page)}
                           />
                         )}
                         {getCommentsByPageType(userActivity?.comments || [], 'moving_services').length > 0 && (
@@ -619,6 +656,8 @@ export default function MyPage() {
                             items={getCommentsByPageType(userActivity.comments, 'moving_services')}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('moving-services-comments')}
+                            currentPage={categoryPages['moving-services-comments'] || 1}
+                            onPageChange={(page) => handlePageChange('moving-services-comments', page)}
                           />
                         )}
                         {userActivity?.comments.filter(c => c.subtype === 'service_inquiry').length > 0 && (
@@ -629,6 +668,8 @@ export default function MyPage() {
                             items={userActivity.comments.filter(c => c.subtype === 'service_inquiry')}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('service-inquiries')}
+                            currentPage={categoryPages['service-inquiries'] || 1}
+                            onPageChange={(page) => handlePageChange('service-inquiries', page)}
                           />
                         )}
                         {userActivity?.comments.filter(c => c.subtype === 'service_review').length > 0 && (
@@ -639,6 +680,8 @@ export default function MyPage() {
                             items={userActivity.comments.filter(c => c.subtype === 'service_review')}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('service-reviews')}
+                            currentPage={categoryPages['service-reviews'] || 1}
+                            onPageChange={(page) => handlePageChange('service-reviews', page)}
                           />
                         )}
                       </div>
@@ -646,15 +689,15 @@ export default function MyPage() {
                   )}
 
                   {/* 전문가 꿀정보 활동 (DB 원시 타입: expert_tips) */}
-                  {userActivity && (
-                    (userActivity.posts.expert_tips?.length > 0 || getCommentsByPageType(userActivity.comments, 'expert_tips').length > 0)
+                  {userActivity && userActivity.posts && (
+                    (userActivity.posts.expert_tips?.length > 0 || getCommentsByPageType(userActivity.comments || [], 'expert_tips').length > 0)
                   ) && (
                     <div>
                       <h4 className="font-semibold mb-3 flex items-center gap-2" style={{color: 'var(--accent-primary)'}}>
                         💡 전문가 꿀정보
                       </h4>
                       <div className="space-y-2">
-                        {userActivity?.posts.expert_tips?.length > 0 && (
+                        {userActivity?.posts?.expert_tips?.length > 0 && (
                           <ActivityItem 
                             type="expert-tips-posts" 
                             icon="📝" 
@@ -662,6 +705,8 @@ export default function MyPage() {
                             items={userActivity.posts.expert_tips}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('expert-tips-posts')}
+                            currentPage={categoryPages['expert-tips-posts'] || 1}
+                            onPageChange={(page) => handlePageChange('expert-tips-posts', page)}
                           />
                         )}
                         {getCommentsByPageType(userActivity?.comments || [], 'expert_tips').length > 0 && (
@@ -672,6 +717,8 @@ export default function MyPage() {
                             items={getCommentsByPageType(userActivity.comments, 'expert_tips')}
                             onToggle={toggleActivityDetail}
                             isExpanded={expandedActivities.has('expert-tips-comments')}
+                            currentPage={categoryPages['expert-tips-comments'] || 1}
+                            onPageChange={(page) => handlePageChange('expert-tips-comments', page)}
                           />
                         )}
                       </div>
@@ -751,6 +798,8 @@ export default function MyPage() {
                                   items={items}
                                   onToggle={toggleActivityDetail}
                                   isExpanded={expandedActivities.has(`${pageType.key}-${reaction.key.replace('reaction-', '')}`)}
+                                  currentPage={categoryPages[`${pageType.key}-${reaction.key.replace('reaction-', '')}`] || 1}
+                                  onPageChange={(page) => handlePageChange(`${pageType.key}-${reaction.key.replace('reaction-', '')}`, page)}
                                 />
                               );
                             })}

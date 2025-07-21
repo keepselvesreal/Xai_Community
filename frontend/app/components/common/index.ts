@@ -14,6 +14,7 @@ export { ListSkeleton } from './ListSkeleton';
 
 // 기타 유틸리티 컴포넌트
 export { default as EmptyState } from './EmptyState';
+export { Pagination } from './Pagination';
 
 // 폼 컴포넌트
 export { default as PostWriteForm } from './PostWriteForm';
