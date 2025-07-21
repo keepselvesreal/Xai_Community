@@ -263,8 +263,6 @@ const InquiryManagement: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">등록 문의 관리</h3>
-        
         {/* 필터 */}
         <div className="flex gap-4 mb-4">
           <div>
@@ -289,9 +287,7 @@ const InquiryManagement: React.FC = () => {
             >
               <option value="all">전체</option>
               <option value="pending">대기</option>
-              <option value="published">대기</option>
               <option value="resolved">승인</option>
-              <option value="rejected">거부</option>
             </select>
           </div>
         </div>

@@ -177,8 +177,6 @@ const ReportManagement: React.FC = () => {
 
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <h2 className="text-xl font-semibold text-gray-900 mb-4">신고 관리</h2>
-        
         {/* 필터 */}
         <div className="flex gap-4 mb-6">
           <div>
@@ -203,7 +201,6 @@ const ReportManagement: React.FC = () => {
             >
               <option value="all">전체</option>
               <option value="pending">대기</option>
-              <option value="published">대기</option>
               <option value="resolved">확인</option>
             </select>
           </div>

@@ -33,6 +33,7 @@ const SuggestionManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set());
 
   // 건의 목록 조회
@@ -41,8 +42,9 @@ const SuggestionManagement: React.FC = () => {
       setLoading(true);
       
       console.log('🔍 건의 조회 시작');
-      console.log('🔍 필터:', { page });
+      console.log('🔍 필터:', { page, statusFilter });
 
+      // 모든 데이터를 가져와서 클라이언트에서 필터링
       const response = await apiClient.getInquiries(
         page,
         20,
@@ -60,10 +62,23 @@ const SuggestionManagement: React.FC = () => {
       const data: SuggestionResponse = response.data;
       console.log('🔍 API 응답 데이터:', data);
       
-      // 건의 타입만 필터링
-      const suggestionItems = data.items.filter(item => 
+      // 건의 타입 필터링
+      let suggestionItems = data.items.filter(item => 
         item.metadata?.type === 'suggestions'
       );
+
+      // 상태 필터링 (클라이언트 사이드)
+      if (statusFilter !== 'all') {
+        suggestionItems = suggestionItems.filter(item => {
+          if (statusFilter === 'pending') {
+            // "대기" 필터: pending 또는 published 상태
+            return item.status === 'pending' || item.status === 'published';
+          } else {
+            // 다른 상태들은 정확히 매칭
+            return item.status === statusFilter;
+          }
+        });
+      }
 
       console.log('🔍 건의 목록:', suggestionItems);
       setSuggestions(suggestionItems);
@@ -163,7 +178,7 @@ const SuggestionManagement: React.FC = () => {
 
   useEffect(() => {
     fetchSuggestions();
-  }, [page]);
+  }, [page, statusFilter]);
 
   if (loading) {
     return (
@@ -178,8 +193,21 @@ const SuggestionManagement: React.FC = () => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">건의 관리</h3>
-        
+        {/* 필터 */}
+        <div className="flex gap-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">상태</label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="all">전체</option>
+              <option value="pending">대기</option>
+              <option value="resolved">완료</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* 테이블 */}
