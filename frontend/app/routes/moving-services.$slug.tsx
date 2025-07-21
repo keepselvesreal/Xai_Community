@@ -3,6 +3,7 @@ import { type MetaFunction, type LoaderFunction, json } from "@remix-run/node";
 import { useParams, useNavigate, useLoaderData } from "@remix-run/react";
 import AppLayout from "~/components/layout/AppLayout";
 import DetailPageLayout from "~/components/common/DetailPageLayout";
+import ReportModal from "~/components/common/ReportModal";
 import { 
   createServiceDetailSections 
 } from "~/components/service/ServiceDetailSections";
@@ -66,6 +67,10 @@ export default function ServiceDetail() {
     disliked: boolean;
     bookmarked: boolean;
   }>({ liked: false, disliked: false, bookmarked: false });
+  
+  // 신고 모달 상태
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
   
   // 🔄 서버에서 최신 통계 데이터 재로드 함수
   const refreshServiceStats = async (): Promise<void> => {
@@ -496,6 +501,29 @@ export default function ServiceDetail() {
     }
   };
 
+  // 신고 제출 핸들러
+  const handleReportSubmit = async (content: string) => {
+    setReportLoading(true);
+    try {
+      if (!post) {
+        throw new Error('게시글 정보가 없습니다.');
+      }
+      
+      const response = await apiClient.reportPost(post.id, content);
+      if (response.success) {
+        showSuccess('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+        setIsReportModalOpen(false);
+      } else {
+        throw new Error(response.error || '신고 접수에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('신고 실패:', error);
+      showError('신고 접수 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   // 로딩 상태 처리
   if (isLoading) {
     return (
@@ -542,7 +570,8 @@ export default function ServiceDetail() {
     slug,
     comments,
     handleCommentAdded,
-    handleCommentReaction // 댓글 반응 전용 콜백 추가
+    handleCommentReaction, // 댓글 반응 전용 콜백 추가
+    () => setIsReportModalOpen(true) // 신고 버튼 핸들러 추가
   );
 
   return (
@@ -584,6 +613,18 @@ export default function ServiceDetail() {
           {section}
         </div>
       ))}
+
+      {/* 신고 모달 */}
+      {post && (
+        <ReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          targetType="post"
+          targetId={post.id}
+          onSubmit={handleReportSubmit}
+          isLoading={reportLoading}
+        />
+      )}
 
     </AppLayout>
   );

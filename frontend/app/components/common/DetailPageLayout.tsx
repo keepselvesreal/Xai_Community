@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import CommentSection from '~/components/comment/CommentSection';
+import ReportModal from '~/components/common/ReportModal';
+import { apiClient } from '~/lib/api';
 import type { Post, User, Comment } from '~/types';
 
 interface DetailPageLayoutProps {
@@ -45,6 +47,29 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
   pageType = 'board',
   subtype,
 }) => {
+  // 신고 모달 상태
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportLoading, setReportLoading] = useState(false);
+
+  // 신고 제출 핸들러
+  const handleReportSubmit = async (content: string) => {
+    setReportLoading(true);
+    try {
+      const response = await apiClient.reportPost(post.id, content);
+      if (response.success) {
+        alert('신고가 접수되었습니다. 검토 후 조치하겠습니다.');
+        setIsReportModalOpen(false);
+      } else {
+        throw new Error(response.error || '신고 접수에 실패했습니다.');
+      }
+    } catch (error) {
+      console.error('신고 실패:', error);
+      alert('신고 접수 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setReportLoading(false);
+    }
+  };
+
   // 로딩 상태 처리
   if (isLoading) {
     return (
@@ -354,43 +379,53 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
 
           {/* 반응 버튼 섹션 - moving_services가 아닌 경우에만 표시 */}
           {pageType !== 'moving_services' && (
-            <div className="flex justify-center gap-2 pb-2">
-              <button
-                onClick={() => handleReactionClick('like')}
-                disabled={pendingReactions.has('like')}
-                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
-                  userReactions.liked
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-                } ${pendingReactions.has('like') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <span>👍</span>
-                <span>{post.stats?.like_count || 0}</span>
-              </button>
-              <button
-                onClick={() => handleReactionClick('dislike')}
-                disabled={pendingReactions.has('dislike')}
-                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
-                  userReactions.disliked
-                    ? 'bg-red-50 border-red-300 text-red-700'
-                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-                } ${pendingReactions.has('dislike') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <span>👎</span>
-                <span>{post.stats?.dislike_count || 0}</span>
-              </button>
-              <button
-                onClick={() => handleReactionClick('bookmark')}
-                disabled={pendingReactions.has('bookmark')}
-                className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
-                  userReactions.bookmarked
-                    ? 'bg-blue-50 border-blue-300 text-blue-700'
-                    : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
-                } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-              >
-                <span>🔖</span>
-                <span>{post.stats?.bookmark_count || 0}</span>
-              </button>
+            <div className="space-y-2 pb-2">
+              <div className="flex justify-center gap-2">
+                <button
+                  onClick={() => handleReactionClick('like')}
+                  disabled={pendingReactions.has('like')}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
+                    userReactions.liked
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                  } ${pendingReactions.has('like') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span>👍</span>
+                  <span>{post.stats?.like_count || 0}</span>
+                </button>
+                <button
+                  onClick={() => handleReactionClick('dislike')}
+                  disabled={pendingReactions.has('dislike')}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
+                    userReactions.disliked
+                      ? 'bg-red-50 border-red-300 text-red-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                  } ${pendingReactions.has('dislike') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span>👎</span>
+                  <span>{post.stats?.dislike_count || 0}</span>
+                </button>
+                <button
+                  onClick={() => handleReactionClick('bookmark')}
+                  disabled={pendingReactions.has('bookmark')}
+                  className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
+                    userReactions.bookmarked
+                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
+                  } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                >
+                  <span>🔖</span>
+                  <span>{post.stats?.bookmark_count || 0}</span>
+                </button>
+              </div>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsReportModalOpen(true)}
+                  className="text-gray-500 hover:text-red-600 text-sm transition-colors"
+                >
+                  신고
+                </button>
+              </div>
             </div>
           )}
 
@@ -415,6 +450,16 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
           />
         </div>
       )}
+
+      {/* 신고 모달 */}
+      <ReportModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        targetType="post"
+        targetId={post.id}
+        onSubmit={handleReportSubmit}
+        isLoading={reportLoading}
+      />
     </div>
   );
 };

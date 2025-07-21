@@ -401,7 +401,9 @@ export const createServiceDetailSections = (
   postSlug?: string,
   comments?: Comment[],
   onCommentAdded?: () => void,
-  onCommentReaction?: () => void
+  onCommentReaction?: () => void,
+  // 신고 기능을 위한 추가 props
+  onReportClick?: () => void
 ) => {
   return {
     beforeContent: [
@@ -410,7 +412,16 @@ export const createServiceDetailSections = (
       <ServiceContactSection key="contact" service={service} />,
     ],
     afterContent: [],
-    afterReactions: [],
+    afterReactions: onReportClick ? [
+      <div key="report-button" className="flex justify-end mt-2">
+        <button
+          onClick={onReportClick}
+          className="text-gray-500 hover:text-red-600 text-sm transition-colors"
+        >
+          신고
+        </button>
+      </div>
+    ] : [],
     serviceMeta: <ServiceMetaSection key="meta" service={service} />,
     // 문의와 후기 섹션을 별도 컨테이너로 반환 (참조 디자인과 동일)
     customSections: postSlug && comments && onCommentAdded ? [
