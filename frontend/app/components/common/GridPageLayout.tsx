@@ -281,7 +281,7 @@ const GridPageLayout: React.FC<GridPageLayoutProps> = ({
 
   return (
     <AppLayout user={user} onLogout={onLogout}>
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* 액션 버튼 + 검색창 섹션 */}
         <div className={`flex justify-center items-center gap-4 mb-6 ${!hasWritePermission() ? 'justify-center' : ''}`}>
           {hasWritePermission() && (

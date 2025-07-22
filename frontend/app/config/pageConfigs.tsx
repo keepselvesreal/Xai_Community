@@ -787,6 +787,15 @@ const transformPostsToTips = (posts: Post[]): Tip[] => {
 const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
   const getTagColor = (category: string) => {
     switch (category) {
+      case 'market_info':
+        return 'post-tag-info';
+      case 'real_estate_knowledge':
+        return 'post-tag-life';
+      case 'financial_info':
+        return 'post-tag-story';
+      case 'move_in_info':
+        return 'post-tag-info';
+      // 기존 카테고리 호환성 유지
       case 'market_analysis':
         return 'post-tag-info';
       case 'legal_info':
@@ -802,14 +811,23 @@ const InfoCardRenderer = ({ info }: { info: InfoItem }) => {
 
   const getCategoryLabel = (category: string) => {
     switch (category) {
+      case 'market_info':
+        return '시세 정보';
+      case 'real_estate_knowledge':
+        return '부동산 지식';
+      case 'financial_info':
+        return '금융 정보';
+      case 'move_in_info':
+        return '입주 정보';
+      // 기존 카테고리 호환성 유지
       case 'market_analysis':
-        return '시세분석';
+        return '시세 정보';
       case 'legal_info':
-        return '법률정보';
+        return '부동산 지식';
       case 'move_in_guide':
-        return '입주가이드';
+        return '입주 정보';
       case 'investment_trend':
-        return '투자동향';
+        return '금융 정보';
       default:
         return category;
     }
@@ -922,10 +940,10 @@ export const infoConfig: ListPageConfig<InfoItem> = {
   // UI 설정
   categories: [
     { value: 'all', label: '전체' },
-    { value: 'market_analysis', label: '시세분석' },
-    { value: 'legal_info', label: '법률정보' },
-    { value: 'move_in_guide', label: '입주가이드' },
-    { value: 'investment_trend', label: '투자동향' }
+    { value: 'market_info', label: '시세 정보' },
+    { value: 'real_estate_knowledge', label: '부동산 지식' },
+    { value: 'financial_info', label: '금융 정보' },
+    { value: 'move_in_info', label: '입주 정보' }
   ],
   
   sortOptions: [
@@ -960,10 +978,10 @@ const infoPostFilterFunction = (post: Post, category: string, query: string): bo
   // 카테고리 필터
   if (category !== 'all') {
     const categoryMapping: { [key: string]: string[] } = {
-      'market_analysis': ['시세분석'],
-      'legal_info': ['법률정보'],
-      'move_in_guide': ['입주가이드'],
-      'investment_trend': ['투자동향']
+      'market_info': ['시세 정보', '시세분석', 'market_info', 'market_analysis'],
+      'real_estate_knowledge': ['부동산 지식', '법률정보', 'real_estate_knowledge', 'legal_info'],
+      'financial_info': ['금융 정보', '투자동향', 'financial_info', 'investment_trend'],
+      'move_in_info': ['입주 정보', '입주가이드', 'move_in_info', 'move_in_guide']
     };
     
     const postCategory = post.metadata?.category;
@@ -991,8 +1009,8 @@ const infoPostFilterFunction = (post: Post, category: string, query: string): bo
 export const unifiedInfoConfig: ListPageConfig<Post> = {
   // 페이지 기본 설정
   title: '정보',
-  writeButtonText: '📊 정보 제공',
-  writeButtonLink: '/info/suggest',
+  writeButtonText: '',
+  writeButtonLink: '',
   searchPlaceholder: '부동산 정보 검색...',
   
   // API 설정
@@ -1006,10 +1024,10 @@ export const unifiedInfoConfig: ListPageConfig<Post> = {
   // UI 설정
   categories: [
     { value: 'all', label: '전체' },
-    { value: 'market_analysis', label: '시세분석' },
-    { value: 'legal_info', label: '법률정보' },
-    { value: 'move_in_guide', label: '입주가이드' },
-    { value: 'investment_trend', label: '투자동향' }
+    { value: 'market_info', label: '시세 정보' },
+    { value: 'real_estate_knowledge', label: '부동산 지식' },
+    { value: 'financial_info', label: '금융 정보' },
+    { value: 'move_in_info', label: '입주 정보' }
   ],
   
   sortOptions: [

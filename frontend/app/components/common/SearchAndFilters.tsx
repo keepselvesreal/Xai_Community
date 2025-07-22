@@ -22,16 +22,21 @@ export function SearchAndFilters({
     }
   };
 
+  // 버튼이 없으면 검색창만 가운데 정렬
+  const hasWriteButton = writeButtonText && writeButtonLink;
+
   return (
-    <div className="flex justify-center items-center gap-4 mb-6">
-      <Link
-        to={writeButtonLink}
-        className="w-full max-w-xs px-6 py-3 bg-var-card border border-var-color rounded-full hover:border-accent-primary hover:bg-var-hover transition-all duration-200 font-medium text-var-primary flex items-center justify-center gap-2"
-      >
-        {writeButtonText}
-      </Link>
+    <div className={`flex items-center gap-4 mb-6 ${hasWriteButton ? 'justify-center' : 'justify-center'}`}>
+      {hasWriteButton && (
+        <Link
+          to={writeButtonLink}
+          className="w-full max-w-xs px-6 py-3 bg-var-card border border-var-color rounded-full hover:border-accent-primary hover:bg-var-hover transition-all duration-200 font-medium text-var-primary flex items-center justify-center gap-2"
+        >
+          {writeButtonText}
+        </Link>
+      )}
       
-      <div className="flex items-center gap-3 bg-var-card border border-var-color rounded-full px-4 py-3 w-full max-w-xs">
+      <div className={`flex items-center gap-3 bg-var-card border border-var-color rounded-full px-4 py-3 w-full max-w-xs ${!hasWriteButton ? 'mx-auto' : ''}`}>
         {isSearching ? (
           <div 
             data-testid="search-loading"
