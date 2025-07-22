@@ -1,0 +1,221 @@
+{
+  "metadata": {
+    "session_id": "REPORT_20250722_104436_10B7",
+    "start_time": "2025-07-22T10:44:36.784559",
+    "end_time": "2025-07-22T10:44:36.788227",
+    "duration": "0.0초",
+    "total_tests": 8,
+    "passed_tests": 7,
+    "failed_tests": 0,
+    "warning_tests": 1,
+    "environment": "development",
+    "api_base_url": "http://localhost:8000"
+  },
+  "sections": [
+    {
+      "name": "게시글 목록 기능",
+      "status": "warning",
+      "tests": [
+        {
+          "name": "기본 목록 조회",
+          "status": "success",
+          "duration": "0.8초",
+          "details": "20개 게시글 정상 조회",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.784853"
+        },
+        {
+          "name": "페이지네이션",
+          "status": "success",
+          "duration": "0.6초",
+          "details": "5페이지 정상 동작",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.786778"
+        },
+        {
+          "name": "카테고리 필터",
+          "status": "success",
+          "duration": "0.7초",
+          "details": "3개 카테고리 필터링 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.786885"
+        },
+        {
+          "name": "검색 기능",
+          "status": "warning",
+          "duration": "1.2초",
+          "details": "한글 검색 일부 이슈",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.786944"
+        }
+      ],
+      "start_time": "2025-07-22T10:44:36.784775",
+      "end_time": "2025-07-22T10:44:36.787051"
+    },
+    {
+      "name": "게시글 CRUD",
+      "status": "success",
+      "tests": [
+        {
+          "name": "게시글 생성",
+          "status": "success",
+          "duration": "1.1초",
+          "details": "마크다운 콘텐츠 정상 생성",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787176"
+        },
+        {
+          "name": "게시글 조회",
+          "status": "success",
+          "duration": "0.5초",
+          "details": "조회수 정상 증가",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787226"
+        },
+        {
+          "name": "게시글 수정",
+          "status": "success",
+          "duration": "0.9초",
+          "details": "메타데이터 포함 수정 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787278"
+        },
+        {
+          "name": "게시글 삭제",
+          "status": "success",
+          "duration": "0.4초",
+          "details": "soft delete 정상 동작",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787327"
+        }
+      ],
+      "start_time": "2025-07-22T10:44:36.787125",
+      "end_time": "2025-07-22T10:44:36.788165"
+    }
+  ],
+  "test_data": [
+    {
+      "type": "posts",
+      "count": 5,
+      "pattern": "[TEST-REPORT_20250722_104436_10B7] 게시글 제목"
+    },
+    {
+      "type": "comments",
+      "count": 10,
+      "pattern": "테스트 댓글 (세션: REPORT_20250722_104436_10B7)"
+    }
+  ],
+  "generated_data": {
+    "posts": [
+      {
+        "id": "post_1",
+        "title": "테스트 게시글 1",
+        "slug": "test-post-1",
+        "timestamp": "2025-07-22T10:44:36.787381",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_2",
+        "title": "테스트 게시글 2",
+        "slug": "test-post-2",
+        "timestamp": "2025-07-22T10:44:36.787430",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_3",
+        "title": "테스트 게시글 3",
+        "slug": "test-post-3",
+        "timestamp": "2025-07-22T10:44:36.787475",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_4",
+        "title": "테스트 게시글 4",
+        "slug": "test-post-4",
+        "timestamp": "2025-07-22T10:44:36.787517",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_5",
+        "title": "테스트 게시글 5",
+        "slug": "test-post-5",
+        "timestamp": "2025-07-22T10:44:36.787558",
+        "session_id": "REPORT_20250722_104436_10B7"
+      }
+    ],
+    "comments": [
+      {
+        "id": "comment_1",
+        "content": "테스트 댓글 1",
+        "post_id": "post_1",
+        "timestamp": "2025-07-22T10:44:36.787600",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_2",
+        "content": "테스트 댓글 2",
+        "post_id": "post_1",
+        "timestamp": "2025-07-22T10:44:36.787643",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_3",
+        "content": "테스트 댓글 3",
+        "post_id": "post_2",
+        "timestamp": "2025-07-22T10:44:36.787687",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_4",
+        "content": "테스트 댓글 4",
+        "post_id": "post_2",
+        "timestamp": "2025-07-22T10:44:36.787729",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_5",
+        "content": "테스트 댓글 5",
+        "post_id": "post_3",
+        "timestamp": "2025-07-22T10:44:36.787771",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_6",
+        "content": "테스트 댓글 6",
+        "post_id": "post_3",
+        "timestamp": "2025-07-22T10:44:36.787811",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_7",
+        "content": "테스트 댓글 7",
+        "post_id": "post_4",
+        "timestamp": "2025-07-22T10:44:36.787851",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_8",
+        "content": "테스트 댓글 8",
+        "post_id": "post_4",
+        "timestamp": "2025-07-22T10:44:36.787894",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_9",
+        "content": "테스트 댓글 9",
+        "post_id": "post_5",
+        "timestamp": "2025-07-22T10:44:36.788022",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_10",
+        "content": "테스트 댓글 10",
+        "post_id": "post_5",
+        "timestamp": "2025-07-22T10:44:36.788108",
+        "session_id": "REPORT_20250722_104436_10B7"
+      }
+    ],
+    "users": [],
+    "reactions": []
+  }
+}

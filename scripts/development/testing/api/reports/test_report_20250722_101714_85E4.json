@@ -1,0 +1,82 @@
+{
+  "metadata": {
+    "session_id": "STATS_20250722_101641_85E4",
+    "start_time": "2025-07-22T10:16:41.324567",
+    "end_time": "2025-07-22T10:17:14.710590",
+    "duration": "33.4초",
+    "total_tests": 3,
+    "passed_tests": 3,
+    "failed_tests": 0,
+    "warning_tests": 0,
+    "environment": "development",
+    "api_base_url": "http://localhost:8000"
+  },
+  "sections": [
+    {
+      "name": "실시간 통계 검증",
+      "status": "success",
+      "tests": [
+        {
+          "name": "사용자 인증",
+          "status": "success",
+          "duration": "0.6초",
+          "details": "테스트 사용자 생성 및 로그인 성공: statstest_85e4",
+          "error": null,
+          "timestamp": "2025-07-22T10:16:41.897673"
+        },
+        {
+          "name": "테스트 게시글 생성",
+          "status": "success",
+          "duration": "0.1초",
+          "details": "게시글 생성 성공: 687ee67929a8ab0c71de9bc6-stats-stats2025072210164185e4-실시간-통계-검증용-게시글",
+          "error": null,
+          "timestamp": "2025-07-22T10:16:42.017058"
+        },
+        {
+          "name": "조회수 증가 검증",
+          "status": "success",
+          "duration": "10.7초",
+          "details": "조회수 정상 증가 확인 (최종: 상세=3, 목록=4)",
+          "error": null,
+          "timestamp": "2025-07-22T10:16:52.762053"
+        }
+      ],
+      "start_time": "2025-07-22T10:16:41.325173",
+      "end_time": "2025-07-22T10:17:14.710284"
+    }
+  ],
+  "test_data": [
+    {
+      "type": "posts",
+      "count": 1,
+      "pattern": "[TEST-STATS_20250722_101641_85E4] 게시글 제목"
+    },
+    {
+      "type": "users",
+      "count": 1,
+      "pattern": "testuser_85e4"
+    }
+  ],
+  "generated_data": {
+    "posts": [
+      {
+        "title": "[📊STATS-STATS_20250722_101641_85E4] 실시간 통계 검증용 게시글",
+        "slug": "687ee67929a8ab0c71de9bc6-stats-stats2025072210164185e4-실시간-통계-검증용-게시글",
+        "content_preview": "[📊STATS-STATS_20250722_101641_85E4] 실시간 통계 검증용 게시글...",
+        "timestamp": "2025-07-22T10:16:42.017251",
+        "session_id": "STATS_20250722_101641_85E4"
+      }
+    ],
+    "comments": [],
+    "users": [
+      {
+        "handle": "statstest_85e4",
+        "email": "statstest_85e4@test.com",
+        "display_name": "📊통계테스트_85e4",
+        "timestamp": "2025-07-22T10:16:41.898034",
+        "session_id": "STATS_20250722_101641_85E4"
+      }
+    ],
+    "reactions": []
+  }
+}

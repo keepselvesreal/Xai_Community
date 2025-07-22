@@ -51,6 +51,12 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
   } = useComments({ postSlug, onCommentAdded, onCommentReaction });
 
   const handleSubmitComment = async () => {
+    // 로그인 체크
+    if (!user) {
+      alert('댓글 작성을 위해 로그인이 필요합니다.');
+      return;
+    }
+
     // 후기인 경우 별점이 필수
     if (subtype === 'service_review' && rating === 0) {
       alert('별점을 선택해주세요.');
@@ -203,21 +209,22 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
       )}
 
       {/* 서비스 페이지가 아닌 경우 입력란을 위에 표시 */}
-      {pageType !== 'moving_services' && user && (
+      {pageType !== 'moving_services' && (
         <div className="space-y-3 mb-6">
           <Textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
-            placeholder={commentText.placeholder}
+            placeholder={user ? commentText.placeholder : '댓글 작성을 위해 로그인이 필요합니다.'}
             rows={3}
+            disabled={!user}
           />
           <div className="flex justify-end">
             <Button
               onClick={handleSubmitComment}
-              disabled={!newComment.trim() || isSubmitting}
+              disabled={!user || !newComment.trim() || isSubmitting}
               loading={isSubmitting}
             >
-              {commentText.submitText}
+              {user ? commentText.submitText : '로그인 필요'}
             </Button>
           </div>
         </div>
@@ -254,10 +261,19 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
       </div>
 
       {/* 서비스 페이지인 경우 입력란을 목록 아래에 표시 */}
-      {pageType === 'moving_services' && user && (
+      {pageType === 'moving_services' && (
         <div className={subtype === 'service_review' ? 'review-form' : 'comment-form mt-6'}>
           {subtype === 'service_review' && (
             <h4 className="form-label" style={{ marginBottom: '16px', fontSize: '16px' }}>후기 작성</h4>
+          )}
+          
+          {/* 로그인하지 않은 사용자를 위한 안내 */}
+          {!user && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-blue-700 text-sm">
+                {subtype === 'service_inquiry' ? '문의' : subtype === 'service_review' ? '후기' : '댓글'} 작성을 위해 로그인이 필요합니다.
+              </p>
+            </div>
           )}
           
           {/* 문의인 경우 공개/비공개 선택 */}
@@ -275,6 +291,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
                     checked={isPublic}
                     onChange={() => setIsPublic(true)}
                     className="text-blue-600"
+                    disabled={!user}
                   />
                   <span className="text-sm">공개 (모든 사용자가 볼 수 있음)</span>
                 </label>
@@ -286,6 +303,7 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
                     checked={!isPublic}
                     onChange={() => setIsPublic(false)}
                     className="text-blue-600"
+                    disabled={!user}
                   />
                   <span className="text-sm">비공개 (업체와 본인만 볼 수 있음)</span>
                 </label>
@@ -316,16 +334,17 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
                       key={starNumber}
                       type="button"
                       onClick={() => {
-                        setRating(starNumber);
+                        if (user) setRating(starNumber);
                       }}
-                      onMouseEnter={() => setHoveredRating(starNumber)}
-                      onMouseLeave={() => setHoveredRating(0)}
+                      onMouseEnter={() => user && setHoveredRating(starNumber)}
+                      onMouseLeave={() => user && setHoveredRating(0)}
                       className="p-1 focus:outline-none"
+                      disabled={!user}
                     >
                       <span 
                         className={`text-3xl cursor-pointer select-none ${
                           shouldBeYellow ? 'text-yellow-400' : 'text-gray-300'
-                        }`}
+                        } ${!user ? 'opacity-50' : ''}`}
                       >
                         ★
                       </span>
@@ -346,10 +365,11 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
             <textarea
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
-              placeholder={commentText.placeholder}
+              placeholder={user ? commentText.placeholder : `${subtype === 'service_inquiry' ? '문의' : subtype === 'service_review' ? '후기' : '댓글'} 작성을 위해 로그인이 필요합니다.`}
               rows={4}
               className={subtype === 'service_review' ? 'form-input' : 'comment-textarea w-full min-h-[100px] p-3 border border-gray-300 rounded-lg resize-vertical focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500'}
               style={subtype === 'service_review' ? { minHeight: '100px', resize: 'vertical' } : {}}
+              disabled={!user}
             />
           </div>
           
@@ -358,13 +378,14 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
               type="button"
               onClick={handleSubmitComment}
               disabled={
+                !user ||
                 !newComment.trim() || 
                 isSubmitting || 
                 (subtype === 'service_review' && rating === 0)
               }
               className={subtype === 'service_review' ? 'btn-primary' : 'comment-submit bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed'}
             >
-              {isSubmitting ? '등록 중...' : commentText.submitText}
+              {!user ? '로그인 필요' : isSubmitting ? '등록 중...' : commentText.submitText}
             </button>
           </div>
         </div>

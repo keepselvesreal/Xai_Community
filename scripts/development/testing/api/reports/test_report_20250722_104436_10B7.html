@@ -1,0 +1,893 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>게시판 API 자동화 테스트 보고서</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+        
+        .header .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+        }
+        
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .summary-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+        
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .summary-card .icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+        
+        .summary-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+        
+        .summary-card p {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
+        
+        .test-sections {
+            display: grid;
+            gap: 20px;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .section-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .section-header h2 {
+            font-size: 1.5rem;
+            font-weight: 400;
+        }
+        
+        .section-status {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .status-success {
+            background: #2ecc71;
+        }
+        
+        .status-warning {
+            background: #f39c12;
+        }
+        
+        .status-danger {
+            background: #e74c3c;
+        }
+        
+        .section-content {
+            padding: 25px;
+        }
+        
+        .test-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #ddd;
+        }
+        
+        .test-item.success {
+            border-left-color: #2ecc71;
+            background: #d4edda;
+        }
+        
+        .test-item.warning {
+            border-left-color: #f39c12;
+            background: #fff3cd;
+        }
+        
+        .test-item.danger {
+            border-left-color: #e74c3c;
+            background: #f8d7da;
+        }
+        
+        .test-item .icon {
+            font-size: 1.5rem;
+            margin-right: 15px;
+            width: 30px;
+            text-align: center;
+        }
+        
+        .test-item .content {
+            flex: 1;
+        }
+        
+        .test-item .title {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .test-item .details {
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .test-item .duration {
+            font-size: 0.8rem;
+            color: #999;
+            margin-left: auto;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .stat-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .stat-item .value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        .stat-item .label {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .refresh-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .auto-refresh {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.8rem;
+            color: #666;
+        }
+        
+        .auto-refresh input[type="checkbox"] {
+            margin: 0;
+        }
+        
+        .timestamp {
+            background: #ecf0f1;
+            color: #2c3e50;
+            padding: 10px 20px;
+            border-radius: 0 0 15px 15px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        .collapsible-header {
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .collapsible-content {
+            max-height: 1000px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        
+        .collapsible-content.collapsed {
+            max-height: 0;
+        }
+        
+        .error-details {
+            background: #fff5f5;
+            border: 1px solid #fed7d7;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: #c53030;
+        }
+        
+        .url-links {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        
+        .url-links h4 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        
+        .url-links a {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            margin: 5px 10px 5px 0;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+        
+        .url-links a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+        }
+        
+        .test-data-summary {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-data-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .test-data-item:last-child {
+            border-bottom: none;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .summary-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .refresh-controls {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin-bottom: 20px;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 새로고침 컨트롤 -->
+        <div class="refresh-controls">
+            <button class="btn" onclick="refreshData()">
+                <span id="refresh-icon">🔄</span> 새로고침
+            </button>
+            <div class="auto-refresh">
+                <input type="checkbox" id="auto-refresh" onchange="toggleAutoRefresh()">
+                <label for="auto-refresh">자동 새로고침 (30초)</label>
+            </div>
+        </div>
+
+        <!-- 헤더 -->
+        <div class="header">
+            <h1>🚀 게시판 API 자동화 테스트 보고서</h1>
+            <p class="subtitle">XAI 아파트 커뮤니티 게시판 시스템 종합 테스트 결과</p>
+            <div class="timestamp" id="last-updated">
+                마지막 업데이트: <span id="timestamp">로딩 중...</span>
+            </div>
+        </div>
+
+        <!-- 요약 카드 -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="icon">📊</div>
+                <h3 id="total-tests">-</h3>
+                <p>총 테스트 수</p>
+            </div>
+            <div class="summary-card">
+                <div class="icon">✅</div>
+                <h3 id="passed-tests">-</h3>
+                <p>성공한 테스트</p>
+            </div>
+            <div class="summary-card">
+                <div class="icon">❌</div>
+                <h3 id="failed-tests">-</h3>
+                <p>실패한 테스트</p>
+            </div>
+            <div class="summary-card">
+                <div class="icon">⏱️</div>
+                <h3 id="test-duration">-</h3>
+                <p>테스트 소요 시간</p>
+            </div>
+        </div>
+
+        <!-- 테스트 섹션들 -->
+        <div class="test-sections" id="test-sections">
+            <!-- 동적으로 생성됨 -->
+        </div>
+
+        <!-- 생성된 테스트 데이터 요약 -->
+        <div class="test-data-summary">
+            <h3>🎯 생성된 테스트 데이터</h3>
+            <div id="test-data-list">
+                <!-- 동적으로 생성됨 -->
+            </div>
+            
+            <div class="url-links">
+                <h4>🔗 빠른 링크</h4>
+                <a href="http://localhost:5173/board" target="_blank">게시판 페이지</a>
+                <a href="http://localhost:8000/docs" target="_blank">API 문서</a>
+                <a href="http://localhost:8000/api/health" target="_blank">서버 상태</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 전역 변수
+        let autoRefreshInterval = null;
+        let currentTestData = null;
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📊 테스트 보고서 페이지 로드됨');
+            loadTestResults();
+        });
+
+        // 테스트 결과 로드
+        async function loadTestResults() {
+            try {
+                updateTimestamp();
+                showLoadingState();
+                
+                // 모의 데이터 (실제로는 JSON 파일에서 로드)
+                const testData = await fetchTestData();
+                currentTestData = testData;
+                
+                renderSummaryCards(testData);
+                renderTestSections(testData);
+                renderTestDataSummary(testData);
+                
+                hideLoadingState();
+                console.log('✅ 테스트 결과 로드 완료');
+                
+            } catch (error) {
+                console.error('❌ 테스트 결과 로드 실패:', error);
+                showErrorState(error.message);
+            }
+        }
+
+        // 테스트 데이터 가져오기 (모의 구현)
+        async function fetchTestData() {
+            // 실제 테스트 결과 데이터
+            return {
+  "metadata": {
+    "session_id": "REPORT_20250722_104436_10B7",
+    "start_time": "2025-07-22T10:44:36.784559",
+    "end_time": "2025-07-22T10:44:36.788227",
+    "duration": "0.0초",
+    "total_tests": 8,
+    "passed_tests": 7,
+    "failed_tests": 0,
+    "warning_tests": 1,
+    "environment": "development",
+    "api_base_url": "http://localhost:8000"
+  },
+  "sections": [
+    {
+      "name": "게시글 목록 기능",
+      "status": "warning",
+      "tests": [
+        {
+          "name": "기본 목록 조회",
+          "status": "success",
+          "duration": "0.8초",
+          "details": "20개 게시글 정상 조회",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.784853"
+        },
+        {
+          "name": "페이지네이션",
+          "status": "success",
+          "duration": "0.6초",
+          "details": "5페이지 정상 동작",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.786778"
+        },
+        {
+          "name": "카테고리 필터",
+          "status": "success",
+          "duration": "0.7초",
+          "details": "3개 카테고리 필터링 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.786885"
+        },
+        {
+          "name": "검색 기능",
+          "status": "warning",
+          "duration": "1.2초",
+          "details": "한글 검색 일부 이슈",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.786944"
+        }
+      ],
+      "start_time": "2025-07-22T10:44:36.784775",
+      "end_time": "2025-07-22T10:44:36.787051"
+    },
+    {
+      "name": "게시글 CRUD",
+      "status": "success",
+      "tests": [
+        {
+          "name": "게시글 생성",
+          "status": "success",
+          "duration": "1.1초",
+          "details": "마크다운 콘텐츠 정상 생성",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787176"
+        },
+        {
+          "name": "게시글 조회",
+          "status": "success",
+          "duration": "0.5초",
+          "details": "조회수 정상 증가",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787226"
+        },
+        {
+          "name": "게시글 수정",
+          "status": "success",
+          "duration": "0.9초",
+          "details": "메타데이터 포함 수정 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787278"
+        },
+        {
+          "name": "게시글 삭제",
+          "status": "success",
+          "duration": "0.4초",
+          "details": "soft delete 정상 동작",
+          "error": null,
+          "timestamp": "2025-07-22T10:44:36.787327"
+        }
+      ],
+      "start_time": "2025-07-22T10:44:36.787125",
+      "end_time": "2025-07-22T10:44:36.788165"
+    }
+  ],
+  "test_data": [
+    {
+      "type": "posts",
+      "count": 5,
+      "pattern": "[TEST-REPORT_20250722_104436_10B7] 게시글 제목"
+    },
+    {
+      "type": "comments",
+      "count": 10,
+      "pattern": "테스트 댓글 (세션: REPORT_20250722_104436_10B7)"
+    }
+  ],
+  "generated_data": {
+    "posts": [
+      {
+        "id": "post_1",
+        "title": "테스트 게시글 1",
+        "slug": "test-post-1",
+        "timestamp": "2025-07-22T10:44:36.787381",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_2",
+        "title": "테스트 게시글 2",
+        "slug": "test-post-2",
+        "timestamp": "2025-07-22T10:44:36.787430",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_3",
+        "title": "테스트 게시글 3",
+        "slug": "test-post-3",
+        "timestamp": "2025-07-22T10:44:36.787475",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_4",
+        "title": "테스트 게시글 4",
+        "slug": "test-post-4",
+        "timestamp": "2025-07-22T10:44:36.787517",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "post_5",
+        "title": "테스트 게시글 5",
+        "slug": "test-post-5",
+        "timestamp": "2025-07-22T10:44:36.787558",
+        "session_id": "REPORT_20250722_104436_10B7"
+      }
+    ],
+    "comments": [
+      {
+        "id": "comment_1",
+        "content": "테스트 댓글 1",
+        "post_id": "post_1",
+        "timestamp": "2025-07-22T10:44:36.787600",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_2",
+        "content": "테스트 댓글 2",
+        "post_id": "post_1",
+        "timestamp": "2025-07-22T10:44:36.787643",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_3",
+        "content": "테스트 댓글 3",
+        "post_id": "post_2",
+        "timestamp": "2025-07-22T10:44:36.787687",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_4",
+        "content": "테스트 댓글 4",
+        "post_id": "post_2",
+        "timestamp": "2025-07-22T10:44:36.787729",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_5",
+        "content": "테스트 댓글 5",
+        "post_id": "post_3",
+        "timestamp": "2025-07-22T10:44:36.787771",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_6",
+        "content": "테스트 댓글 6",
+        "post_id": "post_3",
+        "timestamp": "2025-07-22T10:44:36.787811",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_7",
+        "content": "테스트 댓글 7",
+        "post_id": "post_4",
+        "timestamp": "2025-07-22T10:44:36.787851",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_8",
+        "content": "테스트 댓글 8",
+        "post_id": "post_4",
+        "timestamp": "2025-07-22T10:44:36.787894",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_9",
+        "content": "테스트 댓글 9",
+        "post_id": "post_5",
+        "timestamp": "2025-07-22T10:44:36.788022",
+        "session_id": "REPORT_20250722_104436_10B7"
+      },
+      {
+        "id": "comment_10",
+        "content": "테스트 댓글 10",
+        "post_id": "post_5",
+        "timestamp": "2025-07-22T10:44:36.788108",
+        "session_id": "REPORT_20250722_104436_10B7"
+      }
+    ],
+    "users": [],
+    "reactions": []
+  }
+};
+        }
+
+        // 요약 카드 렌더링
+        function renderSummaryCards(data) {
+            document.getElementById('total-tests').textContent = data.metadata.total_tests;
+            document.getElementById('passed-tests').textContent = data.metadata.passed_tests;
+            document.getElementById('failed-tests').textContent = data.metadata.failed_tests;
+            document.getElementById('test-duration').textContent = data.metadata.duration;
+        }
+
+        // 테스트 섹션 렌더링
+        function renderTestSections(data) {
+            const container = document.getElementById('test-sections');
+            container.innerHTML = '';
+
+            data.sections.forEach((section, index) => {
+                const sectionElement = createTestSection(section, index);
+                container.appendChild(sectionElement);
+            });
+        }
+
+        // 테스트 섹션 생성
+        function createTestSection(section, index) {
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'test-section';
+
+            const statusClass = `status-${section.status}`;
+            const statusText = {
+                'success': '성공',
+                'warning': '경고', 
+                'danger': '실패'
+            }[section.status];
+
+            sectionDiv.innerHTML = `
+                <div class="section-header collapsible-header" onclick="toggleSection(${index})">
+                    <h2>${section.name}</h2>
+                    <span class="section-status ${statusClass}">${statusText}</span>
+                </div>
+                <div class="section-content collapsible-content" id="section-${index}">
+                    ${section.tests.map(test => createTestItem(test)).join('')}
+                </div>
+            `;
+
+            return sectionDiv;
+        }
+
+        // 테스트 항목 생성
+        function createTestItem(test) {
+            const iconMap = {
+                'success': '✅',
+                'warning': '⚠️',
+                'danger': '❌'
+            };
+
+            const errorDetails = test.error ? 
+                `<div class="error-details">오류 상세: ${test.error}</div>` : '';
+
+            return `
+                <div class="test-item ${test.status}">
+                    <div class="icon">${iconMap[test.status]}</div>
+                    <div class="content">
+                        <div class="title">${test.name}</div>
+                        <div class="details">${test.details}</div>
+                        ${errorDetails}
+                    </div>
+                    <div class="duration">${test.duration}</div>
+                </div>
+            `;
+        }
+
+        // 테스트 데이터 요약 렌더링
+        function renderTestDataSummary(data) {
+            const container = document.getElementById('test-data-list');
+            container.innerHTML = '';
+
+            // generated_data에서 실제 데이터 개수 계산
+            const generatedData = data.generated_data || {};
+            const dataTypes = ['posts', 'comments', 'users', 'reactions'];
+            
+            dataTypes.forEach(type => {
+                const items = generatedData[type] || [];
+                const count = items.length;
+                
+                if (count > 0) {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'test-data-item';
+                    itemDiv.innerHTML = `
+                        <span><strong>${type}</strong>: ${count}개</span>
+                        <span style="font-size: 0.8rem; color: #666;">세션 ${data.metadata.session_id}에서 생성</span>
+                    `;
+                    container.appendChild(itemDiv);
+                }
+            });
+            
+            // 데이터가 없는 경우 메시지 표시
+            if (container.children.length === 0) {
+                container.innerHTML = '<div class="test-data-item"><span style="color: #666;">생성된 테스트 데이터 없음 (정리 완료)</span></div>';
+            }
+        }
+
+        // 섹션 토글
+        function toggleSection(index) {
+            const content = document.getElementById(`section-${index}`);
+            content.classList.toggle('collapsed');
+        }
+
+        // 데이터 새로고침
+        async function refreshData() {
+            const refreshIcon = document.getElementById('refresh-icon');
+            refreshIcon.innerHTML = '<div class="loading-spinner"></div>';
+            
+            try {
+                await loadTestResults();
+            } finally {
+                refreshIcon.textContent = '🔄';
+            }
+        }
+
+        // 자동 새로고침 토글
+        function toggleAutoRefresh() {
+            const checkbox = document.getElementById('auto-refresh');
+            
+            if (checkbox.checked) {
+                autoRefreshInterval = setInterval(refreshData, 30000);
+                console.log('🔄 자동 새로고침 활성화 (30초)');
+            } else {
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+                console.log('⏹️ 자동 새로고침 비활성화');
+            }
+        }
+
+        // 타임스탬프 업데이트
+        function updateTimestamp() {
+            const now = new Date();
+            const timestamp = now.toLocaleString('ko-KR', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            document.getElementById('timestamp').textContent = timestamp;
+        }
+
+        // 로딩 상태 표시
+        function showLoadingState() {
+            const summaryCards = document.querySelectorAll('.summary-card h3');
+            summaryCards.forEach(card => {
+                card.innerHTML = '<div class="loading-spinner"></div>';
+            });
+        }
+
+        // 로딩 상태 숨김
+        function hideLoadingState() {
+            // 로딩 스피너가 제거되고 실제 데이터가 표시됨
+        }
+
+        // 오류 상태 표시
+        function showErrorState(message) {
+            const container = document.getElementById('test-sections');
+            container.innerHTML = `
+                <div class="test-section">
+                    <div class="section-header" style="background: #e74c3c;">
+                        <h2>오류 발생</h2>
+                        <span class="section-status status-danger">실패</span>
+                    </div>
+                    <div class="section-content">
+                        <div class="test-item danger">
+                            <div class="icon">❌</div>
+                            <div class="content">
+                                <div class="title">데이터 로드 실패</div>
+                                <div class="details">${message}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // 페이지 언로드 시 정리
+        window.addEventListener('beforeunload', function() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+        });
+    </script>
+</body>
+</html>

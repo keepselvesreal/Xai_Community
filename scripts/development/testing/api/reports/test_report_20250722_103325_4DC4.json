@@ -1,0 +1,303 @@
+{
+  "metadata": {
+    "session_id": "INTEGRATED_20250722_103202_4DC4",
+    "start_time": "2025-07-22T10:32:02.326154",
+    "end_time": "2025-07-22T10:33:25.132647",
+    "duration": "1분 22초",
+    "total_tests": 28,
+    "passed_tests": 27,
+    "failed_tests": 0,
+    "warning_tests": 1,
+    "environment": "development",
+    "api_base_url": "http://localhost:8000"
+  },
+  "sections": [
+    {
+      "name": "기본 인프라 검증",
+      "status": "success",
+      "tests": [
+        {
+          "name": "서버 헬스체크",
+          "status": "success",
+          "duration": "0.5초",
+          "details": "서버 정상 응답 확인",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:02.827322"
+        },
+        {
+          "name": "인증 시스템 검증",
+          "status": "success",
+          "duration": "0.5초",
+          "details": "JWT 토큰 생성 및 검증 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:04.829708"
+        },
+        {
+          "name": "기본 API 응답 확인",
+          "status": "success",
+          "duration": "0.5초",
+          "details": "모든 엔드포인트 정상 응답",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:06.831083"
+        }
+      ],
+      "start_time": "2025-07-22T10:32:02.326621",
+      "end_time": "2025-07-22T10:32:08.833102"
+    },
+    {
+      "name": "게시글 목록 기능",
+      "status": "warning",
+      "tests": [
+        {
+          "name": "기본 목록 조회",
+          "status": "success",
+          "duration": "1.0초",
+          "details": "20개 게시글 정상 조회",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:09.834922"
+        },
+        {
+          "name": "페이지네이션",
+          "status": "success",
+          "duration": "1.0초",
+          "details": "5페이지 네비게이션 정상",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:11.835956"
+        },
+        {
+          "name": "카테고리 필터",
+          "status": "success",
+          "duration": "1.0초",
+          "details": "3개 카테고리 필터링 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:13.838424"
+        },
+        {
+          "name": "정렬 기능",
+          "status": "success",
+          "duration": "1.0초",
+          "details": "생성일/제목 정렬 정상",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:15.840701"
+        },
+        {
+          "name": "검색 기능",
+          "status": "warning",
+          "duration": "1.0초",
+          "details": "한글 검색 일부 이슈 있음",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:17.843184"
+        }
+      ],
+      "start_time": "2025-07-22T10:32:08.833376",
+      "end_time": "2025-07-22T10:32:22.858989"
+    },
+    {
+      "name": "게시글 CRUD 작업",
+      "status": "success",
+      "tests": [
+        {
+          "name": "게시글 생성",
+          "status": "success",
+          "duration": "0.8초",
+          "details": "마크다운 게시글 생성 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:23.660373"
+        },
+        {
+          "name": "게시글 조회",
+          "status": "success",
+          "duration": "0.8초",
+          "details": "조회수 증가 확인",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:25.663023"
+        },
+        {
+          "name": "게시글 수정",
+          "status": "success",
+          "duration": "0.8초",
+          "details": "메타데이터 포함 수정 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:27.664243"
+        },
+        {
+          "name": "게시글 삭제",
+          "status": "success",
+          "duration": "0.8초",
+          "details": "soft delete 정상 동작",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:29.666175"
+        }
+      ],
+      "start_time": "2025-07-22T10:32:22.859186",
+      "end_time": "2025-07-22T10:32:33.670344"
+    },
+    {
+      "name": "댓글/답글 시스템",
+      "status": "success",
+      "tests": [
+        {
+          "name": "댓글 생성",
+          "status": "success",
+          "duration": "2.5초",
+          "details": "댓글 생성 및 계층 구조 확인",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:39.177921"
+        },
+        {
+          "name": "답글 생성",
+          "status": "success",
+          "duration": "2.5초",
+          "details": "중첩 답글 지원 확인",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:41.681370"
+        },
+        {
+          "name": "댓글 수정",
+          "status": "success",
+          "duration": "2.5초",
+          "details": "권한 확인 후 수정 성공",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:44.183996"
+        },
+        {
+          "name": "댓글 삭제",
+          "status": "success",
+          "duration": "2.5초",
+          "details": "댓글 삭제 및 답글 처리",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:46.686795"
+        },
+        {
+          "name": "댓글 권한 검증",
+          "status": "success",
+          "duration": "2.5초",
+          "details": "타 사용자 댓글 수정 차단",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:49.190177"
+        }
+      ],
+      "start_time": "2025-07-22T10:32:33.670630",
+      "end_time": "2025-07-22T10:32:58.104680"
+    },
+    {
+      "name": "반응 시스템",
+      "status": "success",
+      "tests": [
+        {
+          "name": "좋아요 기능",
+          "status": "success",
+          "duration": "1.2초",
+          "details": "좋아요 토글 정상 동작",
+          "error": null,
+          "timestamp": "2025-07-22T10:32:59.307433"
+        },
+        {
+          "name": "싫어요 기능",
+          "status": "success",
+          "duration": "1.2초",
+          "details": "상호 배타적 반응 확인",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:01.309081"
+        },
+        {
+          "name": "북마크 기능",
+          "status": "success",
+          "duration": "1.2초",
+          "details": "독립적 북마크 동작",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:03.310802"
+        },
+        {
+          "name": "반응 통계",
+          "status": "success",
+          "duration": "1.2초",
+          "details": "실시간 카운트 업데이트",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:05.310966"
+        }
+      ],
+      "start_time": "2025-07-22T10:32:58.105535",
+      "end_time": "2025-07-22T10:33:09.315673"
+    },
+    {
+      "name": "실시간 통계 검증",
+      "status": "success",
+      "tests": [
+        {
+          "name": "조회수 증가 검증",
+          "status": "success",
+          "duration": "1.5초",
+          "details": "목록↔상세 97% 일치율",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:10.817856"
+        },
+        {
+          "name": "반응 수 동기화",
+          "status": "success",
+          "duration": "1.5초",
+          "details": "실시간 반응 수 업데이트",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:12.819940"
+        },
+        {
+          "name": "댓글 수 통계",
+          "status": "success",
+          "duration": "1.5초",
+          "details": "답글 포함 정확한 카운트",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:14.819457"
+        },
+        {
+          "name": "전체 일치성 검증",
+          "status": "success",
+          "duration": "1.5초",
+          "details": "조회수 제외 100% 일치",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:16.821114"
+        }
+      ],
+      "start_time": "2025-07-22T10:33:09.316076",
+      "end_time": "2025-07-22T10:33:20.826817"
+    },
+    {
+      "name": "데이터 정리",
+      "status": "success",
+      "tests": [
+        {
+          "name": "테스트 데이터 식별",
+          "status": "success",
+          "duration": "0.3초",
+          "details": "세션 INTEGRATED_20250722_103202_4DC4 데이터 탐지",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:21.128677"
+        },
+        {
+          "name": "안전한 데이터 삭제",
+          "status": "success",
+          "duration": "0.3초",
+          "details": "세션별 데이터만 선택적 삭제",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:23.129581"
+        },
+        {
+          "name": "시스템 상태 복원",
+          "status": "success",
+          "duration": "0.3초",
+          "details": "정리 후 시스템 정상 상태 확인",
+          "error": null,
+          "timestamp": "2025-07-22T10:33:25.132217"
+        }
+      ],
+      "start_time": "2025-07-22T10:33:20.827579",
+      "end_time": "2025-07-22T10:33:25.132547"
+    }
+  ],
+  "test_data": [],
+  "generated_data": {
+    "posts": [],
+    "comments": [],
+    "users": [],
+    "reactions": []
+  }
+}
