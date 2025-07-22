@@ -43,6 +43,7 @@ dependencies = [
     "aiohttp>=3.12.13",
     "requests>=2.32.4",
     "redis>=5.0.0",
+    "fastapi-limiter>=0.1.6",
     "locust>=2.37.12",
     "sentry-sdk[fastapi]>=2.22.0",
     # 인프라 모니터링을 위한 패키지들

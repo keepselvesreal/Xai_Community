@@ -475,6 +475,29 @@ class Settings(BaseSettings):
         default=None, description="Upstash Redis 데이터베이스 ID"
     )
 
+    # === Rate Limiting 설정 ===
+    rate_limiting_enabled: bool = Field(
+        default=True, description="Rate limiting 전역 활성화 여부"
+    )
+    rate_limiting_storage_url: Optional[str] = Field(
+        default=None,
+        description="Rate limiting 전용 Redis URL (없으면 기본 Redis 사용)"
+    )
+    rate_limiting_key_prefix: str = Field(
+        default="rate_limit:",
+        description="Rate limiting Redis 키 프리픽스"
+    )
+    rate_limiting_default_limit: int = Field(
+        default=100,
+        gt=0,
+        description="기본 Rate limit (요청/분)"
+    )
+    rate_limiting_default_window: int = Field(
+        default=60,
+        gt=0,
+        description="기본 Rate limiting 시간 윈도우 (초)"
+    )
+
     @field_validator("secret_key")
     @classmethod
     def validate_secret_key(cls, v: str) -> str:
