@@ -93,16 +93,19 @@ function ActivityItem({
                           <span>{new Date(item.created_at).toLocaleDateString()}</span>
                           <span>·</span>
                           <span className="text-gray-500">
-                            👁 {formatNumber(item.view_count || 0)}
+                            👁 {formatNumber(item.view_count ?? 0)}
                           </span>
                           <span className="text-gray-500">
-                            👍 {formatNumber(item.like_count || 0)}
+                            👍 {formatNumber(item.like_count ?? 0)}
                           </span>
                           <span className="text-gray-500">
-                            👎 {formatNumber(item.dislike_count || 0)}
+                            👎 {formatNumber(item.dislike_count ?? 0)}
                           </span>
                           <span className="text-gray-500">
-                            💬 {formatNumber(item.comment_count || 0)}
+                            💬 {formatNumber(item.comment_count ?? 0)}
+                          </span>
+                          <span className="text-gray-500">
+                            📌 {formatNumber(item.bookmark_count ?? 0)}
                           </span>
                           <span>·</span>
                           <span className="text-gray-500">
@@ -121,18 +124,44 @@ function ActivityItem({
                         <div className="flex items-center gap-2 text-xs text-gray-500">
                           <span>{new Date(item.created_at).toLocaleDateString()}</span>
                           <span>·</span>
-                          <span className="text-gray-500">
-                            👁 {formatNumber(item.view_count || 0)}
-                          </span>
-                          <span className="text-gray-500">
-                            👍 {formatNumber(item.like_count || 0)}
-                          </span>
-                          <span className="text-gray-500">
-                            👎 {formatNumber(item.dislike_count || 0)}
-                          </span>
-                          <span className="text-gray-500">
-                            💬 {formatNumber(item.comment_count || 0)}
-                          </span>
+                          
+                          {/* 입주 서비스 업체 글인 경우 특별한 통계 형식 */}
+                          {item.route_path && item.route_path.includes('/moving-services/') ? (
+                            <>
+                              <span className="text-gray-500">
+                                👁 {formatNumber(item.view_count ?? 0)}
+                              </span>
+                              <span className="text-gray-500">
+                                관심 {formatNumber(item.bookmark_count ?? 0)}
+                              </span>
+                              <span className="text-gray-500">
+                                문의 {formatNumber(item.inquiry_count ?? 0)}
+                              </span>
+                              <span className="text-gray-500">
+                                후기 {formatNumber(item.review_count ?? 0)}
+                              </span>
+                            </>
+                          ) : (
+                            /* 일반 게시글의 통계 정보 */
+                            <>
+                              <span className="text-gray-500">
+                                👁 {formatNumber(item.view_count ?? 0)}
+                              </span>
+                              <span className="text-gray-500">
+                                👍 {formatNumber(item.like_count ?? 0)}
+                              </span>
+                              <span className="text-gray-500">
+                                👎 {formatNumber(item.dislike_count ?? 0)}
+                              </span>
+                              <span className="text-gray-500">
+                                💬 {formatNumber(item.comment_count ?? 0)}
+                              </span>
+                              <span className="text-gray-500">
+                                📌 {formatNumber(item.bookmark_count ?? 0)}
+                              </span>
+                            </>
+                          )}
+                          
                           {item.subtype && (
                             <>
                               <span>·</span>
@@ -248,9 +277,7 @@ export default function MyPage() {
   // 초기 로드
   useEffect(() => {
     loadUserActivity();
-  }, [user, loaderData.userStats]);
-
-  // 페이지 포커스 시 자동 새로고침 제거 (수동 새로고침만 사용)
+  }, [user]);
 
   // 게스트 사용자를 위한 기본 데이터
   const displayUser = user || {
@@ -627,7 +654,6 @@ export default function MyPage() {
                   {/* 입주 업체 서비스 (Phase 5: moving_services로 통일) */}
                   {userActivity && userActivity.posts && userActivity.comments && (
                     (userActivity.posts.moving_services?.length > 0 || 
-                     getCommentsByPageType(userActivity.comments, 'moving_services').length > 0 ||
                      userActivity.comments.filter(c => c.subtype === 'service_inquiry').length > 0 ||
                      userActivity.comments.filter(c => c.subtype === 'service_review').length > 0)
                   ) && (
@@ -646,18 +672,6 @@ export default function MyPage() {
                             isExpanded={expandedActivities.has('moving-services-posts')}
                             currentPage={categoryPages['moving-services-posts'] || 1}
                             onPageChange={(page) => handlePageChange('moving-services-posts', page)}
-                          />
-                        )}
-                        {getCommentsByPageType(userActivity?.comments || [], 'moving_services').length > 0 && (
-                          <ActivityItem 
-                            type="moving-services-comments" 
-                            icon="💬" 
-                            name="댓글" 
-                            items={getCommentsByPageType(userActivity.comments, 'moving_services')}
-                            onToggle={toggleActivityDetail}
-                            isExpanded={expandedActivities.has('moving-services-comments')}
-                            currentPage={categoryPages['moving-services-comments'] || 1}
-                            onPageChange={(page) => handlePageChange('moving-services-comments', page)}
                           />
                         )}
                         {userActivity?.comments.filter(c => c.subtype === 'service_inquiry').length > 0 && (

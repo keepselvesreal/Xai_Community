@@ -37,6 +37,10 @@ export function Pagination({
     return pages;
   };
 
+  const pages = getPageNumbers();
+  const showFirstPage = currentPage > 3 && !pages.includes(1);
+  const showLastPage = currentPage < totalPages - 2 && !pages.includes(totalPages);
+
   return (
     <div className={`flex items-center justify-center gap-2 mt-4 ${className}`}>
       <button
@@ -51,7 +55,7 @@ export function Pagination({
         이전
       </button>
       
-      {currentPage > 3 && (
+      {showFirstPage && (
         <>
           <button
             onClick={() => onPageChange(1)}
@@ -67,7 +71,7 @@ export function Pagination({
         </>
       )}
       
-      {getPageNumbers().map(page => (
+      {pages.map(page => (
         <button
           key={page}
           onClick={() => onPageChange(page)}
@@ -85,7 +89,7 @@ export function Pagination({
         </button>
       ))}
       
-      {currentPage < totalPages - 2 && (
+      {showLastPage && (
         <>
           {currentPage < totalPages - 3 && <span className="text-var-muted">...</span>}
           <button

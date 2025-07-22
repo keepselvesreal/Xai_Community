@@ -197,6 +197,9 @@ class Post(Document, PostBase):
     dislike_count: int = 0
     comment_count: int = 0
     bookmark_count: int = 0
+    # 입주 서비스 업체 전용 통계
+    inquiry_count: int = 0  # 문의 댓글 수
+    review_count: int = 0   # 후기 댓글 수
 
     class Settings:
         name = settings.posts_collection

@@ -629,7 +629,22 @@ class ApiClient {
     return result;
   }
 
-  // 사용자 활동 조회 API
+  // 사용자 활동 개수 조회 API (빠른 조회용)
+  async getUserActivityCounts(): Promise<{posts: number, comments: number, reactions: number}> {
+    console.log('ApiClient: getUserActivityCounts called');
+    
+    const result = await this.makeRequest<{posts: number, comments: number, reactions: number}>('/api/users/me/activity/counts', {
+      method: 'GET',
+    });
+    
+    if (!result.success) {
+      throw new Error(`Failed to retrieve user activity counts: ${result.error}`);
+    }
+    
+    return result.data;
+  }
+
+  // 사용자 활동 조회 API (진짜 페이지네이션)
   async getUserActivity(page: number = 1, limit: number = 10): Promise<UserActivityResponse> {
     console.log('ApiClient: getUserActivity called with page:', page, 'limit:', limit);
     

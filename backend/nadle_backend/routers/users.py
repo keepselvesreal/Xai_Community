@@ -33,6 +33,9 @@ class ActivityItem(BaseModel):
     like_count: int | None = None
     dislike_count: int | None = None
     comment_count: int | None = None
+    bookmark_count: int | None = None  # 북마크 수 추가
+    inquiry_count: int | None = None  # 문의 수 추가 (입주 서비스용)
+    review_count: int | None = None   # 후기 수 추가 (입주 서비스용)
     route_path: str
     subtype: str | None = None
     target_type: str | None = None
@@ -71,10 +74,35 @@ def get_user_activity_service() -> UserActivityService:
     )
 
 
+@router.get("/me/activity/counts")
+async def get_user_activity_counts(
+    current_user: User = Depends(get_current_user),
+    user_activity_service: UserActivityService = Depends(get_user_activity_service),
+):
+    """Get user activity counts only (for pagination info)."""
+    try:
+        user_id = str(current_user.id)
+        
+        # 빠른 개수 조회만 수행
+        counts = await user_activity_service.get_user_activity_counts(user_id)
+        
+        return {
+            "posts": counts["posts"],
+            "comments": counts["comments"], 
+            "reactions": counts["reactions"]
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve user activity counts: {str(e)}",
+        )
+
+
 @router.get("/me/activity", response_model=UserActivityResponse)
 async def get_user_activity(
     page: int = 1,
-    limit: int = 10,
+    limit: int = 10,  # 진짜 페이지네이션으로 변경
     current_user: User = Depends(get_current_user),
     user_activity_service: UserActivityService = Depends(get_user_activity_service),
 ) -> UserActivityResponse:
@@ -117,6 +145,9 @@ async def get_user_activity(
                     like_count=post["like_count"],
                     dislike_count=post["dislike_count"],
                     comment_count=post["comment_count"],
+                    bookmark_count=post["bookmark_count"],  # 북마크 수 추가
+                    inquiry_count=post.get("inquiry_count", 0),  # 문의 수 추가
+                    review_count=post.get("review_count", 0),   # 후기 수 추가
                     route_path=post["route_path"],
                 )
                 for post in posts
@@ -131,6 +162,14 @@ async def get_user_activity(
                 route_path=comment["route_path"],
                 subtype=comment["subtype"],
                 title=comment.get("post_title"),  # 댓글의 경우 해당 게시글 제목 표시
+                # 댓글이 달린 게시글의 통계 정보 사용
+                view_count=comment.get("view_count", 0),
+                like_count=comment.get("like_count", 0),
+                dislike_count=comment.get("dislike_count", 0),
+                comment_count=comment.get("comment_count", 0),
+                bookmark_count=comment.get("bookmark_count", 0),
+                inquiry_count=comment.get("inquiry_count", 0),
+                review_count=comment.get("review_count", 0),
             )
             for comment in activity_data["comments"]
         ]
@@ -149,6 +188,14 @@ async def get_user_activity(
                         title=reaction.get("title"),  # 반응한 게시글 제목
                         created_at=reaction["created_at"],
                         route_path=reaction["route_path"],
+                        # 게시글 통계 정보 추가
+                        view_count=reaction.get("view_count"),
+                        like_count=reaction.get("like_count"),
+                        dislike_count=reaction.get("dislike_count"),
+                        comment_count=reaction.get("comment_count"),
+                        bookmark_count=reaction.get("bookmark_count"),  # 북마크 수 추가
+                        inquiry_count=reaction.get("inquiry_count", 0),  # 문의 수 추가
+                        review_count=reaction.get("review_count", 0),   # 후기 수 추가
                     )
                     for reaction in reactions
                 ]

@@ -596,6 +596,8 @@ export interface ActivityItem {
   view_count?: number;
   dislike_count?: number;
   bookmark_count?: number;
+  inquiry_count?: number;    // 문의 수 추가 (입주 서비스용)
+  review_count?: number;     // 후기 수 추가 (입주 서비스용)
   
   // 댓글 관련 optional 필드
   content?: string;

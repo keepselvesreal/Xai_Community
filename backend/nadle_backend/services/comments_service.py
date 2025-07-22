@@ -1,4 +1,26 @@
-"""Comments service for business logic layer."""
+"""Comments service for business logic layer.
+
+작업 시간: 2025-07-22 15:20 KST
+작업 버전: v2.1.0 - subtype 기반 카운트 업데이트 추가
+
+주요 컴포넌트들:
+- CommentsService: 댓글 비즈니스 로직 서비스 (라인 23)
+
+주요 함수들:
+- create_comment(): 새 댓글 생성 (라인 30-85)
+- get_comments_with_user_data(): 사용자 데이터와 함께 댓글 조회 (라인 87-205)
+- create_reply(): 댓글에 대한 답글 생성 (라인 207-299)
+- update_comment_with_permission(): 권한 확인 후 댓글 수정 (라인 300-344)
+- toggle_comment_reaction(): 댓글 반응 토글 (라인 346-439)
+- delete_comment_with_permission(): 권한 확인 후 댓글 삭제 (라인 441-481)
+- _handle_subtype_count_increment(): subtype 기반 카운트 증가 (라인 711-733)
+- _handle_subtype_count_decrement(): subtype 기반 카운트 감소 (라인 735-755)
+
+관련 파일들:
+- nadle_backend.repositories.comment_repository: 댓글 데이터 접근
+- nadle_backend.repositories.post_repository: 게시글 데이터 접근 및 카운트 업데이트
+- nadle_backend.models.core: 댓글/게시글 모델
+"""
 
 from typing import List, Dict, Optional, Tuple, Any
 from nadle_backend.models.core import (
@@ -73,6 +95,9 @@ class CommentsService:
 
         # Increment post comment count
         await self._increment_post_comment_count(str(post.id))
+        
+        # Increment subtype specific counts
+        await self._handle_subtype_count_increment(str(post.id), comment_data)
 
         # 🚀 댓글 작성 후 캐시 무효화
         await self._invalidate_comments_cache(post_slug)
@@ -284,6 +309,9 @@ class CommentsService:
 
         # Increment post comment count
         await self._increment_post_comment_count(str(post.id))
+        
+        # Increment subtype specific counts
+        await self._handle_subtype_count_increment(str(post.id), reply_data)
 
         # 🚀 답글 작성 후 캐시 무효화
         await self._invalidate_comments_cache(post_slug)
@@ -466,6 +494,9 @@ class CommentsService:
         if success:
             # Decrement post comment count
             await self._decrement_post_comment_count(str(post.id))
+            
+            # Decrement subtype specific counts
+            await self._handle_subtype_count_decrement(str(post.id), comment)
 
             # 🚀 댓글 삭제 후 캐시 무효화
             try:
@@ -698,3 +729,49 @@ class CommentsService:
         except Exception as e:
             print(f"❌ 댓글 캐시 무효화 실패: {e}")
             # 캐시 무효화 실패는 치명적이지 않으므로 예외를 발생시키지 않음
+
+    async def _handle_subtype_count_increment(
+        self, post_id: str, comment_data: CommentCreate
+    ) -> None:
+        """Handle subtype specific count increment based on comment metadata.
+
+        Args:
+            post_id: Post ID
+            comment_data: Comment creation data
+        """
+        try:
+            metadata = comment_data.metadata or {}
+            subtype = metadata.get("subtype")
+            
+            if subtype == "service_inquiry":
+                await self.post_repo.increment_inquiry_count(post_id)
+                print(f"🔢 문의 카운트 증가 - post_id: {post_id}")
+            elif subtype == "service_review":
+                await self.post_repo.increment_review_count(post_id)
+                print(f"🔢 리뷰 카운트 증가 - post_id: {post_id}")
+        except Exception as e:
+            # Log error but don't fail the comment creation
+            print(f"❌ Subtype 카운트 증가 실패: {e}")
+            pass
+
+    async def _handle_subtype_count_decrement(self, post_id: str, comment: Comment) -> None:
+        """Handle subtype specific count decrement based on comment metadata.
+
+        Args:
+            post_id: Post ID
+            comment: Comment instance being deleted
+        """
+        try:
+            metadata = comment.metadata or {}
+            subtype = metadata.get("subtype")
+            
+            if subtype == "service_inquiry":
+                await self.post_repo.decrement_inquiry_count(post_id)
+                print(f"🔢 문의 카운트 감소 - post_id: {post_id}")
+            elif subtype == "service_review":
+                await self.post_repo.decrement_review_count(post_id)
+                print(f"🔢 리뷰 카운트 감소 - post_id: {post_id}")
+        except Exception as e:
+            # Log error but don't fail the comment deletion
+            print(f"❌ Subtype 카운트 감소 실패: {e}")
+            pass

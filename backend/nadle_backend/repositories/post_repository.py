@@ -1,4 +1,38 @@
-"""Post repository for data access layer."""
+"""Post repository for data access layer.
+
+작업 시간: 2025년 7월 22일 15:17 (KST)
+작업 버전: v2.4 - inquiry_count, review_count 업데이트 메서드 추가
+
+주요 컴포넌트들:
+- PostRepository: 게시글 데이터 접근 계층 클래스
+
+주요 메서드들:
+- create(post_data, author_id): 새 게시글 생성 (라인 22-66)
+- get_by_id(post_id, include_deleted=False): ID로 게시글 조회 (라인 68-93)
+- get_by_slug(slug): 슬러그로 게시글 조회 (라인 95-110)
+- update(post_id, update_data): 게시글 업데이트 (라인 112-146)
+- delete(post_id): 게시글 소프트 삭제 (라인 148-170)
+- list_posts(): 게시글 목록 조회 (페이지네이션 포함) (라인 172-233)
+- search_posts(): 게시글 검색 (라인 235-308)
+- increment_view_count(post_id): 조회수 증가 (라인 310-326)
+- increment_bookmark_count(post_id): 북마크 수 증가 (라인 328-344)
+- decrement_bookmark_count(post_id): 북마크 수 감소 (라인 346-362)
+- increment_inquiry_count(post_id): 문의 수 증가 (라인 364-380)
+- decrement_inquiry_count(post_id): 문의 수 감소 (라인 382-398)
+- increment_review_count(post_id): 리뷰 수 증가 (라인 400-416)
+- decrement_review_count(post_id): 리뷰 수 감소 (라인 418-434)
+- get_user_reactions(): 사용자 반응 조회 (라인 437-450)
+- list_posts_optimized(): MongoDB aggregation을 사용한 최적화된 게시글 조회 (라인 538-650)
+- update_post_counts(): 게시글 카운트 필드 일괄 업데이트 (라인 652-697)
+- get_inquiries_list(): 관리자용 문의/신고 목록 조회 (라인 700-808)
+- get_all_posts_for_admin(): 관리자용 모든 게시글 조회 (라인 810-871)
+- update_status(): 게시글 상태 업데이트 (라인 873-915)
+
+관련 파일들:
+- /models/core.py: Post, PostCreate, PostUpdate 모델 정의
+- /exceptions/post.py: PostNotFoundError, PostSlugAlreadyExistsError 예외
+- /utils/timezone.py: get_kst_now() 시간 유틸리티
+"""
 
 from typing import List, Dict, Optional, Tuple, Any
 from datetime import datetime
@@ -361,6 +395,78 @@ class PostRepository:
             print(f"Error decrementing bookmark count for post {post_id}: {e}")
             return False
 
+    async def increment_inquiry_count(self, post_id: str) -> bool:
+        """Increment post inquiry count.
+
+        Args:
+            post_id: Post ID
+
+        Returns:
+            True if successful
+        """
+        try:
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update(
+                {"$inc": {"inquiry_count": 1}}
+            )
+            return True
+        except Exception as e:
+            print(f"Error incrementing inquiry count for post {post_id}: {e}")
+            return False
+
+    async def decrement_inquiry_count(self, post_id: str) -> bool:
+        """Decrement post inquiry count.
+
+        Args:
+            post_id: Post ID
+
+        Returns:
+            True if successful
+        """
+        try:
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update(
+                {"$inc": {"inquiry_count": -1}}
+            )
+            return True
+        except Exception as e:
+            print(f"Error decrementing inquiry count for post {post_id}: {e}")
+            return False
+
+    async def increment_review_count(self, post_id: str) -> bool:
+        """Increment post review count.
+
+        Args:
+            post_id: Post ID
+
+        Returns:
+            True if successful
+        """
+        try:
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update(
+                {"$inc": {"review_count": 1}}
+            )
+            return True
+        except Exception as e:
+            print(f"Error incrementing review count for post {post_id}: {e}")
+            return False
+
+    async def decrement_review_count(self, post_id: str) -> bool:
+        """Decrement post review count.
+
+        Args:
+            post_id: Post ID
+
+        Returns:
+            True if successful
+        """
+        try:
+            result = await Post.find({"_id": PydanticObjectId(post_id)}).update(
+                {"$inc": {"review_count": -1}}
+            )
+            return True
+        except Exception as e:
+            print(f"Error decrementing review count for post {post_id}: {e}")
+            return False
+
 
     async def get_user_reactions(
         self, user_id: str, post_ids: List[str]
@@ -534,6 +640,75 @@ class PostRepository:
             return count
         except Exception:
             return 0
+
+    async def find_by_author_with_current_stats(
+        self, author_id: str, limit: int = 10, skip: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Find posts by author ID with real-time statistics (similar to list_posts_optimized).
+
+        Args:
+            author_id: Author ID
+            limit: Maximum number of posts to return (default: 10)
+            skip: Number of posts to skip (default: 0)
+
+        Returns:
+            List of post dictionaries with current statistics
+        """
+        try:
+            from beanie import PydanticObjectId
+            
+            # Aggregation pipeline for user posts with current stats
+            pipeline = [
+                # 1. Match posts by author (excluding deleted)
+                {"$match": {
+                    "author_id": author_id,
+                    "status": {"$ne": "deleted"}
+                }},
+                
+                # 2. Sort by creation date (newest first)
+                {"$sort": {"created_at": -1}},
+                
+                # 3. Pagination
+                {"$skip": skip},
+                {"$limit": limit},
+                
+                # 4. Project all needed fields with current statistics
+                {"$project": {
+                    "_id": 1,
+                    "title": 1,
+                    "content": 1,
+                    "slug": 1,
+                    "author_id": 1,
+                    "created_at": 1,
+                    "updated_at": 1,
+                    "metadata": 1,
+                    "status": 1,
+                    # Get current statistics from Post model (these should be up-to-date)
+                    "view_count": {"$ifNull": ["$view_count", 0]},
+                    "like_count": {"$ifNull": ["$like_count", 0]},
+                    "dislike_count": {"$ifNull": ["$dislike_count", 0]},
+                    "comment_count": {"$ifNull": ["$comment_count", 0]},
+                    "bookmark_count": {"$ifNull": ["$bookmark_count", 0]},
+                }}
+            ]
+            
+            # Execute aggregation
+            posts_data = await Post.get_motor_collection().aggregate(pipeline).to_list(None)
+            
+            print(f"🔍 find_by_author_with_current_stats: Found {len(posts_data)} posts for user {author_id}")
+            
+            # Debug: Log statistics for first post
+            if posts_data:
+                first_post = posts_data[0]
+                print(f"📊 First post stats: view={first_post.get('view_count', 0)}, like={first_post.get('like_count', 0)}, bookmark={first_post.get('bookmark_count', 0)}")
+            
+            return posts_data
+            
+        except Exception as e:
+            print(f"Error in find_by_author_with_current_stats: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return []
 
     async def list_posts_optimized(
         self,

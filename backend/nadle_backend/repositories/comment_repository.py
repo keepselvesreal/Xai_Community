@@ -492,3 +492,69 @@ class CommentRepository:
         except Exception as e:
             print(f"Error getting comment stats for post {post_id}: {e}")
             return default_stats
+
+    async def get_bulk_comment_stats_by_posts(self, post_ids: List[str]) -> Dict[str, Dict[str, int]]:
+        """여러 게시글의 댓글 통계를 한 번에 집계.
+
+        MongoDB aggregation을 사용하여 효율적으로 여러 게시글의 댓글 타입별 통계를 계산합니다.
+        N+1 쿼리 문제를 해결하기 위한 배치 처리 메서드입니다.
+
+        Args:
+            post_ids: 게시글 ID 목록
+
+        Returns:
+            게시글 ID별 댓글 타입별 통계 딕셔너리:
+            {
+                "post_id_1": {"general": 5, "service_inquiry": 3, "service_review": 2},
+                "post_id_2": {"general": 1, "service_inquiry": 0, "service_review": 4},
+                ...
+            }
+        """
+        # 기본 통계 구조 정의
+        default_stats = {"general": 0, "service_inquiry": 0, "service_review": 0}
+        result = {post_id: default_stats.copy() for post_id in post_ids}
+
+        if not post_ids:
+            return result
+
+        try:
+            # MongoDB aggregation 파이프라인 (배치 처리)
+            pipeline = [
+                {
+                    "$match": {
+                        "parent_id": {"$in": post_ids},
+                        "status": "active"
+                    }
+                },
+                {
+                    "$group": {
+                        "_id": {
+                            "post_id": "$parent_id",
+                            "subtype": "$metadata.subtype"
+                        },
+                        "count": {"$sum": 1}
+                    }
+                }
+            ]
+
+            bulk_results = await Comment.aggregate(pipeline).to_list()
+
+            # 결과를 딕셔너리로 변환
+            for item in bulk_results:
+                post_id = item["_id"]["post_id"]
+                subtype = item["_id"]["subtype"]
+                count = item["count"]
+
+                if post_id in result:
+                    if subtype == "service_inquiry":
+                        result[post_id]["service_inquiry"] = count
+                    elif subtype == "service_review":
+                        result[post_id]["service_review"] = count
+                    elif subtype is None:
+                        result[post_id]["general"] = count
+
+            return result
+
+        except Exception as e:
+            print(f"Error getting bulk comment stats for posts {post_ids}: {e}")
+            return result
