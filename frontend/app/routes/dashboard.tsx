@@ -6,6 +6,8 @@ import Button from "~/components/ui/Button";
 import InquiryManagement from "~/components/admin/InquiryManagement";
 import ReportManagement from "~/components/admin/ReportManagement";
 import SuggestionManagement from "~/components/admin/SuggestionManagement";
+import { RateLimitingCard } from "~/components/monitoring/RateLimitingCard";
+import { RateLimitingChart } from "~/components/monitoring/RateLimitingChart";
 import { useAuth } from "~/contexts/AuthContext";
 
 export const meta: MetaFunction = () => {
@@ -116,6 +118,13 @@ export default function Dashboard() {
               >
                 💡 건의 관리
               </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => scrollToSection('rate-limiting-management')}
+                className="flex items-center gap-2"
+              >
+                🛡️ Rate Limiting 관리
+              </Button>
             </div>
           </div>
         );
@@ -154,6 +163,26 @@ export default function Dashboard() {
         );
       })()}
 
+      {/* Rate Limiting 관리 섹션 (관리자 전용) */}
+      {(() => {
+        const isAdmin = user?.is_admin || user?.email === 'ktsfrank@naver.com' || user?.email === "admin@example.com" || user?.role === "admin";
+        return isAdmin && (
+          <div id="rate-limiting-management" className="mb-8">
+            <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-lg mb-6">
+              <h2 className="text-2xl font-bold mb-2">🛡️ Rate Limiting 관리</h2>
+              <p className="text-orange-100">API 요청 제한 및 보안 모니터링 대시보드</p>
+            </div>
+            
+            {/* Rate Limiting 카드 */}
+            <div className="mb-6">
+              <RateLimitingCard summary={null} loading={false} />
+            </div>
+            
+            {/* Rate Limiting 상세 차트 */}
+            <RateLimitingChart metrics={null} loading={false} />
+          </div>
+        );
+      })()}
 
     </AppLayout>
   );

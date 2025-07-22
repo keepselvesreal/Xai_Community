@@ -16,11 +16,15 @@ import type {
   SlowRequestsQueryParams,
   TimeSeriesQueryParams,
   PopularEndpointsQueryParams,
+  RateLimitMetrics,
+  RateLimitSummary,
+  RateLimitConfig,
 } from '~/types/monitoring';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 const MONITORING_API_BASE = `${API_BASE_URL}/api/internal`;
+const RATE_LIMITING_API_BASE = `${API_BASE_URL}/api/monitoring`;
 
 /**
  * HTTP 요청을 수행하는 기본 함수
@@ -44,6 +48,40 @@ async function apiRequest<T>(
 
     const data = await response.json();
     return { success: true, data };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      success: false,
+      error: {
+        message: errorMessage,
+        timestamp: Date.now(),
+      },
+    };
+  }
+}
+
+/**
+ * Rate Limiting API 요청을 수행하는 함수
+ */
+async function rateLimitingApiRequest<T>(
+  endpoint: string,
+  options: RequestInit = {}
+): Promise<MonitoringApiResponse<T>> {
+  try {
+    const response = await fetch(`${RATE_LIMITING_API_BASE}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    return { success: true, data: data.data || data };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return {
@@ -263,4 +301,81 @@ export async function apiCallWithRetry<T>(
       timestamp: Date.now(),
     },
   };
+}
+
+// Rate Limiting API 함수들
+
+/**
+ * Rate Limiting 상세 메트릭 조회
+ */
+export async function getRateLimitingMetrics(): Promise<MonitoringApiResponse<RateLimitMetrics>> {
+  return rateLimitingApiRequest<RateLimitMetrics>('/rate-limiting/metrics');
+}
+
+/**
+ * Rate Limiting 요약 정보 조회
+ */
+export async function getRateLimitingSummary(): Promise<MonitoringApiResponse<RateLimitSummary>> {
+  return rateLimitingApiRequest<RateLimitSummary>('/rate-limiting/summary');
+}
+
+/**
+ * Rate Limiting 설정 정보 조회
+ */
+export async function getRateLimitingConfig(): Promise<MonitoringApiResponse<{
+  configs: Record<string, RateLimitConfig>;
+  total_endpoints: number;
+}>> {
+  return rateLimitingApiRequest('/rate-limiting/config');
+}
+
+/**
+ * Rate Limiting 대시보드 데이터 (요약 + 메트릭) 조회
+ */
+export async function getRateLimitingDashboardData(): Promise<MonitoringApiResponse<{
+  summary: RateLimitSummary;
+  metrics: RateLimitMetrics;
+  config: Record<string, RateLimitConfig>;
+}>> {
+  try {
+    const [summaryResult, metricsResult, configResult] = await Promise.allSettled([
+      getRateLimitingSummary(),
+      getRateLimitingMetrics(),
+      getRateLimitingConfig(),
+    ]);
+
+    const summary = summaryResult.status === 'fulfilled' && summaryResult.value.success 
+      ? summaryResult.value.data! 
+      : null;
+    const metrics = metricsResult.status === 'fulfilled' && metricsResult.value.success 
+      ? metricsResult.value.data! 
+      : null;
+    const config = configResult.status === 'fulfilled' && configResult.value.success 
+      ? configResult.value.data!.configs 
+      : {};
+
+    if (!summary || !metrics) {
+      return {
+        success: false,
+        error: {
+          message: 'Failed to fetch rate limiting dashboard data',
+          timestamp: Date.now(),
+        },
+      };
+    }
+
+    return {
+      success: true,
+      data: { summary, metrics, config }
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Failed to fetch rate limiting dashboard data';
+    return {
+      success: false,
+      error: {
+        message: errorMessage,
+        timestamp: Date.now(),
+      },
+    };
+  }
 }

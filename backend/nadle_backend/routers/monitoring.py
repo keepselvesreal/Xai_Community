@@ -788,6 +788,51 @@ async def get_unified_dashboard(
             logger.warning(f"인프라 모니터링 조회 실패: {e}")
             infrastructure_monitoring = {"error": str(e), "services": {}}
 
+        # 4. Rate Limiting 모니터링 추가
+        rate_limiting_monitoring = {}
+        try:
+            from ..middleware.monitoring import PerformanceTracker
+            from ..database.redis_factory import get_redis_manager
+            
+            # Redis 클라이언트 가져오기
+            redis_manager = await get_redis_manager()
+            
+            # 다양한 Redis 클라이언트 속성 시도
+            redis_client = (
+                getattr(redis_manager, 'redis_client', None) or 
+                getattr(redis_manager, 'client', None) or
+                redis_manager
+            )
+            
+            if redis_client:
+                # PerformanceTracker 인스턴스 생성
+                tracker = PerformanceTracker(redis_client)
+                
+                # Rate limiting 요약 정보 조회
+                rate_limiting_summary = await tracker.get_rate_limit_summary()
+                rate_limiting_monitoring = {
+                    "service": "rate_limiting",
+                    "status": rate_limiting_summary.get("status", "unknown"),
+                    "total_blocks_24h": rate_limiting_summary.get("total_blocks_24h", 0),
+                    "recent_hour_blocks": rate_limiting_summary.get("recent_hour_blocks", 0),
+                    "overall_block_rate": rate_limiting_summary.get("overall_block_rate", 0.0),
+                    "top_blocked_endpoints": rate_limiting_summary.get("top_blocked_endpoints", [])[:3]  # 상위 3개만
+                }
+            else:
+                rate_limiting_monitoring = {
+                    "service": "rate_limiting",
+                    "status": "unavailable",
+                    "error": "Redis 연결 불가"
+                }
+                
+        except Exception as e:
+            logger.warning(f"Rate Limiting 모니터링 조회 실패: {e}")
+            rate_limiting_monitoring = {
+                "service": "rate_limiting",
+                "status": "error",
+                "error": str(e)
+            }
+
         # 통합 응답 구성
         response = {
             "environment": environment,
@@ -795,6 +840,7 @@ async def get_unified_dashboard(
             "external_monitoring": external_monitoring,
             "application_monitoring": application_monitoring,
             "infrastructure_monitoring": infrastructure_monitoring,
+            "rate_limiting_monitoring": rate_limiting_monitoring,
         }
 
         logger.info(f"환경 '{environment}' 통합 대시보드 조회 완료")
@@ -1211,3 +1257,428 @@ async def get_advanced_monitoring_status(
         raise HTTPException(
             status_code=500, detail=f"고급 모니터링 상태 조회 실패: {str(e)}"
         )
+
+
+# === Rate Limiting 모니터링 엔드포인트들 ===
+
+@router.get("/rate-limiting/metrics")
+async def get_rate_limiting_metrics() -> Dict[str, Any]:
+    """Rate Limiting 상세 메트릭 조회"""
+    try:
+        from ..middleware.monitoring import MonitoringMiddleware
+        from ..database.redis_factory import RedisFactory
+        
+        # Redis 클라이언트 가져오기
+        from ..database.redis_factory import get_redis_manager
+        redis_manager = await get_redis_manager()
+        
+        # Redis 연결 확인
+        if not await redis_manager.is_connected():
+            await redis_manager.connect()
+            
+        redis_client = getattr(redis_manager, 'redis_client', None)
+        
+        if not redis_client:
+            raise HTTPException(status_code=503, detail="Redis 연결을 사용할 수 없습니다")
+        
+        # 환경별 키 프리픽스 가져오기
+        from ..config import get_settings
+        settings = get_settings()
+        key_prefix = ""
+        if settings.environment == "development":
+            key_prefix = "dev:"
+        elif settings.environment == "test":
+            key_prefix = "test:"
+        elif settings.environment == "staging":
+            key_prefix = "stage:"
+        elif settings.environment == "production":
+            key_prefix = "prod:"
+        
+        # PerformanceTracker 인스턴스 생성 (key_prefix 포함)
+        from ..middleware.monitoring import PerformanceTracker
+        tracker = PerformanceTracker(redis_client, key_prefix=key_prefix)
+        
+        # Rate limiting 메트릭 조회
+        metrics = await tracker.get_rate_limit_metrics()
+        
+        return {
+            "status": "success",
+            "data": metrics,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Rate limiting 메트릭 조회 실패: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Rate limiting 메트릭 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/rate-limiting/summary")
+async def get_rate_limiting_summary() -> Dict[str, Any]:
+    """Rate Limiting 요약 정보 조회"""
+    try:
+        from ..middleware.monitoring import PerformanceTracker
+        from ..database.redis_factory import RedisFactory
+        
+        # Redis 클라이언트 가져오기
+        from ..database.redis_factory import get_redis_manager
+        redis_manager = await get_redis_manager()
+        
+        # Redis 연결 확인
+        if not await redis_manager.is_connected():
+            await redis_manager.connect()
+            
+        redis_client = getattr(redis_manager, 'redis_client', None)
+        
+        if not redis_client:
+            raise HTTPException(status_code=503, detail="Redis 연결을 사용할 수 없습니다")
+        
+        # 환경별 키 프리픽스 가져오기
+        from ..config import get_settings
+        settings = get_settings()
+        
+        key_prefix = ""
+        if settings.environment == "development":
+            key_prefix = "dev:"
+        elif settings.environment == "test":
+            key_prefix = "test:"
+        elif settings.environment == "staging":
+            key_prefix = "stage:"
+        elif settings.environment == "production":
+            key_prefix = "prod:"
+        
+        # PerformanceTracker 인스턴스 생성
+        tracker = PerformanceTracker(redis_client, key_prefix=key_prefix)
+        
+        # Rate limiting 요약 정보 조회
+        summary = await tracker.get_rate_limit_summary()
+        
+        return {
+            "status": "success",
+            "data": summary,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Rate limiting 요약 조회 실패: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Rate limiting 요약 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/rate-limiting/debug")
+async def debug_rate_limiting_redis() -> Dict[str, Any]:
+    """Rate Limiting Redis 데이터 디버깅"""
+    try:
+        from ..database.redis_factory import get_redis_manager
+        from ..config import get_settings
+        
+        settings = get_settings()
+        key_prefix = ""
+        if settings.environment == "development":
+            key_prefix = "dev:"
+        elif settings.environment == "test":
+            key_prefix = "test:"
+        elif settings.environment == "staging":
+            key_prefix = "stage:"
+        elif settings.environment == "production":
+            key_prefix = "prod:"
+        
+        redis_manager = await get_redis_manager()
+        
+        # Redis 연결 확인 및 클라이언트 추출
+        if not await redis_manager.is_connected():
+            await redis_manager.connect()
+            
+        redis_client = getattr(redis_manager, 'redis_client', None)
+        
+        if not redis_client:
+            return {"error": "Redis client not available"}
+        
+        # 직접 Redis 데이터 조회
+        test_key = f"{key_prefix}api:metrics:rate_limit_blocks"
+        raw_data = await redis_client.hgetall(test_key)
+        
+        # 상태코드 데이터도 조회
+        status_key = f"{key_prefix}api:metrics:status_codes"
+        status_data = await redis_client.hgetall(status_key)
+        
+        return {
+            "environment": settings.environment,
+            "key_prefix": key_prefix,
+            "redis_client_type": str(type(redis_client)),
+            "rate_limit_blocks_key": test_key,
+            "rate_limit_blocks_data": dict(raw_data) if raw_data else {},
+            "status_codes_key": status_key,
+            "status_codes_data": dict(status_data) if status_data else {},
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "error": str(e),
+            "timestamp": datetime.utcnow().isoformat()
+        }
+
+
+@router.get("/rate-limiting/config")
+async def get_rate_limiting_config() -> Dict[str, Any]:
+    """Rate Limiting 설정 정보 조회"""
+    try:
+        from ..models.rate_limit_config import RateLimitConfigRegistry
+        
+        # 모든 설정 조회
+        configs = {}
+        for endpoint_key in ["auth_login", "auth_register", "posts_create", "posts_list", "comments_create", "files_upload", "email_verification"]:
+            config = RateLimitConfigRegistry.get_config(endpoint_key)
+            if config:
+                configs[config.endpoint] = {
+                    "limit": config.limit,
+                    "window": config.window,
+                    "strategy": config.key_strategy.value,
+                    "enabled": config.enabled
+                }
+        
+        return {
+            "status": "success",
+            "data": {
+                "configs": configs,
+                "total_endpoints": len(configs)
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Rate limiting 설정 조회 실패: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Rate limiting 설정 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/performance/overview")
+async def get_performance_overview() -> Dict[str, Any]:
+    """성능 모니터링 종합 정보 (Rate Limiting 포함)"""
+    try:
+        from ..middleware.monitoring import PerformanceTracker
+        from ..database.redis_factory import get_redis_manager
+        
+        # Redis 클라이언트 가져오기
+        redis_manager = await get_redis_manager()
+        
+        # 다양한 Redis 클라이언트 속성 시도
+        redis_client = (
+            getattr(redis_manager, 'redis_client', None) or 
+            getattr(redis_manager, 'client', None) or
+            redis_manager
+        )
+        
+        if not redis_client:
+            raise HTTPException(status_code=503, detail="Redis 연결을 사용할 수 없습니다")
+        
+        # 환경별 키 프리픽스 가져오기
+        from ..config import get_settings
+        settings = get_settings()
+        
+        key_prefix = ""
+        if settings.environment == "development":
+            key_prefix = "dev:"
+        elif settings.environment == "test":
+            key_prefix = "test:"
+        elif settings.environment == "staging":
+            key_prefix = "stage:"
+        elif settings.environment == "production":
+            key_prefix = "prod:"
+        
+        # PerformanceTracker 인스턴스 생성
+        tracker = PerformanceTracker(redis_client, key_prefix=key_prefix)
+        
+        # 모든 성능 데이터 수집
+        performance_data = {}
+        
+        # 1. 엔드포인트 통계
+        endpoint_stats = await tracker.get_metrics()
+        performance_data["endpoint_statistics"] = endpoint_stats
+        
+        # 2. 에러율 계산
+        error_rate = await tracker.calculate_error_rate()
+        performance_data["error_rate"] = error_rate
+        
+        # 3. 인기 엔드포인트
+        popular_endpoints = await tracker.get_popular_endpoints(limit=10)
+        performance_data["popular_endpoints"] = popular_endpoints
+        
+        # 4. Rate limiting 요약
+        rate_limit_summary = await tracker.get_rate_limit_summary()
+        performance_data["rate_limiting"] = rate_limit_summary
+        
+        # 5. 전체 요청 수 계산
+        total_requests = sum(endpoint_stats.get("endpoints", {}).values())
+        performance_data["total_requests"] = total_requests
+        
+        # 6. 시스템 상태 평가
+        system_status = "healthy"
+        if error_rate > 0.05:  # 5% 이상 에러율
+            system_status = "critical"
+        elif error_rate > 0.01 or rate_limit_summary.get("overall_block_rate", 0) > 5:
+            system_status = "warning"
+        
+        performance_data["system_status"] = system_status
+        
+        return {
+            "status": "success",
+            "data": performance_data,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"성능 오버뷰 조회 실패: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"성능 오버뷰 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/performance/endpoints")
+async def get_endpoint_performance() -> Dict[str, Any]:
+    """엔드포인트별 성능 분석 (Rate Limiting 포함)"""
+    try:
+        from ..middleware.monitoring import PerformanceTracker
+        from ..database.redis_factory import get_redis_manager
+        
+        # Redis 클라이언트 가져오기
+        redis_manager = await get_redis_manager()
+        
+        # 다양한 Redis 클라이언트 속성 시도
+        redis_client = (
+            getattr(redis_manager, 'redis_client', None) or 
+            getattr(redis_manager, 'client', None) or
+            redis_manager
+        )
+        
+        if not redis_client:
+            raise HTTPException(status_code=503, detail="Redis 연결을 사용할 수 없습니다")
+        
+        # 환경별 키 프리픽스 가져오기
+        from ..config import get_settings
+        settings = get_settings()
+        
+        key_prefix = ""
+        if settings.environment == "development":
+            key_prefix = "dev:"
+        elif settings.environment == "test":
+            key_prefix = "test:"
+        elif settings.environment == "staging":
+            key_prefix = "stage:"
+        elif settings.environment == "production":
+            key_prefix = "prod:"
+        
+        # PerformanceTracker 인스턴스 생성
+        tracker = PerformanceTracker(redis_client, key_prefix=key_prefix)
+        
+        # 엔드포인트 통계와 Rate limiting 데이터 결합
+        endpoint_stats = await tracker.get_metrics()
+        rate_limit_metrics = await tracker.get_rate_limit_metrics()
+        
+        # 엔드포인트별 종합 분석
+        endpoint_analysis = {}
+        
+        for endpoint, request_count in endpoint_stats.get("endpoints", {}).items():
+            # Rate limiting 정보 찾기
+            rate_limit_info = None
+            for rl_endpoint in rate_limit_metrics.get("endpoints", []):
+                if rl_endpoint.get("endpoint") == endpoint:
+                    rate_limit_info = rl_endpoint
+                    break
+            
+            # 간단한 성능 통계 구성
+            performance_stats = {
+                "request_count": request_count,
+                "avg_response_time": 0,  # 실제 구현 시 계산 필요
+                "error_rate": 0  # 실제 구현 시 계산 필요
+            }
+            
+            endpoint_analysis[endpoint] = {
+                "performance": performance_stats,
+                "rate_limiting": {
+                    "blocks": rate_limit_info.get("blocks", 0) if rate_limit_info else 0,
+                    "block_rate": rate_limit_info.get("block_rate", 0) if rate_limit_info else 0,
+                    "total_requests": rate_limit_info.get("total_requests", 0) if rate_limit_info else 0
+                },
+                "health_score": _calculate_endpoint_health_score(performance_stats, rate_limit_info)
+            }
+        
+        return {
+            "status": "success",
+            "data": {
+                "endpoints": endpoint_analysis,
+                "total_endpoints": len(endpoint_analysis),
+                "summary": {
+                    "total_requests": sum(ep.get("performance", {}).get("request_count", 0) for ep in endpoint_analysis.values()),
+                    "total_blocks": sum(ep.get("rate_limiting", {}).get("blocks", 0) for ep in endpoint_analysis.values()),
+                    "avg_block_rate": sum(ep.get("rate_limiting", {}).get("block_rate", 0) for ep in endpoint_analysis.values()) / len(endpoint_analysis) if endpoint_analysis else 0
+                }
+            },
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"엔드포인트 성능 분석 조회 실패: {e}")
+        raise HTTPException(
+            status_code=500, 
+            detail=f"엔드포인트 성능 분석 조회 실패: {str(e)}"
+        )
+
+
+def _calculate_endpoint_health_score(performance_stats: Dict, rate_limit_info: Dict) -> Dict[str, Any]:
+    """엔드포인트 건강도 점수 계산"""
+    score = 100
+    issues = []
+    
+    # 성능 기반 점수 감점
+    error_rate = performance_stats.get("error_rate", 0)
+    if error_rate > 0.05:  # 5% 이상
+        score -= 30
+        issues.append("high_error_rate")
+    elif error_rate > 0.01:  # 1% 이상
+        score -= 15
+        issues.append("moderate_error_rate")
+    
+    avg_response_time = performance_stats.get("avg_response_time", 0)
+    if avg_response_time > 2000:  # 2초 이상
+        score -= 25
+        issues.append("slow_response")
+    elif avg_response_time > 1000:  # 1초 이상
+        score -= 10
+        issues.append("moderate_response_time")
+    
+    # Rate limiting 기반 점수 감점
+    if rate_limit_info:
+        block_rate = rate_limit_info.get("block_rate", 0)
+        if block_rate > 10:  # 10% 이상 차단
+            score -= 20
+            issues.append("high_block_rate")
+        elif block_rate > 5:  # 5% 이상 차단
+            score -= 10
+            issues.append("moderate_block_rate")
+    
+    # 건강도 등급 결정
+    if score >= 90:
+        grade = "excellent"
+    elif score >= 75:
+        grade = "good"
+    elif score >= 60:
+        grade = "fair"
+    elif score >= 40:
+        grade = "poor"
+    else:
+        grade = "critical"
+    
+    return {
+        "score": max(0, score),
+        "grade": grade,
+        "issues": issues
+    }

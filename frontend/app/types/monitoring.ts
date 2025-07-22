@@ -207,3 +207,71 @@ export interface PopularEndpointsQueryParams {
   /** 조회할 최대 개수 (1-50) */
   limit?: number;
 }
+
+// Rate Limiting 관련 타입들
+export interface RateLimitEndpoint {
+  /** 엔드포인트 (예: "GET:/api/posts/list") */
+  endpoint: string;
+  /** 차단 횟수 */
+  blocks: number;
+  /** 전체 요청 수 */
+  total_requests: number;
+  /** 차단율 (퍼센트) */
+  block_rate: number;
+}
+
+export interface RateLimitHourlyBlock {
+  /** 시간대 (예: "14:00") */
+  hour: string;
+  /** 해당 시간대 차단 횟수 */
+  blocks: number;
+}
+
+export interface RateLimitMetrics {
+  /** 총 차단 횟수 */
+  total_blocks: number;
+  /** 엔드포인트별 차단 통계 */
+  endpoints: RateLimitEndpoint[];
+  /** 전체 차단율 (퍼센트) */
+  block_rate: number;
+  /** 시간별 차단 통계 (최근 24시간) */
+  hourly_blocks: RateLimitHourlyBlock[];
+}
+
+export interface RateLimitSummary {
+  /** 최근 24시간 총 차단 횟수 */
+  total_blocks_24h: number;
+  /** 최근 1시간 차단 횟수 */
+  recent_hour_blocks: number;
+  /** 전체 차단율 (퍼센트) */
+  overall_block_rate: number;
+  /** 상위 차단된 엔드포인트 */
+  top_blocked_endpoints: RateLimitEndpoint[];
+  /** 상태: normal, warning, critical */
+  status: 'normal' | 'warning' | 'critical';
+}
+
+export interface RateLimitConfig {
+  /** 요청 제한 수 */
+  limit: number;
+  /** 시간 윈도우 (초) */
+  window: number;
+  /** 전략 (ip 또는 user) */
+  strategy: string;
+  /** 활성화 여부 */
+  enabled: boolean;
+}
+
+export interface RateLimitingCardProps {
+  /** Rate Limiting 요약 데이터 */
+  summary: RateLimitSummary | null;
+  /** 로딩 상태 */
+  loading?: boolean;
+}
+
+export interface RateLimitingChartProps {
+  /** Rate Limiting 메트릭 데이터 */
+  metrics: RateLimitMetrics | null;
+  /** 로딩 상태 */
+  loading?: boolean;
+}

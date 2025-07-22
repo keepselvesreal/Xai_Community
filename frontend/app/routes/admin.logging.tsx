@@ -8,6 +8,8 @@ import { json } from "@remix-run/node";
 import { useLoaderData } from "@remix-run/react";
 import { useState, useEffect } from "react";
 import { LoggingDashboard } from "~/components/logging";
+import { RateLimitingCard } from "~/components/monitoring/RateLimitingCard";
+import { RateLimitingChart } from "~/components/monitoring/RateLimitingChart";
 import { useAuth } from "~/contexts/AuthContext";
 import { useNotification } from "~/contexts/NotificationContext";
 import AppLayout from "~/components/layout/AppLayout";
@@ -156,6 +158,52 @@ export default function AdminLogging() {
           initialLoading={true}
           className="w-full"
         />
+
+        {/* Rate Limiting 로그 분석 섹션 */}
+        <div className="space-y-6">
+          <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold mb-2">🛡️ Rate Limiting 로그 분석</h2>
+                <p className="text-orange-100">API 요청 제한 관련 로그 및 차단 이벤트 분석</p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-orange-100">로그 기반 분석</div>
+                <div className="font-medium">실시간 모니터링</div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Rate Limiting 통계 카드 */}
+          <div className="mb-6">
+            <RateLimitingCard summary={null} loading={false} />
+          </div>
+          
+          {/* Rate Limiting 상세 분석 차트 */}
+          <RateLimitingChart metrics={null} loading={false} />
+          
+          {/* 추가 로그 분석 정보 */}
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 Rate Limiting 로그 분석 정보</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="text-blue-600 text-xl mb-2">🔍</div>
+                <h4 className="font-semibold text-blue-900">로그 검색</h4>
+                <p className="text-sm text-blue-700 mt-1">Rate limiting 관련 로그를 검색하고 분석합니다.</p>
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="text-yellow-600 text-xl mb-2">⚠️</div>
+                <h4 className="font-semibold text-yellow-900">차단 패턴</h4>
+                <p className="text-sm text-yellow-700 mt-1">반복적인 차단 패턴을 분석하여 이상 활동을 감지합니다.</p>
+              </div>
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="text-red-600 text-xl mb-2">🚨</div>
+                <h4 className="font-semibold text-red-900">알림 설정</h4>
+                <p className="text-sm text-red-700 mt-1">임계값 초과 시 자동 알림을 설정할 수 있습니다.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </AppLayout>
   );

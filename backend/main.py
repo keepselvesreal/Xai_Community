@@ -264,7 +264,25 @@ def create_app() -> FastAPI:
         logging_middleware_status = "add_failed"
         logging_middleware_error = str(e)
     
-    # 9. CORS 및 기타 설정 추가 (최종 단계)
+    # 9. Rate Limiting 미들웨어 추가
+    rate_limiting_status = "not_tested"
+    rate_limiting_error = None
+    
+    logger.info("🚦 Rate Limiting 미들웨어 추가 중...")
+    try:
+        from nadle_backend.middleware.rate_limiting_middleware import RateLimitingMiddleware
+        
+        # Rate Limiting 미들웨어 추가
+        app.add_middleware(RateLimitingMiddleware)
+        
+        logger.info("✅ Rate Limiting 미들웨어 추가 성공")
+        rate_limiting_status = "added"
+    except Exception as e:
+        logger.error(f"❌ Rate Limiting 미들웨어 추가 실패: {e}")
+        rate_limiting_status = "add_failed"
+        rate_limiting_error = str(e)
+    
+    # 10. CORS 및 기타 설정 추가 (최종 단계)
     final_setup_status = "not_tested"
     final_setup_error = None
     
@@ -323,6 +341,8 @@ def create_app() -> FastAPI:
     app.state.monitoring_error = monitoring_error
     app.state.sentry_status = sentry_status
     app.state.sentry_error = sentry_error
+    app.state.rate_limiting_status = rate_limiting_status
+    app.state.rate_limiting_error = rate_limiting_error
     app.state.final_setup_status = final_setup_status
     app.state.final_setup_error = final_setup_error
     
@@ -407,13 +427,17 @@ def create_app() -> FastAPI:
                     "status": app.state.sentry_status,
                     "error": app.state.sentry_error
                 },
+                "rate_limiting_middleware": {
+                    "status": app.state.rate_limiting_status,
+                    "error": app.state.rate_limiting_error
+                },
                 "final_setup": {
                     "status": app.state.final_setup_status,
                     "error": app.state.final_setup_error
                 }
             },
             "restoration_summary": {
-                "total_components": 8,
+                "total_components": 9,
                 "completed_steps": [
                     "✅ 1. Database import",
                     "✅ 2. Models import", 
@@ -422,7 +446,9 @@ def create_app() -> FastAPI:
                     "✅ 5. Database events",
                     "✅ 6. MonitoringMiddleware",
                     "✅ 7. SentryMiddleware",
-                    "✅ 8. Final CORS & Setup"
+                    "✅ 8. LoggingMiddleware",
+                    "✅ 9. RateLimitingMiddleware",
+                    "✅ 10. Final CORS & Setup"
                 ]
             },
             "status": "debug_mode_active"

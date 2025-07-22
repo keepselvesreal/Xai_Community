@@ -6,6 +6,8 @@
 import { useState, useEffect } from 'react';
 import { EnvironmentSelector, type Environment } from './EnvironmentSelector';
 import { LayeredMonitoring } from './LayeredMonitoring';
+import { RateLimitingCard } from './RateLimitingCard';
+import { RateLimitingChart } from './RateLimitingChart';
 import { getUnifiedDashboardData, logMonitoringError } from '~/lib/unified-monitoring-api';
 import type { UnifiedMonitoringData } from '~/types/unified-monitoring';
 
@@ -122,6 +124,32 @@ export function UnifiedMonitoringDashboard({
         onEnvironmentChange={handleEnvironmentChange}
       />
       
+      {/* Rate Limiting 섹션 */}
+      <div className="bg-gradient-to-r from-orange-500 to-red-600 text-white p-6 rounded-lg">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-xl font-bold mb-2">🛡️ Rate Limiting 모니터링</h2>
+            <p className="text-orange-100">API 요청 제한 및 보안 상태 모니터링</p>
+          </div>
+        </div>
+        
+        {/* Rate Limiting 카드 그리드 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+          <RateLimitingCard summary={null} loading={loading} />
+          <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-2">🔍 실시간 상태</h3>
+            <div className="space-y-2 text-sm">
+              <div>환경: <span className="font-medium">{selectedEnvironment}</span></div>
+              <div>Redis: <span className="font-medium">{redisStatus}</span></div>
+              <div>상태: <span className="font-medium">활성</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Rate Limiting 상세 차트 */}
+      <RateLimitingChart metrics={null} loading={loading} />
+
       {/* 계층별 모니터링 */}
       <LayeredMonitoring
         environment={selectedEnvironment}

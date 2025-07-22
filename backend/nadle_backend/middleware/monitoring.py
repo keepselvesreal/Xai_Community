@@ -33,6 +33,7 @@ class PerformanceTracker:
         max_data_points: int = 1000,
         retention_hours: int = 24,
         enabled: bool = True,
+        key_prefix: str = "",
     ):
         """
         성능 추적기 초기화
@@ -51,6 +52,7 @@ class PerformanceTracker:
         self.max_data_points = max_data_points
         self.retention_hours = retention_hours
         self.enabled = enabled
+        self.key_prefix = key_prefix
 
     async def start_tracking(self, request: Request) -> Dict[str, Any]:
         """
@@ -124,11 +126,24 @@ class PerformanceTracker:
             endpoint_key = self._generate_endpoint_key(
                 metric_data["method"], metric_data["path"]
             )
-            await self.redis_client.hincrby("api:metrics:endpoints", endpoint_key, 1)
+            endpoints_redis_key = f"{self.key_prefix}api:metrics:endpoints" if self.key_prefix else "api:metrics:endpoints"
+            await self.redis_client.hincrby(endpoints_redis_key, endpoint_key, 1)
 
             # 상태코드별 요청 수 증가
             status_key = self._generate_status_key(metric_data["status_code"])
-            await self.redis_client.hincrby("api:metrics:status_codes", status_key, 1)
+            status_codes_redis_key = f"{self.key_prefix}api:metrics:status_codes" if self.key_prefix else "api:metrics:status_codes"
+            await self.redis_client.hincrby(status_codes_redis_key, status_key, 1)
+            
+            # Rate Limiting 메트릭 저장
+            if metric_data["status_code"] == 429:
+                # Rate limit 차단 횟수 증가
+                rate_limit_blocks_key = f"{self.key_prefix}api:metrics:rate_limit_blocks" if self.key_prefix else "api:metrics:rate_limit_blocks"
+                await self.redis_client.hincrby(rate_limit_blocks_key, endpoint_key, 1)
+                
+                # 시간별 Rate limit 차단 통계
+                hour_key = f"{self.key_prefix}rate_limit_blocks:{datetime.now().strftime('%Y%m%d%H')}" if self.key_prefix else f"rate_limit_blocks:{datetime.now().strftime('%Y%m%d%H')}"
+                await self.redis_client.hincrby(hour_key, endpoint_key, 1)
+                await self.redis_client.expire(hour_key, 86400)  # 24시간 보존
 
             # 응답시간 데이터 저장 (최근 데이터만 유지)
             timing_key = self._generate_timing_key(
@@ -206,7 +221,8 @@ class PerformanceTracker:
         """전체 메트릭 조회"""
         try:
             # 엔드포인트별 통계
-            endpoint_stats = await self.redis_client.hgetall("api:metrics:endpoints")
+            endpoints_redis_key = f"{self.key_prefix}api:metrics:endpoints" if self.key_prefix else "api:metrics:endpoints"
+            endpoint_stats = await self.redis_client.hgetall(endpoints_redis_key)
             endpoints = {}
             if endpoint_stats:
                 for k, v in endpoint_stats.items():
@@ -217,7 +233,8 @@ class PerformanceTracker:
                     endpoints[key] = value
 
             # 상태코드별 통계
-            status_stats = await self.redis_client.hgetall("api:metrics:status_codes")
+            status_codes_redis_key = f"{self.key_prefix}api:metrics:status_codes" if self.key_prefix else "api:metrics:status_codes"
+            status_stats = await self.redis_client.hgetall(status_codes_redis_key)
             status_codes = {}
             if status_stats:
                 for k, v in status_stats.items():
@@ -292,7 +309,8 @@ class PerformanceTracker:
     async def calculate_error_rate(self) -> float:
         """전체 에러율 계산"""
         try:
-            status_stats = await self.redis_client.hgetall("api:metrics:status_codes")
+            status_codes_redis_key = f"{self.key_prefix}api:metrics:status_codes" if self.key_prefix else "api:metrics:status_codes"
+            status_stats = await self.redis_client.hgetall(status_codes_redis_key)
             if not status_stats:
                 return 0.0
 
@@ -426,7 +444,8 @@ class PerformanceTracker:
     async def get_popular_endpoints(self, limit: int = 10) -> List[Dict[str, Any]]:
         """인기 엔드포인트 조회"""
         try:
-            endpoint_stats = await self.redis_client.hgetall("api:metrics:endpoints")
+            endpoints_redis_key = f"{self.key_prefix}api:metrics:endpoints" if self.key_prefix else "api:metrics:endpoints"
+            endpoint_stats = await self.redis_client.hgetall(endpoints_redis_key)
 
             if not endpoint_stats:
                 return []
@@ -453,6 +472,109 @@ class PerformanceTracker:
             logger.error(f"Failed to get popular endpoints: {e}")
             return []
 
+    async def get_rate_limit_metrics(self) -> Dict[str, Any]:
+        """Rate Limiting 메트릭 조회"""
+        try:
+            # Rate limit 차단 통계 조회
+            rate_limit_blocks_key = f"{self.key_prefix}api:metrics:rate_limit_blocks" if self.key_prefix else "api:metrics:rate_limit_blocks"
+            rate_limit_blocks = await self.redis_client.hgetall(rate_limit_blocks_key)
+            
+            # 전체 요청 수 조회
+            endpoints_redis_key = f"{self.key_prefix}api:metrics:endpoints" if self.key_prefix else "api:metrics:endpoints"
+            total_requests = await self.redis_client.hgetall(endpoints_redis_key)
+            
+            metrics = {
+                "total_blocks": 0,
+                "endpoints": [],
+                "block_rate": 0.0,
+                "hourly_blocks": []
+            }
+            
+            if rate_limit_blocks:
+                # 엔드포인트별 차단 통계
+                for endpoint_bytes, block_count_bytes in rate_limit_blocks.items():
+                    endpoint = endpoint_bytes.decode() if hasattr(endpoint_bytes, "decode") else endpoint_bytes
+                    block_count = int(block_count_bytes.decode() if hasattr(block_count_bytes, "decode") else block_count_bytes)
+                    
+                    # 해당 엔드포인트의 전체 요청 수
+                    total_for_endpoint = 0
+                    if total_requests and endpoint in [k.decode() if hasattr(k, "decode") else k for k in total_requests.keys()]:
+                        for k, v in total_requests.items():
+                            key = k.decode() if hasattr(k, "decode") else k
+                            if key == endpoint:
+                                total_for_endpoint = int(v.decode() if hasattr(v, "decode") else v)
+                                break
+                    
+                    block_rate = (block_count / total_for_endpoint * 100) if total_for_endpoint > 0 else 0
+                    
+                    metrics["endpoints"].append({
+                        "endpoint": endpoint,
+                        "blocks": block_count,
+                        "total_requests": total_for_endpoint,
+                        "block_rate": round(block_rate, 2)
+                    })
+                    metrics["total_blocks"] += block_count
+                
+                # 전체 차단율 계산
+                total_all_requests = sum(int(v.decode() if hasattr(v, "decode") else v) for v in total_requests.values()) if total_requests else 0
+                metrics["block_rate"] = round((metrics["total_blocks"] / total_all_requests * 100), 2) if total_all_requests > 0 else 0
+            
+            # 시간별 차단 통계 (최근 24시간)
+            current_hour = datetime.now()
+            for i in range(24):
+                hour = current_hour - timedelta(hours=i)
+                hour_key = f"{self.key_prefix}rate_limit_blocks:{hour.strftime('%Y%m%d%H')}" if self.key_prefix else f"rate_limit_blocks:{hour.strftime('%Y%m%d%H')}"
+                hour_blocks = await self.redis_client.hgetall(hour_key)
+                
+                hour_total = sum(int(v.decode() if hasattr(v, "decode") else v) for v in hour_blocks.values()) if hour_blocks else 0
+                metrics["hourly_blocks"].append({
+                    "hour": hour.strftime('%H:00'),
+                    "blocks": hour_total
+                })
+            
+            # 최신 시간순으로 정렬
+            metrics["hourly_blocks"].reverse()
+            
+            return metrics
+            
+        except Exception as e:
+            logger.error(f"Failed to get rate limit metrics: {e}")
+            return {
+                "total_blocks": 0,
+                "endpoints": [],
+                "block_rate": 0.0,
+                "hourly_blocks": []
+            }
+
+    async def get_rate_limit_summary(self) -> Dict[str, Any]:
+        """Rate Limiting 요약 정보"""
+        try:
+            metrics = await self.get_rate_limit_metrics()
+            
+            # 상위 차단된 엔드포인트
+            top_blocked = sorted(metrics["endpoints"], key=lambda x: x["blocks"], reverse=True)[:5]
+            
+            # 최근 1시간 차단 수
+            recent_hour_blocks = metrics["hourly_blocks"][-1]["blocks"] if metrics["hourly_blocks"] else 0
+            
+            return {
+                "total_blocks_24h": metrics["total_blocks"],
+                "recent_hour_blocks": recent_hour_blocks,
+                "overall_block_rate": metrics["block_rate"],
+                "top_blocked_endpoints": top_blocked,
+                "status": "critical" if metrics["block_rate"] > 10 else "warning" if metrics["block_rate"] > 5 else "normal"
+            }
+            
+        except Exception as e:
+            logger.error(f"Failed to get rate limit summary: {e}")
+            return {
+                "total_blocks_24h": 0,
+                "recent_hour_blocks": 0,
+                "overall_block_rate": 0.0,
+                "top_blocked_endpoints": [],
+                "status": "unknown"
+            }
+
 
 class MonitoringMiddleware(BaseHTTPMiddleware):
     """
@@ -471,9 +593,33 @@ class MonitoringMiddleware(BaseHTTPMiddleware):
         """
         super().__init__(app)
         self.redis_client = redis_client or self._get_default_redis_client()
+        
+        # 환경별 키 프리픽스 가져오기
+        key_prefix = self._get_key_prefix()
+        
         self.tracker = (
-            PerformanceTracker(self.redis_client) if self.redis_client else None
+            PerformanceTracker(self.redis_client, key_prefix=key_prefix) if self.redis_client else None
         )
+
+    def _get_key_prefix(self) -> str:
+        """환경별 키 프리픽스 가져오기"""
+        try:
+            from nadle_backend.config import settings
+            
+            # development 환경의 경우 "dev:" 프리픽스 사용
+            if settings.environment == "development":
+                return "dev:"
+            elif settings.environment == "test":
+                return "test:"
+            elif settings.environment == "staging":
+                return "stage:"
+            elif settings.environment == "production":
+                return "prod:"
+            else:
+                return ""
+        except Exception as e:
+            logger.warning(f"Failed to get key prefix: {e}")
+            return ""
 
     def _get_default_redis_client(self) -> Optional[redis.Redis]:
         """기본 Redis 클라이언트 생성"""

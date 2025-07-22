@@ -359,6 +359,14 @@ class PostsService:
             }
 
             # ✅ Post 모델의 기존 통계 데이터 사용 (별도 계산 없음)
+            # 최상위 레벨에 통계 필드 추가 (프론트엔드 호환성)
+            post_dict["view_count"] = post_data.get("view_count", 0)
+            post_dict["like_count"] = post_data.get("like_count", 0)
+            post_dict["dislike_count"] = post_data.get("dislike_count", 0)
+            post_dict["comment_count"] = post_data.get("comment_count", 0)
+            post_dict["bookmark_count"] = post_data.get("bookmark_count", 0)
+            
+            # 호환성을 위한 stats 객체도 유지
             post_dict["stats"] = {
                 "view_count": post_data.get("view_count", 0),
                 "like_count": post_data.get("like_count", 0),

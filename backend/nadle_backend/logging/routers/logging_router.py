@@ -424,6 +424,265 @@ async def count_logs(
         )
 
 
+# === Rate Limiting 로깅 엔드포인트들 ===
+
+@router.get("/rate-limiting/summary", response_model=Dict[str, Any])
+async def get_rate_limiting_log_summary(
+    hours: int = Query(24, ge=1, le=168, description="조회할 시간 범위 (시간)"),
+    log_service: LogService = Depends(get_log_service),
+) -> Dict[str, Any]:
+    """
+    Rate Limiting 관련 로그 요약 정보 조회
+    
+    Args:
+        hours: 조회할 시간 범위
+        log_service: 로그 서비스 인스턴스
+        
+    Returns:
+        Rate limiting 로그 통계 및 요약 정보
+    """
+    try:
+        # Rate limiting 관련 로그 필터 생성
+        filter_params = LogFilter(
+            search_query="rate limit",
+            status_codes=[429],  # Too Many Requests
+            hours_back=hours,
+            page=1,
+            limit=1000  # 충분한 데이터 수집을 위해
+        )
+        
+        # Rate limiting 로그 검색
+        logs_response = await log_service.search_logs(filter_params)
+        
+        # 통계 생성
+        summary = {
+            "total_rate_limit_events": logs_response.total_count,
+            "time_range_hours": hours,
+            "blocked_requests": 0,
+            "top_blocked_endpoints": {},
+            "blocked_ips": {},
+            "hourly_distribution": {},
+            "summary_stats": {}
+        }
+        
+        # 로그 분석
+        for log_entry in logs_response.logs:
+            # 차단된 요청 수 계산
+            if log_entry.status_code == 429:
+                summary["blocked_requests"] += 1
+                
+                # 엔드포인트별 차단 통계
+                endpoint = log_entry.endpoint or "unknown"
+                summary["top_blocked_endpoints"][endpoint] = summary["top_blocked_endpoints"].get(endpoint, 0) + 1
+                
+                # IP별 차단 통계 (클라이언트 IP 정보가 있다면)
+                client_ip = getattr(log_entry, 'client_ip', None) or getattr(log_entry.metadata, 'client_ip', None) if hasattr(log_entry, 'metadata') else None
+                if client_ip:
+                    summary["blocked_ips"][client_ip] = summary["blocked_ips"].get(client_ip, 0) + 1
+                
+                # 시간별 분포 (시간대별)
+                hour_key = log_entry.timestamp.strftime("%H:00") if log_entry.timestamp else "unknown"
+                summary["hourly_distribution"][hour_key] = summary["hourly_distribution"].get(hour_key, 0) + 1
+        
+        # 상위 5개 엔드포인트와 IP 추출
+        summary["top_blocked_endpoints"] = dict(sorted(summary["top_blocked_endpoints"].items(), key=lambda x: x[1], reverse=True)[:5])
+        summary["blocked_ips"] = dict(sorted(summary["blocked_ips"].items(), key=lambda x: x[1], reverse=True)[:5])
+        
+        # 요약 통계
+        summary["summary_stats"] = {
+            "avg_blocks_per_hour": summary["blocked_requests"] / hours if hours > 0 else 0,
+            "unique_blocked_endpoints": len(summary["top_blocked_endpoints"]),
+            "unique_blocked_ips": len(summary["blocked_ips"]),
+            "most_blocked_endpoint": max(summary["top_blocked_endpoints"].items(), key=lambda x: x[1])[0] if summary["top_blocked_endpoints"] else None
+        }
+        
+        return summary
+        
+    except Exception as e:
+        logger.error(f"Rate limiting 로그 요약 조회 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Rate limiting 로그 요약 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/rate-limiting/blocked-requests", response_model=LogListResponse)
+async def get_blocked_requests_logs(
+    endpoint: Optional[str] = Query(None, description="특정 엔드포인트 필터"),
+    client_ip: Optional[str] = Query(None, description="특정 IP 주소 필터"),
+    hours: int = Query(24, ge=1, le=168, description="조회할 시간 범위"),
+    page: int = Query(1, ge=1, description="페이지 번호"),
+    limit: int = Query(50, ge=1, le=500, description="페이지당 로그 수"),
+    log_service: LogService = Depends(get_log_service),
+) -> LogListResponse:
+    """
+    Rate Limiting으로 차단된 요청 로그 조회
+    
+    Args:
+        endpoint: 특정 엔드포인트 필터
+        client_ip: 특정 클라이언트 IP 필터
+        hours: 조회할 시간 범위
+        page: 페이지 번호
+        limit: 페이지당 로그 수
+        log_service: 로그 서비스 인스턴스
+        
+    Returns:
+        차단된 요청 로그 목록
+    """
+    try:
+        # 검색 쿼리 구성
+        search_parts = ["rate limit", "blocked", "429"]
+        if endpoint:
+            search_parts.append(f"endpoint:{endpoint}")
+        if client_ip:
+            search_parts.append(f"ip:{client_ip}")
+        
+        search_query = " ".join(search_parts)
+        
+        # 필터 생성
+        filter_params = LogFilter(
+            search_query=search_query,
+            status_codes=[429],
+            endpoint=endpoint,
+            hours_back=hours,
+            page=page,
+            limit=limit
+        )
+        
+        # 로그 검색
+        logs_response = await log_service.search_logs(filter_params)
+        
+        return logs_response
+        
+    except Exception as e:
+        logger.error(f"차단된 요청 로그 조회 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"차단된 요청 로그 조회 실패: {str(e)}"
+        )
+
+
+@router.get("/rate-limiting/analytics", response_model=Dict[str, Any])
+async def get_rate_limiting_analytics(
+    days: int = Query(7, ge=1, le=30, description="분석할 일수"),
+    log_service: LogService = Depends(get_log_service),
+) -> Dict[str, Any]:
+    """
+    Rate Limiting 로그 분석 및 트렌드 정보
+    
+    Args:
+        days: 분석할 일수
+        log_service: 로그 서비스 인스턴스
+        
+    Returns:
+        Rate limiting 트렌드 분석 결과
+    """
+    try:
+        # 일별 Rate limiting 로그 통계 수집
+        daily_stats = {}
+        endpoint_trends = {}
+        
+        for day_offset in range(days):
+            # 각 날짜별로 24시간 범위로 로그 조회
+            filter_params = LogFilter(
+                search_query="rate limit",
+                status_codes=[429],
+                hours_back=24,
+                page=1,
+                limit=1000
+            )
+            
+            # 해당 날짜의 로그 조회
+            logs_response = await log_service.search_logs(filter_params)
+            
+            # 날짜 키 생성 (오늘로부터 몇일 전)
+            day_key = f"day_{day_offset}"
+            daily_stats[day_key] = {
+                "total_blocks": logs_response.total_count,
+                "endpoints": {},
+                "peak_hour": None,
+                "peak_hour_blocks": 0
+            }
+            
+            # 시간별 분포 및 엔드포인트별 통계
+            hourly_blocks = {}
+            for log_entry in logs_response.logs:
+                endpoint = log_entry.endpoint or "unknown"
+                hour = log_entry.timestamp.hour if log_entry.timestamp else 0
+                
+                # 엔드포인트별 통계
+                daily_stats[day_key]["endpoints"][endpoint] = daily_stats[day_key]["endpoints"].get(endpoint, 0) + 1
+                
+                # 전체 엔드포인트 트렌드
+                if endpoint not in endpoint_trends:
+                    endpoint_trends[endpoint] = []
+                
+                # 시간별 통계
+                hourly_blocks[hour] = hourly_blocks.get(hour, 0) + 1
+            
+            # 각 엔드포인트의 일별 데이터 추가
+            for endpoint in endpoint_trends:
+                endpoint_trends[endpoint].append(daily_stats[day_key]["endpoints"].get(endpoint, 0))
+            
+            # 피크 시간 찾기
+            if hourly_blocks:
+                peak_hour = max(hourly_blocks.items(), key=lambda x: x[1])
+                daily_stats[day_key]["peak_hour"] = peak_hour[0]
+                daily_stats[day_key]["peak_hour_blocks"] = peak_hour[1]
+        
+        # 트렌드 분석
+        total_blocks_trend = [daily_stats[f"day_{i}"]["total_blocks"] for i in range(days)]
+        
+        # 증가/감소 트렌드 계산
+        trend_direction = "stable"
+        if len(total_blocks_trend) >= 2:
+            recent_avg = sum(total_blocks_trend[:3]) / min(3, len(total_blocks_trend))  # 최근 3일 평균
+            older_avg = sum(total_blocks_trend[3:]) / max(1, len(total_blocks_trend) - 3)  # 이전 평균
+            
+            if recent_avg > older_avg * 1.2:
+                trend_direction = "increasing"
+            elif recent_avg < older_avg * 0.8:
+                trend_direction = "decreasing"
+        
+        analytics = {
+            "period_days": days,
+            "daily_statistics": daily_stats,
+            "endpoint_trends": endpoint_trends,
+            "overall_trend": {
+                "direction": trend_direction,
+                "total_blocks_series": total_blocks_trend,
+                "avg_daily_blocks": sum(total_blocks_trend) / len(total_blocks_trend) if total_blocks_trend else 0,
+                "peak_day_blocks": max(total_blocks_trend) if total_blocks_trend else 0,
+                "min_day_blocks": min(total_blocks_trend) if total_blocks_trend else 0
+            },
+            "recommendations": []
+        }
+        
+        # 추천사항 생성
+        if trend_direction == "increasing":
+            analytics["recommendations"].append("Rate limiting 차단이 증가하고 있습니다. 정책 검토를 권장합니다.")
+        
+        peak_blocks = max(total_blocks_trend) if total_blocks_trend else 0
+        if peak_blocks > 100:
+            analytics["recommendations"].append("높은 차단율이 감지되었습니다. DDoS 공격 가능성을 확인하세요.")
+            
+        # 가장 문제가 되는 엔드포인트 식별
+        total_endpoint_blocks = {ep: sum(blocks) for ep, blocks in endpoint_trends.items()}
+        if total_endpoint_blocks:
+            top_problematic = max(total_endpoint_blocks.items(), key=lambda x: x[1])
+            if top_problematic[1] > peak_blocks * 0.5:  # 전체의 50% 이상을 차지하는 엔드포인트
+                analytics["recommendations"].append(f"엔드포인트 '{top_problematic[0]}'에서 과도한 차단이 발생하고 있습니다.")
+        
+        return analytics
+        
+    except Exception as e:
+        logger.error(f"Rate limiting 분석 실패: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Rate limiting 분석 실패: {str(e)}"
+        )
+
+
 # Note: Exception handlers are defined at the app level, not router level
 # These functions can be used by the main app if needed
 

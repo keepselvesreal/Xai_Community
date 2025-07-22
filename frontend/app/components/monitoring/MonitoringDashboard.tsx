@@ -10,6 +10,8 @@ import { HealthStatusCard } from './HealthStatusCard';
 import { MetricsChart } from './MetricsChart';
 import { PopularEndpointsChart } from './PopularEndpointsChart';
 import { SlowRequestsList } from './SlowRequestsList';
+import { RateLimitingCard } from './RateLimitingCard';
+import { RateLimitingChart } from './RateLimitingChart';
 import LoadingSpinner from '~/components/common/LoadingSpinner';
 
 export function MonitoringDashboard({
@@ -192,8 +194,14 @@ export function MonitoringDashboard({
         </div>
       </div>
 
-      {/* 헬스 상태 카드 */}
-      <HealthStatusCard health={data?.data?.health || null} loading={loading} />
+      {/* 상태 카드 그리드 */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* 헬스 상태 카드 */}
+        <HealthStatusCard health={data?.data?.health || null} loading={loading} />
+        
+        {/* Rate Limiting 상태 카드 */}
+        <RateLimitingCard summary={null} loading={loading} />
+      </div>
 
       {/* 메트릭 차트 그리드 */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -227,6 +235,11 @@ export function MonitoringDashboard({
           loading={loading}
           maxItems={10}
         />
+      </div>
+
+      {/* Rate Limiting 상세 차트 */}
+      <div className="mt-6">
+        <RateLimitingChart metrics={null} loading={loading} />
       </div>
 
       {/* 에러 알림 (데이터가 있지만 에러가 있는 경우) */}
