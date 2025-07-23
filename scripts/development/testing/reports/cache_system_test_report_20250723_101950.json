@@ -1,0 +1,318 @@
+{
+  "test_summary": {
+    "total_tests": 20,
+    "passed": 20,
+    "failed": 0,
+    "skipped": 0,
+    "success_rate": 100.0,
+    "total_duration": 0.350684,
+    "start_time": "2025-07-23T10:19:50.192540",
+    "end_time": "2025-07-23T10:19:50.543224"
+  },
+  "environment_info": {
+    "environment": "development",
+    "redis_type": "local",
+    "cache_enabled": true,
+    "key_prefix": "dev:"
+  },
+  "test_suites": [
+    {
+      "name": "Redis Factory Pattern Tests",
+      "total_duration": 0.00793,
+      "start_time": "2025-07-23T10:19:50.192802",
+      "end_time": "2025-07-23T10:19:50.200732",
+      "results": [
+        {
+          "test_name": "Redis Manager Instance Retrieval",
+          "status": "PASS",
+          "duration": 0.00019884109497070312,
+          "message": "Redis 매니저 인스턴스 정상 획득",
+          "details": {
+            "manager_type": "RedisManager"
+          },
+          "error": null
+        },
+        {
+          "test_name": "Redis Connection Test",
+          "status": "PASS",
+          "duration": 0.0050733089447021484,
+          "message": "Redis 연결 성공",
+          "details": {
+            "connected": true
+          },
+          "error": null
+        },
+        {
+          "test_name": "Redis Health Check",
+          "status": "PASS",
+          "duration": 0.0024051666259765625,
+          "message": "Redis 상태 확인 성공: connected",
+          "details": {
+            "status": "connected",
+            "redis_version": "6.0.16",
+            "used_memory": "2.29M",
+            "connected_clients": 10,
+            "total_commands_processed": 2902,
+            "environment": "development",
+            "redis_type": "local",
+            "key_prefix": "dev:",
+            "connection_ensured": true
+          },
+          "error": null
+        },
+        {
+          "test_name": "Key Prefix Validation",
+          "status": "PASS",
+          "duration": 6.4373016357421875e-06,
+          "message": "키 프리픽스 정상 적용",
+          "details": {
+            "original_key": "test_key",
+            "prefixed_key": "dev:test_key",
+            "expected_prefix": "dev:"
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Cache Service Tests",
+      "total_duration": 0.004146,
+      "start_time": "2025-07-23T10:19:50.201066",
+      "end_time": "2025-07-23T10:19:50.205212",
+      "results": [
+        {
+          "test_name": "User Cache Set Operation",
+          "status": "PASS",
+          "duration": 0.0009038448333740234,
+          "message": "사용자 캐시 저장 성공",
+          "details": {
+            "user_id": "test_user_6fee120c",
+            "success": true
+          },
+          "error": null
+        },
+        {
+          "test_name": "User Cache Get Operation",
+          "status": "PASS",
+          "duration": 0.0006473064422607422,
+          "message": "사용자 캐시 조회 성공",
+          "details": {
+            "user_id": "test_user_6fee120c",
+            "data_found": true
+          },
+          "error": null
+        },
+        {
+          "test_name": "User Cache Delete Operation",
+          "status": "PASS",
+          "duration": 0.001420736312866211,
+          "message": "사용자 캐시 삭제 성공",
+          "details": {
+            "user_id": "test_user_6fee120c",
+            "deleted": true
+          },
+          "error": null
+        },
+        {
+          "test_name": "Cache Statistics Retrieval",
+          "status": "PASS",
+          "duration": 0.0008308887481689453,
+          "message": "캐시 통계 조회 성공",
+          "details": {
+            "cache_enabled": true,
+            "redis_status": "connected",
+            "redis_info": {
+              "status": "connected",
+              "redis_version": "6.0.16",
+              "used_memory": "2.29M",
+              "connected_clients": 10,
+              "total_commands_processed": 2912
+            }
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Session Service Tests",
+      "total_duration": 0.024946,
+      "start_time": "2025-07-23T10:19:50.205525",
+      "end_time": "2025-07-23T10:19:50.230471",
+      "results": [
+        {
+          "test_name": "Session Creation",
+          "status": "PASS",
+          "duration": 0.006525754928588867,
+          "message": "세션 생성 성공",
+          "details": {
+            "session_id": "b294bb01-593f-49a5-9293-24157674db98",
+            "user_id": "session_user_488283c7"
+          },
+          "error": null
+        },
+        {
+          "test_name": "Session Retrieval",
+          "status": "PASS",
+          "duration": 0.00494074821472168,
+          "message": "세션 조회 성공",
+          "details": {
+            "session_id": "b294bb01-593f-49a5-9293-24157674db98",
+            "user_id": "session_user_488283c7"
+          },
+          "error": null
+        },
+        {
+          "test_name": "User Sessions List",
+          "status": "PASS",
+          "duration": 0.0016617774963378906,
+          "message": "사용자 세션 목록 조회 성공",
+          "details": {
+            "user_id": "session_user_488283c7",
+            "session_count": 1
+          },
+          "error": null
+        },
+        {
+          "test_name": "Session Deletion",
+          "status": "PASS",
+          "duration": 0.01140594482421875,
+          "message": "세션 삭제 성공",
+          "details": {
+            "session_id": "b294bb01-593f-49a5-9293-24157674db98",
+            "deleted": true
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Token Blacklist Service Tests",
+      "total_duration": 0.018292,
+      "start_time": "2025-07-23T10:19:50.230941",
+      "end_time": "2025-07-23T10:19:50.249233",
+      "results": [
+        {
+          "test_name": "Token Blacklist Addition",
+          "status": "PASS",
+          "duration": 0.005510807037353516,
+          "message": "토큰 블랙리스트 추가 성공",
+          "details": {
+            "token_prefix": "test_token_6b55e6c60",
+            "user_id": "blacklist_user_e450fc2b"
+          },
+          "error": null
+        },
+        {
+          "test_name": "Token Blacklist Check",
+          "status": "PASS",
+          "duration": 0.0019998550415039062,
+          "message": "토큰 블랙리스트 확인 성공",
+          "details": {
+            "is_blacklisted": true
+          },
+          "error": null
+        },
+        {
+          "test_name": "JTI Blacklist Operations",
+          "status": "PASS",
+          "duration": 0.006256818771362305,
+          "message": "JTI 블랙리스트 작업 성공",
+          "details": {
+            "jti": "test_jti_40ca30f62be04c73",
+            "is_blacklisted": true
+          },
+          "error": null
+        },
+        {
+          "test_name": "Blacklist Info Retrieval",
+          "status": "PASS",
+          "duration": 0.0020444393157958984,
+          "message": "블랙리스트 정보 조회 성공",
+          "details": {
+            "reason": "test_reason",
+            "blacklisted_at": "2025-07-23T10:19:50.232198",
+            "expires_at": "2025-07-23T11:19:50.231221",
+            "user_id": "blacklist_user_e450fc2b"
+          },
+          "error": null
+        },
+        {
+          "test_name": "Blacklist Statistics",
+          "status": "PASS",
+          "duration": 0.0019979476928710938,
+          "message": "블랙리스트 통계 조회 성공",
+          "details": {
+            "status": "connected",
+            "total_blacklisted": "unavailable",
+            "redis_info": {}
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Environment Namespacing Tests",
+      "total_duration": 0.003986,
+      "start_time": "2025-07-23T10:19:50.249683",
+      "end_time": "2025-07-23T10:19:50.253669",
+      "results": [
+        {
+          "test_name": "Key Prefix Application",
+          "status": "PASS",
+          "duration": 2.09808349609375e-05,
+          "message": "키 프리픽스 적용 확인 성공",
+          "details": {
+            "test_keys": [
+              "user:123",
+              "session:abc",
+              "cache:data"
+            ],
+            "expected_prefix": "dev:",
+            "prefixed_keys": [
+              "dev:user:123",
+              "dev:session:abc",
+              "dev:cache:data"
+            ]
+          },
+          "error": null
+        },
+        {
+          "test_name": "Environment Isolation Test",
+          "status": "PASS",
+          "duration": 0.0038344860076904297,
+          "message": "환경별 격리 테스트 성공",
+          "details": {
+            "environment": "development",
+            "test_key": "isolation_test",
+            "prefixed_key": "dev:isolation_test",
+            "data_match": true
+          },
+          "error": null
+        }
+      ]
+    },
+    {
+      "name": "Performance Tests",
+      "total_duration": 0.288962,
+      "start_time": "2025-07-23T10:19:50.254117",
+      "end_time": "2025-07-23T10:19:50.543079",
+      "results": [
+        {
+          "test_name": "Bulk Operations Performance",
+          "status": "PASS",
+          "duration": 0.28884339332580566,
+          "message": "대량 데이터 처리 성능 테스트 완료",
+          "details": {
+            "test_count": 100,
+            "store_duration": 0.09087157249450684,
+            "retrieve_duration": 0.1017599105834961,
+            "store_ops_per_sec": 1100.4541602495651,
+            "retrieve_ops_per_sec": 982.7052660187624,
+            "retrieved_count": 100
+          },
+          "error": null
+        }
+      ]
+    }
+  ]
+}
