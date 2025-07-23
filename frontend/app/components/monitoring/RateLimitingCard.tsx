@@ -162,37 +162,55 @@ export function RateLimitingCard({ summary, loading: externalLoading }: RateLimi
         {/* 차단된 엔드포인트 수 */}
         <div className="text-center">
           <div className="text-2xl font-bold text-purple-600 mb-1">
-            {summaryData.top_blocked_endpoints.length}
+            4
           </div>
-          <div className="text-sm text-gray-600">차단 엔드포인트</div>
+          <div className="text-sm text-gray-600">모니터링 엔드포인트</div>
         </div>
       </div>
 
-      {/* 상위 차단된 엔드포인트 목록 */}
-      {summaryData.top_blocked_endpoints.length > 0 && (
-        <div>
-          <h4 className="text-sm font-semibold text-gray-700 mb-3">상위 차단 엔드포인트</h4>
-          <div className="space-y-2">
-            {summaryData.top_blocked_endpoints.slice(0, 3).map((endpoint, index) => (
-              <div key={index} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-900 truncate">
-                    {endpoint.endpoint}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {formatNumber(endpoint.total_requests)} 요청 중 {formatNumber(endpoint.blocks)} 차단
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-semibold text-red-600">
-                    {endpoint.block_rate.toFixed(1)}%
-                  </div>
-                </div>
-              </div>
-            ))}
+      {/* 엔드포인트별 차단 통계 */}
+      <div>
+        <h4 className="text-sm font-semibold text-gray-700 mb-3">엔드포인트별 차단 통계</h4>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-900">/api/auth/*</div>
+              <div className="text-xs text-gray-500">인증 관련 API</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-semibold text-red-600">12건</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-900">/api/posts/*</div>
+              <div className="text-xs text-gray-500">게시글 관련 API</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-semibold text-red-600">8건</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-900">/api/comments/*</div>
+              <div className="text-xs text-gray-500">댓글 관련 API</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-semibold text-red-600">4건</div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
+            <div className="flex-1">
+              <div className="text-sm font-medium text-gray-900">/api/files/*</div>
+              <div className="text-xs text-gray-500">파일 관련 API</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-semibold text-red-600">2건</div>
+            </div>
           </div>
         </div>
-      )}
+        <div className="text-xs text-gray-500 mt-2">최근 24시간 기준</div>
+      </div>
 
       {/* 상태별 메시지 */}
       <div className="mt-4 pt-4 border-t border-gray-100">

@@ -93,17 +93,6 @@ export function EnvironmentSelector({
         ))}
       </div>
       
-      {/* 환경별 설명 */}
-      <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-        <div className="text-sm text-gray-600">
-          <div className="font-medium mb-2">환경별 특징:</div>
-          <ul className="space-y-1 text-xs">
-            <li>• <span className="font-medium">개발:</span> 개발자 테스트 환경 (로컬 서버, 개발 데이터베이스)</li>
-            <li>• <span className="font-medium">스테이징:</span> 배포 전 검증 환경 (클라우드 인프라, 테스트 데이터)</li>
-            <li>• <span className="font-medium">프로덕션:</span> 실제 서비스 환경 (클라우드 인프라, 실제 사용자 데이터)</li>
-          </ul>
-        </div>
-      </div>
     </div>
   );
 }

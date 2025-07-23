@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import type { Environment } from './EnvironmentSelector';
 import { getSentryErrors, getEndpointsStatus } from '~/lib/unified-monitoring-api';
+import { SentryStatusCard } from './SentryStatusCard';
 
 interface ExternalMonitoring {
   service: string;
@@ -109,6 +110,7 @@ interface LayeredMonitoringProps {
   error: string | null;
   onRefresh: () => void;
   redisStatus?: string;
+  timestamp?: string;
 }
 
 export function LayeredMonitoring({
@@ -117,7 +119,8 @@ export function LayeredMonitoring({
   loading,
   error,
   onRefresh,
-  redisStatus = 'unknown'
+  redisStatus = 'unknown',
+  timestamp
 }: LayeredMonitoringProps) {
   const [sentryErrors, setSentryErrors] = useState<SentryErrorInfo | null>(null);
   const [endpointsStatus, setEndpointsStatus] = useState<EndpointsStatus | null>(null);
@@ -168,6 +171,7 @@ export function LayeredMonitoring({
     onRefresh();
     loadAdvancedMonitoringData();
   };
+
   /**
    * 상태 아이콘 가져오기
    */
@@ -315,8 +319,12 @@ export function LayeredMonitoring({
         
         {external?.error ? (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">외부 모니터링 데이터 로드 실패</p>
-            <p className="text-sm text-red-500 mt-1">{external.error}</p>
+            <p className="text-red-600">외부 모니터링 서비스 연결 실패</p>
+            <p className="text-sm text-red-500 mt-1">
+              HetrixTools API 연결에 문제가 있거나 API 토큰이 올바르지 않습니다. 
+              설정을 확인하거나 서비스 상태를 점검해주세요.
+            </p>
+            <p className="text-xs text-red-400 mt-2">오류 상세: {external.error}</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -351,7 +359,23 @@ export function LayeredMonitoring({
             ) : (
               <div className="text-center py-8 text-gray-500">
                 <div className="text-4xl mb-2">📡</div>
-                <p>모니터링 데이터가 없습니다</p>
+                {environment === 'development' ? (
+                  <>
+                    <p className="font-medium">개발 환경에서는 외부 모니터링을 사용할 수 없습니다</p>
+                    <p className="text-sm mt-2">
+                      HetrixTools는 localhost나 내부 네트워크에 접근할 수 없습니다.<br/>
+                      스테이징 또는 프로덕션 환경에서 외부 모니터링을 확인하세요.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">외부 모니터링 설정이 필요합니다</p>
+                    <p className="text-sm mt-2">
+                      HetrixTools 모니터가 설정되지 않았거나<br/>
+                      현재 환경에 대한 모니터링 데이터가 없습니다.
+                    </p>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -381,184 +405,106 @@ export function LayeredMonitoring({
             <p className="text-sm text-red-500 mt-1">{app.error}</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className={`flex items-center justify-between p-4 border rounded-lg ${getStatusColorClass(app?.health_status || 'unknown')}`}>
-              <div className="flex items-center space-x-3">
-                <span className="text-2xl">{getStatusIcon(app?.health_status || 'unknown')}</span>
-                <div>
-                  <div className="font-semibold">상태: {app?.health_status || 'Unknown'}</div>
-                  <div className="text-sm opacity-75">백엔드 API 서버</div>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm">마지막 확인</div>
-                <div className="text-xs opacity-75">
-                  {new Date().toLocaleTimeString('ko-KR')}
-                </div>
-              </div>
+          <div className="space-y-6">
+            {/* Sentry 에러 모니터링 서브섹션 */}
+            <div>
+              {/* SentryStatusCard 삽입 */}
+              <SentryStatusCard timestamp={timestamp} />
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Sentry 에러 추적 - 실제 데이터 표시 */}
-              <div className={`border rounded-lg p-4 ${
-                sentryErrors ? 
-                  getStatusBackgroundClass(sentryErrors.status) : 
-                  'bg-blue-50 border-blue-200'
-              }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <div className={`text-xl ${
-                      sentryErrors ? 
-                        getStatusTextClass(sentryErrors.status) : 
-                        'text-blue-600'
-                    }`}>🔍</div>
-                    <h4 className={`font-semibold ${
-                      sentryErrors ? 
-                        getStatusTextClass(sentryErrors.status) : 
-                        'text-blue-900'
-                    }`}>Sentry 에러 추적</h4>
-                  </div>
-                  <div className={`text-sm ${
-                    sentryErrors ? 
-                      getStatusTextClass(sentryErrors.status) : 
-                      'text-blue-600'
-                  }`}>
-                    {advancedLoading ? '⏳ 로딩 중' : 
-                     sentryErrors ? getStatusIcon(sentryErrors.status) + ' ' + getStatusMessage(sentryErrors.status) : 
-                     '✅ 활성'}
-                  </div>
-                </div>
-                <div className={`space-y-1 text-sm ${
-                  sentryErrors ? 
-                    getStatusTextClass(sentryErrors.status) : 
-                    'text-blue-700'
+
+            {/* API 엔드포인트 모니터링 서브섹션 */}
+            <div>
+              <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
+                <span className="mr-2">📊</span>
+                API 엔드포인트 모니터링
+              </h4>
+
+              {/* 전체 엔드포인트 상태 */}
+              <div>
+                <h5 className="font-medium text-gray-700 mb-3">전체 엔드포인트 상태</h5>
+                <div className={`border rounded-lg p-4 mb-4 ${
+                  endpointsStatus ? 
+                    getStatusBackgroundClass(endpointsStatus.overall_status) : 
+                    'bg-green-50 border-green-200'
                 }`}>
-                  {sentryErrors ? (
-                    <>
-                      {sentryErrors.status === 'unconfigured' ? (
-                        <div>Sentry가 설정되지 않았습니다.</div>
-                      ) : sentryErrors.status === 'no_data' ? (
-                        <div>Sentry가 연결되었지만 에러 데이터가 없습니다.</div>
-                      ) : sentryErrors.status === 'error' ? (
-                        <div>Sentry 연결 중 오류가 발생했습니다.</div>
-                      ) : (
-                        <>
-                          <div>최근 1시간: {sentryErrors.last_hour_errors}개 에러</div>
-                          <div>최근 24시간: {sentryErrors.last_24h_errors}개 에러</div>
-                          <div>최근 3일: {sentryErrors.last_3d_errors}개 에러</div>
-                          <div>시간당 에러율: {sentryErrors.error_rate_per_hour.toFixed(1)}개/시간</div>
-                          {sentryErrors.last_error_time && (
-                            <div className="text-xs opacity-75">
-                              최근 에러: {new Date(sentryErrors.last_error_time).toLocaleString('ko-KR')}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div>환경: {import.meta.env.VITE_NODE_ENV || 'development'}</div>
-                      <div>샘플링: {import.meta.env.VITE_NODE_ENV === 'production' ? '5%' : '100%'}</div>
-                      <div>실시간 에러 모니터링 활성화됨</div>
-                    </>
-                  )}
-                </div>
-              </div>
-              
-              {/* API 엔드포인트 상태 */}
-              <div className={`border rounded-lg p-4 ${
-                endpointsStatus ? 
-                  getStatusBackgroundClass(endpointsStatus.overall_status) : 
-                  'bg-green-50 border-green-200'
-              }`}>
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center space-x-2">
-                    <div className={`text-xl ${
-                      endpointsStatus ? 
-                        getStatusTextClass(endpointsStatus.overall_status) : 
-                        'text-green-600'
-                    }`}>📊</div>
-                    <h4 className={`font-semibold ${
+                  <div className="flex items-center justify-between mb-2">
+                    <div className={`text-sm font-medium ${
                       endpointsStatus ? 
                         getStatusTextClass(endpointsStatus.overall_status) : 
                         'text-green-900'
-                    }`}>API 엔드포인트</h4>
+                    }`}>
+                      {advancedLoading ? '⏳ 로딩 중' : 
+                       endpointsStatus ? getStatusIcon(endpointsStatus.overall_status) + ' ' + endpointsStatus.overall_status : 
+                       '✅ 활성'}
+                    </div>
                   </div>
-                  <div className={`text-sm ${
+                  <div className={`space-y-1 text-sm ${
                     endpointsStatus ? 
                       getStatusTextClass(endpointsStatus.overall_status) : 
-                      'text-green-600'
+                      'text-green-700'
                   }`}>
-                    {advancedLoading ? '⏳ 로딩 중' : 
-                     endpointsStatus ? getStatusIcon(endpointsStatus.overall_status) + ' ' + endpointsStatus.overall_status : 
-                     '✅ 활성'}
+                    {endpointsStatus ? (
+                      <>
+                        <div>정상: {endpointsStatus.healthy_count}/{endpointsStatus.total_endpoints}개</div>
+                        <div>평균 응답시간: {endpointsStatus.average_response_time.toFixed(0)}ms</div>
+                        {endpointsStatus.degraded_count > 0 && (
+                          <div>성능 저하: {endpointsStatus.degraded_count}개</div>
+                        )}
+                        {endpointsStatus.down_count > 0 && (
+                          <div>중단: {endpointsStatus.down_count}개</div>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <div>평균 응답시간: ~{Math.floor(Math.random() * 100 + 50)}ms</div>
+                        <div>처리량: ~{Math.floor(Math.random() * 50 + 10)} req/min</div>
+                        <div>API 엔드포인트: {data ? '정상' : '확인 중'}</div>
+                      </>
+                    )}
                   </div>
                 </div>
-                <div className={`space-y-1 text-sm ${
-                  endpointsStatus ? 
-                    getStatusTextClass(endpointsStatus.overall_status) : 
-                    'text-green-700'
-                }`}>
-                  {endpointsStatus ? (
-                    <>
-                      <div>정상: {endpointsStatus.healthy_count}/{endpointsStatus.total_endpoints}개</div>
-                      <div>평균 응답시간: {endpointsStatus.average_response_time.toFixed(0)}ms</div>
-                      {endpointsStatus.degraded_count > 0 && (
-                        <div>성능 저하: {endpointsStatus.degraded_count}개</div>
-                      )}
-                      {endpointsStatus.down_count > 0 && (
-                        <div>중단: {endpointsStatus.down_count}개</div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div>평균 응답시간: ~{Math.floor(Math.random() * 100 + 50)}ms</div>
-                      <div>처리량: ~{Math.floor(Math.random() * 50 + 10)} req/min</div>
-                      <div>API 엔드포인트: {data ? '정상' : '확인 중'}</div>
-                    </>
-                  )}
-                </div>
               </div>
-              
-            </div>
 
-            {/* API 엔드포인트 상세 정보 */}
-            {endpointsStatus && endpointsStatus.endpoints.length > 0 && (
-              <div className="mt-4">
-                <h4 className="font-semibold text-gray-900 mb-3">📊 API 엔드포인트 상세 현황</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {endpointsStatus.endpoints.map((endpoint) => (
-                    <div 
-                      key={endpoint.endpoint} 
-                      className={`border rounded-lg p-3 ${getStatusBackgroundClass(endpoint.status)}`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm">{getStatusIcon(endpoint.status)}</span>
-                          <span className={`font-medium text-sm ${getStatusTextClass(endpoint.status)}`}>
-                            {endpoint.name}
-                          </span>
-                        </div>
-                        <span className={`text-xs ${getStatusTextClass(endpoint.status)}`}>
-                          {endpoint.response_time.toFixed(0)}ms
-                        </span>
-                      </div>
-                      <div className={`text-xs ${getStatusTextClass(endpoint.status)} opacity-75`}>
-                        <div>경로: {endpoint.endpoint}</div>
-                        {endpoint.status_code && (
-                          <div>상태: HTTP {endpoint.status_code}</div>
-                        )}
-                        {endpoint.error_message && (
-                          <div className="truncate" title={endpoint.error_message}>
-                            오류: {endpoint.error_message}
+              {/* API 엔드포인트 상세 정보 */}
+              {endpointsStatus && endpointsStatus.endpoints.length > 0 && (
+                <div>
+                  <h5 className="font-medium text-gray-700 mb-3">상세 현황</h5>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {endpointsStatus.endpoints.map((endpoint) => {
+                      return (
+                        <div 
+                          key={endpoint.endpoint} 
+                          className={`border rounded-lg p-3 ${getStatusBackgroundClass(endpoint.status)}`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-sm">{getStatusIcon(endpoint.status)}</span>
+                              <span className={`font-medium text-sm ${getStatusTextClass(endpoint.status)}`}>
+                                {endpoint.name}
+                              </span>
+                            </div>
+                            <span className={`text-xs ${getStatusTextClass(endpoint.status)}`}>
+                              {endpoint.response_time.toFixed(0)}ms
+                            </span>
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                          <div className={`text-xs ${getStatusTextClass(endpoint.status)} opacity-75`}>
+                            <div>경로: {endpoint.endpoint}</div>
+                            {endpoint.status_code && (
+                              <div>상태: HTTP {endpoint.status_code}</div>
+                            )}
+                            {endpoint.error_message && (
+                              <div className="truncate" title={endpoint.error_message}>
+                                오류: {endpoint.error_message}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -747,6 +693,7 @@ export function LayeredMonitoring({
     );
   }
 
+
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -759,7 +706,7 @@ export function LayeredMonitoring({
         </h2>
         <div className="flex items-center space-x-4">
           <div className="text-sm text-gray-500">
-            업데이트: {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString('ko-KR') : '-'}
+            업데이트: {timestamp ? new Date(timestamp).toLocaleString('ko-KR') : (data?.timestamp ? new Date(data.timestamp).toLocaleTimeString('ko-KR') : '-')}
           </div>
           <button
             onClick={handleRefresh}
@@ -771,9 +718,9 @@ export function LayeredMonitoring({
       </div>
 
       {/* 계층별 모니터링 */}
-      {renderExternalMonitoring()}
-      {renderApplicationMonitoring()}
       {renderInfrastructureMonitoring()}
+      {renderApplicationMonitoring()}
+      {renderExternalMonitoring()}
     </div>
   );
 }

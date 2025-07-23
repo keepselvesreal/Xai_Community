@@ -15,9 +15,10 @@ import "./styles/service-comments.css";
 import { AuthProvider } from "~/contexts/AuthContext";
 import { NotificationProvider } from "~/contexts/NotificationContext";
 import { ThemeProvider } from "~/contexts/ThemeContext";
-import ErrorBoundary from "~/components/common/ErrorBoundary";
+import { SentryErrorBoundary } from "~/components/errors/SentryErrorBoundary";
 import { getAnalytics } from "~/hooks/useAnalytics";
 import { sentryService } from "~/lib/sentry-service";
+import { setupGlobalErrorHandlers } from "~/utils/errorReporter";
 
 // 빌드 정보 타입 정의
 interface BuildInfo {
@@ -186,11 +187,20 @@ export default function App() {
           
           // 전역에 노출 (디버깅용)
           (window as any).sentryService = sentryService;
+          
+          // 전역 에러 핸들러 등록 (Sentry 초기화 후)
+          setupGlobalErrorHandlers();
+          console.log('✅ 전역 에러 핸들러 등록 완료');
         } else {
           console.warn('⚠️ VITE_SENTRY_DSN이 설정되지 않아 Sentry 초기화를 건너뜁니다.');
+          // Sentry 없이도 에러 핸들러는 등록
+          setupGlobalErrorHandlers();
+          console.log('✅ 전역 에러 핸들러 등록 완료 (Sentry 없음)');
         }
       } catch (error) {
         console.error('❌ 프론트엔드 Sentry 초기화 실패:', error);
+        // 초기화 실패해도 에러 핸들러는 등록
+        setupGlobalErrorHandlers();
       }
     }
   }, [sentryInitialized]);
@@ -227,9 +237,9 @@ export default function App() {
   }, [location, buildInfo]);
   
   return (
-    <ErrorBoundary>
+    <SentryErrorBoundary>
       <ThemeProvider>
-        <ErrorBoundary>
+        <SentryErrorBoundary>
           <AuthProvider>
             <NotificationProvider>
               <Outlet />
@@ -289,8 +299,8 @@ export default function App() {
               )}
             </NotificationProvider>
           </AuthProvider>
-        </ErrorBoundary>
+        </SentryErrorBoundary>
       </ThemeProvider>
-    </ErrorBoundary>
+    </SentryErrorBoundary>
   );
 }
