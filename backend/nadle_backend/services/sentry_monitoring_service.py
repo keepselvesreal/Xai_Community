@@ -156,13 +156,13 @@ class SentryMonitoringService:
             )
             recent_logs_response = await self.log_service.search_logs(recent_errors_filter)
             
-            # LogEntry를 SentryErrorInfo로 변환 (테스트 에러 제외)
+            # LogEntry를 SentryErrorInfo로 변환 (개발 환경에서는 테스트 에러도 포함)
             recent_errors = []
             for log_entry in recent_logs_response.logs:
-                # 테스트 에러 필터링
+                # 개발 환경에서는 테스트 에러도 포함하여 표시
                 is_test_error = self._is_test_error(log_entry)
-                if is_test_error:
-                    continue  # 테스트 에러는 제외
+                if is_test_error and self.settings.environment == "production":
+                    continue  # 프로덕션에서만 테스트 에러 제외
                 
                 error_type = "UnknownError"
                 if log_entry.metadata and hasattr(log_entry.metadata, 'error_type') and log_entry.metadata.error_type:
