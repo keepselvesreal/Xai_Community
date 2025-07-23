@@ -309,28 +309,27 @@ export function LayeredMonitoring({
     const external = data?.external_monitoring;
     
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">🌐 외부 모니터링</h3>
-          <div className="text-sm text-gray-500">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-900">🌐 외부 모니터링</h3>
+          <div className="text-xs text-gray-500">
             {external?.service || 'HetrixTools'}
           </div>
         </div>
         
         {external?.error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">외부 모니터링 서비스 연결 실패</p>
-            <p className="text-sm text-red-500 mt-1">
-              HetrixTools API 연결에 문제가 있거나 API 토큰이 올바르지 않습니다. 
-              설정을 확인하거나 서비스 상태를 점검해주세요.
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+            <p className="text-xs text-red-600">외부 모니터링 서비스 연결 실패</p>
+            <p className="text-xs text-red-500 mt-1">
+              HetrixTools API 연결 문제. 설정을 확인해주세요.
             </p>
-            <p className="text-xs text-red-400 mt-2">오류 상세: {external.error}</p>
+            <p className="text-xs text-red-400 mt-1">오류: {external.error}</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-gray-700">총 모니터 수</span>
-              <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm font-medium">
+              <span className="text-xs font-medium text-gray-700">총 모니터 수</span>
+              <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded-full text-xs font-medium">
                 {external?.total_monitors || 0}개
               </span>
             </div>
@@ -391,21 +390,21 @@ export function LayeredMonitoring({
     const app = data?.application_monitoring;
     
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">⚡ 애플리케이션 모니터링</h3>
-          <div className="text-sm text-gray-500">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-900">⚡ 애플리케이션 모니터링</h3>
+          <div className="text-xs text-gray-500">
             {app?.service || 'Backend API'}
           </div>
         </div>
         
         {app?.error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">애플리케이션 모니터링 데이터 로드 실패</p>
-            <p className="text-sm text-red-500 mt-1">{app.error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+            <p className="text-xs text-red-600">애플리케이션 모니터링 데이터 로드 실패</p>
+            <p className="text-xs text-red-500 mt-1">{app.error}</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-3">
             {/* Sentry 에러 모니터링 서브섹션 */}
             <div>
               {/* SentryStatusCard 삽입 */}
@@ -414,15 +413,15 @@ export function LayeredMonitoring({
 
             {/* API 엔드포인트 모니터링 서브섹션 */}
             <div>
-              <h4 className="text-md font-semibold text-gray-800 mb-3 flex items-center">
-                <span className="mr-2">📊</span>
+              <h4 className="text-xs font-semibold text-gray-800 mb-1 flex items-center">
+                <span className="mr-1">📊</span>
                 API 엔드포인트 모니터링
               </h4>
 
               {/* 전체 엔드포인트 상태 */}
               <div>
-                <h5 className="font-medium text-gray-700 mb-3">전체 엔드포인트 상태</h5>
-                <div className={`border rounded-lg p-4 mb-4 ${
+                <h5 className="text-xs font-medium text-gray-700 mb-1">전체 엔드포인트 상태</h5>
+                <div className={`border rounded-lg p-2 mb-2 ${
                   endpointsStatus ? 
                     getStatusBackgroundClass(endpointsStatus.overall_status) : 
                     'bg-green-50 border-green-200'
@@ -517,54 +516,54 @@ export function LayeredMonitoring({
     const infra = data?.infrastructure_monitoring;
     
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">🏗️ 인프라 모니터링</h3>
-          <div className="text-sm text-gray-500">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold text-gray-900">🏗️ 인프라 모니터링</h3>
+          <div className="text-xs text-gray-500">
             {environment === 'development' ? '로컬 Redis' : '클라우드 인프라'}
           </div>
         </div>
         
         {infra?.error ? (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-            <p className="text-red-600">인프라 모니터링 데이터 로드 실패</p>
-            <p className="text-sm text-red-500 mt-1">{infra.error}</p>
+          <div className="bg-red-50 border border-red-200 rounded-lg p-2">
+            <p className="text-xs text-red-600">인프라 모니터링 데이터 로드 실패</p>
+            <p className="text-xs text-red-500 mt-1">{infra.error}</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
             {/* MongoDB Atlas (모든 환경) */}
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold">MongoDB Atlas</span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">{data ? '✅' : '⏳'}</span>
-                  <span className="text-sm font-medium text-purple-700">
+            <div className="bg-purple-50 border border-purple-200 rounded-lg p-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold">MongoDB Atlas</span>
+                <div className="flex items-center space-x-1">
+                  <span className="text-xs">{data ? '✅' : '⏳'}</span>
+                  <span className="text-xs font-medium text-purple-700">
                     {data ? '정상' : '확인 중'}
                   </span>
                 </div>
               </div>
-              <div className="space-y-1 text-sm text-purple-700">
-                <div>데이터베이스: xai_community</div>
+              <div className="space-y-0.5 text-xs text-purple-700">
+                <div>DB: xai_community</div>
                 <div>컬렉션: 7개 활성화</div>
                 <div>연결 풀: 안정적</div>
               </div>
             </div>
 
             {/* Redis/Upstash (환경별) */}
-            <div className={`${getStatusBackgroundClass(redisStatus)} border rounded-lg p-4`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="font-semibold">
+            <div className={`${getStatusBackgroundClass(redisStatus)} border rounded-lg p-2`}>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-semibold">
                   {environment === 'development' ? 'Redis (로컬)' : 'Upstash Redis'}
                 </span>
-                <div className="flex items-center space-x-2">
-                  <span className="text-lg">{getStatusIcon(redisStatus)}</span>
-                  <span className={`text-sm font-medium ${getStatusTextClass(redisStatus)}`}>
+                <div className="flex items-center space-x-1">
+                  <span className="text-xs">{getStatusIcon(redisStatus)}</span>
+                  <span className={`text-xs font-medium ${getStatusTextClass(redisStatus)}`}>
                     {redisStatus === 'healthy' ? '정상' : 
                      redisStatus === 'unhealthy' ? '연결 실패' : '알 수 없음'}
                   </span>
                 </div>
               </div>
-              <div className={`space-y-1 text-sm ${getStatusTextClass(redisStatus)}`}>
+              <div className={`space-y-0.5 text-xs ${getStatusTextClass(redisStatus)}`}>
                 {environment === 'development' ? (
                   <>
                     <div>포트: 6379</div>
@@ -694,22 +693,22 @@ export function LayeredMonitoring({
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900">
+        <h2 className="text-lg font-semibold text-gray-900">
           {environment === 'development' && '🚧 개발 환경'}
           {environment === 'staging' && '🔍 스테이징 환경'}
           {environment === 'production' && '🚀 프로덕션 환경'}
           {' '}모니터링
         </h2>
-        <div className="flex items-center space-x-4">
-          <div className="text-sm text-gray-500">
+        <div className="flex items-center space-x-3">
+          <div className="text-xs text-gray-500">
             업데이트: {timestamp ? new Date(timestamp).toLocaleString('ko-KR') : (data?.timestamp ? new Date(data.timestamp).toLocaleTimeString('ko-KR') : '-')}
           </div>
           <button
             onClick={handleRefresh}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+            className="bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 transition-colors text-xs"
           >
             새로고침
           </button>

@@ -146,18 +146,24 @@ class SentryMonitoringService:
             day_stats = await self.log_service.get_stats(24)  # 24시간
             three_day_stats = await self.log_service.get_stats(72)  # 3일(72시간)
             
-            # 최근 5개 에러 조회 
+            # 최근 5개 에러 조회 (테스트 에러 제외)
+            # "[Sentry] 테스트 에러"로 시작하는 메시지와 sentry 태그가 있는 테스트 에러들을 제외
             recent_errors_filter = LogFilter(
                 levels=[LogLevel.ERROR],
                 start_time=three_days_ago,
-                page_size=5,
+                page_size=20,  # 테스트 에러가 많을 수 있으므로 더 많이 가져와서 필터링
                 page=1
             )
             recent_logs_response = await self.log_service.search_logs(recent_errors_filter)
             
-            # LogEntry를 SentryErrorInfo로 변환
+            # LogEntry를 SentryErrorInfo로 변환 (테스트 에러 제외)
             recent_errors = []
             for log_entry in recent_logs_response.logs:
+                # 테스트 에러 필터링
+                is_test_error = self._is_test_error(log_entry)
+                if is_test_error:
+                    continue  # 테스트 에러는 제외
+                
                 error_type = "UnknownError"
                 if log_entry.metadata and hasattr(log_entry.metadata, 'error_type') and log_entry.metadata.error_type:
                     error_type = log_entry.metadata.error_type
@@ -171,6 +177,10 @@ class SentryMonitoringService:
                     file_path=None,  # MongoDB 로그에서는 추출하기 어려움
                     line_number=None
                 ))
+                
+                # 실제 에러 5개만 수집
+                if len(recent_errors) >= 5:
+                    break
             
             # 마지막 에러 시간 찾기
             last_error_time = None
@@ -210,6 +220,54 @@ class SentryMonitoringService:
             total_events=0,
             recent_errors=[],
         )
+
+    def _is_test_error(self, log_entry) -> bool:
+        """
+        로그 엔트리가 테스트 에러인지 판단합니다.
+        
+        Args:
+            log_entry: LogEntry 객체
+            
+        Returns:
+            bool: 테스트 에러인 경우 True
+        """
+        # 메시지 기반 필터링
+        test_message_patterns = [
+            "[Sentry] 테스트 에러",
+            "테스트 에러 - 모니터링 시스템에서 생성됨",
+            "테스트 ValueError",
+            "테스트 TypeError", 
+            "테스트 KeyError",
+            "테스트 IndexError",
+            "테스트 RuntimeError"
+        ]
+        
+        for pattern in test_message_patterns:
+            if pattern in log_entry.message:
+                return True
+        
+        # 메타데이터 기반 필터링
+        if log_entry.metadata and hasattr(log_entry.metadata, 'tags') and log_entry.metadata.tags:
+            # sentry 태그가 있으면서 application_error 태그가 있는 경우는 보통 테스트 에러
+            if 'sentry' in log_entry.metadata.tags and 'application_error' in log_entry.metadata.tags:
+                # 파일 경로가 sentry_monitoring_service.py인 경우는 테스트 에러
+                if (hasattr(log_entry.metadata, 'custom') and 
+                    log_entry.metadata.custom and 
+                    'file_path' in log_entry.metadata.custom and
+                    'sentry_monitoring_service.py' in str(log_entry.metadata.custom['file_path'])):
+                    return True
+        
+        # 컨텍스트 기반 필터링 (테스트 엔드포인트)
+        if log_entry.context and log_entry.context.endpoint:
+            test_endpoints = [
+                '/api/monitoring/test/',
+                '/api/monitoring/sentry/test-error'
+            ]
+            for test_endpoint in test_endpoints:
+                if test_endpoint in log_entry.context.endpoint:
+                    return True
+        
+        return False
 
     def _determine_status(self, hourly_errors: int) -> str:
         """

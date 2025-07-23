@@ -39,6 +39,20 @@ async def api_health_check(
         return {"status": "unhealthy", "service": "nadle-backend-api", "error": str(e)}
 
 
+@router.get("/api/test/real-error")
+async def test_real_api_error() -> Dict[str, Any]:
+    """실제 API 에러를 발생시키는 테스트 엔드포인트 (Sentry 테스트 아님)"""
+    # 실제 애플리케이션에서 발생할 수 있는 진짜 에러
+    try:
+        # 데이터베이스 연결 실패 시뮬레이션
+        from ..models.core import User
+        # 잘못된 쿼리로 인한 실제 에러 발생
+        result = await User.find_one({"$invalid_operator": "test"})
+        return {"result": result}
+    except Exception as e:
+        # 여기서 실제 에러가 발생하고 미들웨어에서 로깅됨
+        raise HTTPException(status_code=500, detail=f"Database query error: {str(e)}")
+
 @router.get("/api/auth/health")
 async def auth_health_check() -> Dict[str, Any]:
     """인증 시스템 헬스체크"""

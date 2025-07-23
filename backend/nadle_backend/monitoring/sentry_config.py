@@ -64,7 +64,7 @@ def sentry_before_send(
     event: Dict[str, Any], hint: Dict[str, Any]
 ) -> Optional[Dict[str, Any]]:
     """
-    Sentry 이벤트 전송 전 필터링 함수
+    Sentry 이벤트 전송 전 필터링 함수 (개선된 버전)
 
     Args:
         event: Sentry 이벤트 데이터
@@ -73,16 +73,34 @@ def sentry_before_send(
     Returns:
         Optional[Dict[str, Any]]: 전송할 이벤트 (None이면 전송 안함)
     """
-    # HTTP 예외 필터링 (404, 403 등은 Sentry에 보내지 않음)
+    import random
+    
+    # HTTP 예외 스마트 필터링
     if event.get("exception"):
         for exception_value in event["exception"].get("values", []):
             exception_type = exception_value.get("type", "")
             exception_message = exception_value.get("value", "")
 
-            # HTTPException 필터링
             if exception_type == "HTTPException":
-                if "404" in exception_message or "403" in exception_message:
-                    return None
+                # 404: 10% 샘플링 (패턴 파악용)
+                if "404" in exception_message:
+                    return event if random.random() < 0.1 else None
+                
+                # 401/403: 100% 수집 (보안 중요)
+                elif any(code in exception_message for code in ["401", "403"]):
+                    # 보안 태그 추가
+                    event.setdefault("tags", {})["security_error"] = True
+                    return event
+                
+                # 422: 20% 샘플링 (사용자 입력 오류)
+                elif "422" in exception_message:
+                    return event if random.random() < 0.2 else None
+                
+                # 500번대: 100% 수집 (서버 에러)
+                elif any(code in exception_message for code in ["500", "502", "503", "504"]):
+                    # 긴급 태그 추가
+                    event.setdefault("tags", {})["critical_error"] = True
+                    return event
 
     # 개발 환경에서는 모든 이벤트 전송
     if event.get("environment") == "development":
