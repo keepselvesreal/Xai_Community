@@ -38,7 +38,6 @@ export default function Analytics() {
   const [bounceRate, setBounceRate] = useState<BounceRate | null>(null);
   const [realtimeActivity, setRealtimeActivity] = useState<RealtimeActivity[]>([]);
   const [loading, setLoading] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<string | null>(null);
 
   // 관리자 권한 확인 (클라이언트 사이드)
   const isAdmin = user?.is_admin === true || user?.email === "admin@example.com" || user?.role === "admin";
@@ -62,7 +61,6 @@ export default function Analytics() {
       setBounceRate(bounceRateData);
       setRealtimeActivity(activityData);
       console.log('🔍 실시간 활동 피드 데이터:', activityData);
-      setLastUpdate(new Date().toISOString());
       
       showSuccess('분석 데이터를 성공적으로 업데이트했습니다.');
     } catch (error) {
@@ -74,30 +72,6 @@ export default function Analytics() {
     }
   };
 
-  // 테스트 도구 함수들
-  const handleSimulateActivity = async (activityType: string, count: number = 1) => {
-    try {
-      await analyticsDashboardService.simulateUserActivity(activityType, count);
-      showSuccess(`${activityType} 활동 ${count}건이 생성되었습니다.`);
-      // 데이터 새로고침
-      setTimeout(loadAllData, 1000);
-    } catch (error) {
-      showError('활동 시뮬레이션에 실패했습니다.');
-    }
-  };
-
-  const handleResetData = async () => {
-    if (!confirm('모든 테스트 데이터를 초기화하시겠습니까?')) return;
-    
-    try {
-      await analyticsDashboardService.resetTestData();
-      showSuccess('테스트 데이터가 초기화되었습니다.');
-      // 데이터 새로고침
-      setTimeout(loadAllData, 1000);
-    } catch (error) {
-      showError('데이터 초기화에 실패했습니다.');
-    }
-  };
 
   // 권한 확인 및 초기 데이터 로드
   useEffect(() => {
@@ -165,35 +139,11 @@ export default function Analytics() {
   return (
     <AppLayout 
       title="사용자 분석 대시보드"
-      subtitle="실제 데이터 기반 사용자 행동 분석"
+      subtitle=""
       user={user}
       onLogout={logout}
     >
       <div className="space-y-6">
-        {/* 대시보드 헤더 */}
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white p-6 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-2">📊 사용자 분석 대시보드</h1>
-              <p className="text-indigo-100">실제 데이터 기반 커뮤니티 활동 분석</p>
-              <div className="mt-4 text-sm text-indigo-100">
-                마지막 업데이트: {lastUpdate 
-                  ? new Date(lastUpdate).toLocaleString('ko-KR')
-                  : '업데이트 필요'
-                } (5초마다 자동 갱신)
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={loadAllData}
-                disabled={loading}
-                className="bg-white/20 hover:bg-white/30 transition-colors text-white px-4 py-2 rounded-lg text-sm disabled:opacity-50"
-              >
-                {loading ? '로딩 중...' : '수동 새로고침'}
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* 로딩 상태 */}
         {loading && (
@@ -407,81 +357,6 @@ export default function Analytics() {
           )}
         </div>
 
-        {/* 개발환경 테스트 도구 */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">🔧 개발환경 테스트 도구</h2>
-          
-          {/* 실제 추적 중인 활동만 포함 */}
-          <div className="mb-6">
-            <h3 className="text-lg font-medium text-gray-700 mb-3">📈 추적 중인 활동 시뮬레이션</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              
-              {/* 사용자 가입 */}
-              <button
-                onClick={() => handleSimulateActivity('signup', 3)}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
-              >
-                <div className="text-xl mb-1">👥</div>
-                <div>사용자 가입 (3명)</div>
-              </button>
-
-              {/* 게시글 작성 */}
-              <button
-                onClick={() => handleSimulateActivity('post_create', 5)}
-                className="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
-              >
-                <div className="text-xl mb-1">📝</div>
-                <div>게시글 작성 (5건)</div>
-              </button>
-
-              {/* 댓글 작성 */}
-              <button
-                onClick={() => handleSimulateActivity('comment', 8)}
-                className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
-              >
-                <div className="text-xl mb-1">💬</div>
-                <div>댓글 작성 (8건)</div>
-              </button>
-
-              {/* 좋아요 */}
-              <button
-                onClick={() => handleSimulateActivity('like', 10)}
-                className="bg-purple-500 hover:bg-purple-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
-              >
-                <div className="text-xl mb-1">👍</div>
-                <div>좋아요 (10건)</div>
-              </button>
-
-              {/* 북마크 */}
-              <button
-                onClick={() => handleSimulateActivity('bookmark', 6)}
-                className="bg-pink-500 hover:bg-pink-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
-              >
-                <div className="text-xl mb-1">💾</div>
-                <div>북마크 (6건)</div>
-              </button>
-
-              {/* 테스트 데이터 초기화 */}
-              <button
-                onClick={handleResetData}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-3 rounded-lg text-sm transition-colors flex flex-col items-center"
-              >
-                <div className="text-xl mb-1">🗑️</div>
-                <div>테스트 데이터 초기화</div>
-              </button>
-            </div>
-          </div>
-
-          <div className="text-sm text-gray-600 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="font-medium text-blue-900 mb-2">📊 현재 추적 중인 지표</div>
-            <div className="space-y-1 text-blue-800">
-              <div>• <strong>사용자 통계:</strong> 신규 가입, 일일 활성 사용자, 총 사용자 수</div>
-              <div>• <strong>가입 전환율:</strong> 방문자 → 가입자 전환율 (오늘/어제 비교)</div>
-              <div>• <strong>이벤트 활동:</strong> 게시글 작성, 댓글 작성, 좋아요, 북마크</div>
-              <div>• <strong>실시간 피드:</strong> 최근 사용자 활동 타임라인</div>
-            </div>
-          </div>
-        </div>
       </div>
     </AppLayout>
   );

@@ -19,7 +19,7 @@ def get_health_service() -> HealthCheckService:
 async def health_check(
     health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
-    """기본 헬스체크 (새로운 통합 API로 위임)"""
+    """기본 헬스체크 (레거시 호환성용)"""
     try:
         result = await health_service.simple_health_check()
         return result
@@ -31,7 +31,7 @@ async def health_check(
 async def api_health_check(
     health_service: HealthCheckService = Depends(get_health_service),
 ) -> Dict[str, Any]:
-    """API 헬스체크 엔드포인트 (엔드포인트 모니터링용)"""
+    """표준 API 헬스체크 엔드포인트 (모니터링 시스템에서 사용)"""
     try:
         result = await health_service.simple_health_check()
         return result

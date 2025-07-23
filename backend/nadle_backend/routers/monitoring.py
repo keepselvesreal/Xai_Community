@@ -5,7 +5,7 @@ HetrixTools 업타임 모니터링과 인프라 모니터링(Cloud Run, Vercel, 
 통합하여 제공하는 API 엔드포인트
 """
 
-from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi import APIRouter, HTTPException, Depends, Query, Request
 from typing import Dict, Any, List, Optional
 import logging
 import asyncio
@@ -33,10 +33,12 @@ from ..services.sentry_monitoring_service import SentryMonitoringService
 from ..services.endpoint_monitoring_service import EndpointMonitoringService
 
 from ..config import get_settings
+from ..logging.dependencies import get_log_service
 
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/monitoring", tags=["monitoring"])
+
 
 
 def get_hetrix_service() -> HetrixMonitoringService:
@@ -59,9 +61,31 @@ def get_unified_monitoring_service() -> UnifiedMonitoringService:
     return UnifiedMonitoringService()
 
 
-def get_sentry_monitoring_service() -> SentryMonitoringService:
-    """SentryMonitoringService 의존성 주입"""
-    return SentryMonitoringService()
+async def get_sentry_monitoring_service() -> SentryMonitoringService:
+    """SentryMonitoringService 의존성 주입 - LogService 연계"""
+    try:
+        # 직접 LogService를 생성해서 주입
+        from ..database.connection import get_database
+        from ..logging.repositories.mongo_log_repository import MongoLogRepository
+        from ..logging.services.log_service import LogService
+        
+        db = await get_database()
+        repository = MongoLogRepository(db)
+        
+        # 인덱스가 이미 있는지 확인하고 없으면 생성
+        try:
+            await repository.setup_indexes()
+        except Exception:
+            # 인덱스가 이미 존재하면 무시
+            pass
+        
+        log_service = LogService(repository, cache_service=None)
+        
+        return SentryMonitoringService(log_service=log_service)
+    except Exception as e:
+        logger.error(f"SentryMonitoringService 초기화 실패: {e}")
+        # LogService 없이라도 기본 기능은 제공
+        return SentryMonitoringService(log_service=None)
 
 
 def get_endpoint_monitoring_service() -> EndpointMonitoringService:
@@ -321,6 +345,7 @@ async def simple_health_check(
 ) -> Dict[str, Any]:
     """간단한 헬스체크 (외부 모니터링 서비스용)"""
     try:
+        
         result = await health_service.simple_health_check()
         return result
 
@@ -1633,6 +1658,9 @@ async def get_endpoint_performance() -> Dict[str, Any]:
         )
 
 
+# === 테스트 모드 관련 엔드포인트 ===
+
+
 def _calculate_endpoint_health_score(performance_stats: Dict, rate_limit_info: Dict) -> Dict[str, Any]:
     """엔드포인트 건강도 점수 계산"""
     score = 100
@@ -1682,3 +1710,223 @@ def _calculate_endpoint_health_score(performance_stats: Dict, rate_limit_info: D
         "grade": grade,
         "issues": issues
     }
+
+# === Sentry 테스트 엔드포인트 ===
+
+@router.post("/test/sentry/error")
+async def test_sentry_single_error() -> Dict[str, Any]:
+    """단일 테스트 에러를 Sentry에 전송"""
+    try:
+        # LogService와 연동된 SentryMonitoringService 사용
+        sentry_service = await get_sentry_monitoring_service()
+        result = await sentry_service.capture_test_error()
+        
+        logger.info(f"Sentry 단일 테스트 에러 전송 결과: {result}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Sentry 테스트 에러 전송 실패: {e}")
+        return {"success": False, "message": f"테스트 에러 전송 실패: {str(e)}"}
+
+@router.post("/test/sentry/multiple-errors")
+async def test_sentry_multiple_errors(count: int = 3) -> Dict[str, Any]:
+    """다중 테스트 에러를 Sentry에 전송 (통계 테스트용)"""
+    try:
+        # LogService와 연동된 SentryMonitoringService 사용
+        sentry_service = await get_sentry_monitoring_service()
+        result = await sentry_service.capture_multiple_test_errors(count)
+        
+        logger.info(f"Sentry 다중 테스트 에러 전송 결과: {result}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Sentry 다중 테스트 에러 전송 실패: {e}")
+        return {"success": False, "message": f"다중 테스트 에러 전송 실패: {str(e)}"}
+
+@router.get("/sentry/statistics")
+async def get_sentry_error_statistics() -> Dict[str, Any]:
+    """Sentry 에러 통계 조회 (DB 기반)"""
+    try:
+        # LogService와 연동된 SentryMonitoringService 사용
+        sentry_service = await get_sentry_monitoring_service()
+        stats = await sentry_service.get_error_statistics()
+        
+        # 직렬화 가능한 형태로 변환
+        result = {
+            "last_hour_errors": stats.last_hour_errors,
+            "last_24h_errors": stats.last_24h_errors,
+            "last_3d_errors": stats.last_3d_errors,
+            "error_rate_per_hour": stats.error_rate_per_hour,
+            "status": stats.status,
+            "last_error_time": stats.last_error_time,
+            "environment": stats.environment,
+            "total_events": stats.total_events,
+            "recent_errors": [
+                {
+                    "message": error.message,
+                    "timestamp": error.timestamp,
+                    "error_type": error.error_type,
+                    "file_path": error.file_path,
+                    "line_number": error.line_number
+                }
+                for error in stats.recent_errors
+            ]
+        }
+        
+        logger.info(f"Sentry 에러 통계 조회 완료: {result['status']}")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Sentry 에러 통계 조회 실패: {e}")
+        return {
+            "status": "error",
+            "message": f"에러 통계 조회 실패: {str(e)}",
+            "last_hour_errors": 0,
+            "last_24h_errors": 0,
+            "last_3d_errors": 0,
+            "error_rate_per_hour": 0.0
+        }
+
+@router.get("/sentry/health")
+async def get_sentry_health() -> Dict[str, Any]:
+    """Sentry 연결 상태 확인"""
+    try:
+        from nadle_backend.services.sentry_monitoring_service import SentryMonitoringService
+        
+        sentry_service = SentryMonitoringService()
+        health_status = await sentry_service.check_sentry_health()
+        
+        logger.info(f"Sentry 헬스체크 완료: {health_status['status']}")
+        return health_status
+        
+    except Exception as e:
+        logger.error(f"Sentry 헬스체크 실패: {e}")
+        return {
+            "status": "error",
+            "message": f"Sentry 헬스체크 실패: {str(e)}",
+            "configured": False
+        }
+
+@router.get("/sentry/debug")
+async def get_sentry_debug_info() -> Dict[str, Any]:
+    """Sentry 디버깅 정보 조회 (개발용)"""
+    try:
+        from nadle_backend.services.sentry_monitoring_service import SentryMonitoringService
+        
+        sentry_service = SentryMonitoringService()
+        
+        # 디버깅 정보 수집
+        debug_info = {
+            "sentry_configured": sentry_service.sentry_configured,
+            "error_memory_count": len(sentry_service._error_memory["recent_errors"]),
+            "total_count": sentry_service._error_memory["total_count"],
+            "recent_errors_raw": sentry_service._error_memory["recent_errors"][-3:],  # 최근 3개만
+            "instance_id": id(sentry_service),
+            "initialized": getattr(sentry_service, '_initialized', False)
+        }
+        
+        logger.info(f"Sentry 디버깅 정보: {debug_info}")
+        return debug_info
+        
+    except Exception as e:
+        logger.error(f"Sentry 디버깅 정보 조회 실패: {e}")
+        return {
+            "status": "error", 
+            "message": f"디버깅 정보 조회 실패: {str(e)}"
+        }
+
+
+@router.post("/sentry/frontend-error")
+async def record_frontend_error(request: Request) -> Dict[str, Any]:
+    """프론트엔드에서 발생한 에러를 백엔드에서도 기록"""
+    try:
+        from nadle_backend.services.sentry_monitoring_service import SentryMonitoringService
+        
+        # 요청 본문 파싱
+        body = await request.json()
+        message = body.get('message', '프론트엔드 에러')
+        source = body.get('source', 'frontend')
+        timestamp = body.get('timestamp', datetime.utcnow().isoformat())
+        url = body.get('url', 'unknown')
+        
+        sentry_service = SentryMonitoringService()
+        
+        # 프론트엔드 에러를 메모리에 기록
+        sentry_service.record_error(
+            error_message=f"[Frontend] {message}",
+            error_type="FrontendError",
+            file_path=url,
+            line_number=None
+        )
+        
+        logger.info(f"프론트엔드 에러 백엔드 기록 완료: {message}")
+        
+        return {
+            "success": True,
+            "message": "프론트엔드 에러가 백엔드에 기록되었습니다",
+            "timestamp": timestamp
+        }
+    
+    except Exception as e:
+        logger.error(f"프론트엔드 에러 백엔드 기록 실패: {e}")
+        return {
+            "success": False,
+            "message": f"프론트엔드 에러 기록 실패: {str(e)}"
+        }
+
+
+@router.post("/test/api/server-error")
+async def test_api_server_error() -> Dict[str, Any]:
+    """
+    실제 API에서 서버 에러를 발생시켜 Sentry 포착 테스트
+    """
+    try:
+        logger.info("🔥 의도적인 서버 에러 발생 테스트 시작")
+        
+        # 다양한 타입의 서버 에러 발생
+        import random
+        error_types = [
+            lambda: 1 / 0,  # ZeroDivisionError
+            lambda: [][1],  # IndexError  
+            lambda: {}["nonexistent"],  # KeyError
+            lambda: None.some_method(),  # AttributeError
+            lambda: int("not_a_number"),  # ValueError
+        ]
+        
+        # 랜덤하게 에러 타입 선택
+        error_func = random.choice(error_types)
+        error_func()  # 에러 발생!
+        
+        # 여기까지 오면 안됨
+        return {"success": False, "message": "에러가 발생하지 않았습니다"}
+        
+    except Exception as e:
+        # 에러 정보 로깅
+        logger.error(f"🔥 의도적인 API 에러 발생: {type(e).__name__} - {str(e)}")
+        
+        # 에러를 다시 raise해서 Sentry가 포착하도록 함
+        raise e
+
+
+@router.get("/test/api/database-error")
+async def test_api_database_error() -> Dict[str, Any]:
+    """
+    데이터베이스 관련 에러를 발생시켜 Sentry 포착 테스트
+    """
+    try:
+        logger.info("🗄️ 의도적인 데이터베이스 에러 발생 테스트 시작")
+        
+        # 잘못된 데이터베이스 쿼리 시도
+        from nadle_backend.models.core import User
+        
+        # 존재하지 않는 필드로 쿼리 (MongoDB 에러 발생)
+        result = await User.find({"nonexistent_field_12345": "value"}).to_list()
+        
+        return {"success": False, "message": "데이터베이스 에러가 발생하지 않았습니다"}
+        
+    except Exception as e:
+        # 에러 정보 로깅
+        logger.error(f"🗄️ 의도적인 데이터베이스 에러 발생: {type(e).__name__} - {str(e)}")
+        
+        # 에러를 다시 raise해서 Sentry가 포착하도록 함
+        raise e

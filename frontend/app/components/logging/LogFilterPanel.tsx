@@ -1,20 +1,26 @@
 /**
- * 로그 필터링 패널 컴포넌트
+ * 작업 시간: 2025-01-23 20:00 (한국 시간)
+ * 작업 버전: v2.0
+ * 주요 컴포넌트: 간소화된 로그 필터링 패널 (드롭다운 기반)
  * 
- * 로그 검색 및 필터링을 위한 UI 컴포넌트
+ * 주요 컴포넌트 구성:
+ * - LogFilterPanel: 메인 필터링 컴포넌트 (라인 20-200)
+ * - 드롭다운 필터들: 시간 범위, 로그 레벨, 서비스, 인프라 타입 (라인 50-150)
+ * - 검색 기능: 키워드 검색 (라인 30-50)
+ * 
+ * 관련 파일:
+ * - ~/types/logging.ts: 타입 정의
+ * - ~/lib/logging-api.ts: API 및 유틸리티 함수
  */
 import React, { useState } from 'react';
 import { 
   LogFilterPanelProps, 
   LogLevel, 
   ServiceType, 
-  LogSource,
   SERVICE_OPTIONS,
-  SOURCE_OPTIONS,
-  REGION_OPTIONS,
   INFRASTRUCTURE_OPTIONS
 } from '~/types/logging';
-import { logLevelUtils, serviceTypeUtils, logSourceUtils, timeUtils } from '~/lib/logging-api';
+import { logLevelUtils, serviceTypeUtils, timeUtils } from '~/lib/logging-api';
 
 export function LogFilterPanel({
   filter,
@@ -23,6 +29,25 @@ export function LogFilterPanel({
   className = ''
 }: LogFilterPanelProps) {
   const [localSearchQuery, setLocalSearchQuery] = useState(filter.search_query || '');
+
+  // 시간 범위 옵션
+  const timeRangeOptions = [
+    { label: '1시간', hours: 1 },
+    { label: '6시간', hours: 6 },
+    { label: '24시간', hours: 24 },
+    { label: '7일', hours: 168 }
+  ];
+
+  // 현재 선택된 시간 범위 찾기
+  const getCurrentTimeRange = () => {
+    const now = new Date();
+    const startTime = filter.start_time ? new Date(filter.start_time) : null;
+    
+    if (!startTime) return 24; // 기본값
+    
+    const diffHours = Math.round((now.getTime() - startTime.getTime()) / (1000 * 60 * 60));
+    return timeRangeOptions.find(option => option.hours === diffHours)?.hours || 24;
+  };
 
   const handleTimeRangeChange = (hours: number) => {
     const timeRange = timeUtils.getTimeRange(hours);
@@ -33,63 +58,27 @@ export function LogFilterPanel({
     });
   };
 
-  const handleLevelChange = (level: LogLevel, checked: boolean) => {
-    const currentLevels = filter.levels || [];
-    const newLevels = checked
-      ? [...currentLevels, level]
-      : currentLevels.filter(l => l !== level);
-    
+  const handleLevelChange = (level: string) => {
+    const newLevels = level === 'all' ? undefined : [level as LogLevel];
     onFilterChange({
       ...filter,
-      levels: newLevels.length > 0 ? newLevels : undefined
+      levels: newLevels
     });
   };
 
-  const handleServiceChange = (service: ServiceType, checked: boolean) => {
-    const currentServices = filter.services || [];
-    const newServices = checked
-      ? [...currentServices, service]
-      : currentServices.filter(s => s !== service);
-    
+  const handleServiceChange = (service: string) => {
+    const newServices = service === 'all' ? undefined : [service as ServiceType];
     onFilterChange({
       ...filter,
-      services: newServices.length > 0 ? newServices : undefined
+      services: newServices
     });
   };
 
-  const handleSourceChange = (source: LogSource, checked: boolean) => {
-    const currentSources = filter.sources || [];
-    const newSources = checked
-      ? [...currentSources, source]
-      : currentSources.filter(s => s !== source);
-    
+  const handleInfrastructureChange = (infrastructure: string) => {
+    const newInfra = infrastructure === 'all' ? undefined : [infrastructure];
     onFilterChange({
       ...filter,
-      sources: newSources.length > 0 ? newSources : undefined
-    });
-  };
-
-  const handleRegionChange = (region: string, checked: boolean) => {
-    const currentRegions = filter.regions || [];
-    const newRegions = checked
-      ? [...currentRegions, region]
-      : currentRegions.filter(r => r !== region);
-    
-    onFilterChange({
-      ...filter,
-      regions: newRegions.length > 0 ? newRegions : undefined
-    });
-  };
-
-  const handleInfrastructureChange = (infrastructure: string, checked: boolean) => {
-    const currentInfra = filter.infrastructure_types || [];
-    const newInfra = checked
-      ? [...currentInfra, infrastructure]
-      : currentInfra.filter(i => i !== infrastructure);
-    
-    onFilterChange({
-      ...filter,
-      infrastructure_types: newInfra.length > 0 ? newInfra : undefined
+      infrastructure_types: newInfra
     });
   };
 
@@ -98,7 +87,7 @@ export function LogFilterPanel({
     onFilterChange({
       ...filter,
       search_query: localSearchQuery.trim() || undefined,
-      page: 1 // 검색 시 첫 페이지로 리셋
+      page: 1
     });
   };
 
@@ -107,18 +96,16 @@ export function LogFilterPanel({
     onFilterChange({
       page: 1,
       page_size: filter.page_size,
-      ...timeUtils.getTimeRange(24) // 기본 24시간으로 리셋
+      ...timeUtils.getTimeRange(24)
     });
   };
 
   const hasActiveFilters = !!(
     filter.levels?.length ||
     filter.services?.length ||
-    filter.sources?.length ||
     filter.search_query ||
     filter.user_id ||
     filter.endpoint ||
-    filter.regions?.length ||
     filter.infrastructure_types?.length ||
     filter.status_codes?.length ||
     filter.instance_ids?.length ||
@@ -126,189 +113,106 @@ export function LogFilterPanel({
   );
 
   return (
-    <div className={`bg-white rounded-lg border border-gray-200 p-6 ${className}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-2">
-          <span className="text-xl">🔍</span>
-          <h3 className="text-lg font-semibold text-gray-900">필터링</h3>
-        </div>
-        {hasActiveFilters && (
-          <button
-            onClick={clearAllFilters}
-            className="text-sm text-red-600 hover:text-red-700 font-medium"
-            disabled={loading}
-          >
-            모든 필터 지우기
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-6">
-        {/* 검색 쿼리 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            키워드 검색
-          </label>
-          <form onSubmit={handleSearchSubmit} className="flex space-x-2">
+    <div className={`bg-white border-b border-gray-200 p-4 ${className}`}>
+      <div className="space-y-3">
+        {/* 첫 번째 줄: 검색 */}
+        <div className="flex items-center space-x-4">
+          <form onSubmit={handleSearchSubmit} className="flex items-center space-x-2">
             <input
               type="text"
               value={localSearchQuery}
               onChange={(e) => setLocalSearchQuery(e.target.value)}
-              placeholder="로그 메시지 또는 스택 트레이스 검색..."
-              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="키워드 검색..."
+              className="w-64 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={loading}
             />
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               검색
             </button>
           </form>
         </div>
 
-        {/* 시간 범위 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            시간 범위
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {[
-              { label: '1시간', hours: 1 },
-              { label: '6시간', hours: 6 },
-              { label: '24시간', hours: 24 },
-              { label: '7일', hours: 168 }
-            ].map(({ label, hours }) => (
-              <button
-                key={hours}
-                onClick={() => handleTimeRangeChange(hours)}
-                disabled={loading}
-                className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
-              >
-                {label}
-              </button>
-            ))}
+        {/* 두 번째 줄: 시간, 레벨, 서비스, 인프라 */}
+        <div className="flex flex-wrap items-center gap-4">
+          {/* 시간 범위 드롭다운 */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">시간:</label>
+            <select
+              value={getCurrentTimeRange()}
+              onChange={(e) => handleTimeRangeChange(Number(e.target.value))}
+              disabled={loading}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              {timeRangeOptions.map(option => (
+                <option key={option.hours} value={option.hours}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
 
-        {/* 로그 레벨 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            로그 레벨
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {logLevelUtils.all.map((level) => (
-              <label key={level} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filter.levels?.includes(level) || false}
-                  onChange={(e) => handleLevelChange(level, e.target.checked)}
-                  disabled={loading}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-sm text-gray-700">{level}</span>
-              </label>
-            ))}
+          {/* 로그 레벨 드롭다운 */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">레벨:</label>
+            <select
+              value={filter.levels?.[0] || 'all'}
+              onChange={(e) => handleLevelChange(e.target.value)}
+              disabled={loading}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">전체</option>
+              {logLevelUtils.all.map((level) => (
+                <option key={level} value={level}>
+                  {level}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
 
-        {/* 서비스 타입 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            서비스
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {SERVICE_OPTIONS.map((service) => (
-              <label key={service.value} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filter.services?.includes(service.value) || false}
-                  onChange={(e) => handleServiceChange(service.value, e.target.checked)}
-                  disabled={loading}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-lg">{service.icon}</span>
-                <span className="text-sm text-gray-700">
+          {/* 서비스 드롭다운 */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">서비스:</label>
+            <select
+              value={filter.services?.[0] || 'all'}
+              onChange={(e) => handleServiceChange(e.target.value)}
+              disabled={loading}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">전체</option>
+              {SERVICE_OPTIONS.map((service) => (
+                <option key={service.value} value={service.value}>
                   {service.label}
-                </span>
-              </label>
-            ))}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 인프라 타입 드롭다운 */}
+          <div className="flex items-center space-x-2">
+            <label className="text-sm font-medium text-gray-700">인프라:</label>
+            <select
+              value={filter.infrastructure_types?.[0] || 'all'}
+              onChange={(e) => handleInfrastructureChange(e.target.value)}
+              disabled={loading}
+              className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="all">전체</option>
+              {INFRASTRUCTURE_OPTIONS.map((infra) => (
+                <option key={infra.value} value={infra.value}>
+                  {infra.label}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
-        {/* 로그 소스 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            소스
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {SOURCE_OPTIONS.map((source) => (
-              <label key={source.value} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filter.sources?.includes(source.value) || false}
-                  onChange={(e) => handleSourceChange(source.value, e.target.checked)}
-                  disabled={loading}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-lg">{source.icon}</span>
-                <span className="text-sm text-gray-700">{source.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* 지역 필터 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            지역
-          </label>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {REGION_OPTIONS.map((region) => (
-              <label key={region.value} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filter.regions?.includes(region.value) || false}
-                  onChange={(e) => handleRegionChange(region.value, e.target.checked)}
-                  disabled={loading}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-lg">{region.icon}</span>
-                <span className="text-sm text-gray-700">{region.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* 인프라 타입 필터 */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            인프라 타입
-          </label>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-            {INFRASTRUCTURE_OPTIONS.map((infra) => (
-              <label key={infra.value} className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={filter.infrastructure_types?.includes(infra.value) || false}
-                  onChange={(e) => handleInfrastructureChange(infra.value, e.target.checked)}
-                  disabled={loading}
-                  className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
-                />
-                <span className="text-lg">{infra.icon}</span>
-                <span className="text-sm text-gray-700">{infra.label}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* 추가 필터 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              사용자 ID
-            </label>
+        {/* 세 번째 줄: 사용자 ID, 엔드포인트, 초기화 버튼 */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center space-x-2">
             <input
               type="text"
               value={filter.user_id || ''}
@@ -316,16 +220,13 @@ export function LogFilterPanel({
                 ...filter,
                 user_id: e.target.value.trim() || undefined
               })}
-              placeholder="특정 사용자 ID"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="사용자 ID"
+              className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={loading}
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              엔드포인트
-            </label>
+          <div className="flex items-center space-x-2">
             <input
               type="text"
               value={filter.endpoint || ''}
@@ -333,49 +234,24 @@ export function LogFilterPanel({
                 ...filter,
                 endpoint: e.target.value.trim() || undefined
               })}
-              placeholder="예: /api/users"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              placeholder="엔드포인트"
+              className="w-32 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               disabled={loading}
             />
           </div>
+
+          {/* 필터 초기화 */}
+          {hasActiveFilters && (
+            <button
+              onClick={clearAllFilters}
+              className="px-3 py-2 text-sm text-red-600 hover:text-red-700 border border-red-300 rounded-lg hover:bg-red-50 transition-colors"
+              disabled={loading}
+            >
+              초기화
+            </button>
+          )}
         </div>
       </div>
-
-      {/* 활성 필터 표시 */}
-      {hasActiveFilters && (
-        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="text-sm text-blue-700">
-            <strong>활성 필터:</strong>
-            {filter.levels?.length && (
-              <span className="ml-2">레벨: {filter.levels.join(', ')}</span>
-            )}
-            {filter.services?.length && (
-              <span className="ml-2">서비스: {filter.services.join(', ')}</span>
-            )}
-            {filter.sources?.length && (
-              <span className="ml-2">소스: {filter.sources.join(', ')}</span>
-            )}
-            {filter.search_query && (
-              <span className="ml-2">검색: "{filter.search_query}"</span>
-            )}
-            {filter.user_id && (
-              <span className="ml-2">사용자: {filter.user_id}</span>
-            )}
-            {filter.endpoint && (
-              <span className="ml-2">엔드포인트: {filter.endpoint}</span>
-            )}
-            {filter.regions?.length && (
-              <span className="ml-2">지역: {filter.regions.join(', ')}</span>
-            )}
-            {filter.infrastructure_types?.length && (
-              <span className="ml-2">인프라: {filter.infrastructure_types.join(', ')}</span>
-            )}
-            {filter.status_codes?.length && (
-              <span className="ml-2">상태코드: {filter.status_codes.join(', ')}</span>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

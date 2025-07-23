@@ -55,17 +55,10 @@ class EndpointMonitoringService:
 
         # 모니터링할 엔드포인트 정의
         self.endpoints = [
-            # Health API
+            # Health API (통합된 헬스체크)
             {
                 "endpoint": "/api/health",
                 "name": "Health Check",
-                "method": "GET",
-                "timeout": 5.0,
-                "expected_status": [200],
-            },
-            {
-                "endpoint": "/api/monitoring/health/simple",
-                "name": "Simple Health",
                 "method": "GET",
                 "timeout": 5.0,
                 "expected_status": [200],

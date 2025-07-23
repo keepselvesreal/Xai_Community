@@ -161,7 +161,11 @@ def create_app() -> FastAPI:
         app.include_router(reports.router, prefix="/api/reports", tags=["reports"])  # 신고 라우터 추가
         app.include_router(logging_router, prefix="/api", tags=["logging"])  # 로깅 시스템 라우터 추가
         
-        logger.info("✅ Routers 추가 성공 (HetrixTools 모니터링 및 로깅 시스템 포함)")
+        # 클라이언트 에러 수집 라우터 추가
+        from nadle_backend.routers.client_errors import router as client_errors_router
+        app.include_router(client_errors_router, tags=["client-errors"])
+        
+        logger.info("✅ Routers 추가 성공 (HetrixTools 모니터링, 로깅 시스템, 클라이언트 에러 수집 포함)")
         routers_status = "added"
     except Exception as e:
         logger.error(f"❌ Routers 추가 실패: {e}")
@@ -313,6 +317,15 @@ def create_app() -> FastAPI:
         app.title = "XAI Community Backend - Full Restore"
         app.description = "완전히 복원된 XAI Community FastAPI Backend"
         app.version = "1.0.0-restored"
+        
+        # Exception Handlers 등록 (마지막에 등록)
+        logger.info("⚠️ Exception Handlers 등록 중...")
+        try:
+            from nadle_backend.middleware.exception_handlers import setup_exception_handlers
+            setup_exception_handlers(app)
+            logger.info("✅ Exception Handlers 등록 완료")
+        except Exception as handler_error:
+            logger.error(f"❌ Exception Handlers 등록 실패: {handler_error}")
         
         logger.info("✅ 최종 애플리케이션 설정 완료")
         logger.info("🎉 모든 컴포넌트 점진적 복원 성공!")

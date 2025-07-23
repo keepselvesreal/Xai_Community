@@ -6,6 +6,7 @@ Sentry 미들웨어
 
 import time
 import logging
+from datetime import datetime
 from typing import Callable, Optional, Dict, Any
 from contextlib import asynccontextmanager
 import asyncio
@@ -69,9 +70,74 @@ class SentryRequestMiddleware(BaseHTTPMiddleware):
             duration = time.time() - start_time
             set_tag("request.duration", f"{duration:.3f}s")
             set_tag("error.occurred", True)
+            
+            # 네트워크 에러 타입 분류 및 태그 추가
+            error_category = self._categorize_error(e)
+            set_tag("error.category", error_category)
+            set_tag("error.type", type(e).__name__)
 
             # 에러를 Sentry에 자동 전송 (FastAPI integration에서 처리)
             logger.error(f"Request failed: {request.method} {request.url} - {e}")
+            
+            # LogService에 직접 에러 기록 (통합 관리)
+            try:
+                from ..core.logging import LogLevel, LogServiceType, LogSource, LogContext, LogMetadata
+                from ..logging.dependencies import get_log_repository, get_cache_service
+                from ..logging.services.log_service import LogService
+                from ..database.connection import get_database
+                import traceback
+                
+                # LogService 인스턴스 생성 (미들웨어에서는 직접 생성)
+                database = await get_database()
+                
+                # 간단한 LogRepository 생성
+                from ..logging.repositories.mongo_log_repository import MongoLogRepository
+                log_repository = MongoLogRepository(database)
+                
+                # LogService 생성
+                log_service = LogService(log_repository=log_repository)
+                
+                # 스택 트레이스에서 파일 정보 추출
+                tb = traceback.extract_tb(e.__traceback__)
+                file_path = tb[-1].filename if tb else None
+                line_number = tb[-1].lineno if tb else None
+                
+                # LogEntry 생성하여 DB에 저장
+                log_context = LogContext(
+                    endpoint=str(request.url),
+                    method=request.method,
+                    ip_address=request.client.host if request.client else None,
+                    infrastructure="api_middleware"
+                )
+                
+                log_metadata = LogMetadata(
+                    error_type=e.__class__.__name__,
+                    tags=["api_error", "middleware", "sentry", error_category],
+                    custom={
+                        "file_path": file_path,
+                        "line_number": line_number,
+                        "request_method": request.method,
+                        "request_url": str(request.url),
+                        "error_category": error_category,
+                        "is_network_error": error_category in ["network", "timeout", "connection"]
+                    }
+                )
+                
+                await log_service.log_internal(
+                    level=LogLevel.ERROR,
+                    service=LogServiceType.API,
+                    message=f"[API] {request.method} {request.url} - {str(e)}",
+                    context=log_context,
+                    metadata=log_metadata,
+                    stack_trace=traceback.format_exc(),
+                    timestamp=datetime.utcnow()
+                )
+                
+                logger.info(f"✅ API 에러가 LogService에 기록됨: {e.__class__.__name__}")
+                
+            except Exception as record_error:
+                logger.warning(f"⚠️ API 에러 LogService 기록 실패: {record_error}")
+            
             raise
 
 
@@ -137,6 +203,64 @@ class SentryUserMiddleware(BaseHTTPMiddleware):
         except ImportError:
             # 테스트용 기본 구현
             return None
+
+    def _categorize_error(self, exception: Exception) -> str:
+        """
+        예외를 카테고리별로 분류
+        
+        Args:
+            exception: 발생한 예외
+            
+        Returns:
+            str: 에러 카테고리
+        """
+        exception_name = exception.__class__.__name__.lower()
+        exception_message = str(exception).lower()
+        
+        # 네트워크 관련 에러
+        if any(keyword in exception_name for keyword in [
+            "connection", "network", "timeout", "socket"
+        ]):
+            return "network"
+        
+        # 타임아웃 에러
+        if any(keyword in exception_name for keyword in [
+            "timeout", "asyncio.timeout"
+        ]) or "timeout" in exception_message:
+            return "timeout"
+        
+        # 연결 에러
+        if any(keyword in exception_name for keyword in [
+            "connection", "connect", "disconnect"
+        ]):
+            return "connection"
+        
+        # 인증/권한 에러
+        if any(keyword in exception_name for keyword in [
+            "auth", "permission", "forbidden", "unauthorized"
+        ]):
+            return "auth"
+        
+        # 검증 에러
+        if any(keyword in exception_name for keyword in [
+            "validation", "value", "type", "attribute"
+        ]):
+            return "validation"
+        
+        # HTTP 관련 에러
+        if any(keyword in exception_name for keyword in [
+            "http", "status", "response"
+        ]):
+            return "http"
+        
+        # 데이터베이스 에러
+        if any(keyword in exception_name for keyword in [
+            "mongo", "database", "db", "collection"
+        ]):
+            return "database"
+        
+        # 기타
+        return "other"
 
 
 def track_performance(operation_name: str):

@@ -456,9 +456,8 @@ export function LayeredMonitoring({
                       </>
                     ) : (
                       <>
-                        <div>평균 응답시간: ~{Math.floor(Math.random() * 100 + 50)}ms</div>
-                        <div>처리량: ~{Math.floor(Math.random() * 50 + 10)} req/min</div>
-                        <div>API 엔드포인트: {data ? '정상' : '확인 중'}</div>
+                        <div>상태: 확인 중</div>
+                        <div>데이터 로딩 대기</div>
                       </>
                     )}
                   </div>
@@ -555,7 +554,7 @@ export function LayeredMonitoring({
             <div className={`${getStatusBackgroundClass(redisStatus)} border rounded-lg p-4`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="font-semibold">
-                  {import.meta.env.VITE_NODE_ENV === 'development' ? 'Redis (로컬)' : 'Upstash Redis'}
+                  {environment === 'development' ? 'Redis (로컬)' : 'Upstash Redis'}
                 </span>
                 <div className="flex items-center space-x-2">
                   <span className="text-lg">{getStatusIcon(redisStatus)}</span>
@@ -566,7 +565,7 @@ export function LayeredMonitoring({
                 </div>
               </div>
               <div className={`space-y-1 text-sm ${getStatusTextClass(redisStatus)}`}>
-                {import.meta.env.VITE_NODE_ENV === 'development' ? (
+                {environment === 'development' ? (
                   <>
                     <div>포트: 6379</div>
                     <div>키 프리픽스: dev:</div>
@@ -575,7 +574,7 @@ export function LayeredMonitoring({
                 ) : (
                   <>
                     <div>서비스: Upstash Redis</div>
-                    <div>키 프리픽스: {import.meta.env.VITE_NODE_ENV === 'staging' ? 'stage:' : 'prod:'}</div>
+                    <div>키 프리픽스: {environment === 'staging' ? 'stage:' : 'prod:'}</div>
                     <div>모드: 클라우드</div>
                   </>
                 )}

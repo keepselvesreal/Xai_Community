@@ -148,43 +148,7 @@ export class AnalyticsDashboardService {
     }
   }
 
-  /**
-   * 개발환경용 사용자 활동 시뮬레이션
-   */
-  async simulateUserActivity(activityType: string, count: number = 1): Promise<any> {
-    try {
-      const response = await apiClient.request('POST', '/api/analytics/test/simulate', {
-        params: { activity_type: activityType, count }
-      });
-      
-      if (response.success && response.data) {
-        return response.data;
-      }
-      
-      throw new Error('활동 시뮬레이션 실패');
-    } catch (error) {
-      console.error('활동 시뮬레이션 오류:', error);
-      throw error;
-    }
-  }
 
-  /**
-   * 개발환경용 테스트 데이터 초기화
-   */
-  async resetTestData(): Promise<any> {
-    try {
-      const response = await apiClient.request('DELETE', '/api/analytics/test/reset');
-      
-      if (response.success && response.data) {
-        return response.data;
-      }
-      
-      throw new Error('테스트 데이터 초기화 실패');
-    } catch (error) {
-      console.error('테스트 데이터 초기화 오류:', error);
-      throw error;
-    }
-  }
 }
 
 // 글로벌 인스턴스

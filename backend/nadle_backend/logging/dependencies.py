@@ -26,6 +26,7 @@ from .adapters import (
     UpstashLogAdapter,
     CloudRunLogAdapter,
     AtlasLogAdapter,
+    SentryLogAdapter,
 )
 
 logger = logging.getLogger(__name__)
@@ -168,6 +169,43 @@ def _create_external_adapters() -> Dict[str, ExternalLogAdapterInterface]:
     )
     logger.info("Atlas log adapter configured with mock data")
 
+    # Sentry adapter - SentryMonitoringService와 연계
+    try:
+        from ..services.sentry_monitoring_service import SentryMonitoringService
+        from ..config import get_settings
+        
+        settings = get_settings()
+        sentry_configured = (
+            settings.sentry_dsn 
+            and len(settings.sentry_dsn.strip()) > 0
+        )
+        
+        if sentry_configured:
+            # LogService는 순환 참조 방지를 위해 None으로 초기화
+            sentry_service = SentryMonitoringService(log_service=None)
+            
+            adapters["sentry"] = SentryLogAdapter(
+                sentry_monitoring_service=sentry_service,
+                use_mock=False
+            )
+            logger.info("Sentry log adapter configured")
+        else:
+            # Mock adapter for development
+            adapters["sentry"] = SentryLogAdapter(
+                sentry_monitoring_service=None,
+                use_mock=True
+            )
+            logger.info("Sentry log adapter configured with mock data")
+            
+    except Exception as e:
+        logger.warning(f"Sentry adapter initialization failed: {e}")
+        # Fallback to mock adapter
+        adapters["sentry"] = SentryLogAdapter(
+            sentry_monitoring_service=None,
+            use_mock=True
+        )
+        logger.info("Sentry log adapter configured with mock data (fallback)")
+
     return adapters
 
 
@@ -275,6 +313,10 @@ async def get_external_log_collector_with_mock_adapters(
             api_key="test-key",
             group_id="test-group",
             cluster_name="test-cluster",
+            use_mock=True,
+        ),
+        "sentry": SentryLogAdapter(
+            sentry_monitoring_service=None,
             use_mock=True,
         ),
     }

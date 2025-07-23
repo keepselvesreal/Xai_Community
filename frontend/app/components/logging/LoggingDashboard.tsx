@@ -1,7 +1,19 @@
 /**
- * 로깅 대시보드 메인 컴포넌트
+ * 작업 시간: 2025-01-23 20:00 (한국 시간)
+ * 작업 버전: v2.0
+ * 주요 컴포넌트: 통합 로깅 대시보드 (필터와 로그 목록 통합)
  * 
- * 태수가 제시한 UI 구조를 그대로 구현한 통합 로깅 대시보드
+ * 주요 컴포넌트 구성:
+ * - LoggingDashboard: 메인 대시보드 컴포넌트 (라인 17-330)
+ * - 로그 통계 카드: LogStatsCards (라인 220-230)
+ * - 최근 에러 목록: LogErrorTopList (라인 233-239)
+ * - 통합 로그 목록: 필터 + 테이블 + 페이지네이션 (라인 242-300)
+ * - 로그 상세 모달: LogDetailModal (라인 302-306)
+ * 
+ * 관련 파일:
+ * - LogFilterPanel.tsx: 드롭다운 기반 필터 패널
+ * - LogTable.tsx: 로그 테이블 컴포넌트
+ * - LogDetailModal.tsx: 로그 상세보기 모달
  */
 import React, { useState, useEffect } from 'react';
 import { LoggingDashboardProps, LogFilter, LogEntry, LogDashboardResponse } from '~/types/logging';
@@ -188,15 +200,15 @@ export function LoggingDashboard({
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">
-            🔍 로그 관리 대시보드
+            로그 목록
           </h1>
-          {lastUpdated && (
-            <p className="text-sm text-gray-500">
-              마지막 업데이트: {timeUtils.formatTimestamp(lastUpdated.toISOString())}
-            </p>
-          )}
         </div>
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-4">
+          {lastUpdated && (
+            <span className="text-sm text-gray-500">
+              마지막 업데이트: {timeUtils.formatTimestamp(lastUpdated.toISOString())}
+            </span>
+          )}
           {autoRefresh && (
             <span className="text-sm text-green-600 bg-green-100 px-2 py-1 rounded">
               자동 새로고침 활성
@@ -218,8 +230,8 @@ export function LoggingDashboard({
 
       {/* 요약 통계 */}
       {dashboardData && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">
             📊 요약 통계 (최근 24시간)
           </h2>
           <LogStatsCards
@@ -238,29 +250,31 @@ export function LoggingDashboard({
         />
       )}
 
-      {/* 필터링 패널 */}
-      <LogFilterPanel
-        filter={filter}
-        onFilterChange={handleFilterChange}
-        loading={searchLoading}
-      />
-
       {/* 로그 목록 */}
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">
-            📋 로그 목록
-          </h2>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+        {/* 통합된 헤더와 필터 */}
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="flex items-center space-x-4">
+            <h2 className="text-lg font-semibold text-gray-900">
+              📋 로그 목록
+            </h2>
             <span className="text-sm text-gray-500">
-              총 {totalCount.toLocaleString()}개 로그
+              총 {totalCount.toLocaleString()}개
             </span>
             <span className="text-sm text-gray-500">
               페이지: {filter.page || 1}
             </span>
           </div>
         </div>
+        
+        {/* 필터링 패널 */}
+        <LogFilterPanel
+          filter={filter}
+          onFilterChange={handleFilterChange}
+          loading={searchLoading}
+        />
 
+        {/* 로그 테이블 */}
         <LogTable
           logs={logs}
           loading={searchLoading}
@@ -269,7 +283,7 @@ export function LoggingDashboard({
 
         {/* 페이지네이션 */}
         {totalCount > 0 && (
-          <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center justify-between p-4 border-t border-gray-200 bg-gray-50">
             <div className="text-sm text-gray-500">
               {((filter.page || 1) - 1) * (filter.page_size || 50) + 1} - {Math.min((filter.page || 1) * (filter.page_size || 50), totalCount)} / {totalCount}
             </div>
