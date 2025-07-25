@@ -22,12 +22,13 @@ import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 import * as React from "react";
 import * as Sentry from "@sentry/react";
+import { getNodeEnv } from "~/utils/env";
 
 // MVP 단계 Sentry 초기화
 function initSentry() {
   // 환경별 DSN 설정
   const dsn = import.meta.env.VITE_SENTRY_DSN;
-  const environment = import.meta.env.VITE_NODE_ENV || 'development';
+  const environment = getNodeEnv();
   
   if (!dsn) {
     console.warn('⚠️ Sentry DSN이 설정되지 않았습니다. 환경변수 VITE_SENTRY_DSN을 확인하세요.');

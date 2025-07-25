@@ -18,6 +18,7 @@ import { ThemeProvider } from "~/contexts/ThemeContext";
 import { SentryErrorBoundary } from "~/components/errors/SentryErrorBoundary";
 import { getAnalytics } from "~/hooks/useAnalytics";
 import { sentryService } from "~/lib/sentry-service";
+import { getNodeEnv, validateAndGetEnvironment } from "~/utils/env";
 import { setupGlobalErrorHandlers } from "~/utils/errorReporter";
 
 // 빌드 정보 타입 정의
@@ -32,8 +33,13 @@ interface BuildInfo {
 
 // 서버 사이드에서 환경변수를 안전하게 로드
 export async function loader() {
-  // 환경변수 우선순위: ENVIRONMENT > NODE_ENV
-  const environment = process.env.ENVIRONMENT || process.env.NODE_ENV || "development";
+  // VITE_NODE_ENV로 통일된 환경 설정
+  const environment = process.env.VITE_NODE_ENV;
+  
+  // 환경변수가 명시적으로 설정되지 않은 경우 에러
+  if (!environment) {
+    throw new Error("❌ 서버 환경변수 VITE_NODE_ENV가 설정되지 않았습니다. 환경변수 파일에서 설정해주세요.");
+  }
   
   const buildInfo: BuildInfo = {
     version: process.env.npm_package_version || "unknown",
@@ -56,8 +62,7 @@ export async function loader() {
   // Vercel 환경변수 콘솔 출력 (staging, production에서)
   if (environment === "staging" || environment === "production") {
     console.log("=== Vercel Environment Variables ===");
-    console.log("NODE_ENV:", process.env.NODE_ENV);
-    console.log("ENVIRONMENT:", process.env.ENVIRONMENT);
+    console.log("VITE_NODE_ENV:", process.env.VITE_NODE_ENV);
     console.log("VERCEL_ENV:", process.env.VERCEL_ENV);
     console.log("VERCEL_GIT_COMMIT_SHA:", process.env.VERCEL_GIT_COMMIT_SHA);
     console.log("VERCEL_DEPLOYMENT_ID:", process.env.VERCEL_DEPLOYMENT_ID);
@@ -163,12 +168,13 @@ export default function App() {
     if (typeof window !== "undefined" && !sentryInitialized) {
       try {
         // Vite 환경변수에서 직접 로드
+        const nodeEnv = getNodeEnv();
         const finalConfig = {
           dsn: import.meta.env.VITE_SENTRY_DSN,
-          environment: import.meta.env.VITE_ENVIRONMENT || 'development',
+          environment: nodeEnv,
           tracesSampleRate: parseFloat(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE || '1.0'),
           sendDefaultPii: import.meta.env.VITE_SENTRY_SEND_DEFAULT_PII === 'true',
-          debug: import.meta.env.VITE_SENTRY_DEBUG === 'true' || import.meta.env.VITE_ENVIRONMENT === 'development',
+          debug: import.meta.env.VITE_SENTRY_DEBUG === 'true' || nodeEnv === 'development',
         };
 
         console.log('🚨 프론트엔드 Sentry 초기화 시도:', {
@@ -207,10 +213,26 @@ export default function App() {
 
   // 환경정보 콘솔 출력 및 Google Analytics 페이지 변경 추적
   useEffect(() => {
-    // 클라이언트에서 올바른 환경 설정 (hydration 불일치 방지)
+    // 클라이언트에서 환경 설정 검증 및 설정
     if (typeof window !== "undefined") {
-      const actualEnvironment = import.meta.env.VITE_NODE_ENV || 'development';
-      setClientEnvironment(actualEnvironment);
+      try {
+        // 모든 환경에서 백엔드-프론트엔드 환경값 일치 검증
+        const validatedEnv = validateAndGetEnvironment(buildInfo?.environment);
+        setClientEnvironment(validatedEnv);
+        
+        console.log(`✅ 환경 검증 성공: ${validatedEnv}`);
+      } catch (error) {
+        // 환경 불일치 시 사용자에게 명확한 오류 표시
+        console.error('환경 검증 실패:', error);
+        
+        if (error instanceof Error) {
+          // 사용자에게 친화적인 오류 메시지 표시
+          alert(error.message);
+        }
+        
+        // 오류를 다시 던져서 애플리케이션 로딩 중단
+        throw error;
+      }
     }
     
     // 환경정보 콘솔 출력 (클라이언트 사이드)
@@ -250,8 +272,8 @@ export default function App() {
                   id="environment-info" 
                   style={{
                     position: "fixed",
-                    bottom: "10px",
-                    right: "10px", 
+                    top: "4px",
+                    right: "4px", 
                     background: clientEnvironment === "production" 
                       ? "rgba(220, 38, 38, 0.9)" 
                       : clientEnvironment === "staging" 
@@ -271,9 +293,7 @@ export default function App() {
                       : "1px solid #374151"
                   }}
                 >
-                  <div><strong>환경 정보:</strong></div>
                   <div>Environment: <strong>{clientEnvironment}</strong></div>
-                  <div>Version: {buildInfo.version || "unknown"}</div>
                   
                   {/* Vercel 배포 정보 표시 */}
                   {buildInfo.deploymentId && (

@@ -8,6 +8,7 @@
  */
 import { useState, useEffect } from 'react';
 import { EnvironmentSelector, type Environment } from './EnvironmentSelector';
+import { getNodeEnv } from '~/utils/env';
 import { LayeredMonitoring } from './LayeredMonitoring';
 import { getUnifiedDashboardData, logMonitoringError } from '~/lib/unified-monitoring-api';
 import type { UnifiedMonitoringData } from '~/types/unified-monitoring';
@@ -35,7 +36,7 @@ export function UnifiedMonitoringDashboard({
    */
   const loadRedisStatus = async () => {
     try {
-      const nodeEnv = import.meta.env.VITE_NODE_ENV || 'development';
+      const nodeEnv = getNodeEnv();
       let apiEndpoint = '';
       
       if (nodeEnv === 'development') {
