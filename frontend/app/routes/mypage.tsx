@@ -340,40 +340,6 @@ export default function MyPage() {
     }
   }
 
-  async function handleChangeEmail() {
-    
-    const currentEmail = user.email;
-    const newEmail = window.prompt('새로운 이메일을 입력하세요:', currentEmail);
-    
-    if (newEmail === null) return; // 취소한 경우
-    if (newEmail.trim() === currentEmail) {
-      alert('현재 이메일과 동일합니다.');
-      return;
-    }
-    
-    // 이메일 형식 검증
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-      alert('올바른 이메일 형식을 입력해주세요.');
-      return;
-    }
-    
-    try {
-      const result = await apiClient.updateUserProfile({ email: newEmail });
-      if (result.success) {
-        alert('이메일이 성공적으로 변경되었습니다.\n이메일 인증이 필요할 수 있습니다.');
-        // AuthContext의 사용자 정보 새로고침
-        await refreshUser();
-        // 사용자 활동 정보 새로고침
-        await loadUserActivity();
-      } else {
-        alert(`이메일 변경에 실패했습니다: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Email update error:', error);
-      alert('이메일 변경 중 오류가 발생했습니다.');
-    }
-  }
 
   async function handleChangePassword() {
     
@@ -413,60 +379,7 @@ export default function MyPage() {
     }
   }
 
-  async function handleEditProfile() {
-    
-    const currentName = user.name || user.display_name || '';
-    const currentBio = user.bio || '';
-    
-    const newName = window.prompt('이름을 입력하세요:', currentName);
-    if (newName === null) return; // 취소한 경우
-    
-    const newBio = window.prompt('소개를 입력하세요:', currentBio);
-    if (newBio === null) return; // 취소한 경우
-    
-    try {
-      const profileData: { name?: string; bio?: string } = {};
-      if (newName.trim() !== currentName) {
-        profileData.name = newName.trim();
-      }
-      if (newBio.trim() !== currentBio) {
-        profileData.bio = newBio.trim();
-      }
-      
-      if (Object.keys(profileData).length === 0) {
-        alert('변경된 내용이 없습니다.');
-        return;
-      }
-      
-      const result = await apiClient.updateUserProfile(profileData);
-      if (result.success) {
-        alert('프로필이 성공적으로 업데이트되었습니다.');
-        // AuthContext의 사용자 정보 새로고침
-        await refreshUser();
-        // 사용자 활동 정보 새로고침
-        await loadUserActivity();
-      } else {
-        alert(`프로필 업데이트에 실패했습니다: ${result.error}`);
-      }
-    } catch (error) {
-      console.error('Profile update error:', error);
-      alert('프로필 업데이트 중 오류가 발생했습니다.');
-    }
-  }
 
-  function handleShowLoginHistory() {
-    alert('로그인 기록 페이지를 표시합니다.\n\n최근 로그인:\n• 2024-12-28 14:30 (현재 세션)\n• 2024-12-27 09:15\n• 2024-12-26 18:42');
-  }
-
-  function handleShow2FA() {
-    if (window.confirm('2단계 인증을 설정하시겠습니까?\n보안이 더욱 강화됩니다.')) {
-      alert('2단계 인증 설정 페이지로 이동합니다.');
-    }
-  }
-
-  function handleShowPrivacySettings() {
-    alert('개인정보 설정 페이지로 이동합니다.\n\n설정 가능한 항목:\n• 이름 공개 여부\n• 동/호수 공개 여부\n• 활동 기록 공개 여부');
-  }
 
   return (
     <AppLayout 
@@ -477,92 +390,6 @@ export default function MyPage() {
     >
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* 내 정보 카드 */}
-        {isLoading ? (
-          <UserInfoSkeleton />
-        ) : (
-          <div className="card p-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-accent-primary to-accent-secondary p-6">
-              <h3 className="font-bold text-xl text-white drop-shadow-sm">
-                내 정보
-              </h3>
-            </div>
-            
-            <div className="p-8 space-y-8">
-            <div className="flex justify-between items-start py-4">
-              <div className="flex-1">
-                <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>아이디</div>
-                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{user?.user_handle || user?.display_name || user?.email}</div>
-                <div className="text-sm" style={{color: 'var(--text-muted)'}}>로그인에 사용되는 아이디</div>
-              </div>
-              <button 
-                onClick={() => handleChangeUserId()}
-                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
-              >
-                변경
-              </button>
-            </div>
-
-            <div className="flex justify-between items-start py-4">
-              <div className="flex-1">
-                <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>이메일</div>
-                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{user?.email}</div>
-                <div className="text-sm" style={{color: 'var(--text-muted)'}}>알림 및 계정 복구용 이메일</div>
-              </div>
-              <button 
-                onClick={() => handleChangeEmail()}
-                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
-              >
-                변경
-              </button>
-            </div>
-
-            <div className="flex justify-between items-start py-4">
-              <div className="flex-1">
-                <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>비밀번호</div>
-                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>••••••••</div>
-                <div className="text-sm" style={{color: 'var(--text-muted)'}}>마지막 변경: 2024년 10월 15일</div>
-              </div>
-              <button 
-                onClick={() => handleChangePassword()}
-                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
-              >
-                변경
-              </button>
-            </div>
-
-            <button 
-              onClick={() => handleEditProfile()}
-              className="w-full py-4 rounded-xl font-semibold transition-all text-lg bg-accent-primary text-white hover:bg-accent-hover"
-            >
-              수정
-            </button>
-
-            {/* 보안 설정 링크 */}
-            <div className="flex justify-center gap-6 pt-6 border-t border-var-light">
-              <button 
-                onClick={() => handleShowLoginHistory()}
-                className="text-var-muted hover:text-accent-primary transition-colors text-sm"
-              >
-                로그인 기록
-              </button>
-              <button 
-                onClick={() => handleShow2FA()}
-                className="text-var-muted hover:text-accent-primary transition-colors text-sm"
-              >
-                2단계 인증
-              </button>
-              <button 
-                onClick={() => handleShowPrivacySettings()}
-                className="text-var-muted hover:text-accent-primary transition-colors text-sm"
-              >
-                개인정보 설정
-              </button>
-            </div>
-          </div>
-          </div>
-        )}
-
         {/* 내 활동 카드 */}
         {isLoading ? (
           <ActivitySectionSkeleton />
@@ -877,6 +704,50 @@ export default function MyPage() {
                 </>
               )}
             </div>
+          </div>
+          </div>
+        )}
+
+        {/* 내 정보 카드 */}
+        {isLoading ? (
+          <UserInfoSkeleton />
+        ) : (
+          <div className="card p-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-accent-primary to-accent-secondary p-6">
+              <h3 className="font-bold text-xl text-white drop-shadow-sm">
+                내 정보
+              </h3>
+            </div>
+            
+            <div className="p-4 space-y-4">
+            <div className="flex justify-between items-start py-2">
+              <div className="flex-1">
+                <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>아이디</div>
+                <div className="font-semibold text-lg mb-1" style={{color: 'var(--text-primary)'}}>{user?.user_handle || user?.display_name || user?.email}</div>
+                <div className="text-sm" style={{color: 'var(--text-muted)'}}>로그인에 사용되는 아이디</div>
+              </div>
+              <button 
+                onClick={() => handleChangeUserId()}
+                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
+              >
+                변경
+              </button>
+            </div>
+
+            <div className="flex justify-between items-start py-2">
+              <div className="flex-1">
+                <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>비밀번호</div>
+                <div className="font-semibold text-lg mb-1" style={{color: 'var(--text-primary)'}}>••••••••</div>
+                <div className="text-sm" style={{color: 'var(--text-muted)'}}>마지막 변경: 2024년 10월 15일</div>
+              </div>
+              <button 
+                onClick={() => handleChangePassword()}
+                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
+              >
+                변경
+              </button>
+            </div>
+
           </div>
           </div>
         )}

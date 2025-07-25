@@ -2,6 +2,9 @@
  * 통합 모니터링 대시보드 컴포넌트
  * 
  * 환경별 선택과 계층별 모니터링을 통합한 메인 대시보드
+ * 
+ * 작업 시간: 2025-07-25 14:40 (KST)
+ * 작업 버전: v1.1 - 인프라 개별 모니터링 섹션 추가
  */
 import { useState, useEffect } from 'react';
 import { EnvironmentSelector, type Environment } from './EnvironmentSelector';
@@ -135,7 +138,6 @@ export function UnifiedMonitoringDashboard({
         redisStatus={redisStatus}
         timestamp={timestamp}
       />
-
 
     </div>
   );

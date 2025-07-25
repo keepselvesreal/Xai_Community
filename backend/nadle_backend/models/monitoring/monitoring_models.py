@@ -95,6 +95,14 @@ class AtlasMetrics(BaseMetrics):
 
     cluster_name: str
     cluster_type: Optional[str] = None
+    
+    # 클러스터 기본 정보 (M0 클러스터용)
+    mongodb_version: Optional[str] = None
+    provider_name: Optional[str] = None
+    instance_size: Optional[str] = None
+    
+    # M0 클러스터 제한 메시지
+    metric_limitation_message: Optional[str] = None
 
     # 연결 정보
     connections_current: Optional[int] = Field(None, ge=0)

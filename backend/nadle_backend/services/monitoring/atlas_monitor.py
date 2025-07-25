@@ -185,19 +185,24 @@ class AtlasMonitoringService:
 
             # 간단한 메트릭은 클러스터 레벨에서 조회 시도
             url = f"{self._base_url}/groups/{self._group_id}/clusters/{self._cluster_name}/measurements"
+            logger.info(f"메트릭 API 호출: {url}")
+            logger.info(f"파라미터: {params}")
             response = self._make_request("GET", url, params=params)
 
             if response.status_code == 200:
                 data = response.json()
-                return data.get("measurements", [])
+                measurements = data.get("measurements", [])
+                logger.info(f"메트릭 '{metric_name}' 조회 성공: {len(measurements)}개 측정값")
+                return measurements
             else:
-                logger.debug(
+                logger.warning(
                     f"메트릭 '{metric_name}' 조회 실패: {response.status_code}"
                 )
+                logger.warning(f"응답 내용: {response.text}")
                 return []
 
         except Exception as e:
-            logger.debug(f"메트릭 '{metric_name}' 조회 실패: {e}")
+            logger.warning(f"메트릭 '{metric_name}' 조회 실패: {e}")
             return []
 
     async def get_metrics(self) -> AtlasMetrics:
@@ -212,6 +217,14 @@ class AtlasMonitoringService:
             metrics_data = {}
 
             if cluster_info:
+                logger.info(f"클러스터 정보 확인됨")
+                logger.info(f"클러스터 타입: {cluster_info.get('clusterType')}")
+                logger.info(f"클러스터 상태: {cluster_info.get('stateName')}")
+                
+                # 인스턴스 크기 확인
+                instance_size = cluster_info.get("providerSettings", {}).get("instanceSizeName", "")
+                logger.info(f"인스턴스 크기: {instance_size}")
+                
                 metrics_data.update(
                     {
                         "cluster_type": cluster_info.get("clusterType"),
@@ -219,28 +232,51 @@ class AtlasMonitoringService:
                         "provider_name": cluster_info.get("providerSettings", {}).get(
                             "providerName"
                         ),
+                        "instance_size": instance_size,
                     }
                 )
+                
+                # M0 (무료 티어)는 상세 메트릭을 지원하지 않음
+                if instance_size == "M0":
+                    logger.info("M0 클러스터는 상세 메트릭을 지원하지 않습니다. 기본 정보만 제공합니다.")
+                    metrics_data.update({
+                        "metric_limitation_message": "M0 무료 티어는 상세 메트릭을 지원하지 않습니다",
+                        "connections_current": None,
+                        "cpu_usage_percent": None,
+                        "memory_usage_percent": None,
+                        "operations_per_second": None,
+                    })
+                else:
+                    # 유료 클러스터에서만 상세 메트릭 수집
+                    logger.info("유료 클러스터, 상세 메트릭 수집 시작")
+                    
+                    # 연결 정보 조회 시도
+                    try:
+                        connections_current = await loop.run_in_executor(
+                            None, lambda: self._get_simple_metric_value("CONNECTIONS")
+                        )
+                        if connections_current is not None:
+                            metrics_data["connections_current"] = connections_current
+                            logger.info(f"연결 수 메트릭 조회 성공: {connections_current}")
+                        else:
+                            logger.info("연결 수 메트릭: 데이터 없음")
+                    except Exception as e:
+                        logger.warning(f"연결 수 메트릭 조회 실패: {e}")
 
-                # 연결 정보 조회 시도
-                try:
-                    connections_current = await loop.run_in_executor(
-                        None, lambda: self._get_simple_metric_value("CONNECTIONS")
-                    )
-                    if connections_current is not None:
-                        metrics_data["connections_current"] = connections_current
-                except Exception as e:
-                    logger.debug(f"연결 수 메트릭 조회 실패: {e}")
-
-                # CPU 사용률 조회 시도
-                try:
-                    cpu_usage = await loop.run_in_executor(
-                        None, lambda: self._get_simple_metric_value("PROCESS_CPU_USER")
-                    )
-                    if cpu_usage is not None:
-                        metrics_data["cpu_usage_percent"] = cpu_usage
-                except Exception as e:
-                    logger.debug(f"CPU 사용률 메트릭 조회 실패: {e}")
+                    # CPU 사용률 조회 시도
+                    try:
+                        cpu_usage = await loop.run_in_executor(
+                            None, lambda: self._get_simple_metric_value("PROCESS_CPU_USER")
+                        )
+                        if cpu_usage is not None:
+                            metrics_data["cpu_usage_percent"] = cpu_usage
+                            logger.info(f"CPU 사용률 메트릭 조회 성공: {cpu_usage}")
+                        else:
+                            logger.info("CPU 사용률 메트릭: 데이터 없음")
+                    except Exception as e:
+                        logger.warning(f"CPU 사용률 메트릭 조회 실패: {e}")
+            else:
+                logger.warning("클러스터 정보가 없어 메트릭 수집을 건너뜁니다")
 
             # AtlasMetrics 객체 생성
             metrics = AtlasMetrics(
@@ -263,20 +299,26 @@ class AtlasMonitoringService:
     def _get_simple_metric_value(self, metric_name: str) -> Optional[float]:
         """간단한 메트릭 값 조회"""
         try:
+            logger.info(f"메트릭 '{metric_name}' 조회 시작")
             measurements = self._get_cluster_metrics_sync(metric_name)
+            logger.info(f"메트릭 '{metric_name}' 측정값 수: {len(measurements)}")
 
             for measurement in measurements:
                 if measurement.get("name") == metric_name:
                     data_points = measurement.get("dataPoints", [])
+                    logger.info(f"메트릭 '{metric_name}' 데이터 포인트 수: {len(data_points)}")
                     if data_points:
                         # 최신 데이터 포인트의 값 반환
                         latest_point = data_points[-1]
-                        return latest_point.get("value")
+                        value = latest_point.get("value")
+                        logger.info(f"메트릭 '{metric_name}' 최신 값: {value}")
+                        return value
 
+            logger.info(f"메트릭 '{metric_name}': 일치하는 데이터 없음")
             return None
 
         except Exception as e:
-            logger.debug(f"메트릭 '{metric_name}' 값 조회 실패: {e}")
+            logger.warning(f"메트릭 '{metric_name}' 값 조회 실패: {e}")
             return None
 
     async def health_check(self) -> Dict[str, Any]:
