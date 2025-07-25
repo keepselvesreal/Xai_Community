@@ -1,5 +1,6 @@
 """Authentication router for FastAPI endpoints."""
 
+import logging
 from typing import Dict, Any, List
 from fastapi import APIRouter, Depends, HTTPException, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
@@ -10,11 +11,18 @@ from nadle_backend.models.email_verification import (
     EmailVerificationResponse,
     EmailVerificationCodeRequest,
     EmailVerificationCodeResponse,
+    EmailVerificationTokenRequest,
+    EmailVerificationTokenResponse,
+    EmailVerificationStatusResponse,
 )
 from nadle_backend.services.auth_service import AuthService
 from nadle_backend.services.email_verification_service import EmailVerificationService
+from nadle_backend.services.email_verification_token_service import EmailVerificationTokenService
 from nadle_backend.repositories.email_verification_repository import (
     EmailVerificationRepository,
+)
+from nadle_backend.repositories.email_verification_token_repository import (
+    EmailVerificationTokenRepository,
 )
 from nadle_backend.dependencies.auth import (
     CurrentActiveUser,
@@ -35,7 +43,9 @@ from nadle_backend.exceptions.user import (
     EmailAlreadyExistsError,
     HandleAlreadyExistsError,
 )
+from nadle_backend.config import settings
 
+logger = logging.getLogger(__name__)
 
 # Create router
 router = APIRouter(
@@ -682,6 +692,138 @@ async def verify_email_code(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to verify email code: {str(e)}",
+        )
+
+
+# Token-based email verification endpoints
+async def get_email_verification_token_service():
+    """Get email verification token service dependency."""
+    repository = EmailVerificationTokenRepository()
+    return EmailVerificationTokenService(repository)
+
+
+@router.post("/send-verification-token", response_model=EmailVerificationTokenResponse)
+async def send_verification_token(
+    request: EmailVerificationTokenRequest,
+    token_service: EmailVerificationTokenService = Depends(get_email_verification_token_service),
+):
+    """Send email verification token link.
+    
+    Args:
+        request: Email verification token request
+        token_service: Email verification token service
+        
+    Returns:
+        Token sent status and message
+        
+    Raises:
+        HTTPException: If email sending fails
+    """
+    try:
+        logger.info(f"🎯 API endpoint called with request: {request}")
+        logger.info(f"🔧 Token service type: {type(token_service)}")
+        
+        # Extract client IP - 개발환경에서는 127.0.0.1 사용
+        client_ip = "127.0.0.1"  # 실제 환경에서는 request.client.host 등으로 추출
+        logger.info(f"🌐 Using client IP: {client_ip}")
+        
+        logger.info(f"📞 Calling token_service.send_verification_token_email...")
+        result = await token_service.send_verification_token_email(request, client_ip)
+        logger.info(f"📋 Service result: {result}")
+        
+        return result
+    except Exception as e:
+        logger.error(f"❌ API endpoint exception: {type(e).__name__}: {str(e)}")
+        import traceback
+        logger.error(f"📍 API Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send verification token: {str(e)}",
+        )
+
+
+@router.get("/verify-email-token/{token}")
+async def verify_email_token(
+    token: str,
+    token_service: EmailVerificationTokenService = Depends(get_email_verification_token_service),
+):
+    """Verify email using token from email link.
+    
+    Args:
+        token: Verification token from email
+        token_service: Email verification token service
+        
+    Returns:
+        Verification success status and message
+        
+    Raises:
+        HTTPException: If token verification fails
+    """
+    try:
+        # URL decode the token in case of encoding issues
+        from urllib.parse import unquote
+        decoded_token = unquote(token)
+        logger.info(f"🔍 Starting token verification for token: {decoded_token[:10]}...")
+        logger.info(f"Original token: {token[:20]}...")
+        logger.info(f"Decoded token: {decoded_token[:20]}...")
+        
+        success, message = await token_service.verify_token(decoded_token)
+        logger.info(f"✅ Token verification result: success={success}, message='{message}'")
+        
+        if success:
+            # Get verification details to include email
+            verification = await token_service.repository.get_by_token(decoded_token)
+            email_param = f"&email={verification.email}" if verification else ""
+            
+            # Redirect to frontend with success message
+            from fastapi.responses import RedirectResponse
+            frontend_url = settings.frontend_url or "http://localhost:5173"
+            return RedirectResponse(
+                url=f"{frontend_url}/auth/register-with-verification?verified=true&message={message}{email_param}",
+                status_code=302
+            )
+        else:
+            # Redirect to frontend with error message
+            from fastapi.responses import RedirectResponse
+            frontend_url = settings.frontend_url or "http://localhost:5173"
+            return RedirectResponse(
+                url=f"{frontend_url}/auth/register-with-verification?verified=false&message={message}",
+                status_code=302
+            )
+            
+    except Exception as e:
+        logger.error(f"❌ Exception during token verification: {type(e).__name__}: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to verify token: {str(e)}",
+        )
+
+
+@router.get("/check-verification-status/{email}", response_model=EmailVerificationStatusResponse)
+async def check_verification_status(
+    email: str,
+    token_service: EmailVerificationTokenService = Depends(get_email_verification_token_service),
+):
+    """Check email verification status (for polling).
+    
+    Args:
+        email: Email address to check
+        token_service: Email verification token service
+        
+    Returns:
+        Email verification status
+        
+    Raises:
+        HTTPException: If status check fails
+    """
+    try:
+        return await token_service.check_verification_status(email)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to check verification status: {str(e)}",
         )
 
 

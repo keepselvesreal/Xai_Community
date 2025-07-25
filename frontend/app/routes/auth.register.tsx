@@ -1,3 +1,15 @@
+/*
+작업 시간: 2025-07-25 09:35:00 KST
+작업 버전: v1.1.0 (환경변수별 라우팅 추가)
+주요 컴포넌트들: Register (환경변수별 조건부 라우팅)
+주요 함수들:
+- isEmailVerificationEnabled: 이메일 인증 활성화 여부 확인 (L30-35)
+- Register: 환경변수에 따른 조건부 렌더링 (L50-60)
+관련 파일들:
+- auth.register-with-verification.tsx: 이메일 인증 포함 페이지
+- .env.development: 환경변수 설정
+*/
+
 import { type ActionFunction, type MetaFunction } from "@remix-run/node";
 import { Form, useActionData, useNavigation } from "@remix-run/react";
 import { useState, useEffect } from "react";
@@ -65,7 +77,13 @@ export const action: ActionFunction = async ({ request }) => {
   return null;
 };
 
-export default function Register() {
+// Check if email verification is enabled
+function isEmailVerificationEnabled(): boolean {
+  return import.meta.env.VITE_EMAIL_VERIFICATION_ENABLED === 'true';
+}
+
+// Original register component (without email verification)
+function RegisterBasic() {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const { register } = useAuth();
@@ -346,4 +364,27 @@ export default function Register() {
       </div>
     </div>
   );
+}
+
+// Main register component with conditional routing
+export default function Register() {
+  // Dynamic import for email verification component
+  if (isEmailVerificationEnabled()) {
+    // Redirect to email verification page
+    if (typeof window !== 'undefined') {
+      window.location.href = '/auth/register-with-verification';
+      return null;
+    }
+    // Fallback for SSR
+    return (
+      <div className="min-h-screen bg-var-primary flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-var-secondary">리다이렉트 중...</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // Use basic register component if email verification is disabled
+  return <RegisterBasic />;
 }

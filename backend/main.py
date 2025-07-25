@@ -112,7 +112,8 @@ def create_app() -> FastAPI:
     logger.info("📝 Models import 테스트 시작...")
     try:
         from nadle_backend.models.core import User, Post, Comment, FileRecord, UserReaction, PostStats, Stats
-        logger.info("✅ Models import 성공")
+        from nadle_backend.models.email_verification import EmailVerification, EmailVerificationToken
+        logger.info("✅ Models import 성공 (EmailVerificationToken 포함)")
         models_status = "imported"
     except Exception as e:
         logger.error(f"❌ Models import 실패: {e}")
@@ -188,9 +189,11 @@ def create_app() -> FastAPI:
                 await database.connect()
                 logger.info("✅ Database 연결 성공!")
                 
-                # Beanie 모델 초기화
+                # Beanie 모델 초기화 (EmailVerificationToken 포함)
+                from nadle_backend.models.email_verification import EmailVerification, EmailVerificationToken
                 await database.init_beanie_models([
-                    User, Post, Comment, FileRecord, UserReaction, PostStats, Stats
+                    User, Post, Comment, FileRecord, UserReaction, PostStats, Stats,
+                    EmailVerification, EmailVerificationToken
                 ])
                 logger.info("✅ Beanie 모델 초기화 성공!")
             except Exception as e:

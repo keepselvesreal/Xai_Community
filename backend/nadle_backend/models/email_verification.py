@@ -1,5 +1,6 @@
 """Email verification models for signup process."""
 
+import secrets
 from datetime import datetime, timedelta
 from typing import Optional
 from pydantic import BaseModel, EmailStr, Field
@@ -196,3 +197,97 @@ class EmailVerification(Document):
         return cls(
             email=email.lower(), code=code, expires_at=expires_at, created_ip=created_ip
         )
+
+
+# Token-based email verification models
+class EmailVerificationToken(Document):
+    """Document model for token-based email verification (button click from email)."""
+
+    # Core fields
+    email: Indexed(str) = Field(..., description="Email address being verified")
+    token: Indexed(str) = Field(..., description="Unique verification token")
+    
+    # Timing fields
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow, description="When verification was created"
+    )
+    expires_at: Indexed(datetime) = Field(..., description="When verification expires")
+    
+    # Status
+    is_verified: bool = Field(
+        default=False, description="Whether email has been verified"
+    )
+    verified_at: Optional[datetime] = Field(
+        default=None, description="When email was verified"
+    )
+    
+    # Security
+    created_ip: Optional[str] = Field(
+        default=None, description="IP address that created verification"
+    )
+
+    class Settings:
+        """Beanie document settings."""
+        name = "email_verification_tokens"
+        indexes = [
+            [("email", ASCENDING)],
+            [("token", ASCENDING)],
+            [("expires_at", ASCENDING)],  # For TTL index
+            [("created_at", ASCENDING)],
+        ]
+
+    def is_expired(self) -> bool:
+        """Check if verification token has expired."""
+        return datetime.utcnow() > self.expires_at
+
+    def mark_verified(self) -> None:
+        """Mark email as verified."""
+        self.is_verified = True
+        self.verified_at = datetime.utcnow()
+        
+    def time_until_expiry(self) -> int:
+        """Get minutes until expiry."""
+        if self.is_expired():
+            return 0
+        delta = self.expires_at - datetime.utcnow()
+        return max(0, int(delta.total_seconds() / 60))
+
+    @classmethod
+    def create_token_verification(
+        cls, email: str, expire_minutes: int = None, created_ip: str = None
+    ) -> "EmailVerificationToken":
+        """Create a new token-based email verification instance."""
+        if expire_minutes is None:
+            expire_minutes = getattr(settings, "email_verification_token_expire_minutes", 30)
+        
+        # Generate secure random token
+        token = secrets.token_urlsafe(32)
+        expires_at = datetime.utcnow() + timedelta(minutes=expire_minutes)
+
+        return cls(
+            email=email.lower(),
+            token=token,
+            expires_at=expires_at,
+            created_ip=created_ip
+        )
+
+
+class EmailVerificationTokenRequest(BaseModel):
+    """Request model for creating token-based email verification."""
+    email: EmailStr = Field(..., description="Email address to verify")
+
+
+class EmailVerificationTokenResponse(BaseModel):
+    """Response model for token-based email verification operations."""
+    success: bool = Field(..., description="Whether operation was successful")
+    email: str = Field(..., description="Email address")
+    token_sent: bool = Field(..., description="Whether verification token was sent")
+    expires_in_minutes: int = Field(..., description="Minutes until token expires")
+    message: str = Field(..., description="User-friendly message")
+
+
+class EmailVerificationStatusResponse(BaseModel):
+    """Response model for checking email verification status."""
+    email: str = Field(..., description="Email address")
+    is_verified: bool = Field(..., description="Whether email is verified")
+    message: str = Field(..., description="Status message")

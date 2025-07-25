@@ -42,6 +42,10 @@ from .email_verification import (
     EmailVerificationResponse,
     EmailVerificationCodeRequest,
     EmailVerificationCodeResponse,
+    EmailVerificationToken,
+    EmailVerificationTokenRequest,
+    EmailVerificationTokenResponse,
+    EmailVerificationStatusResponse,
 )
 
 __all__ = [
@@ -86,4 +90,8 @@ __all__ = [
     "EmailVerificationResponse",
     "EmailVerificationCodeRequest",
     "EmailVerificationCodeResponse",
+    "EmailVerificationToken",
+    "EmailVerificationTokenRequest",
+    "EmailVerificationTokenResponse",
+    "EmailVerificationStatusResponse",
 ]

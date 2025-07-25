@@ -171,6 +171,12 @@ class Settings(BaseSettings):
         default=None,
         description="CORS 및 리다이렉트용 프론트엔드 URL - 환경변수 FRONTEND_URL 권장",
     )
+    
+    # 백엔드 URL (이메일 인증 링크용)
+    backend_url: Optional[str] = Field(
+        default=None,
+        description="이메일 인증 링크 등에 사용될 백엔드 URL - 환경변수 BACKEND_URL 권장",
+    )
 
     # === 환경 설정 ===
     environment: Literal["development", "staging", "production", "test"] = Field(
@@ -296,10 +302,23 @@ class Settings(BaseSettings):
     )
 
     # Email Verification Settings
+    email_verification_enabled: bool = Field(
+        default=False, description="Enable email verification for registration"
+    )
     email_verification_expire_minutes: int = Field(
         default=5,
         gt=0,
         description="Email verification token expiration time in minutes",
+    )
+    email_verification_token_expire_minutes: int = Field(
+        default=30,
+        gt=0,
+        description="Email verification token expiration time for link-based verification",
+    )
+    
+    email_mock_mode: bool = Field(
+        default=False,
+        description="Enable mock mode for email sending (for development)",
     )
     email_verification_code_length: int = Field(
         default=6, ge=4, le=8, description="Length of email verification code"
