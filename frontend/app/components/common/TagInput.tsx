@@ -35,7 +35,7 @@ export default function TagInput({
       </label>
       
       {/* 태그 컨테이너 */}
-      <div className={`w-full min-h-[48px] px-4 py-2 bg-var-section border border-var-color rounded-lg focus-within:ring-2 focus-within:ring-accent-primary focus-within:border-transparent ${className}`}>
+      <div className={`w-full min-h-[48px] px-4 py-2 bg-var-section border border-[#52C41A] rounded-lg focus-within:ring-2 focus-within:ring-[#52C41A] focus-within:border-transparent ${className}`}>
         <div className="flex flex-wrap gap-2 items-center">
           {/* 기존 태그들 */}
           {tags.map((tag, index) => (

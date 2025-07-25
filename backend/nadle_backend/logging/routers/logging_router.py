@@ -26,7 +26,7 @@ from ..services import LogService, ExternalLogCollectorService
 from ..dependencies import (
     get_log_service,
     get_external_log_collector,
-    get_current_user_optional,
+    get_optional_current_user,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ async def search_logs(
     page_size: int = Query(50, ge=1, le=1000, description="Page size"),
     # Dependencies
     log_service: LogService = Depends(get_log_service),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Search logs with filtering and pagination.
@@ -126,7 +126,7 @@ async def search_logs(
 async def get_log_stats(
     hours: int = Query(24, ge=1, le=168, description="Hours to look back (1-168)"),
     log_service: LogService = Depends(get_log_service),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Get log statistics for a time range.
@@ -154,7 +154,7 @@ async def get_log_stats(
 async def get_dashboard_data(
     hours: int = Query(24, ge=1, le=168, description="Hours to look back (1-168)"),
     log_service: LogService = Depends(get_log_service),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Get comprehensive dashboard data.
@@ -182,7 +182,7 @@ async def get_dashboard_data(
 async def get_log_by_id(
     log_id: str,
     log_service: LogService = Depends(get_log_service),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Get a single log entry by ID.
@@ -217,7 +217,7 @@ async def collect_external_logs(
     external_collector: ExternalLogCollectorService = Depends(
         get_external_log_collector
     ),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Trigger collection of external logs.
@@ -294,7 +294,7 @@ async def get_external_health(
     external_collector: ExternalLogCollectorService = Depends(
         get_external_log_collector
     ),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Get health status of external log collection.
@@ -321,7 +321,7 @@ async def get_external_health(
 async def cleanup_old_logs(
     retention_days: int = Query(30, ge=1, le=365, description="Days to retain logs"),
     log_service: LogService = Depends(get_log_service),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Clean up old logs based on retention policy.
@@ -373,7 +373,7 @@ async def count_logs(
     deployment_ids: Optional[List[str]] = Query(None),
     hours: int = Query(24, ge=1, le=168),
     log_service: LogService = Depends(get_log_service),
-    current_user=Depends(get_current_user_optional),
+    current_user=Depends(get_optional_current_user),
 ):
     """
     Count logs matching filter criteria.

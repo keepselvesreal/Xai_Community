@@ -119,7 +119,7 @@ export default function PostWriteForm<T extends { title: string; content: string
                 value={initialData.title}
                 onChange={handleInputChange}
                 placeholder={titleLabel === "업체명" ? "업체명을 입력하세요" : "제목을 입력하세요"}
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-3 bg-white border border-[#52C41A] rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent"
                 maxLength={titleMaxLength}
               />
               <div className="mt-2 text-xs text-gray-500 text-right">
@@ -142,7 +142,7 @@ export default function PostWriteForm<T extends { title: string; content: string
                 onChange={handleInputChange}
                 placeholder={contentLabel === "업체 소개" ? "업체 소개를 입력하세요..." : "내용을 입력하세요"}
                 rows={6}
-                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-vertical"
+                className="w-full px-4 py-3 bg-white border border-[#52C41A] rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent resize-vertical"
                 maxLength={contentMaxLength}
               />
               <div className="mt-2 text-xs text-gray-500 text-right">

@@ -297,3 +297,4 @@ OptionalCurrentUser = Depends(get_optional_current_user)
 OptionalCurrentActiveUser = Depends(get_optional_current_active_user)
 AdminUser = Depends(require_admin_user)
 CurrentToken = Depends(get_current_token)
+

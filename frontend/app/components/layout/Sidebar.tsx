@@ -129,7 +129,7 @@ const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false
 
           {/* Row 2: User Controls */}
           <div className="flex items-center justify-center w-full gap-3 mb-3">
-            {user ? (
+            {user && onLogout ? (
               <>
                 <a
                   href="/mypage"
@@ -150,12 +150,20 @@ const Sidebar = ({ isOpen = true, onClose, onToggleCollapse, isCollapsed = false
                 </button>
               </>
             ) : (
-              <a
-                href="/auth/login"
-                className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px text-center"
-              >
-                로그인
-              </a>
+              <>
+                <a
+                  href="/auth/register"
+                  className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px text-center"
+                >
+                  회원가입
+                </a>
+                <a
+                  href="/auth/login"
+                  className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px text-center"
+                >
+                  로그인
+                </a>
+              </>
             )}
           </div>
         </div>

@@ -30,13 +30,13 @@ export function SearchAndFilters({
       {hasWriteButton && (
         <Link
           to={writeButtonLink}
-          className="w-full max-w-xs px-6 py-3 bg-var-card border border-var-color rounded-full hover:border-accent-primary hover:bg-var-hover transition-all duration-200 font-medium text-var-primary flex items-center justify-center gap-2"
+          className="w-full max-w-xs px-6 py-3 bg-var-card border border-[#52C41A] rounded-full hover:border-[#52C41A] hover:bg-var-hover transition-all duration-200 font-medium text-var-primary flex items-center justify-center gap-2"
         >
           {writeButtonText}
         </Link>
       )}
       
-      <div className={`flex items-center gap-3 bg-var-card border border-var-color rounded-full px-4 py-3 w-full max-w-xs ${!hasWriteButton ? 'mx-auto' : ''}`}>
+      <div className={`flex items-center gap-3 bg-var-card border border-[#52C41A] rounded-full px-4 py-3 w-full max-w-xs ${!hasWriteButton ? 'mx-auto' : ''}`}>
         {isSearching ? (
           <div 
             data-testid="search-loading"

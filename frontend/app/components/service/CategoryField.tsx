@@ -28,7 +28,7 @@ export default function CategoryField({ value, onChange }: CategoryFieldProps) {
       <select
         value={value}
         onChange={handleChange}
-        className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        className="w-full px-4 py-3 bg-white border border-[#52C41A] rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent"
       >
         {categories.map((category) => (
           <option key={category.value} value={category.value}>

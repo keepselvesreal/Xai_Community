@@ -234,7 +234,7 @@ async def get_external_log_collector(
     return _external_log_collector
 
 
-async def get_current_user_optional():
+async def get_optional_current_user():
     """
     Get current user (optional for logging endpoints).
 
@@ -243,7 +243,7 @@ async def get_current_user_optional():
     """
     try:
         # Import here to avoid circular dependencies
-        from ..dependencies.auth import get_current_user_optional as get_auth_user
+        from ..dependencies.auth import get_optional_current_user as get_auth_user
 
         return await get_auth_user()
     except Exception:

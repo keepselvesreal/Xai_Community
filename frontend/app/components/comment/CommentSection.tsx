@@ -189,6 +189,13 @@ const CommentSection = ({ postSlug, comments, onCommentAdded, onCommentReaction,
     isArray: Array.isArray(comments),
     pageType,
     subtype,
+    // user_reaction 필드 확인
+    userReactions: comments?.map(c => ({
+      id: c.id,
+      user_reaction: c.user_reaction,
+      like_count: c.like_count,
+      dislike_count: c.dislike_count
+    })),
     // 서비스 댓글의 메타데이터 확인
     serviceComments: comments?.filter(c => c.metadata).map(c => ({
       id: c.id,

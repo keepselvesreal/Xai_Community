@@ -386,7 +386,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   disabled={pendingReactions.has('like')}
                   className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
                     userReactions.liked
-                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      ? 'bg-gray-50 border-gray-200 text-gray-900 font-semibold'
                       : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
                   } ${pendingReactions.has('like') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
@@ -398,7 +398,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   disabled={pendingReactions.has('dislike')}
                   className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
                     userReactions.disliked
-                      ? 'bg-red-50 border-red-300 text-red-700'
+                      ? 'bg-gray-50 border-gray-200 text-gray-900 font-semibold'
                       : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
                   } ${pendingReactions.has('dislike') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
@@ -410,7 +410,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
                   disabled={pendingReactions.has('bookmark')}
                   className={`flex items-center gap-2 px-4 py-2 border rounded-lg text-sm transition-all duration-200 ${
                     userReactions.bookmarked
-                      ? 'bg-blue-50 border-blue-300 text-blue-700'
+                      ? 'bg-gray-50 border-gray-200 text-gray-900 font-semibold'
                       : 'bg-gray-50 border-gray-200 text-gray-600 hover:bg-gray-100 hover:border-gray-300'
                   } ${pendingReactions.has('bookmark') ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
                 >
@@ -445,6 +445,7 @@ const DetailPageLayout: React.FC<DetailPageLayoutProps> = ({
             postSlug={postSlug}
             comments={comments}
             onCommentAdded={onCommentAdded}
+            onCommentReaction={onCommentAdded}
             pageType={pageType}
             subtype={subtype}
           />

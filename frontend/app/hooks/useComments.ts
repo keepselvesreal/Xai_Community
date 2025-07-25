@@ -210,13 +210,17 @@ export const useComments = ({ postSlug, onCommentAdded, onCommentReaction }: Use
         console.log('반응 API 응답:', response);
 
         if (response.success) {
+          console.log('✅ 댓글 반응 API 성공, 콜백 호출 중...');
           // 댓글 반응 전용 콜백이 있으면 사용, 없으면 기본 콜백 사용
           if (onCommentReaction) {
+            console.log('📞 onCommentReaction 콜백 호출');
             onCommentReaction();
           } else {
+            console.log('📞 onCommentAdded 콜백 호출');
             onCommentAdded();
           }
         } else {
+          console.log('❌ 댓글 반응 API 실패:', response.error);
           showError(response.error || '반응 처리에 실패했습니다');
         }
       } catch (error) {

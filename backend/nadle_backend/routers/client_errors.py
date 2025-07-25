@@ -24,7 +24,7 @@ from fastapi import APIRouter, Request, Depends, status
 from fastapi.responses import JSONResponse
 
 from ..core.logging import LogLevel, LogServiceType, LogSource, LogContext, LogMetadata
-from ..dependencies.auth import get_current_user_optional
+from ..dependencies.auth import get_optional_current_user
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/client-errors", tags=["client-errors"])
@@ -64,7 +64,7 @@ class ClientErrorRequest(BaseModel):
 async def report_client_error(
     error_data: ClientErrorRequest,
     request: Request,
-    current_user: Optional[dict] = Depends(get_current_user_optional)
+    current_user: Optional[dict] = Depends(get_optional_current_user)
 ):
     """
     클라이언트에서 발생한 에러를 서버에 보고

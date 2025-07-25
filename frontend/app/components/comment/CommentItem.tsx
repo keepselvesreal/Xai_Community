@@ -109,6 +109,13 @@ const CommentItem = ({
   const handleReaction = (type: "like" | "dislike") => {
     if (!onReaction) return;
     
+    console.log('🔍 댓글 반응 클릭:', {
+      commentId: comment.id,
+      type,
+      currentUserReaction: comment.user_reaction,
+      hasCurrentUser: !!currentUser
+    });
+    
     onReaction(comment.id, type);
   };
 
@@ -276,7 +283,11 @@ const CommentItem = ({
               <button
                 type="button"
                 onClick={() => handleReaction("like")}
-                className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition-colors"
+                className={`flex items-center space-x-1 transition-colors ${
+                  comment.user_reaction?.liked 
+                    ? 'text-gray-900 font-semibold' 
+                    : 'text-gray-500 hover:text-green-600'
+                }`}
                 disabled={!currentUser}
               >
                 <span>👍</span>
@@ -285,7 +296,11 @@ const CommentItem = ({
               <button
                 type="button"
                 onClick={() => handleReaction("dislike")}
-                className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition-colors"
+                className={`flex items-center space-x-1 transition-colors ${
+                  comment.user_reaction?.disliked 
+                    ? 'text-gray-900 font-semibold' 
+                    : 'text-gray-500 hover:text-red-600'
+                }`}
                 disabled={!currentUser}
               >
                 <span>👎</span>
@@ -451,7 +466,11 @@ const CommentItem = ({
               <button
                 type="button"
                 onClick={() => handleReaction("like")}
-                className="flex items-center space-x-1 text-gray-500 hover:text-green-600 transition-colors"
+                className={`flex items-center space-x-1 transition-colors ${
+                  comment.user_reaction?.liked 
+                    ? 'text-gray-900 font-semibold' 
+                    : 'text-gray-500 hover:text-green-600'
+                }`}
                 disabled={!currentUser}
               >
                 <span>👍</span>
@@ -460,7 +479,11 @@ const CommentItem = ({
               <button
                 type="button"
                 onClick={() => handleReaction("dislike")}
-                className="flex items-center space-x-1 text-gray-500 hover:text-red-600 transition-colors"
+                className={`flex items-center space-x-1 transition-colors ${
+                  comment.user_reaction?.disliked 
+                    ? 'text-gray-900 font-semibold' 
+                    : 'text-gray-500 hover:text-red-600'
+                }`}
                 disabled={!currentUser}
               >
                 <span>👎</span>

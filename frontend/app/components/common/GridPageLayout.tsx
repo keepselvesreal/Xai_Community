@@ -314,13 +314,13 @@ const GridPageLayout: React.FC<GridPageLayoutProps> = ({
           {hasWritePermission() && (
             <button 
               onClick={onActionClick}
-              className="w-full max-w-xs px-6 py-3 bg-white border border-gray-300 rounded-full hover:border-blue-500 hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 flex items-center justify-center gap-2"
+              className="w-full max-w-xs px-6 py-3 bg-white border border-[#52C41A] rounded-full hover:border-[#52C41A] hover:bg-gray-50 transition-all duration-200 font-medium text-gray-700 flex items-center justify-center gap-2"
             >
               {getActionButtonText()}
             </button>
           )}
           
-          <div className={`flex items-center gap-3 bg-white border border-gray-300 rounded-full px-4 py-3 w-full max-w-xs ${!hasWritePermission() ? 'mx-auto' : ''}`}>
+          <div className={`flex items-center gap-3 bg-white border border-[#52C41A] rounded-full px-4 py-3 w-full max-w-xs ${!hasWritePermission() ? 'mx-auto' : ''}`}>
             <span className="text-gray-500">🔍</span>
             <input
               type="text"

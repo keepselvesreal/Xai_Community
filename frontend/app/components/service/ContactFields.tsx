@@ -36,7 +36,7 @@ export default function ContactFields({
           value={contact}
           onChange={handleContactChange}
           placeholder="연락처를 입력하세요"
-          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-3 bg-white border border-[#52C41A] rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent"
         />
       </div>
       
@@ -49,7 +49,7 @@ export default function ContactFields({
           value={availableHours}
           onChange={handleAvailableHoursChange}
           placeholder="예: 09:00~18:00"
-          className="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          className="w-full px-4 py-3 bg-white border border-[#52C41A] rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent"
         />
       </div>
     </div>

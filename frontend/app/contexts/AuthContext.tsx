@@ -104,6 +104,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const handleTokenExpired = () => {
       console.log('AuthContext: Token expired event received, logging out...');
+      // 이미 로그아웃 중이거나 사용자가 없으면 중복 처리 방지
+      if (!user || !token) {
+        console.log('AuthContext: Already logged out, skipping token expired handler');
+        return;
+      }
       setSessionExpiryReason(SESSION_EXPIRY_REASONS.TOKEN_INVALID);
       performLogout();
     };
@@ -111,6 +116,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const handleSessionExpired = (event: CustomEvent) => {
       const reason = event.detail?.reason || SESSION_EXPIRY_REASONS.TOKEN_INVALID;
       console.log('AuthContext: Session expired event received, reason:', reason);
+      // 이미 로그아웃 중이거나 사용자가 없으면 중복 처리 방지
+      if (!user || !token) {
+        console.log('AuthContext: Already logged out, skipping session expired handler');
+        return;
+      }
       setSessionExpiryReason(reason);
       performLogout();
     };
@@ -207,12 +217,18 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const performLogout = useCallback(() => {
     console.log('AuthContext: Performing logout...');
     
+    // 이미 로그아웃된 상태면 중복 처리 방지
+    if (!user && !token) {
+      console.log('AuthContext: Already logged out, skipping performLogout');
+      return;
+    }
+    
     // 세션 만료 사유를 로그아웃 전에 localStorage에 저장 (알림용)
     if (typeof window !== 'undefined' && sessionExpiryReason) {
       localStorage.setItem('logoutReason', sessionExpiryReason);
     }
     
-    // 상태 즉시 업데이트
+    // 상태 즉시 업데이트 - 동기적으로 처리하여 UI 즉시 반영
     setUser(null);
     setToken(null);
     setRefreshToken(null);
@@ -239,7 +255,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         window.location.href = '/';
       }, 100); // 상태 업데이트가 완료된 후 리디렉션
     }
-  }, [sessionExpiryReason]);
+  }, [sessionExpiryReason, user, token]);
 
   const logout = useCallback(() => {
     console.log('AuthContext: Manual logout requested');
@@ -309,7 +325,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logout,
     refreshUser,
     isLoading,
-    isAuthenticated: !!user && !!token,
+    isAuthenticated: !!user && !!token && user !== null && token !== null,
     // 세션 관리 기능들
     showSessionWarning,
     sessionExpiryReason,

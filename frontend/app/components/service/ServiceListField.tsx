@@ -115,7 +115,7 @@ export default function ServiceListField({
                   value={service.serviceName}
                   onChange={(e) => handleServiceChange(index, 'serviceName', e.target.value)}
                   placeholder="서비스 이름을 입력하세요"
-                  className="w-full px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm"
+                  className="w-full px-3 py-2 bg-var-section border border-[#52C41A] rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent text-sm"
                   style={{
                     backgroundColor: 'var(--var-section)',
                     borderColor: 'var(--var-color)',
@@ -137,7 +137,7 @@ export default function ServiceListField({
                       value={service.price}
                       onChange={(e) => handleServiceChange(index, 'price', e.target.value)}
                       placeholder={service.hasSpecialPrice ? '기존 가격' : '가격을 입력하세요'}
-                      className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm"
+                      className="flex-1 px-3 py-2 bg-var-section border border-[#52C41A] rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent text-sm"
                       style={{
                         backgroundColor: 'var(--var-section)',
                         borderColor: 'var(--var-color)',
@@ -168,7 +168,7 @@ export default function ServiceListField({
                         value={service.specialPrice}
                         onChange={(e) => handleServiceChange(index, 'specialPrice', e.target.value)}
                         placeholder="특가 가격"
-                        className="flex-1 px-3 py-2 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent text-sm"
+                        className="flex-1 px-3 py-2 bg-var-section border border-[#52C41A] rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent text-sm"
                         style={{
                           backgroundColor: 'var(--var-section)',
                           borderColor: 'var(--var-color)',
