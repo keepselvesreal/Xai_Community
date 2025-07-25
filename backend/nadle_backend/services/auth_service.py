@@ -257,9 +257,23 @@ class AuthService:
 
         Raises:
             UserNotFoundError: If user not found
+            EmailAlreadyExistsError: If email already exists
+            HandleAlreadyExistsError: If handle already exists
         """
         # Check if user exists
-        await self.user_repository.get_by_id(user_id)
+        current_user = await self.user_repository.get_by_id(user_id)
+
+        # Check for email uniqueness if email is being updated
+        if user_update.email and user_update.email != current_user.email:
+            existing_user = await self.user_repository.get_by_email(user_update.email)
+            if existing_user:
+                raise EmailAlreadyExistsError(f"Email {user_update.email} already exists")
+
+        # Check for handle uniqueness if handle is being updated
+        if user_update.user_handle and user_update.user_handle != current_user.user_handle:
+            existing_user = await self.user_repository.get_by_user_handle(user_update.user_handle)
+            if existing_user:
+                raise HandleAlreadyExistsError(f"Handle {user_update.user_handle} already exists")
 
         # Update user
         updated_user = await self.user_repository.update(user_id, user_update)

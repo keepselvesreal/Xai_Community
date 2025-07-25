@@ -260,6 +260,7 @@ export interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
   isAuthenticated: boolean;
   // 세션 관리 기능들

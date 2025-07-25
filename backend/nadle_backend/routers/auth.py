@@ -270,6 +270,10 @@ async def update_user_profile(
         return UserResponse(**user_data)
     except UserNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except EmailAlreadyExistsError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except HandleAlreadyExistsError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 
 @router.post("/change-password", response_model=MessageResponse)

@@ -395,6 +395,21 @@ class UserUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     bio: Optional[str] = Field(None, max_length=500)
     avatar_url: Optional[str] = None
+    user_handle: Optional[str] = Field(None, min_length=3, max_length=30)
+    email: Optional[EmailStr] = None
+
+    @field_validator("user_handle")
+    @classmethod
+    def validate_user_handle(cls, v: Optional[str]) -> Optional[str]:
+        """Validate user handle format."""
+        if v is None:
+            return None
+        # Handle should be alphanumeric with underscores
+        if not v.replace("_", "").isalnum():
+            raise ValueError(
+                "Handle must contain only letters, numbers, and underscores"
+            )
+        return v.lower()
 
 
 class UserResponse(UserBase):

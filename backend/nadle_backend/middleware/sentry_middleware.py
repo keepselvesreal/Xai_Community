@@ -140,6 +140,52 @@ class SentryRequestMiddleware(BaseHTTPMiddleware):
             
             raise
 
+    def _categorize_error(self, exception: Exception) -> str:
+        """
+        예외를 카테고리별로 분류
+        
+        Args:
+            exception: 발생한 예외
+            
+        Returns:
+            str: 에러 카테고리
+        """
+        exception_name = exception.__class__.__name__.lower()
+        exception_message = str(exception).lower()
+        
+        # 네트워크 관련 에러
+        if any(keyword in exception_name for keyword in [
+            "connection", "network", "timeout", "socket"
+        ]):
+            return "network"
+        
+        # 인증 관련 에러
+        if any(keyword in exception_name for keyword in [
+            "auth", "credential", "permission", "forbidden", "unauthorized"
+        ]):
+            return "authentication"
+        
+        # 데이터베이스 관련 에러
+        if any(keyword in exception_name for keyword in [
+            "database", "mongo", "pymongo", "beanie"
+        ]):
+            return "database"
+        
+        # 유효성 검증 에러
+        if any(keyword in exception_name for keyword in [
+            "validation", "pydantic", "value"
+        ]):
+            return "validation"
+        
+        # HTTP 관련 에러
+        if any(keyword in exception_name for keyword in [
+            "http", "request", "response"
+        ]):
+            return "http"
+        
+        # 기본 카테고리
+        return "application"
+
 
 class SentryUserMiddleware(BaseHTTPMiddleware):
     """

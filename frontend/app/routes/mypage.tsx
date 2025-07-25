@@ -14,7 +14,7 @@ import { Pagination } from "~/components/common/Pagination";
 export const meta: MetaFunction = () => {
   return [
     { title: "마이페이지 | XAI 아파트 커뮤니티" },
-    { name: "description", content: "내 정보 및 활동 내역" },
+    { name: "description", content: "마이페이지" },
   ];
 };
 
@@ -202,7 +202,8 @@ function ActivityItem({
 
 export default function MyPage() {
   const loaderData = useLoaderData<typeof loader>();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
+  
   const [activityTab, setActivityTab] = useState<'write' | 'reaction'>('write');
   const [expandedActivities, setExpandedActivities] = useState<Set<string>>(new Set());
   const [userActivity, setUserActivity] = useState<UserActivityResponse | null>(null);
@@ -279,12 +280,6 @@ export default function MyPage() {
     loadUserActivity();
   }, [user]);
 
-  // 게스트 사용자를 위한 기본 데이터
-  const displayUser = user || {
-    email: 'guest@example.com',
-    user_handle: 'Guest User',
-    display_name: 'Guest User'
-  };
 
   // 헬퍼 함수들
   function toggleActivityDetail(activityType: string) {
@@ -306,61 +301,157 @@ export default function MyPage() {
     setCategoryPages(prev => ({ ...prev, [categoryType]: page }));
   }
 
-  function handleChangeUserId() {
-    if (!user) {
-      alert('로그인이 필요한 기능입니다.');
+  async function handleChangeUserId() {
+    
+    const currentHandle = user.user_handle || '';
+    const newHandle = window.prompt('새로운 아이디를 입력하세요 (3-30자, 영문+숫자+언더스코어만 허용):', currentHandle);
+    
+    if (newHandle === null) return; // 취소한 경우
+    if (newHandle.trim() === currentHandle) {
+      alert('현재 아이디와 동일합니다.');
       return;
     }
-    const newUserId = window.prompt('새로운 아이디를 입력하세요:', user?.user_handle || user?.email);
-    if (newUserId && newUserId !== (user?.user_handle || user?.email)) {
-      if (window.confirm(`아이디를 '${newUserId}'로 변경하시겠습니까?`)) {
+    
+    // 클라이언트 측 유효성 검사
+    if (newHandle.length < 3 || newHandle.length > 30) {
+      alert('아이디는 3자 이상 30자 이하로 입력해주세요.');
+      return;
+    }
+    
+    if (!/^[a-zA-Z0-9_]+$/.test(newHandle)) {
+      alert('아이디는 영문, 숫자, 언더스코어(_)만 사용할 수 있습니다.');
+      return;
+    }
+    
+    try {
+      const result = await apiClient.updateUserProfile({ user_handle: newHandle.toLowerCase() });
+      if (result.success) {
         alert('아이디가 성공적으로 변경되었습니다.');
-      }
-    }
-  }
-
-  function handleChangeEmail() {
-    if (!user) {
-      alert('로그인이 필요한 기능입니다.');
-      return;
-    }
-    const newEmail = window.prompt('새로운 이메일을 입력하세요:', user?.email);
-    if (newEmail && newEmail !== user?.email && newEmail.includes('@')) {
-      if (window.confirm(`이메일을 '${newEmail}'로 변경하시겠습니까?\n인증 이메일이 발송됩니다.`)) {
-        alert('인증 이메일이 발송되었습니다. 이메일을 확인해주세요.');
-      }
-    } else if (newEmail && !newEmail.includes('@')) {
-      alert('올바른 이메일 형식을 입력해주세요.');
-    }
-  }
-
-  function handleChangePassword() {
-    if (!user) {
-      alert('로그인이 필요한 기능입니다.');
-      return;
-    }
-    const currentPassword = window.prompt('현재 비밀번호를 입력하세요:');
-    if (currentPassword) {
-      const newPassword = window.prompt('새로운 비밀번호를 입력하세요:');
-      if (newPassword && newPassword.length >= 8) {
-        const confirmPassword = window.prompt('새로운 비밀번호를 다시 입력하세요:');
-        if (newPassword === confirmPassword) {
-          alert('비밀번호가 성공적으로 변경되었습니다.');
-        } else {
-          alert('비밀번호가 일치하지 않습니다.');
-        }
+        // AuthContext의 사용자 정보 새로고침
+        await refreshUser();
+        // 사용자 활동 정보 새로고침
+        await loadUserActivity();
       } else {
-        alert('비밀번호는 8자 이상이어야 합니다.');
+        alert(`아이디 변경에 실패했습니다: ${result.error}`);
       }
+    } catch (error) {
+      console.error('Handle update error:', error);
+      alert('아이디 변경 중 오류가 발생했습니다.');
     }
   }
 
-  function handleEditProfile() {
-    if (!user) {
-      alert('로그인이 필요한 기능입니다.');
+  async function handleChangeEmail() {
+    
+    const currentEmail = user.email;
+    const newEmail = window.prompt('새로운 이메일을 입력하세요:', currentEmail);
+    
+    if (newEmail === null) return; // 취소한 경우
+    if (newEmail.trim() === currentEmail) {
+      alert('현재 이메일과 동일합니다.');
       return;
     }
-    alert('수정 페이지로 이동합니다.');
+    
+    // 이메일 형식 검증
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(newEmail)) {
+      alert('올바른 이메일 형식을 입력해주세요.');
+      return;
+    }
+    
+    try {
+      const result = await apiClient.updateUserProfile({ email: newEmail });
+      if (result.success) {
+        alert('이메일이 성공적으로 변경되었습니다.\n이메일 인증이 필요할 수 있습니다.');
+        // AuthContext의 사용자 정보 새로고침
+        await refreshUser();
+        // 사용자 활동 정보 새로고침
+        await loadUserActivity();
+      } else {
+        alert(`이메일 변경에 실패했습니다: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Email update error:', error);
+      alert('이메일 변경 중 오류가 발생했습니다.');
+    }
+  }
+
+  async function handleChangePassword() {
+    
+    const currentPassword = window.prompt('현재 비밀번호를 입력하세요:');
+    if (!currentPassword) return; // 취소하거나 빈 값인 경우
+    
+    const newPassword = window.prompt('새로운 비밀번호를 입력하세요 (6자 이상):');
+    if (!newPassword) return; // 취소하거나 빈 값인 경우
+    
+    if (newPassword.length < 6) {
+      alert('새로운 비밀번호는 6자 이상이어야 합니다.');
+      return;
+    }
+    
+    const confirmPassword = window.prompt('새로운 비밀번호를 다시 입력하세요:');
+    if (!confirmPassword) return; // 취소하거나 빈 값인 경우
+    
+    if (newPassword !== confirmPassword) {
+      alert('새로운 비밀번호가 일치하지 않습니다.');
+      return;
+    }
+    
+    try {
+      const result = await apiClient.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword
+      });
+      
+      if (result.success) {
+        alert('비밀번호가 성공적으로 변경되었습니다.');
+      } else {
+        alert(`비밀번호 변경에 실패했습니다: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Password change error:', error);
+      alert('비밀번호 변경 중 오류가 발생했습니다.');
+    }
+  }
+
+  async function handleEditProfile() {
+    
+    const currentName = user.name || user.display_name || '';
+    const currentBio = user.bio || '';
+    
+    const newName = window.prompt('이름을 입력하세요:', currentName);
+    if (newName === null) return; // 취소한 경우
+    
+    const newBio = window.prompt('소개를 입력하세요:', currentBio);
+    if (newBio === null) return; // 취소한 경우
+    
+    try {
+      const profileData: { name?: string; bio?: string } = {};
+      if (newName.trim() !== currentName) {
+        profileData.name = newName.trim();
+      }
+      if (newBio.trim() !== currentBio) {
+        profileData.bio = newBio.trim();
+      }
+      
+      if (Object.keys(profileData).length === 0) {
+        alert('변경된 내용이 없습니다.');
+        return;
+      }
+      
+      const result = await apiClient.updateUserProfile(profileData);
+      if (result.success) {
+        alert('프로필이 성공적으로 업데이트되었습니다.');
+        // AuthContext의 사용자 정보 새로고침
+        await refreshUser();
+        // 사용자 활동 정보 새로고침
+        await loadUserActivity();
+      } else {
+        alert(`프로필 업데이트에 실패했습니다: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('Profile update error:', error);
+      alert('프로필 업데이트 중 오류가 발생했습니다.');
+    }
   }
 
   function handleShowLoginHistory() {
@@ -379,31 +470,11 @@ export default function MyPage() {
 
   return (
     <AppLayout 
-      title={user ? "마이페이지" : "회원정보 (게스트 모드)"} 
-      subtitle={user ? "내 정보 및 활동 내역" : "로그인하시면 개인 정보를 확인할 수 있습니다"}
+      title=""
+      subtitle=""
       user={user}
       onLogout={logout}
     >
-      {/* 로그인 안내 메시지 (게스트일 때만) */}
-      {!user && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">ℹ️</div>
-            <div>
-              <h3 className="font-semibold text-blue-800">게스트 모드입니다</h3>
-              <p className="text-blue-600 text-sm mt-1">
-                개인 정보 수정 및 활동 내역을 보려면 로그인해주세요.
-              </p>
-              <Link
-                to="/auth/login"
-                className="inline-block mt-3 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-              >
-                로그인하기
-              </Link>
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* 내 정보 카드 */}
@@ -421,17 +492,12 @@ export default function MyPage() {
             <div className="flex justify-between items-start py-4">
               <div className="flex-1">
                 <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>아이디</div>
-                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{displayUser.user_handle || displayUser.display_name || displayUser.email}</div>
+                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{user?.user_handle || user?.display_name || user?.email}</div>
                 <div className="text-sm" style={{color: 'var(--text-muted)'}}>로그인에 사용되는 아이디</div>
               </div>
               <button 
                 onClick={() => handleChangeUserId()}
-                className={`px-4 py-2 border rounded-lg transition-colors text-sm whitespace-nowrap ${
-                  user 
-                    ? 'border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white'
-                    : 'border-gray-300 text-gray-400 cursor-not-allowed'
-                }`}
-                disabled={!user}
+                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
               >
                 변경
               </button>
@@ -440,17 +506,12 @@ export default function MyPage() {
             <div className="flex justify-between items-start py-4">
               <div className="flex-1">
                 <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>이메일</div>
-                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{displayUser.email}</div>
+                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{user?.email}</div>
                 <div className="text-sm" style={{color: 'var(--text-muted)'}}>알림 및 계정 복구용 이메일</div>
               </div>
               <button 
                 onClick={() => handleChangeEmail()}
-                className={`px-4 py-2 border rounded-lg transition-colors text-sm whitespace-nowrap ${
-                  user 
-                    ? 'border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white'
-                    : 'border-gray-300 text-gray-400 cursor-not-allowed'
-                }`}
-                disabled={!user}
+                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
               >
                 변경
               </button>
@@ -459,17 +520,12 @@ export default function MyPage() {
             <div className="flex justify-between items-start py-4">
               <div className="flex-1">
                 <div className="font-medium text-sm mb-2" style={{color: 'var(--text-secondary)'}}>비밀번호</div>
-                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>{user ? '••••••••' : '로그인 필요'}</div>
-                <div className="text-sm" style={{color: 'var(--text-muted)'}}>{user ? '마지막 변경: 2024년 10월 15일' : '로그인 후 확인 가능'}</div>
+                <div className="font-semibold text-xl mb-2" style={{color: 'var(--text-primary)'}}>••••••••</div>
+                <div className="text-sm" style={{color: 'var(--text-muted)'}}>마지막 변경: 2024년 10월 15일</div>
               </div>
               <button 
                 onClick={() => handleChangePassword()}
-                className={`px-4 py-2 border rounded-lg transition-colors text-sm whitespace-nowrap ${
-                  user 
-                    ? 'border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white'
-                    : 'border-gray-300 text-gray-400 cursor-not-allowed'
-                }`}
-                disabled={!user}
+                className="px-4 py-2 border border-accent-primary text-accent-primary hover:bg-accent-primary hover:text-white rounded-lg transition-colors text-sm whitespace-nowrap"
               >
                 변경
               </button>
@@ -477,14 +533,9 @@ export default function MyPage() {
 
             <button 
               onClick={() => handleEditProfile()}
-              className={`w-full py-4 rounded-xl font-semibold transition-all text-lg ${
-                user 
-                  ? 'bg-accent-primary text-white hover:bg-accent-hover'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-              disabled={!user}
+              className="w-full py-4 rounded-xl font-semibold transition-all text-lg bg-accent-primary text-white hover:bg-accent-hover"
             >
-              {user ? '수정' : '로그인 필요'}
+              수정
             </button>
 
             {/* 보안 설정 링크 */}

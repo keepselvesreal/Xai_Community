@@ -275,12 +275,39 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     }
   }, [sessionExpiryReason]);
 
+  const refreshUser = useCallback(async () => {
+    console.log('AuthContext: Refreshing user data...');
+    if (!token) {
+      console.log('AuthContext: No token available for refresh');
+      return;
+    }
+
+    try {
+      const response = await apiClient.getCurrentUser();
+      console.log('AuthContext: Refresh user response:', response);
+      
+      if (response.success && response.data) {
+        const userData = {
+          ...response.data,
+          id: response.data.id || response.data._id
+        };
+        setUser(userData);
+        console.log('AuthContext: User data refreshed successfully');
+      } else {
+        console.error('AuthContext: Failed to refresh user data:', response.error);
+      }
+    } catch (error) {
+      console.error('AuthContext: Error refreshing user data:', error);
+    }
+  }, [token]);
+
   const value: AuthContextType = {
     user,
     token,
     login,
     register,
     logout,
+    refreshUser,
     isLoading,
     isAuthenticated: !!user && !!token,
     // 세션 관리 기능들

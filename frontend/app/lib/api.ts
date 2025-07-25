@@ -769,6 +769,26 @@ class ApiClient {
     return result;
   }
 
+  async updateUserProfile(profileData: { name?: string; bio?: string; avatar_url?: string; user_handle?: string; email?: string }): Promise<ApiResponse<User>> {
+    console.log('ApiClient: updateUserProfile called with data:', profileData);
+    const result = await this.makeRequest<User>('/api/auth/profile', {
+      method: 'PUT',
+      body: JSON.stringify(profileData),
+    });
+    console.log('ApiClient: updateUserProfile result:', result);
+    return result;
+  }
+
+  async changePassword(passwordData: { current_password: string; new_password: string }): Promise<ApiResponse<{ message: string }>> {
+    console.log('ApiClient: changePassword called');
+    const result = await this.makeRequest<{ message: string }>('/api/auth/change-password', {
+      method: 'POST',
+      body: JSON.stringify(passwordData),
+    });
+    console.log('ApiClient: changePassword result:', result);
+    return result;
+  }
+
   // 사용자 활동 개수 조회 API (빠른 조회용)
   async getUserActivityCounts(): Promise<{posts: number, comments: number, reactions: number}> {
     console.log('ApiClient: getUserActivityCounts called');
