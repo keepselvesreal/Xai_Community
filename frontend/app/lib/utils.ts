@@ -125,7 +125,8 @@ export function removeDuplicates<T>(array: T[], key?: keyof T): T[] {
 
 // 폼 유틸리티
 export function validateEmail(email: string): boolean {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // 더 엄격한 이메일 검증: 도메인에 최소 2자 이상의 TLD 필요
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/;
   return emailRegex.test(email);
 }
 
@@ -135,13 +136,15 @@ export function validatePassword(password: string): {
 } {
   const errors: string[] = [];
   
-  if (password.length < 8) {
-    errors.push('비밀번호는 최소 8자 이상이어야 합니다.');
+  // MVP용 완화된 비밀번호 정책
+  if (password.length < 6) {
+    errors.push('비밀번호는 최소 6자 이상이어야 합니다.');
   }
   
-  if (!/[A-Z]/.test(password)) {
-    errors.push('대문자를 포함해야 합니다.');
-  }
+  // 대문자 필수 조건 제거 (MVP용)
+  // if (!/[A-Z]/.test(password)) {
+  //   errors.push('대문자를 포함해야 합니다.');
+  // }
   
   if (!/[a-z]/.test(password)) {
     errors.push('소문자를 포함해야 합니다.');

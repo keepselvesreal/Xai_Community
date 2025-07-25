@@ -371,14 +371,16 @@ class Stats(Document):
 class UserCreate(UserBase):
     """Model for creating a new user."""
 
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=6)  # MVP용 완화: 8자 → 6자
 
     @field_validator("password")
     @classmethod
     def validate_password(cls, v: str) -> str:
-        """Validate password strength."""
-        if not any(c.isupper() for c in v):
-            raise ValueError("Password must contain at least one uppercase letter")
+        """Validate password strength - MVP용 완화된 정책."""
+        # 대문자 필수 조건 제거 (MVP용)
+        # if not any(c.isupper() for c in v):
+        #     raise ValueError("Password must contain at least one uppercase letter")
+        
         if not any(c.islower() for c in v):
             raise ValueError("Password must contain at least one lowercase letter")
         if not any(c.isdigit() for c in v):

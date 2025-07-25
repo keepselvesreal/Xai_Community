@@ -83,31 +83,41 @@ export default function Register() {
   const isSubmitting = navigation.state === "submitting";
 
   // 실시간 이메일 검증
-  const handleEmailBlur = () => {
+  const handleEmailBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    const input = e.target;
+    console.log('Email blur check:', email, 'Valid:', validateEmail(email)); // 디버깅용
+    
     if (email && !validateEmail(email)) {
       setEmailError("올바른 이메일 주소를 입력해주세요. (예: user@example.com)");
     } else {
       setEmailError("");
+      // 유효한 이메일인 경우 브라우저 커스텀 검증 메시지도 초기화
+      input.setCustomValidity("");
     }
   };
 
   // 브라우저 기본 검증 메시지 커스터마이징
   const handleEmailInvalid = (e: React.InvalidEvent<HTMLInputElement>) => {
-    e.preventDefault();
     const input = e.target;
     if (input.validity.valueMissing) {
       input.setCustomValidity("이메일 주소를 입력해주세요.");
     } else if (input.validity.typeMismatch) {
       input.setCustomValidity("올바른 이메일 형식으로 입력해주세요. (예: user@example.com)");
-    } else {
-      input.setCustomValidity("");
     }
   };
 
-  const handleEmailInput = (e: React.FormEvent<HTMLInputElement>) => {
-    const input = e.target as HTMLInputElement;
-    input.setCustomValidity(""); // 사용자가 입력을 시작하면 커스텀 메시지 초기화
-    setEmail(input.value);
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target;
+    const newEmail = input.value;
+    setEmail(newEmail);
+    
+    // 항상 브라우저 커스텀 메시지 초기화하여 기본 검증이 작동하도록 함
+    input.setCustomValidity("");
+    
+    // 커스텀 에러 메시지도 초기화 (실시간으로 에러 제거)
+    if (emailError && validateEmail(newEmail)) {
+      setEmailError("");
+    }
   };
 
   // 실시간 비밀번호 검증
@@ -216,7 +226,7 @@ export default function Register() {
                     type="email"
                     name="email"
                     value={email}
-                    onInput={handleEmailInput}
+                    onChange={handleEmailChange}
                     onBlur={handleEmailBlur}
                     onInvalid={handleEmailInvalid}
                     placeholder="이메일을 입력하세요 (예: user@example.com)"
