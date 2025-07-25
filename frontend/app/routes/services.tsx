@@ -18,7 +18,7 @@ export default function Services() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   
-  // useListData 훅으로 API 통합 및 상태 관리
+  // useListData 훅으로 API 통합 및 상태 관리 (무한 스크롤 활성화)
   const {
     items: rawItems,
     loading,
@@ -27,8 +27,10 @@ export default function Services() {
     searchQuery,
     handleCategoryFilter,
     handleSort,
-    handleSearch
-  } = useListData(servicesConfig);
+    handleSearch,
+    loadNextPage,
+    hasMore
+  } = useListData(servicesConfig, undefined, false, true);
 
   // useListData에서 이미 변환된 Service 데이터 사용
   const services: Service[] = rawItems;
@@ -60,9 +62,9 @@ export default function Services() {
     handleSort(sortBy);
   };
 
-  // 더보기 핸들러 (현재는 페이징 없음)
+  // 무한 스크롤 핸들러
   const handleLoadMore = () => {
-    // 추후 페이징 구현 시 사용
+    loadNextPage();
   };
 
   // 액션 버튼 핸들러 (업체 등록)
@@ -83,13 +85,14 @@ export default function Services() {
       onLoadMore={handleLoadMore}
       onActionClick={handleActionClick}
       loading={loading}
-      hasMore={false} // 현재는 페이징 없음
+      hasMore={hasMore}
       user={user || undefined}
       onLogout={logout}
       searchQuery={searchQuery}
       activeFilter={currentFilter}
       activeSortBy={sortBy}
       categories={categories}
+      infiniteScrollEnabled={true}
     />
   );
 }

@@ -1,7 +1,23 @@
+/**
+ * 작업 시간: 2025-07-25
+ * 작업 버전: v2.0.0  
+ * 주요 컴포넌트: GridPageLayout (무한 스크롤 지원)
+ * 주요 기능:
+ * - 그리드 레이아웃으로 아이템 표시
+ * - 자동 무한 스크롤 감지 (더보기 버튼 제거)
+ * - 검색, 필터링, 정렬 기능
+ * - 서비스와 전문가 꿀팁 페이지 공통 사용
+ * 코드 라인: 1-420
+ * 관련 파일:
+ * - useInfiniteScroll.ts (무한 스크롤 로직)
+ * - services.tsx, tips.tsx (사용하는 페이지들)
+ */
+
 import { useState, useEffect } from 'react';
 import { useNavigate } from '@remix-run/react';
 import AppLayout from '~/components/layout/AppLayout';
 import LoadingSpinner from '~/components/common/LoadingSpinner';
+import useInfiniteScroll from '~/hooks/useInfiniteScroll';
 import type { User } from '~/types';
 import '~/styles/grid-layout.css';
 
@@ -21,6 +37,7 @@ interface GridPageLayoutProps {
   activeFilter?: string;
   activeSortBy?: string;
   categories?: string[];
+  infiniteScrollEnabled?: boolean;
 }
 
 const GridPageLayout: React.FC<GridPageLayoutProps> = ({
@@ -38,10 +55,20 @@ const GridPageLayout: React.FC<GridPageLayoutProps> = ({
   searchQuery = '',
   activeFilter = 'all',
   activeSortBy = 'latest',
-  categories = []
+  categories = [],
+  infiniteScrollEnabled = false
 }) => {
   const navigate = useNavigate();
   const [localSearchQuery, setLocalSearchQuery] = useState(searchQuery);
+  
+  // 무한 스크롤 훅 설정
+  const { sentinelRef } = useInfiniteScroll({
+    hasMore,
+    loading,
+    onLoadMore,
+    threshold: 200,
+    enabled: infiniteScrollEnabled
+  });
   
   useEffect(() => {
     setLocalSearchQuery(searchQuery);
@@ -353,8 +380,29 @@ const GridPageLayout: React.FC<GridPageLayoutProps> = ({
           </div>
         )}
 
-        {/* 더보기 버튼 */}
-        {hasMore && !loading && (
+        {/* 무한 스크롤 감지 영역 (더보기 버튼 대체) */}
+        {infiniteScrollEnabled && hasMore && (
+          <div ref={sentinelRef} className="h-20 flex items-center justify-center">
+            {loading && (
+              <div className="flex items-center gap-2">
+                <LoadingSpinner />
+                <span className="text-gray-500">더 많은 데이터를 불러오는 중...</span>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* 무한 스크롤 완료 메시지 */}
+        {infiniteScrollEnabled && !hasMore && !loading && items.length > 0 && (
+          <div className="text-center py-8">
+            <div className="text-gray-500 text-sm">
+              🎉 모든 {pageType === 'moving-services' ? '서비스' : '꿀정보'}를 확인했습니다!
+            </div>
+          </div>
+        )}
+        
+        {/* 기존 더보기 버튼 (무한 스크롤이 비활성화된 경우에만) */}
+        {!infiniteScrollEnabled && hasMore && !loading && (
           <div className="flex justify-center mt-8">
             <button
               onClick={onLoadMore}

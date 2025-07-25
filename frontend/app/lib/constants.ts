@@ -138,9 +138,9 @@ export const VALIDATION = {
     PATTERN: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
   },
   PASSWORD: {
-    MIN_LENGTH: 8,
+    MIN_LENGTH: 6, // MVP용 완화: 8자 → 6자
     MAX_LENGTH: 128,
-    PATTERN: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{8,}$/,
+    PATTERN: /^(?=.*[a-z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$/, // MVP용: 대문자 필수 조건 제거
   },
   USER_HANDLE: {
     MIN_LENGTH: 3,
@@ -336,15 +336,21 @@ export const NAV_ITEMS = [
   },
 ] as const;
 
-// 에러 메시지 상수
+// 에러 메시지 상수 - 사용자 친화적으로 개선
 export const ERROR_MESSAGES = {
-  NETWORK_ERROR: '네트워크 오류가 발생했습니다. 연결을 확인해주세요.',
-  UNAUTHORIZED: '로그인이 필요합니다.',
+  NETWORK_ERROR: '인터넷 연결을 확인해주세요.',
+  NETWORK_RETRY: '연결이 불안정합니다. 재시도 중...',
+  UNAUTHORIZED: '다시 로그인이 필요합니다.',
   FORBIDDEN: '권한이 없습니다.',
-  NOT_FOUND: '요청한 리소스를 찾을 수 없습니다.',
+  NOT_FOUND: '요청한 정보를 찾을 수 없습니다.',
   VALIDATION_ERROR: '입력 정보를 다시 확인해주세요.',
-  SERVER_ERROR: '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-  UNKNOWN_ERROR: '알 수 없는 오류가 발생했습니다.',
+  SERVER_ERROR: '일시적인 오류입니다. 잠시 후 다시 시도해주세요.',
+  UNKNOWN_ERROR: '문제가 발생했습니다. 새로고침 후 다시 시도해주세요.',
+  TOKEN_REFRESHING: '인증 정보를 갱신하고 있습니다. 잠시만 기다려주세요.',
+  LOGIN_REQUIRED: '다시 로그인이 필요합니다. 로그인 페이지로 이동할까요?',
+  SESSION_EXPIRED: '보안을 위해 로그아웃되었습니다. 다시 로그인해주세요.',
+  TEMPORARY_ERROR: '일시적인 오류입니다. 잠시 후 다시 시도해주세요.',
+  CONNECTION_ERROR: '서버와의 연결이 불안정합니다.',
 } as const;
 
 // 성공 메시지 상수
@@ -362,18 +368,18 @@ export const SUCCESS_MESSAGES = {
   REACTION_REMOVED: '반응이 취소되었습니다.',
 } as const;
 
-// 세션 관리 상수 (하이브리드 방식)
+// 세션 관리 상수 (하이브리드 방식) - MVP용 완화된 설정
 export const SESSION_CONFIG = {
-  // 최대 세션 지속 시간 (시간)
-  MAX_SESSION_HOURS: 8,
-  // 최대 토큰 갱신 횟수 (30분 × 16회 = 8시간)
-  MAX_REFRESH_COUNT: 16,
+  // 최대 세션 지속 시간 (시간) - MVP용 24시간으로 완화
+  MAX_SESSION_HOURS: 24,
+  // 최대 토큰 갱신 횟수 (30분 × 100회 = 50시간) - MVP용 완화
+  MAX_REFRESH_COUNT: 100,
   // 로그아웃 경고 시간 (분) - 30분 전 경고
   WARNING_BEFORE_LOGOUT_MINUTES: 30,
-  // 토큰 만료 임박 확인 시간 (분) - 10분 전에 갱신
-  TOKEN_REFRESH_THRESHOLD_MINUTES: 10,
-  // 세션 확인 주기 (분) - 5분마다 확인
-  SESSION_CHECK_INTERVAL_MINUTES: 5,
+  // 토큰 만료 임박 확인 시간 (분) - MVP용 30분으로 완화
+  TOKEN_REFRESH_THRESHOLD_MINUTES: 30,
+  // 세션 확인 주기 (분) - MVP용 15분으로 완화
+  SESSION_CHECK_INTERVAL_MINUTES: 15,
 } as const;
 
 // 세션 만료 사유 상수

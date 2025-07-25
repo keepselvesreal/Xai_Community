@@ -1,6 +1,6 @@
 import { redirect, type ActionFunction, type LoaderFunction, type MetaFunction } from "@remix-run/node";
 import { Form, useActionData, useNavigation, useNavigate } from "@remix-run/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "@remix-run/react";
 import Card from "~/components/ui/Card";
 import Input from "~/components/ui/Input";
@@ -57,6 +57,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { login, isAuthenticated } = useAuth();
   const { showSuccess, showError, showWarning } = useNotification();
+  const [rememberMe, setRememberMe] = useState(false);
 
   const isSubmitting = navigation.state === "submitting";
 
@@ -78,6 +79,18 @@ export default function Login() {
 
     try {
       await login(credentials);
+      
+      // 로그인 상태 유지 설정 저장
+      if (typeof window !== 'undefined') {
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+          console.log('Login: Remember me enabled - extended session');
+        } else {
+          localStorage.removeItem('rememberMe');
+          console.log('Login: Normal session');
+        }
+      }
+      
       showSuccess(SUCCESS_MESSAGES.LOGIN_SUCCESS);
       // SPA 방식으로 대시보드로 이동 (페이지 새로고침 없음)
       navigate("/dashboard");
@@ -145,10 +158,12 @@ export default function Login() {
                   <input
                     type="checkbox"
                     id="remember"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
                     className="w-4 h-4 accent-[var(--accent-primary)]"
                   />
                   <label htmlFor="remember" className="text-var-secondary text-sm cursor-pointer">
-                    로그인 상태 유지
+                    로그인 상태 유지 (7일)
                   </label>
                 </div>
 

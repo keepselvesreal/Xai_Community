@@ -152,7 +152,12 @@ const boardSortFunction = (a: Post, b: Post, sortBy: string): number => {
     case 'views':
       return (b.stats?.view_count || b.stats?.views || 0) - (a.stats?.view_count || a.stats?.views || 0);
     case 'likes':
-      return (b.stats?.like_count || b.stats?.likes || 0) - (a.stats?.like_count || a.stats?.likes || 0);
+      // 1차: 추천수로 정렬 (높은 순)
+      const likeDiff = (b.stats?.like_count || b.stats?.likes || 0) - (a.stats?.like_count || a.stats?.likes || 0);
+      if (likeDiff !== 0) return likeDiff;
+      
+      // 2차: 추천수가 같으면 비추천수로 정렬 (낮은 순)
+      return (a.stats?.dislike_count || a.stats?.dislikes || 0) - (b.stats?.dislike_count || b.stats?.dislikes || 0);
     case 'comments':
       return (b.stats?.comment_count || b.stats?.comments || 0) - (a.stats?.comment_count || a.stats?.comments || 0);
     case 'saves':
@@ -381,7 +386,7 @@ const servicesSortFunction = (a: Service, b: Service, sortBy: string): number =>
       return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
     case 'views':
       return (b.serviceStats?.views || b.stats?.view_count || 0) - (a.serviceStats?.views || a.stats?.view_count || 0);
-    case 'saves':
+    case 'bookmarks':
       return (b.bookmarks || b.stats?.bookmark_count || 0) - (a.bookmarks || a.stats?.bookmark_count || 0);
     case 'reviews':
       return (b.serviceStats?.reviews || b.stats?.comment_count || 0) - (a.serviceStats?.reviews || a.stats?.comment_count || 0);
@@ -504,7 +509,7 @@ export const servicesConfig: ListPageConfig<Service> = {
   sortOptions: [
     { value: 'latest', label: '최신순' },
     { value: 'views', label: '조회수' },
-    { value: 'saves', label: '저장수' },
+    { value: 'bookmarks', label: '관심순' },
     { value: 'reviews', label: '후기수' },
     { value: 'inquiries', label: '문의수' }
   ],
@@ -691,9 +696,14 @@ const tipsSortFunction = (a: Tip, b: Tip, sortBy: string): number => {
     case 'views':
       return b.views_count - a.views_count;
     case 'likes':
-      return b.likes_count - a.likes_count;
+      // 1차: 추천수로 정렬 (높은 순)
+      const likeDiff = b.likes_count - a.likes_count;
+      if (likeDiff !== 0) return likeDiff;
+      
+      // 2차: 추천수가 같으면 비추천수로 정렬 (낮은 순)
+      return a.dislikes_count - b.dislikes_count;
     case 'comments':
-      return Math.floor(b.views_count * 0.1) - Math.floor(a.views_count * 0.1);
+      return b.comments_count - a.comments_count;
     case 'saves':
       return b.saves_count - a.saves_count;
     default:

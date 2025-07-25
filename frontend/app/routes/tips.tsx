@@ -53,7 +53,7 @@ export default function Tips() {
   const { showError } = useNotification();
   const navigate = useNavigate();
   
-  // useListData 훅으로 API 통합 및 상태 관리
+  // useListData 훅으로 API 통합 및 상태 관리 (무한 스크롤 활성화)
   const {
     items: tips,
     loading,
@@ -62,8 +62,10 @@ export default function Tips() {
     searchQuery,
     handleCategoryFilter,
     handleSort,
-    handleSearch
-  } = useListData(tipsConfig);
+    handleSearch,
+    loadNextPage,
+    hasMore
+  } = useListData(tipsConfig, undefined, false, true);
 
   // Tip 데이터를 GridPageLayout에서 사용할 수 있는 형태로 변환
   const gridTips = tips.map(convertTipForGrid);
@@ -95,9 +97,9 @@ export default function Tips() {
     handleSort(sortBy);
   };
 
-  // 더보기 핸들러 (현재는 페이징 없음)
+  // 무한 스크롤 핸들러
   const handleLoadMore = () => {
-    // 추후 페이징 구현 시 사용
+    loadNextPage();
   };
 
   // 글쓰기 권한 체크 함수
@@ -136,13 +138,14 @@ export default function Tips() {
       onLoadMore={handleLoadMore}
       onActionClick={handleActionClick}
       loading={loading}
-      hasMore={false} // 현재는 페이징 없음
+      hasMore={hasMore}
       user={user || undefined}
       onLogout={logout}
       searchQuery={searchQuery}
       activeFilter={currentFilter}
       activeSortBy={sortBy}
       categories={categories}
+      infiniteScrollEnabled={true}
     />
   );
 }

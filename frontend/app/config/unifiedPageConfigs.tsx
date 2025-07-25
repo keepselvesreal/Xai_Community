@@ -46,7 +46,12 @@ const boardSortFunction = (a: Post, b: Post, sortBy: string): number => {
     case 'views':
       return (b.stats?.view_count || b.stats?.views || 0) - (a.stats?.view_count || a.stats?.views || 0);
     case 'likes':
-      return (b.stats?.like_count || b.stats?.likes || 0) - (a.stats?.like_count || a.stats?.likes || 0);
+      // 1차: 추천수로 정렬 (높은 순)
+      const likeDiff = (b.stats?.like_count || b.stats?.likes || 0) - (a.stats?.like_count || a.stats?.likes || 0);
+      if (likeDiff !== 0) return likeDiff;
+      
+      // 2차: 추천수가 같으면 비추천수로 정렬 (낮은 순)
+      return (a.stats?.dislike_count || a.stats?.dislikes || 0) - (b.stats?.dislike_count || b.stats?.dislikes || 0);
     case 'comments':
       return (b.stats?.comment_count || b.stats?.comments || 0) - (a.stats?.comment_count || a.stats?.comments || 0);
     case 'saves':

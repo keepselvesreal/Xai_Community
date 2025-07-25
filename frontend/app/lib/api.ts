@@ -95,10 +95,13 @@ class ApiClient {
       
       this.token = token;
       this.refreshToken = refreshToken;
-      console.log('ApiClient: Tokens loaded from localStorage:', 
-        this.token ? `access: ${this.token.substring(0, 10)}...` : 'access: null',
-        this.refreshToken ? `refresh: ${this.refreshToken.substring(0, 10)}...` : 'refresh: null'
-      );
+      // 프로덕션에서는 토큰 정보 로그 제거
+      if (!isProduction) {
+        console.log('ApiClient: Tokens loaded from localStorage:', 
+          this.token ? `access: ${this.token.substring(0, 10)}...` : 'access: null',
+          this.refreshToken ? `refresh: ${this.refreshToken.substring(0, 10)}...` : 'refresh: null'
+        );
+      }
       
       // 세션 만료 체크
       if (this.token && this.refreshToken) {
@@ -128,10 +131,13 @@ class ApiClient {
       if (refreshToken) {
         localStorage.setItem(STORAGE_KEYS.REFRESH_TOKEN, refreshToken);
       }
-      console.log('ApiClient: Tokens saved to localStorage:', 
-        cleanToken ? `access: ${cleanToken.substring(0, 10)}...` : 'access: null',
-        refreshToken ? `refresh: ${refreshToken.substring(0, 10)}...` : 'refresh: unchanged'
-      );
+      // 프로덕션에서는 토큰 정보 로그 제거
+      if (!isProduction) {
+        console.log('ApiClient: Tokens saved to localStorage:', 
+          cleanToken ? `access: ${cleanToken.substring(0, 10)}...` : 'access: null',
+          refreshToken ? `refresh: ${refreshToken.substring(0, 10)}...` : 'refresh: unchanged'
+        );
+      }
     }
   }
 
@@ -174,16 +180,21 @@ class ApiClient {
     
     if (!loginTime) return false;
     
-    // 조건 1: 절대 시간 제한 (8시간 경과)
+    // 로그인 상태 유지 설정에 따른 동적 세션 정책
+    const isRememberMe = typeof window !== 'undefined' && localStorage.getItem('rememberMe') === 'true';
+    const maxSessionHours = isRememberMe ? 24 * 7 : SESSION_CONFIG.MAX_SESSION_HOURS; // 7일 vs 1일
+    const maxRefreshCount = isRememberMe ? SESSION_CONFIG.MAX_REFRESH_COUNT * 7 : SESSION_CONFIG.MAX_REFRESH_COUNT; // 700회 vs 100회
+    
+    // 조건 1: 절대 시간 제한
     const elapsed = (Date.now() - loginTime.getTime()) / (1000 * 60 * 60);
-    if (elapsed > SESSION_CONFIG.MAX_SESSION_HOURS) {
-      console.log('ApiClient: Session expired due to time limit:', elapsed, 'hours');
+    if (elapsed > maxSessionHours) {
+      console.log('ApiClient: Session expired due to time limit:', elapsed, 'hours (max:', maxSessionHours, ')');
       return true;
     }
     
-    // 조건 2: 갱신 횟수 제한 (16회 초과)
-    if (refreshCount >= SESSION_CONFIG.MAX_REFRESH_COUNT) {
-      console.log('ApiClient: Session expired due to refresh limit:', refreshCount);
+    // 조건 2: 갱신 횟수 제한
+    if (refreshCount >= maxRefreshCount) {
+      console.log('ApiClient: Session expired due to refresh limit:', refreshCount, '(max:', maxRefreshCount, ')');
       return true;
     }
     
@@ -196,12 +207,17 @@ class ApiClient {
     
     if (!loginTime) return SESSION_EXPIRY_REASONS.TOKEN_INVALID;
     
+    // 로그인 상태 유지 설정에 따른 동적 세션 정책
+    const isRememberMe = typeof window !== 'undefined' && localStorage.getItem('rememberMe') === 'true';
+    const maxSessionHours = isRememberMe ? 24 * 7 : SESSION_CONFIG.MAX_SESSION_HOURS;
+    const maxRefreshCount = isRememberMe ? SESSION_CONFIG.MAX_REFRESH_COUNT * 7 : SESSION_CONFIG.MAX_REFRESH_COUNT;
+    
     const elapsed = (Date.now() - loginTime.getTime()) / (1000 * 60 * 60);
-    if (elapsed > SESSION_CONFIG.MAX_SESSION_HOURS) {
+    if (elapsed > maxSessionHours) {
       return SESSION_EXPIRY_REASONS.TIME_LIMIT;
     }
     
-    if (refreshCount >= SESSION_CONFIG.MAX_REFRESH_COUNT) {
+    if (refreshCount >= maxRefreshCount) {
       return SESSION_EXPIRY_REASONS.REFRESH_LIMIT;
     }
     
@@ -212,8 +228,12 @@ class ApiClient {
     const loginTime = this.getLoginTime();
     if (!loginTime) return false;
     
+    // 로그인 상태 유지 설정에 따른 동적 경고 시간
+    const isRememberMe = typeof window !== 'undefined' && localStorage.getItem('rememberMe') === 'true';
+    const maxSessionHours = isRememberMe ? 24 * 7 : SESSION_CONFIG.MAX_SESSION_HOURS;
+    
     const elapsed = (Date.now() - loginTime.getTime()) / (1000 * 60);
-    const warningThreshold = (SESSION_CONFIG.MAX_SESSION_HOURS * 60) - SESSION_CONFIG.WARNING_BEFORE_LOGOUT_MINUTES;
+    const warningThreshold = (maxSessionHours * 60) - SESSION_CONFIG.WARNING_BEFORE_LOGOUT_MINUTES;
     
     return elapsed > warningThreshold;
   }
@@ -320,8 +340,10 @@ class ApiClient {
       const cleanToken = this.token.replace(/^Bearer\s+/i, '');
       headers['Authorization'] = `Bearer ${cleanToken}`;
       
-      // 디버깅용 로그
-      console.log('ApiClient: Setting Authorization header with token:', `Bearer ${cleanToken.substring(0, 10)}...`);
+      // 프로덕션에서는 토큰 정보 로그 제거
+      if (!isProduction) {
+        console.log('ApiClient: Setting Authorization header with token:', `Bearer ${cleanToken.substring(0, 10)}...`);
+      }
     }
 
     return headers;
@@ -349,8 +371,12 @@ class ApiClient {
   }
 
   private async performTokenRefresh(): Promise<boolean> {
+    return this.performTokenRefreshWithRetry();
+  }
+
+  private async performTokenRefreshWithRetry(attempt: number = 1, maxAttempts: number = 3): Promise<boolean> {
     try {
-      console.log('ApiClient: Attempting to refresh access token...');
+      console.log(`ApiClient: Attempting to refresh access token... (attempt ${attempt}/${maxAttempts})`);
       
       // 갱신 전 세션 만료 체크
       if (this.isSessionExpired()) {
@@ -369,7 +395,16 @@ class ApiClient {
 
       if (!response.ok) {
         console.error('ApiClient: Token refresh failed:', response.status, response.statusText);
-        // 리프레시 토큰이 만료되었거나 무효함 - 로그아웃 처리
+        
+        // 재시도 가능한 오류인지 확인
+        if (this.isRetryableError(response.status) && attempt < maxAttempts) {
+          const delay = Math.pow(2, attempt) * 1000; // 지수 백오프: 2초, 4초, 8초
+          console.log(`ApiClient: Retrying token refresh in ${delay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return this.performTokenRefreshWithRetry(attempt + 1, maxAttempts);
+        }
+        
+        // 재시도 불가능하거나 최대 재시도 횟수 초과 - 로그아웃 처리
         this.handleSessionExpiry(SESSION_EXPIRY_REASONS.TOKEN_INVALID);
         return false;
       }
@@ -396,9 +431,115 @@ class ApiClient {
       return true;
     } catch (error) {
       console.error('ApiClient: Token refresh error:', error);
+      
+      // 네트워크 오류 등 재시도 가능한 오류인지 확인
+      if (this.isRetryableNetworkError(error) && attempt < maxAttempts) {
+        const delay = Math.pow(2, attempt) * 1000; // 지수 백오프
+        console.log(`ApiClient: Retrying token refresh due to network error in ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return this.performTokenRefreshWithRetry(attempt + 1, maxAttempts);
+      }
+      
       this.handleSessionExpiry(SESSION_EXPIRY_REASONS.TOKEN_INVALID);
       return false;
     }
+  }
+
+  private isRetryableError(status: number): boolean {
+    // 일시적인 서버 오류로 재시도 가능한 상태 코드들
+    return status === 502 || status === 503 || status === 504 || status === 408;
+  }
+
+  private isRetryableNetworkError(error: unknown): boolean {
+    // 네트워크 관련 재시도 가능한 오류들
+    if (error instanceof Error) {
+      const errorMessage = error.message.toLowerCase();
+      return errorMessage.includes('network') ||
+             errorMessage.includes('fetch') ||
+             errorMessage.includes('timeout') ||
+             errorMessage.includes('connection');
+    }
+    return false;
+  }
+
+  private parseValidationErrors(validationErrors: any): string {
+    // FastAPI 422 에러를 사용자 친화적 메시지로 변환
+    if (Array.isArray(validationErrors)) {
+      const friendlyMessages: string[] = [];
+      
+      for (const error of validationErrors) {
+        // 백엔드 응답 구조에 맞게 필드 추출 (field 또는 loc)
+        const field = error.field || (error.loc?.join('.')) || 'unknown';
+        const msg = error.message || error.msg || 'Invalid value';
+        
+        console.log('Parsing validation error:', { field, msg, error }); // 디버깅용
+        
+        // 비밀번호 관련 에러 특별 처리 (현재 MVP 정책에 맞춤)
+        if (field.includes('password')) {
+          if (msg.includes('lowercase')) {
+            friendlyMessages.push('비밀번호에 소문자가 포함되어야 합니다.');
+          } else if (msg.includes('digit')) {
+            friendlyMessages.push('비밀번호에 숫자가 포함되어야 합니다.');
+          } else if (msg.includes('min_length') || msg.includes('at least')) {
+            friendlyMessages.push('비밀번호는 최소 6자 이상이어야 합니다.');
+          } else {
+            friendlyMessages.push('비밀번호는 6자 이상, 소문자와 숫자를 포함해야 합니다.');
+          }
+        }
+        // 이메일 관련 에러 처리
+        else if (field.includes('email')) {
+          if (msg.includes('valid email')) {
+            friendlyMessages.push('올바른 이메일 주소를 입력해주세요.');
+          } else {
+            friendlyMessages.push('이메일 형식이 올바르지 않습니다.');
+          }
+        }
+        // 사용자 핸들 관련 에러 처리 (현재 실제 정책에 맞춤)
+        else if (field.includes('user_handle')) {
+          if (msg.includes('min_length') || msg.includes('at least 3')) {
+            friendlyMessages.push('사용자 아이디는 3자 이상이어야 합니다.');
+          } else if (msg.includes('max_length') || msg.includes('at most 30')) {
+            friendlyMessages.push('사용자 아이디는 30자 이하여야 합니다.');
+          } else if (msg.includes('letters, numbers, and underscores') || msg.includes('alphanumeric')) {
+            friendlyMessages.push('사용자 아이디는 영문, 숫자, 언더스코어(_)만 사용 가능합니다.');
+          } else {
+            friendlyMessages.push('사용자 아이디는 3-30자, 영문/숫자/언더스코어만 사용 가능합니다.');
+          }
+        }
+        // 기타 필드 에러
+        else {
+          friendlyMessages.push(`${field}: ${this.translateValidationMessage(msg)}`);
+        }
+      }
+      
+      return friendlyMessages.length > 0 
+        ? friendlyMessages.join(' ') 
+        : '입력 정보를 다시 확인해주세요.';
+    }
+    
+    // 단일 에러 메시지인 경우
+    return typeof validationErrors === 'string' 
+      ? this.translateValidationMessage(validationErrors)
+      : '입력 정보를 다시 확인해주세요.';
+  }
+
+  private translateValidationMessage(msg: string): string {
+    // 영문 에러 메시지를 한국어로 변환
+    const translations: Record<string, string> = {
+      'Field required': '필수 입력 항목입니다.',
+      'String should have at least': '최소 길이를 만족하지 않습니다.',
+      'String should have at most': '최대 길이를 초과했습니다.',
+      'value is not a valid email address': '올바른 이메일 주소가 아닙니다.',
+      'Input should be a valid string': '문자열을 입력해주세요.',
+    };
+    
+    for (const [en, ko] of Object.entries(translations)) {
+      if (msg.includes(en)) {
+        return ko;
+      }
+    }
+    
+    return msg; // 번역되지 않은 메시지는 원문 반환
   }
 
   private async makeRequest<T>(
@@ -524,12 +665,11 @@ class ApiClient {
           requestBody: config.body
         });
         
-        // FastAPI validation errors 처리
-        if (response.status === 422 && data.detail) {
-          const errorMessages = Array.isArray(data.detail) 
-            ? data.detail.map((err: any) => `${err.loc?.join('.')}: ${err.msg}`).join(', ')
-            : data.detail;
-          throw new Error(`Validation Error: ${errorMessages}`);
+        // FastAPI validation errors 처리 - 사용자 친화적 메시지 제공
+        if (response.status === 422 && (data.details || data.detail)) {
+          const validationErrors = data.details || data.detail;
+          const friendlyErrorMessage = this.parseValidationErrors(validationErrors);
+          throw new Error(friendlyErrorMessage);
         }
         
         throw new Error(data.message || data.detail || `HTTP error! status: ${response.status}`);

@@ -74,9 +74,62 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [userHandle, setUserHandle] = useState("");
   const [isHandleEditing, setIsHandleEditing] = useState(false);
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
 
   const isSubmitting = navigation.state === "submitting";
 
+  // 실시간 이메일 검증
+  const handleEmailBlur = () => {
+    if (email && !validateEmail(email)) {
+      setEmailError("올바른 이메일 주소를 입력해주세요. (예: user@example.com)");
+    } else {
+      setEmailError("");
+    }
+  };
+
+  // 브라우저 기본 검증 메시지 커스터마이징
+  const handleEmailInvalid = (e: React.InvalidEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const input = e.target;
+    if (input.validity.valueMissing) {
+      input.setCustomValidity("이메일 주소를 입력해주세요.");
+    } else if (input.validity.typeMismatch) {
+      input.setCustomValidity("올바른 이메일 형식으로 입력해주세요. (예: user@example.com)");
+    } else {
+      input.setCustomValidity("");
+    }
+  };
+
+  const handleEmailInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const input = e.target as HTMLInputElement;
+    input.setCustomValidity(""); // 사용자가 입력을 시작하면 커스텀 메시지 초기화
+    setEmail(input.value);
+  };
+
+  // 실시간 비밀번호 검증
+  const handlePasswordBlur = () => {
+    if (password) {
+      const validation = validatePassword(password);
+      if (!validation.isValid) {
+        setPasswordError(validation.errors.join(" "));
+      } else {
+        setPasswordError("");
+      }
+    }
+  };
+
+  // 실시간 비밀번호 확인 검증
+  const handleConfirmPasswordBlur = () => {
+    if (confirmPassword && password !== confirmPassword) {
+      setConfirmPasswordError("비밀번호가 일치하지 않습니다.");
+    } else {
+      setConfirmPasswordError("");
+    }
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -85,7 +138,7 @@ export default function Register() {
     const userData: RegisterRequest = {
       email: email,
       user_handle: userHandle,
-      password: formData.get("password") as string,
+      password: password,
     };
 
     // 퍼널 분석 - 회원가입 시도 단계
@@ -163,13 +216,15 @@ export default function Register() {
                     type="email"
                     name="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="이메일을 입력하세요"
+                    onInput={handleEmailInput}
+                    onBlur={handleEmailBlur}
+                    onInvalid={handleEmailInvalid}
+                    placeholder="이메일을 입력하세요 (예: user@example.com)"
                     required
                     className="form-input"
                   />
-                  {actionData?.errors?.email && (
-                    <p className="text-red-500 text-sm mt-1">{actionData.errors.email}</p>
+                  {(emailError || actionData?.errors?.email) && (
+                    <p className="text-red-500 text-sm mt-1">{emailError || actionData.errors.email}</p>
                   )}
                 </div>
 
@@ -216,12 +271,15 @@ export default function Register() {
                   <input
                     type="password"
                     name="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    onBlur={handlePasswordBlur}
                     placeholder="비밀번호를 입력하세요"
                     required
                     className="form-input"
                   />
-                  {actionData?.errors?.password && (
-                    <p className="text-red-500 text-sm mt-1">{actionData.errors.password}</p>
+                  {(passwordError || actionData?.errors?.password) && (
+                    <p className="text-red-500 text-sm mt-1">{passwordError || actionData.errors.password}</p>
                   )}
                 </div>
 
@@ -232,12 +290,15 @@ export default function Register() {
                   <input
                     type="password"
                     name="confirm_password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    onBlur={handleConfirmPasswordBlur}
                     placeholder="비밀번호를 다시 입력하세요"
                     required
                     className="form-input"
                   />
-                  {actionData?.errors?.confirm_password && (
-                    <p className="text-red-500 text-sm mt-1">{actionData.errors.confirm_password}</p>
+                  {(confirmPasswordError || actionData?.errors?.confirm_password) && (
+                    <p className="text-red-500 text-sm mt-1">{confirmPasswordError || actionData.errors.confirm_password}</p>
                   )}
                 </div>
 
@@ -261,12 +322,13 @@ export default function Register() {
               </Link>
             </div>
 
-            {/* 비밀번호 요구사항 안내 */}
+            {/* 비밀번호 요구사항 안내 - 현재 MVP 정책에 맞게 수정 */}
             <div className="mt-6 p-4 bg-var-section border border-var-light rounded-xl text-sm text-var-secondary">
               <strong className="text-accent-primary">비밀번호 요구사항:</strong>
               <ul className="mt-2 space-y-1">
-                <li>• 최소 8자 이상</li>
-                <li>• 대문자, 소문자, 숫자 포함</li>
+                <li>• 최소 6자 이상</li>
+                <li>• 소문자와 숫자 포함</li>
+                <li className="text-gray-400">• 대문자는 선택사항</li>
               </ul>
             </div>
           </div>

@@ -1,3 +1,19 @@
+/**
+ * 작업 시간: 2025-07-25
+ * 작업 버전: v2.0.0
+ * 주요 컴포넌트: useListData 훅 (무한 스크롤 지원)
+ * 주요 기능: 
+ * - API 데이터 로딩 및 캐싱
+ * - 페이지네이션 및 무한 스크롤 지원
+ * - 검색, 필터링, 정렬 기능
+ * - 데이터 누적 방식 무한 스크롤
+ * 코드 라인: 1-450
+ * 관련 파일:
+ * - useInfiniteScroll.ts (무한 스크롤 UI 로직)
+ * - useFilterAndSort.ts (필터링/정렬 로직)
+ * - GridPageLayout.tsx (UI 컴포넌트에서 사용)
+ */
+
 import { useState, useEffect, useCallback } from 'react';
 import { useFilterAndSort } from './useFilterAndSort';
 import { useDebounce } from './useDebounce';
@@ -30,13 +46,19 @@ export interface UseListDataResult<T extends BaseListItem> {
   handleSearch: (query: string) => void;
   handleSearchSubmit: (e: React.FormEvent) => void;
   handlePageChange: (page: number) => void;
+  loadNextPage: () => void;
   refetch: () => void;
+  
+  // 무한 스크롤 관련
+  hasMore: boolean;
+  infiniteScrollEnabled: boolean;
 }
 
 export function useListData<T extends BaseListItem>(
   config: ListPageConfig<T>,
   initialData?: any,
-  isServerRendered?: boolean
+  isServerRendered?: boolean,
+  infiniteScrollEnabled?: boolean
 ): UseListDataResult<T> {
   const [loading, setLoading] = useState(!isServerRendered);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +67,7 @@ export function useListData<T extends BaseListItem>(
       ? (config.transformData ? config.transformData(initialData.items) : initialData.items)
       : []
   );
+  const [allData, setAllData] = useState<T[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -66,7 +89,7 @@ export function useListData<T extends BaseListItem>(
     handleCategoryFilter,
     handleSort,
   } = useFilterAndSort({
-    initialData: hasSearched ? searchResults : rawData,
+    initialData: hasSearched ? searchResults : (infiniteScrollEnabled ? allData : rawData),
     filterFn: config.filterFn,
     sortFn: config.sortFn
   });
@@ -91,29 +114,117 @@ export function useListData<T extends BaseListItem>(
     return `${endpointKey}-${filters}-cache`;
   }, [config.apiEndpoint, config.apiFilters]);
 
+  // 무한 스크롤 모드에서 다음 페이지 로드
+  const loadNextPage = useCallback(async () => {
+    if (!infiniteScrollEnabled || loading || currentPage >= totalPages) {
+      return;
+    }
+    
+    const nextPage = currentPage + 1;
+    console.log(`🔄 무한 스크롤: 페이지 ${nextPage} 로딩 시작`);
+    
+    const cacheKey = `${getCacheKey()}-page-${nextPage}`;
+    
+    // 캐시 확인
+    const cachedPageData = CacheManager.getFromCache<{items: T[], total: number, page: number, pageSize: number}>(cacheKey);
+    if (cachedPageData) {
+      console.log(`📦 캐시에서 페이지 ${nextPage} 데이터 로드`);
+      setAllData(prev => [...prev, ...cachedPageData.items]);
+      setCurrentPage(cachedPageData.page);
+      return;
+    }
+    
+    // 새로운 데이터 로드
+    await fetchAndAppendData(cacheKey, nextPage);
+  }, [infiniteScrollEnabled, loading, currentPage, totalPages, getCacheKey]);
+  
   // API 호출 함수 (캐싱 적용)
-  const fetchData = useCallback(async (page: number = 1) => {
+  const fetchData = useCallback(async (page: number = 1, isInitialLoad: boolean = true) => {
     const cacheKey = `${getCacheKey()}-page-${page}`;
     
     // 페이지별 캐시 확인
     const cachedPageData = CacheManager.getFromCache<{items: T[], total: number, page: number, pageSize: number}>(cacheKey);
     if (cachedPageData) {
-      setRawData(cachedPageData.items);
+      if (infiniteScrollEnabled && !isInitialLoad) {
+        setAllData(prev => [...prev, ...cachedPageData.items]);
+      } else {
+        setRawData(cachedPageData.items);
+        if (infiniteScrollEnabled) {
+          setAllData(cachedPageData.items);
+        }
+      }
       setTotalItems(cachedPageData.total);
       setTotalPages(Math.ceil(cachedPageData.total / pageSize));
       setCurrentPage(cachedPageData.page);
       setLoading(false);
       
       // 백그라운드에서 최신 데이터 업데이트
-      updateDataInBackground(cacheKey, page);
+      updateDataInBackground(cacheKey, page, isInitialLoad);
       return;
     }
 
     // 캐시가 없으면 로딩 상태로 API 호출
-    await fetchAndCacheData(cacheKey, page);
+    await fetchAndCacheData(cacheKey, page, isInitialLoad);
   }, [config.apiEndpoint, config.apiFilters, getCacheKey, pageSize]);
 
-  const fetchAndCacheData = useCallback(async (cacheKey: string, page: number = 1) => {
+  // 데이터를 가져와서 기존 데이터에 추가하는 함수
+  const fetchAndAppendData = useCallback(async (cacheKey: string, page: number) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      let response;
+      
+      if (config.apiEndpoint === '/api/posts') {
+        response = await apiClient.getPosts({
+          ...config.apiFilters,
+          page: page,
+          size: pageSize
+        });
+      } else if (config.apiEndpoint === '/api/posts/services') {
+        response = await apiClient.getServicePostsWithExtendedStats(page, pageSize, 'created_at');
+      } else {
+        response = await apiClient.request(config.apiEndpoint, {
+          method: 'GET',
+          params: {
+            ...config.apiFilters,
+            page: page,
+            size: pageSize
+          }
+        });
+      }
+      
+      if (response.success && response.data) {
+        const items = config.transformData 
+          ? config.transformData(response.data.items)
+          : response.data.items as T[];
+        
+        console.log(`✅ 페이지 ${page} 데이터 로드 완료: ${items.length}개`);
+        
+        // 기존 데이터에 새 데이터 추가
+        setAllData(prev => [...prev, ...items]);
+        setTotalItems(response.data.total || 0);
+        setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
+        setCurrentPage(page);
+        
+        // 캐시 저장
+        CacheManager.saveToCache(cacheKey, {
+          items,
+          total: response.data.total || 0,
+          page: page,
+          pageSize
+        }, 5 * 60 * 1000);
+      } else {
+        throw new Error(response.error || '데이터를 불러올 수 없습니다');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다');
+    } finally {
+      setLoading(false);
+    }
+  }, [config.apiEndpoint, config.apiFilters, config.transformData, pageSize]);
+  
+  const fetchAndCacheData = useCallback(async (cacheKey: string, page: number = 1, isInitialLoad: boolean = true) => {
     try {
       setLoading(true);
       setError(null);
@@ -154,7 +265,16 @@ export function useListData<T extends BaseListItem>(
             console.log('🔍 변환된 첫 번째 아이템:', items[0]);
           }
           
-          setRawData(items);
+          if (infiniteScrollEnabled) {
+            if (isInitialLoad) {
+              setRawData(items);
+              setAllData(items);
+            } else {
+              setAllData(prev => [...prev, ...items]);
+            }
+          } else {
+            setRawData(items);
+          }
           setTotalItems(response.data.total || 0);
           setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
           setCurrentPage(response.data.page || page);
@@ -178,7 +298,17 @@ export function useListData<T extends BaseListItem>(
           const items = config.transformData 
             ? config.transformData(response.data.items)
             : response.data.items as T[];
-          setRawData(items);
+          
+          if (infiniteScrollEnabled) {
+            if (isInitialLoad) {
+              setRawData(items);
+              setAllData(items);
+            } else {
+              setAllData(prev => [...prev, ...items]);
+            }
+          } else {
+            setRawData(items);
+          }
           setTotalItems(response.data.total || 0);
           setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
           setCurrentPage(response.data.page || page);
@@ -208,7 +338,17 @@ export function useListData<T extends BaseListItem>(
           const items = config.transformData 
             ? config.transformData(response.data.items)
             : response.data.items;
-          setRawData(items);
+          
+          if (infiniteScrollEnabled) {
+            if (isInitialLoad) {
+              setRawData(items);
+              setAllData(items);
+            } else {
+              setAllData(prev => [...prev, ...items]);
+            }
+          } else {
+            setRawData(items);
+          }
           setTotalItems(response.data.total || 0);
           setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
           setCurrentPage(response.data.page || page);
@@ -248,7 +388,16 @@ export function useListData<T extends BaseListItem>(
             : response.data.items as T[];
           
           // 새로운 데이터가 있으면 부드럽게 업데이트
-          setRawData(items);
+          if (infiniteScrollEnabled) {
+            if (isInitialLoad) {
+              setRawData(items);
+              setAllData(items);
+            } else {
+              setAllData(prev => [...prev, ...items]);
+            }
+          } else {
+            setRawData(items);
+          }
           setTotalItems(response.data.total || 0);
           setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
           setCurrentPage(response.data.page || page);
@@ -270,7 +419,16 @@ export function useListData<T extends BaseListItem>(
             : response.data.items as T[];
           
           // 새로운 데이터가 있으면 부드럽게 업데이트
-          setRawData(items);
+          if (infiniteScrollEnabled) {
+            if (isInitialLoad) {
+              setRawData(items);
+              setAllData(items);
+            } else {
+              setAllData(prev => [...prev, ...items]);
+            }
+          } else {
+            setRawData(items);
+          }
           setTotalItems(response.data.total || 0);
           setTotalPages(Math.ceil((response.data.total || 0) / pageSize));
           setCurrentPage(response.data.page || page);
@@ -331,18 +489,21 @@ export function useListData<T extends BaseListItem>(
   // 초기 데이터 로드 (SSR 데이터가 없는 경우에만)
   useEffect(() => {
     if (!isServerRendered) {
-      fetchData(1);
+      fetchData(1, true);
     } else {
       // SSR 데이터가 있으면 백그라운드에서 최신 데이터 체크
       const cacheKey = `${getCacheKey()}-page-1`;
       if (initialData?.items) {
+        if (infiniteScrollEnabled) {
+          setAllData(initialData.items);
+        }
         CacheManager.saveToCache(cacheKey, {
           items: initialData.items,
           total: initialData.total || 0,
           page: 1,
           pageSize
         }, 5 * 60 * 1000);
-        updateDataInBackground(cacheKey, 1);
+        updateDataInBackground(cacheKey, 1, true);
       }
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -357,12 +518,12 @@ export function useListData<T extends BaseListItem>(
     // 검색은 이미 디바운싱으로 처리되므로 별도 작업 불필요
   }, []);
   
-  // 페이지 변경 핸들러
+  // 페이지 변경 핸들러 (무한 스크롤 모드에서는 사용하지 않음)
   const handlePageChange = useCallback((page: number) => {
-    if (page < 1 || page > totalPages) return;
+    if (infiniteScrollEnabled || page < 1 || page > totalPages) return;
     setCurrentPage(page);
-    fetchData(page);
-  }, [fetchData, totalPages]);
+    fetchData(page, true);
+  }, [infiniteScrollEnabled, fetchData, totalPages]);
   
   // refetch 함수
   const refetch = useCallback(() => {
@@ -400,6 +561,11 @@ export function useListData<T extends BaseListItem>(
     handleSearch,
     handleSearchSubmit,
     handlePageChange,
-    refetch
+    loadNextPage,
+    refetch,
+    
+    // 무한 스크롤 관련
+    hasMore: currentPage < totalPages,
+    infiniteScrollEnabled: infiniteScrollEnabled || false
   };
 }

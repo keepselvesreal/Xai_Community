@@ -141,7 +141,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       
       if (response.success && response.data) {
         const { access_token, refresh_token } = response.data;
-        console.log('AuthContext: Login successful, tokens:', access_token ? 'access received' : 'access missing', refresh_token ? 'refresh received' : 'refresh missing');
+        // 프로덕션에서는 토큰 정보 로그 제거
+        if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+          console.log('AuthContext: Login successful, tokens:', access_token ? 'access received' : 'access missing', refresh_token ? 'refresh received' : 'refresh missing');
+        }
         
         // 토큰 저장 (직접 localStorage 사용하여 JSON.stringify 회피)
         setToken(access_token);
@@ -289,7 +292,10 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     getSessionExpiryMessage,
   };
   
-  console.log('AuthContext: Current state - user:', !!user, 'token:', !!token, 'isAuthenticated:', !!user && !!token, 'renderKey:', renderKey);
+  // 프로덕션에서는 인증 상태 로그 제거
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    console.log('AuthContext: Current state - user:', !!user, 'token:', !!token, 'isAuthenticated:', !!user && !!token, 'renderKey:', renderKey);
+  }
 
   return (
     <AuthContext.Provider value={value}>
