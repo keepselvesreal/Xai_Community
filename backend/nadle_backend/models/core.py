@@ -521,7 +521,7 @@ class CommentDetail(BaseModel):
     like_count: int = 0  # Calculated from UserReaction
     dislike_count: int = 0  # Calculated from UserReaction
     reply_count: int = 0  # Calculated from child comments
-    user_reaction: Optional[Dict[str, bool]] = None  # liked, disliked
+    user_reaction: Optional[Dict[str, bool]] = Field(default_factory=lambda: {"liked": False, "disliked": False})  # liked, disliked
     metadata: Optional[Dict[str, Any]] = Field(
         default_factory=dict
     )  # 🆕 metadata 필드 추가
@@ -531,6 +531,8 @@ class CommentDetail(BaseModel):
 
     class Config:
         populate_by_name = True
+        # None 값도 JSON 직렬화에 포함
+        exclude_none = False
 
 
 # Pagination Models

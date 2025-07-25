@@ -117,6 +117,7 @@ class CommentsService:
         sort_by: str = "created_at",
         current_user: Optional[User] = None,
     ) -> Tuple[List[CommentDetail], int]:
+        print(f"🚀 [TEST] get_comments_with_user_data 호출됨 - post_slug: {post_slug}, user: {current_user.id if current_user else None}")
         """Get comments for a post with user data and reactions.
 
         Args:
@@ -631,6 +632,10 @@ class CommentsService:
             content = "[비공개 문의입니다]"
             print(f"🔒 [DEBUG] 비공개 문의 마스킹 적용 - comment_id: {comment.id}")
 
+        # 디버깅: user_reaction 값 확인
+        final_user_reaction = user_reaction or {"liked": False, "disliked": False}
+        print(f"🔍 [DEBUG] _convert_to_comment_detail - comment_id: {comment.id}, user_reaction: {user_reaction}, final: {final_user_reaction}")
+        
         return CommentDetail(
             id=str(comment.id),
             author_id=comment.author_id,
@@ -641,7 +646,7 @@ class CommentsService:
             like_count=comment.like_count,
             dislike_count=comment.dislike_count,
             reply_count=comment.reply_count,
-            user_reaction=user_reaction,
+            user_reaction=final_user_reaction,
             metadata=metadata,
             created_at=comment.created_at,
             updated_at=comment.updated_at,

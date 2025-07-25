@@ -529,18 +529,60 @@ async def get_post_comments_batch(
     current_user: Optional[User] = Depends(get_optional_current_active_user),
     posts_service: PostsService = Depends(get_posts_service),
 ):
-    """🚀 2단계: 배치 조회로 게시글 댓글 조회"""
+    """🚀 2단계: 배치 조회로 게시글 댓글 조회 (사용자 반응 정보 포함)"""
     try:
-        # 배치 조회로 댓글과 작성자 정보 함께 조회
-        comments_with_authors = await posts_service.get_comments_with_batch_authors(
-            slug
+        # CommentsService 사용해서 user_reaction 필드 포함한 댓글 조회
+        from nadle_backend.services.comments_service import CommentsService
+        from nadle_backend.repositories.comment_repository import CommentRepository
+        from nadle_backend.repositories.post_repository import PostRepository
+        
+        comment_repo = CommentRepository()
+        post_repo = PostRepository()
+        comments_service = CommentsService(comment_repo, post_repo)
+        
+        # 사용자 반응 정보를 포함한 댓글 조회
+        comments_with_user_data, total = await comments_service.get_comments_with_user_data(
+            post_slug=slug,
+            page=1,
+            page_size=100,  # 충분히 큰 값
+            sort_by="created_at",
+            current_user=current_user
         )
 
         return {
             "success": True,
             "data": {
-                "comments": comments_with_authors,
-                "total": len(comments_with_authors),
+                "comments": [
+                    {
+                        "id": comment.id,
+                        "content": comment.content,
+                        "author_id": comment.author_id,
+                        "author": {
+                            "id": comment.author.id,
+                            "name": comment.author.name,
+                            "email": comment.author.email,
+                            "user_handle": comment.author.user_handle,
+                            "display_name": comment.author.display_name,
+                            "bio": comment.author.bio,
+                            "avatar_url": comment.author.avatar_url,
+                            "status": comment.author.status,
+                            "created_at": comment.author.created_at.isoformat(),
+                            "updated_at": comment.author.updated_at.isoformat(),
+                        } if comment.author else None,
+                        "parent_comment_id": comment.parent_comment_id,
+                        "created_at": comment.created_at.isoformat(),
+                        "updated_at": comment.updated_at.isoformat(),
+                        "status": comment.status,
+                        "like_count": comment.like_count,
+                        "dislike_count": comment.dislike_count,
+                        "reply_count": comment.reply_count,
+                        "user_reaction": comment.user_reaction,  # 🚀 핵심: 사용자 반응 정보 포함
+                        "metadata": comment.metadata or {},
+                        "replies": comment.replies or [],
+                    }
+                    for comment in comments_with_user_data
+                ],
+                "total": total,
             },
         }
 

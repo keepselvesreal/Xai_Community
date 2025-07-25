@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, useNavigate, Link, useLoaderData } from '@remix-run/react';
+import { useParams, useNavigate, useLoaderData } from '@remix-run/react';
 import { json, type LoaderFunction, type MetaFunction } from '@remix-run/node';
 import AppLayout from '~/components/layout/AppLayout';
 import DetailPageLayout from '~/components/common/DetailPageLayout';
@@ -462,6 +462,45 @@ export default function ExpertTipDetail() {
     initializeData();
   }, [slug, loaderData]);
 
+  // 🚀 사용자 로그인 후 댓글 user_reaction 정보 새로고침
+  useEffect(() => {
+    const refreshCommentsWithUserReactions = async () => {
+      if (!slug || !user) return; // 사용자가 로그인하지 않으면 생략
+      
+      try {
+        console.log('🔄 사용자 로그인 후 댓글 user_reaction 새로고침 시작');
+        const response = await apiClient.getCommentsBatch(slug);
+        
+        if (response.success && response.data) {
+          let comments = [];
+          if (response.data.data?.comments) {
+            comments = response.data.data.comments;
+          } else if (response.data.comments) {
+            comments = response.data.comments;
+          } else if (Array.isArray(response.data)) {
+            comments = response.data;
+          }
+          
+          const processCommentsRecursive = (comments: any[]): any[] => {
+            return comments.map(comment => ({
+              ...comment,
+              id: comment.id || comment._id,
+              replies: comment.replies ? processCommentsRecursive(comment.replies) : []
+            }));
+          };
+          
+          const processedComments = processCommentsRecursive(comments);
+          setComments(processedComments);
+          console.log('✅ 사용자 반응 정보가 포함된 댓글 목록 새로고침 완료');
+        }
+      } catch (error) {
+        console.error('❌ 댓글 user_reaction 새로고침 실패:', error);
+      }
+    };
+    
+    refreshCommentsWithUserReactions();
+  }, [slug, user]); // user가 변경될 때마다 실행
+
   if (isLoading) {
     return (
       <AppLayout user={user} onLogout={logout}>
@@ -482,12 +521,12 @@ export default function ExpertTipDetail() {
           <p className="text-gray-600 mb-6">
             {loaderData.error || "요청하신 전문가 꿀정보가 존재하지 않거나 삭제되었습니다."}
           </p>
-          <Link 
-            to="/tips"
+          <button
+            onClick={() => navigate('/tips')}
             className="inline-block px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors"
           >
             전문가 꿀정보 목록으로 돌아가기
-          </Link>
+          </button>
         </div>
       </AppLayout>
     );
@@ -530,23 +569,16 @@ export default function ExpertTipDetail() {
       user={user}
       onLogout={logout}
     >
-      {/* 뒤로가기 버튼 */}
-      <div className="mb-6">
-        <button
-          onClick={() => navigate(-1)}
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors mr-4"
-        >
-          <span>←</span>
-          <span>뒤로가기</span>
-        </button>
-        <Link 
-          to="/tips"
-          className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
-        >
-          <span>📋</span>
-          <span>목록으로</span>
-        </Link>
-      </div>
+      <div className="max-w-4xl mx-auto">
+        {/* 상단 네비게이션 */}
+        <div className="flex items-center justify-between mb-6">
+          <button 
+            onClick={() => navigate('/tips')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            ← 목록으로
+          </button>
+        </div>
 
       <DetailPageLayout
         post={post}
@@ -566,6 +598,7 @@ export default function ExpertTipDetail() {
           afterContent: [<ExpertContentSection key="expert-content" />]
         }}
       />
+      </div>
     </AppLayout>
   );
 }

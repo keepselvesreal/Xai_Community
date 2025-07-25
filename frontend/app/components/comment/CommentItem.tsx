@@ -280,12 +280,21 @@ const CommentItem = ({
         <div className="flex items-center space-x-4 text-sm mt-2">
           {onReaction && (
             <>
+              {/* 디버깅용 로그 */}
+              {console.log('🔍 댓글 반응 버튼 렌더링:', {
+                commentId: comment.id,
+                user_reaction: comment.user_reaction,
+                liked: comment.user_reaction?.liked,
+                disliked: comment.user_reaction?.disliked,
+                like_count: comment.like_count,
+                dislike_count: comment.dislike_count
+              }) || null}
               <button
                 type="button"
                 onClick={() => handleReaction("like")}
                 className={`flex items-center space-x-1 transition-colors ${
                   comment.user_reaction?.liked 
-                    ? 'text-gray-900 font-semibold' 
+                    ? 'text-gray-900 font-bold !text-gray-900' 
                     : 'text-gray-500 hover:text-green-600'
                 }`}
                 disabled={!currentUser}
@@ -298,7 +307,7 @@ const CommentItem = ({
                 onClick={() => handleReaction("dislike")}
                 className={`flex items-center space-x-1 transition-colors ${
                   comment.user_reaction?.disliked 
-                    ? 'text-gray-900 font-semibold' 
+                    ? 'text-gray-900 font-bold !text-gray-900' 
                     : 'text-gray-500 hover:text-red-600'
                 }`}
                 disabled={!currentUser}
@@ -463,12 +472,21 @@ const CommentItem = ({
         <div className="flex items-center space-x-4 text-sm">
           {onReaction && (
             <>
+              {/* 디버깅용 로그 - 일반 페이지 */}
+              {console.log('🔍 댓글 반응 버튼 렌더링 (일반):', {
+                commentId: comment.id,
+                user_reaction: comment.user_reaction,
+                liked: comment.user_reaction?.liked,
+                disliked: comment.user_reaction?.disliked,
+                like_count: comment.like_count,
+                dislike_count: comment.dislike_count
+              }) || null}
               <button
                 type="button"
                 onClick={() => handleReaction("like")}
                 className={`flex items-center space-x-1 transition-colors ${
                   comment.user_reaction?.liked 
-                    ? 'text-gray-900 font-semibold' 
+                    ? 'text-gray-900 font-bold !text-gray-900' 
                     : 'text-gray-500 hover:text-green-600'
                 }`}
                 disabled={!currentUser}
@@ -481,7 +499,7 @@ const CommentItem = ({
                 onClick={() => handleReaction("dislike")}
                 className={`flex items-center space-x-1 transition-colors ${
                   comment.user_reaction?.disliked 
-                    ? 'text-gray-900 font-semibold' 
+                    ? 'text-gray-900 font-bold !text-gray-900' 
                     : 'text-gray-500 hover:text-red-600'
                 }`}
                 disabled={!currentUser}
