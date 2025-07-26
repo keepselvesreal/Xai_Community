@@ -36,12 +36,6 @@ from .core import (
 )
 
 from .email_verification import (
-    EmailVerification,
-    EmailVerificationData,
-    EmailVerificationCreate,
-    EmailVerificationResponse,
-    EmailVerificationCodeRequest,
-    EmailVerificationCodeResponse,
     EmailVerificationToken,
     EmailVerificationTokenRequest,
     EmailVerificationTokenResponse,
@@ -84,12 +78,6 @@ __all__ = [
     "PostListResponse",
     "CommentListResponse",
     # Email Verification Models
-    "EmailVerification",
-    "EmailVerificationData",
-    "EmailVerificationCreate",
-    "EmailVerificationResponse",
-    "EmailVerificationCodeRequest",
-    "EmailVerificationCodeResponse",
     "EmailVerificationToken",
     "EmailVerificationTokenRequest",
     "EmailVerificationTokenResponse",

@@ -293,20 +293,16 @@ export default function App() {
                       : "1px solid #374151"
                   }}
                 >
-                  <div>Environment: <strong>{clientEnvironment}</strong></div>
+                  <div><strong>Environment:</strong> <strong>{clientEnvironment}</strong></div>
                   
-                  {/* Vercel 배포 정보 표시 */}
-                  {buildInfo.deploymentId && (
+                  {/* 배포 정보 표시 */}
+                  {(buildInfo.commitSha || buildInfo.deploymentUrl) && (
                     <>
                       <div style={{ marginTop: "8px", borderTop: "1px solid rgba(255,255,255,0.3)", paddingTop: "8px" }}>
-                        <strong>Vercel 배포:</strong>
+                        <strong>Deployment Information:</strong>
                       </div>
-                      <div>Deploy ID: {buildInfo.deploymentId.slice(0, 12)}...</div>
                       {buildInfo.commitSha && (
                         <div>Commit: {buildInfo.commitSha.slice(0, 8)}</div>
-                      )}
-                      {buildInfo.gitBranch && (
-                        <div>Branch: {buildInfo.gitBranch}</div>
                       )}
                       {buildInfo.deploymentUrl && (
                         <div style={{ fontSize: "10px", marginTop: "4px", wordBreak: "break-all" }}>

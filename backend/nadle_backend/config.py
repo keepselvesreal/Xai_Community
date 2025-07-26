@@ -303,7 +303,7 @@ class Settings(BaseSettings):
 
     # Email Verification Settings
     email_verification_enabled: bool = Field(
-        default=False, description="Enable email verification for registration"
+        default=True, description="Enable email verification for registration"
     )
     email_verification_expire_minutes: int = Field(
         default=5,

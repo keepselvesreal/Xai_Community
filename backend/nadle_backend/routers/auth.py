@@ -7,20 +7,12 @@ from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
 from nadle_backend.models.core import User, UserCreate, UserUpdate, UserResponse
 from nadle_backend.models.email_verification import (
-    EmailVerificationCreate,
-    EmailVerificationResponse,
-    EmailVerificationCodeRequest,
-    EmailVerificationCodeResponse,
     EmailVerificationTokenRequest,
     EmailVerificationTokenResponse,
     EmailVerificationStatusResponse,
 )
 from nadle_backend.services.auth_service import AuthService
-from nadle_backend.services.email_verification_service import EmailVerificationService
 from nadle_backend.services.email_verification_token_service import EmailVerificationTokenService
-from nadle_backend.repositories.email_verification_repository import (
-    EmailVerificationRepository,
-)
 from nadle_backend.repositories.email_verification_token_repository import (
     EmailVerificationTokenRepository,
 )
@@ -82,18 +74,8 @@ class EmailVerificationRequest(BaseModel):
     email: EmailStr
 
 
-class EmailVerificationCodeRequest(BaseModel):
-    """Email verification code request model."""
-
-    email: EmailStr
-    code: str
 
 
-class EmailVerificationResponse(BaseModel):
-    """Email verification response model."""
-
-    success: bool
-    message: str
 
 
 class ChangePasswordRequest(BaseModel):
@@ -624,75 +606,6 @@ async def get_user_sessions(
 
 
 # Dependency injection functions
-async def get_email_verification_repository() -> EmailVerificationRepository:
-    """Get email verification repository instance."""
-    return EmailVerificationRepository()
-
-
-async def get_email_verification_service(
-    repository: EmailVerificationRepository = Depends(
-        get_email_verification_repository
-    ),
-) -> EmailVerificationService:
-    """Get email verification service instance."""
-    return EmailVerificationService(repository=repository)
-
-
-# Email verification endpoints
-@router.post("/send-verification-email", response_model=EmailVerificationResponse)
-async def send_verification_email(
-    request: EmailVerificationCreate,
-    service: EmailVerificationService = Depends(get_email_verification_service),
-):
-    """Send verification email for signup process."""
-    try:
-        result = await service.send_verification_email(request)
-
-        if not result.code_sent:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "message": result.message,
-                    "email": result.email,
-                    "can_resend": result.can_resend,
-                },
-            )
-
-        return result
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to send verification email: {str(e)}",
-        )
-
-
-@router.post("/verify-email-code", response_model=EmailVerificationCodeResponse)
-async def verify_email_code(
-    request: EmailVerificationCodeRequest,
-    service: EmailVerificationService = Depends(get_email_verification_service),
-):
-    """Verify email verification code."""
-    try:
-        result = await service.verify_email_code(request)
-
-        if not result.verified:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "message": result.message,
-                    "email": result.email,
-                    "can_proceed": result.can_proceed,
-                },
-            )
-
-        return result
-
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to verify email code: {str(e)}",
-        )
 
 
 # Token-based email verification endpoints

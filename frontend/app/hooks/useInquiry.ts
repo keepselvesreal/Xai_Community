@@ -3,14 +3,6 @@ import { InquiryType, InquirySubmissionData } from "~/types/inquiry";
 import { inquiryConfigs } from "~/config/inquiryConfigs";
 import { apiClient } from "~/lib/api";
 
-// 환경별 API URL 설정 (기존 api.ts와 동일한 방식)
-function getApiBaseUrl(): string {
-  if (import.meta.env.VITE_API_URL) {
-    return import.meta.env.VITE_API_URL;
-  }
-  return 'http://localhost:8000';
-}
-
 /**
  * 문의 시스템을 위한 커스텀 훅
  */
@@ -42,27 +34,15 @@ export const useInquiry = () => {
 
       console.log("문의 제출 요청:", postData);
 
-      // 로그인 여부에 관계없이 문의 제출 가능하도록 직접 fetch 사용
-      const response = await fetch(`${getApiBaseUrl()}/api/posts`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Authorization 헤더는 선택적으로만 추가
-          ...(apiClient.isAuthenticated() ? { 
-            "Authorization": `Bearer ${localStorage.getItem('authToken')?.replace(/^Bearer\s+/i, '') || ''}` 
-          } : {})
-        },
-        body: JSON.stringify(postData),
-      });
+      // apiClient를 사용하여 문의 제출 (HTTPS URL 및 인증 처리 자동화)
+      const response = await apiClient.createPost(postData);
 
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error("API 응답 오류:", response.status, errorData);
-        throw new Error(`문의 제출 실패 (${response.status}): ${errorData}`);
+      if (!response.success) {
+        console.error("API 응답 오류:", response.error);
+        throw new Error(`문의 제출 실패: ${response.error}`);
       }
 
-      const result = await response.json();
-      console.log("문의 제출 성공:", result);
+      console.log("문의 제출 성공:", response.data);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "문의 제출 중 오류가 발생했습니다.";

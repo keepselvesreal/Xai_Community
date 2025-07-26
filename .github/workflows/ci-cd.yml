@@ -163,9 +163,9 @@ jobs:
         SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
         FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
         FROM_NAME: ${{ secrets.FROM_NAME }}
-        EMAIL_VERIFICATION_EXPIRE_MINUTES: ${{ secrets.EMAIL_VERIFICATION_EXPIRE_MINUTES }}
-        EMAIL_VERIFICATION_CODE_LENGTH: ${{ secrets.EMAIL_VERIFICATION_CODE_LENGTH }}
-        EMAIL_VERIFICATION_MAX_ATTEMPTS: ${{ secrets.EMAIL_VERIFICATION_MAX_ATTEMPTS }}
+        EMAIL_VERIFICATION_ENABLED: ${{ secrets.EMAIL_VERIFICATION_ENABLED }}
+        EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES: ${{ secrets.EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES }}
+        EMAIL_MOCK_MODE: ${{ secrets.EMAIL_MOCK_MODE }}
         # Cache Configuration (Preview Environment Secrets)
         CACHE_ENABLED: ${{ secrets.CACHE_ENABLED }}
         CACHE_TTL_USER: ${{ secrets.CACHE_TTL_USER }}
@@ -314,6 +314,20 @@ jobs:
         # Redis Configuration (프로덕션)
         UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
         UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+        # Email Configuration (Production Environment Secrets)
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
+        SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
+        SMTP_PASSWORD: ${{ secrets.SMTP_PASSWORD }}
+        SMTP_USE_TLS: ${{ secrets.SMTP_USE_TLS }}
+        FROM_EMAIL: ${{ secrets.FROM_EMAIL }}
+        FROM_NAME: ${{ secrets.FROM_NAME }}
+        EMAIL_VERIFICATION_ENABLED: ${{ secrets.EMAIL_VERIFICATION_ENABLED }}
+        EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES: ${{ secrets.EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES }}
+        EMAIL_MOCK_MODE: ${{ secrets.EMAIL_MOCK_MODE }}
+        # Cache Configuration (Production Environment Secrets)
+        CACHE_ENABLED: ${{ secrets.CACHE_ENABLED }}
+        CACHE_TTL_USER: ${{ secrets.CACHE_TTL_USER }}
         GCP_SERVICE_NAME: xai-community-backend
       run: |
         echo "🎯 프로덕션 배포 시작"
