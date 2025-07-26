@@ -166,9 +166,13 @@ jobs:
         EMAIL_VERIFICATION_ENABLED: ${{ secrets.EMAIL_VERIFICATION_ENABLED }}
         EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES: ${{ secrets.EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES }}
         EMAIL_MOCK_MODE: ${{ secrets.EMAIL_MOCK_MODE }}
+        # Backend URL for email verification links
+        BACKEND_URL: https://xai-community-backend-staging-798170408536.asia-northeast3.run.app
         # Cache Configuration (Preview Environment Secrets)
         CACHE_ENABLED: ${{ secrets.CACHE_ENABLED }}
         CACHE_TTL_USER: ${{ secrets.CACHE_TTL_USER }}
+        # Monitoring Configuration
+        HETRIXTOOLS_API_TOKEN: ${{ secrets.HETRIXTOOLS_API_TOKEN }}
         GCP_SERVICE_NAME: xai-community-backend-staging
       run: |
         echo "🎯 스테이징 배포 시작"
@@ -325,9 +329,13 @@ jobs:
         EMAIL_VERIFICATION_ENABLED: ${{ secrets.EMAIL_VERIFICATION_ENABLED }}
         EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES: ${{ secrets.EMAIL_VERIFICATION_TOKEN_EXPIRE_MINUTES }}
         EMAIL_MOCK_MODE: ${{ secrets.EMAIL_MOCK_MODE }}
+        # Backend URL for email verification links
+        BACKEND_URL: https://xai-community-backend-798170408536.asia-northeast3.run.app
         # Cache Configuration (Production Environment Secrets)
         CACHE_ENABLED: ${{ secrets.CACHE_ENABLED }}
         CACHE_TTL_USER: ${{ secrets.CACHE_TTL_USER }}
+        # Monitoring Configuration
+        HETRIXTOOLS_API_TOKEN: ${{ secrets.HETRIXTOOLS_API_TOKEN }}
         GCP_SERVICE_NAME: xai-community-backend
       run: |
         echo "🎯 프로덕션 배포 시작"
