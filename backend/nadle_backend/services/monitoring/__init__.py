@@ -7,14 +7,12 @@
 
 from .cloud_run_monitor import CloudRunMonitoringService
 from .vercel_monitor import VercelMonitoringService
-from .atlas_monitor import AtlasMonitoringService
 from .upstash_monitor import UpstashMonitoringService
 from .unified_monitor import UnifiedMonitoringService
 
 __all__ = [
     "CloudRunMonitoringService",
     "VercelMonitoringService",
-    "AtlasMonitoringService",
     "UpstashMonitoringService",
     "UnifiedMonitoringService",
 ]
