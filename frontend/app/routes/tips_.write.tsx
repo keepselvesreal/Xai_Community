@@ -173,7 +173,7 @@ export default function TipsWrite() {
           name="category"
           value={formData.category}
           onChange={(e) => handleFormDataChange({ category: e.target.value })}
-          className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+          className="w-full px-4 py-3 bg-var-section border border-[#52C41A] rounded-lg text-var-primary focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent"
         >
           {categories.map((category) => (
             <option key={category.value} value={category.value}>
@@ -194,7 +194,7 @@ export default function TipsWrite() {
           onChange={(e) => handleFormDataChange({ introduction: e.target.value })}
           placeholder="간단한 자기소개를 작성해주세요"
           rows={3}
-          className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent resize-vertical"
+          className="w-full px-4 py-3 bg-var-section border border-[#52C41A] rounded-lg text-var-primary placeholder-var-muted focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent resize-vertical"
           maxLength={200}
         />
         <div className="mt-1 text-xs text-var-muted text-right">

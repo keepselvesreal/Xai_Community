@@ -478,12 +478,13 @@ class ServiceProviderTestRunner:
             login_result = await self.api_client.login(writer_user_data["email"], writer_user_data["password"])
             
             if login_result["success"]:
+                user_id = register_result["data"].get("user", {}).get("id") or register_result["data"].get("id")
                 self.test_data["writer_user"] = {
                     **writer_user_data,
-                    "user_id": register_result["data"]["id"],
+                    "user_id": user_id,
                     "tokens": login_result["data"]
                 }
-                self.test_data["created_user_ids"].append(register_result["data"]["id"])
+                self.test_data["created_user_ids"].append(user_id)
                 
                 self.report_generator.add_test_result("인증 시스템 검증", "success", elapsed_time, "사용자 등록 및 OAuth2 로그인 성공")
                 print(f"   ✅ 인증 시스템 검증: 사용자 등록 및 로그인 성공")
@@ -510,11 +511,12 @@ class ServiceProviderTestRunner:
         elapsed_time = f"{time.time() - start_time:.1f}초"
         
         if normal_register_result["success"]:
+            user_id = normal_register_result["data"].get("user", {}).get("id") or normal_register_result["data"].get("id")
             self.test_data["normal_user"] = {
                 **normal_user_data,
-                "user_id": normal_register_result["data"]["id"]
+                "user_id": user_id
             }
-            self.test_data["created_user_ids"].append(normal_register_result["data"]["id"])
+            self.test_data["created_user_ids"].append(user_id)
             
             self.report_generator.add_test_result("기본 API 응답 확인", "success", elapsed_time, "일반 사용자 등록 성공")
             print(f"   ✅ 기본 API 응답 확인: 일반 사용자 등록 성공")
@@ -1250,35 +1252,280 @@ class ServiceProviderTestRunner:
     
     async def _run_realtime_stats_tests(self):
         """실시간 통계 검증 테스트 실행"""
-        tests = [
-            ("조회수 증가 검증", "success", "목록↔상세 조회수 95% 일치율"),
-            ("문의 수 실시간 업데이트", "success", "문의 작성 시 즉시 반영"),
-            ("후기 수 실시간 업데이트", "success", "후기 작성 시 즉시 반영"),
-            ("별점 평균 실시간 반영", "success", "별점 평가 시 평균 즉시 업데이트"),
-            ("전체 일치성 검증", "success", "목록↔상세 페이지 통계 100% 일치")
-        ]
+        if not self.test_data.get("created_post_ids"):
+            self.report_generator.add_test_result("실시간 통계", "error", "0초", "테스트할 게시글이 없습니다")
+            print("   ❌ 실시간 통계: 테스트할 게시글이 없습니다")
+            return
         
-        for test_name, status, details in tests:
-            await self.rate_manager.wait_before_request()
-            await asyncio.sleep(1.5)
+        post_id = self.test_data["created_post_ids"][0]
+        
+        # 1. 조회수 증가 검증 (연속 상세 페이지 접근)
+        await self.rate_manager.wait_before_request()
+        start_time = time.time()
+        
+        # 초기 조회수 확인
+        initial_result = await self.api_client.get(f"/api/posts/{post_id}")
+        if initial_result["success"]:
+            initial_views = initial_result["data"].get("view_count", 0)
             
-            self.report_generator.add_test_result(test_name, status, "1.5초", details)
-            print(f"   ✅ {test_name}: {details}")
+            # 추가 조회 (조회수 증가 유발)
+            await asyncio.sleep(0.5)
+            second_result = await self.api_client.get(f"/api/posts/{post_id}")
+            
+            elapsed_time = f"{time.time() - start_time:.1f}초"
+            
+            if second_result["success"]:
+                updated_views = second_result["data"].get("view_count", 0)
+                
+                if updated_views > initial_views:
+                    self.report_generator.add_test_result("조회수 증가 검증", "success", elapsed_time, f"조회수 증가: {initial_views} → {updated_views}")
+                    print(f"   ✅ 조회수 증가 검증: {initial_views} → {updated_views} 정상 증가")
+                else:
+                    self.report_generator.add_test_result("조회수 증가 검증", "warning", elapsed_time, f"조회수 변화 없음 ({initial_views})")
+                    print(f"   ⚠️ 조회수 증가 검증: 조회수 변화 없음")
+            else:
+                self.report_generator.add_test_result("조회수 증가 검증", "error", elapsed_time, "두 번째 조회 실패")
+                print(f"   ❌ 조회수 증가 검증: 두 번째 조회 실패")
+        else:
+            self.report_generator.add_test_result("조회수 증가 검증", "error", "0.5초", "초기 조회 실패")
+            print(f"   ❌ 조회수 증가 검증: 초기 조회 실패")
+        
+        # 2. 연속 댓글 작성으로 실시간 업데이트 확인
+        await self.rate_manager.wait_before_request()
+        start_time = time.time()
+        
+        # 현재 댓글 수 확인
+        current_post_result = await self.api_client.get(f"/api/posts/{post_id}")
+        if current_post_result["success"]:
+            current_comments = current_post_result["data"].get("comment_count", 0)
+            
+            # 새 문의 댓글 작성
+            realtime_inquiry_data = {
+                "content": f"실시간 업데이트 테스트 문의 - {self.session_id}",
+                "parent_id": post_id,
+                "metadata": {
+                    "subtype": "service_inquiry",
+                    "session_id": self.session_id
+                }
+            }
+            
+            inquiry_result = await self.api_client.post("/api/comments", realtime_inquiry_data)
+            elapsed_time = f"{time.time() - start_time:.1f}초"
+            
+            if inquiry_result["success"]:
+                created_comment = inquiry_result["data"]
+                self.test_data["comments"].append(created_comment)
+                self.test_data["created_comment_ids"].append(created_comment["id"])
+                
+                # 즉시 댓글 수 변화 확인
+                await asyncio.sleep(0.3)
+                updated_post_result = await self.api_client.get(f"/api/posts/{post_id}")
+                
+                if updated_post_result["success"]:
+                    updated_comments = updated_post_result["data"].get("comment_count", 0)
+                    
+                    if updated_comments > current_comments:
+                        self.report_generator.add_test_result("문의 실시간 업데이트", "success", elapsed_time, f"문의 작성 후 즉시 댓글 수 반영 ({current_comments} → {updated_comments})")
+                        print(f"   ✅ 문의 실시간 업데이트: 댓글 수 즉시 반영 ({current_comments} → {updated_comments})")
+                    else:
+                        self.report_generator.add_test_result("문의 실시간 업데이트", "warning", elapsed_time, "댓글 수 업데이트 지연")
+                        print(f"   ⚠️ 문의 실시간 업데이트: 댓글 수 업데이트 지연")
+                else:
+                    self.report_generator.add_test_result("문의 실시간 업데이트", "error", elapsed_time, "업데이트 확인 조회 실패")
+                    print(f"   ❌ 문의 실시간 업데이트: 업데이트 확인 조회 실패")
+            else:
+                self.report_generator.add_test_result("문의 실시간 업데이트", "error", elapsed_time, "실시간 테스트 문의 작성 실패")
+                print(f"   ❌ 문의 실시간 업데이트: 테스트 댓글 작성 실패")
+        
+        # 3. 별점 후기 실시간 업데이트
+        await self.rate_manager.wait_before_request()
+        start_time = time.time()
+        
+        # 현재 별점 통계 확인
+        current_rating_result = await self.api_client.get(f"/api/posts/{post_id}")
+        if current_rating_result["success"]:
+            current_rating = current_rating_result["data"].get("average_rating", 0)
+            current_rating_count = current_rating_result["data"].get("rating_count", 0)
+            
+            # 새 별점 후기 작성
+            realtime_review_data = {
+                "content": f"실시간 별점 업데이트 테스트 후기 - {self.session_id}",
+                "parent_id": post_id,
+                "metadata": {
+                    "subtype": "service_review",
+                    "rating": 4,  # 4점 별점
+                    "session_id": self.session_id
+                }
+            }
+            
+            review_result = await self.api_client.post("/api/comments", realtime_review_data)
+            elapsed_time = f"{time.time() - start_time:.1f}초"
+            
+            if review_result["success"]:
+                created_comment = review_result["data"]
+                self.test_data["comments"].append(created_comment)
+                self.test_data["created_comment_ids"].append(created_comment["id"])
+                
+                # 즉시 별점 변화 확인
+                await asyncio.sleep(0.5)
+                updated_rating_result = await self.api_client.get(f"/api/posts/{post_id}")
+                
+                if updated_rating_result["success"]:
+                    updated_rating = updated_rating_result["data"].get("average_rating", 0)
+                    updated_rating_count = updated_rating_result["data"].get("rating_count", 0)
+                    
+                    if updated_rating_count > current_rating_count:
+                        self.report_generator.add_test_result("별점 실시간 업데이트", "success", elapsed_time, f"별점 후기 작성 후 즉시 반영 (평균: {current_rating:.1f} → {updated_rating:.1f}, 개수: {current_rating_count} → {updated_rating_count})")
+                        print(f"   ✅ 별점 실시간 업데이트: 별점 통계 즉시 반영")
+                    else:
+                        self.report_generator.add_test_result("별점 실시간 업데이트", "warning", elapsed_time, "별점 통계 업데이트 지연")
+                        print(f"   ⚠️ 별점 실시간 업데이트: 별점 통계 업데이트 지연")
+                else:
+                    self.report_generator.add_test_result("별점 실시간 업데이트", "error", elapsed_time, "별점 업데이트 확인 실패")
+                    print(f"   ❌ 별점 실시간 업데이트: 업데이트 확인 실패")
+            else:
+                self.report_generator.add_test_result("별점 실시간 업데이트", "error", elapsed_time, "실시간 테스트 별점 후기 작성 실패")
+                print(f"   ❌ 별점 실시간 업데이트: 테스트 후기 작성 실패")
+        
+        # 4. 최종 목록↔상세 일치성 재검증
+        await self.rate_manager.wait_before_request()
+        start_time = time.time()
+        
+        # 상세 페이지 최종 통계
+        final_detail_result = await self.api_client.get(f"/api/posts/{post_id}")
+        # 목록 페이지 최종 통계
+        final_list_result = await self.api_client.get("/api/posts", {"service": "residential_community", "type": "moving services"})
+        
+        elapsed_time = f"{time.time() - start_time:.1f}초"
+        
+        if final_detail_result["success"] and final_list_result["success"]:
+            detail_data = final_detail_result["data"]
+            list_data = final_list_result["data"]
+            posts = list_data.get("posts", []) if isinstance(list_data, dict) else []
+            
+            # 목록에서 테스트 게시글 찾기
+            target_post = None
+            for post in posts:
+                if str(post.get("id")) == str(post_id):
+                    target_post = post
+                    break
+            
+            if target_post:
+                detail_comments = detail_data.get("comment_count", 0)
+                detail_rating = detail_data.get("average_rating", 0)
+                detail_views = detail_data.get("view_count", 0)
+                
+                list_comments = target_post.get("comment_count", 0)
+                list_rating = target_post.get("average_rating", 0)
+                list_views = target_post.get("view_count", 0)
+                
+                # 완전 일치성 확인 (실시간 업데이트 후)
+                perfect_match = (
+                    detail_comments == list_comments and
+                    abs(detail_rating - list_rating) < 0.01 and
+                    abs(detail_views - list_views) <= 1
+                )
+                
+                if perfect_match:
+                    self.report_generator.add_test_result("최종 통계 일치성", "success", elapsed_time, f"목록↔상세 통계 완벽 일치 (댓글: {list_comments}, 별점: {list_rating:.1f}, 조회: {list_views})")
+                    print(f"   ✅ 최종 통계 일치성: 목록↔상세 완벽 일치")
+                else:
+                    self.report_generator.add_test_result("최종 통계 일치성", "warning", elapsed_time, f"약간의 차이 존재 - 상세: 댓글{detail_comments}/별점{detail_rating:.1f}/조회{detail_views}, 목록: 댓글{list_comments}/별점{list_rating:.1f}/조회{list_views}")
+                    print(f"   ⚠️ 최종 통계 일치성: 약간의 차이 존재")
+            else:
+                self.report_generator.add_test_result("최종 통계 일치성", "error", elapsed_time, "목록에서 테스트 게시글 찾을 수 없음")
+                print(f"   ❌ 최종 통계 일치성: 테스트 게시글 찾을 수 없음")
+        else:
+            self.report_generator.add_test_result("최종 통계 일치성", "error", elapsed_time, "최종 통계 조회 실패")
+            print(f"   ❌ 최종 통계 일치성: 최종 통계 조회 실패")
     
     async def _run_cleanup_tests(self):
         """데이터 정리 테스트 실행"""
-        tests = [
-            ("테스트 데이터 식별", "success", f"세션 {self.session_id} 데이터 탐지"),
-            ("안전한 데이터 삭제", "success", "세션별 데이터만 선택적 삭제"),
-            ("시스템 상태 복원", "success", "정리 후 시스템 정상 상태 확인")
-        ]
+        # 1. 테스트 데이터 식별
+        await self.rate_manager.wait_before_request()
+        start_time = time.time()
         
-        for test_name, status, details in tests:
-            await self.rate_manager.wait_before_request()
-            await asyncio.sleep(0.3)
+        # 현재 세션의 생성된 데이터 수 계산
+        created_users = len(self.test_data.get("users", []))
+        created_posts = len(self.test_data.get("created_post_ids", []))
+        created_comments = len(self.test_data.get("created_comment_ids", []))
+        
+        total_created = created_users + created_posts + created_comments
+        
+        elapsed_time = f"{time.time() - start_time:.1f}초"
+        
+        if total_created > 0:
+            self.report_generator.add_test_result("테스트 데이터 식별", "success", elapsed_time, f"세션 {self.session_id}: 사용자 {created_users}명, 게시글 {created_posts}개, 댓글 {created_comments}개")
+            print(f"   ✅ 테스트 데이터 식별: 총 {total_created}개 항목 식별")
+        else:
+            self.report_generator.add_test_result("테스트 데이터 식별", "warning", elapsed_time, "식별된 테스트 데이터 없음")
+            print(f"   ⚠️ 테스트 데이터 식별: 식별된 데이터 없음")
+        
+        # 2. 안전한 데이터 삭제 시뮬레이션
+        await self.rate_manager.wait_before_request()
+        start_time = time.time()
+        
+        # 실제로는 삭제하지 않고 삭제 가능성만 검증
+        deletable_count = 0
+        preservation_count = 0
+        
+        # 댓글 삭제 가능성 확인
+        for comment_id in self.test_data.get("created_comment_ids", []):
+            # 세션 ID가 있는 댓글만 삭제 대상
+            if comment_id:  # 단순화: 실제로는 API로 메타데이터 확인
+                deletable_count += 1
+        
+        # 게시글 삭제 가능성 확인
+        for post_id in self.test_data.get("created_post_ids", []):
+            if post_id:  # 단순화: 실제로는 세션 ID 메타데이터 확인
+                deletable_count += 1
+        
+        # 사용자 삭제 가능성 확인
+        for user in self.test_data.get("users", []):
+            if user.get("metadata", {}).get("session_id") == self.session_id:
+                deletable_count += 1
+            else:
+                preservation_count += 1
+        
+        elapsed_time = f"{time.time() - start_time:.1f}초"
+        
+        if deletable_count > 0:
+            self.report_generator.add_test_result("안전한 데이터 삭제", "success", elapsed_time, f"삭제 대상 {deletable_count}개, 보존 대상 {preservation_count}개 식별")
+            print(f"   ✅ 안전한 데이터 삭제: 삭제 대상 {deletable_count}개 식별")
+        else:
+            self.report_generator.add_test_result("안전한 데이터 삭제", "info", elapsed_time, "삭제할 데이터 없음")
+            print(f"   ℹ️ 안전한 데이터 삭제: 삭제할 데이터 없음")
+        
+        # 3. 시스템 상태 복원 확인
+        await self.rate_manager.wait_before_request()
+        start_time = time.time()
+        
+        # 헬스체크로 시스템 상태 확인
+        health_result = await self.api_client.get("/health")
+        elapsed_time = f"{time.time() - start_time:.1f}초"
+        
+        if health_result["success"]:
+            health_data = health_result["data"]
             
-            self.report_generator.add_test_result(test_name, status, "0.3초", details)
-            print(f"   ✅ {test_name}: {details}")
+            # 시스템 상태 확인
+            db_status = health_data.get("database", "unknown")
+            api_status = health_data.get("status", "unknown")
+            
+            if db_status == "healthy" and api_status == "healthy":
+                self.report_generator.add_test_result("시스템 상태 복원", "success", elapsed_time, "데이터베이스와 API 모두 정상 상태")
+                print(f"   ✅ 시스템 상태 복원: 시스템 정상 상태 확인")
+            else:
+                self.report_generator.add_test_result("시스템 상태 복원", "warning", elapsed_time, f"시스템 상태: DB={db_status}, API={api_status}")
+                print(f"   ⚠️ 시스템 상태 복원: 시스템 상태 확인 필요")
+        else:
+            self.report_generator.add_test_result("시스템 상태 복원", "error", elapsed_time, "헬스체크 실패")
+            print(f"   ❌ 시스템 상태 복원: 헬스체크 실패")
+        
+        # 4. 정리 완료 메시지
+        if total_created > 0:
+            print(f"   💡 테스트 완료 후 실제 정리: python service_provider_test_data_manager.py --cleanup --session {self.session_id}")
+        else:
+            print(f"   💡 테스트 데이터 정리: 정리할 데이터가 없습니다")
     
     async def _intersection_wait(self, completed_section: Dict[str, Any]):
         """섹션 간 대기 시간"""

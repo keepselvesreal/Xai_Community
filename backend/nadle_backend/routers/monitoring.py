@@ -1,7 +1,7 @@
 """
 통합 모니터링 API 라우터
 
-HetrixTools 업타임 모니터링과 인프라 모니터링(Cloud Run, Vercel, Atlas, Upstash)을
+HetrixTools 업타임 모니터링과 인프라 모니터링(Cloud Run, Vercel, Upstash)을
 통합하여 제공하는 API 엔드포인트
 """
 
@@ -633,43 +633,6 @@ async def get_vercel_status(
         raise HTTPException(status_code=500, detail=f"Vercel 상태 조회 실패: {str(e)}")
 
 
-@router.get("/infrastructure/atlas/status")
-async def get_atlas_status(
-    unified_service: UnifiedMonitoringService = Depends(get_unified_monitoring_service),
-) -> Dict[str, Any]:
-    """MongoDB Atlas 상태 조회"""
-    try:
-        metrics = await unified_service.get_service_metrics(
-            InfrastructureType.MONGODB_ATLAS
-        )
-
-        if metrics is None:
-            raise HTTPException(
-                status_code=404, detail="MongoDB Atlas 서비스가 설정되지 않았습니다"
-            )
-
-        return {
-            "service": "mongodb_atlas",
-            "status": metrics.status.value,
-            "cluster_name": metrics.cluster_name,
-            "cluster_type": metrics.cluster_type,
-            "metrics": {
-                "connections_current": metrics.connections_current,
-                "cpu_usage_percent": metrics.cpu_usage_percent,
-                "memory_usage_percent": metrics.memory_usage_percent,
-                "operations_per_second": metrics.operations_per_second,
-                "response_time_ms": metrics.response_time_ms,
-            },
-            "timestamp": metrics.timestamp.isoformat(),
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"MongoDB Atlas 상태 조회 실패: {e}")
-        raise HTTPException(
-            status_code=500, detail=f"MongoDB Atlas 상태 조회 실패: {str(e)}"
-        )
 
 
 @router.get("/infrastructure/upstash/status")
@@ -919,17 +882,6 @@ async def debug_config() -> Dict[str, Any]:
             "api_token_preview": (
                 settings.vercel_api_token[:8] + "..."
                 if settings.vercel_api_token
-                else None
-            ),
-        },
-        "atlas": {
-            "public_key_configured": bool(settings.atlas_public_key),
-            "private_key_configured": bool(settings.atlas_private_key),
-            "group_id_configured": bool(settings.atlas_group_id),
-            "cluster_name_configured": bool(settings.atlas_cluster_name),
-            "public_key_preview": (
-                settings.atlas_public_key[:4] + "..."
-                if settings.atlas_public_key
                 else None
             ),
         },

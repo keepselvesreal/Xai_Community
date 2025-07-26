@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-작업 시간: 2025-07-22 14:27:55 KST
-작업 버전: 전문가 꿀정보 브라우저 확인용 테스트 데이터 생성 스크립트 v1.0
+작업 시간: 2025-07-22 15:18:00 KST
+작업 버전: 전문가 꿀정보 브라우저 확인용 테스트 데이터 생성 스크립트 v2.0 (실제 API 호출)
 
 주요 컴포넌트들:
 - ExpertTipsBrowserTestSetup: 브라우저 테스트용 데이터 생성 메인 클래스 (43-107라인)
@@ -143,13 +143,12 @@ class ExpertTipsBrowserTestSetup:
                     # 이미 존재할 수 있으므로 로그인 시도
                     pass
             
-            # 로그인하여 토큰 획득
-            login_data = {
-                "email": expert_data["email"],
-                "password": expert_data["password"]
-            }
+            # OAuth2 로그인하여 토큰 획득
+            form_data = aiohttp.FormData()
+            form_data.add_field('username', expert_data["email"])  # OAuth2에서는 username 필드 사용
+            form_data.add_field('password', expert_data["password"])
             
-            async with self.session.post(API_ENDPOINTS["login"], json=login_data) as response:
+            async with self.session.post(API_ENDPOINTS["login"], data=form_data) as response:
                 if response.status == 200:
                     result = await response.json()
                     self.expert_token = result["access_token"]
@@ -181,13 +180,12 @@ class ExpertTipsBrowserTestSetup:
                     # 이미 존재할 수 있으므로 로그인 시도
                     pass
             
-            # 로그인하여 토큰 획득
-            login_data = {
-                "email": normal_data["email"],
-                "password": normal_data["password"]
-            }
+            # OAuth2 로그인하여 토큰 획득
+            form_data = aiohttp.FormData()
+            form_data.add_field('username', normal_data["email"])  # OAuth2에서는 username 필드 사용
+            form_data.add_field('password', normal_data["password"])
             
-            async with self.session.post(API_ENDPOINTS["login"], json=login_data) as response:
+            async with self.session.post(API_ENDPOINTS["login"], data=form_data) as response:
                 if response.status == 200:
                     result = await response.json()
                     self.normal_token = result["access_token"]

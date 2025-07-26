@@ -1,7 +1,7 @@
 """
 통합 모니터링 서비스
 
-4개 인프라(Cloud Run, Vercel, MongoDB Atlas, Upstash Redis)의
+3개 인프라(Cloud Run, Vercel, Upstash Redis)의
 모니터링을 통합하여 제공하는 서비스
 """
 
@@ -21,7 +21,6 @@ from ...models.monitoring.monitoring_models import (
 )
 from .cloud_run_monitor import CloudRunMonitoringService
 from .vercel_monitor import VercelMonitoringService
-from .atlas_monitor import AtlasMonitoringService
 from .upstash_monitor import UpstashMonitoringService
 
 
@@ -35,7 +34,6 @@ class UnifiedMonitoringService:
         self.settings = get_settings()
         self._cloud_run_service = CloudRunMonitoringService()
         self._vercel_service = VercelMonitoringService()
-        self._atlas_service = AtlasMonitoringService()
         self._upstash_service = UpstashMonitoringService()
 
     async def get_all_infrastructure_status(self) -> UnifiedMonitoringResponse:
@@ -53,8 +51,6 @@ class UnifiedMonitoringService:
             if self._vercel_service.is_configured():
                 tasks.append(self._monitor_vercel())
 
-            if self._atlas_service.is_configured():
-                tasks.append(self._monitor_atlas())
 
             if self._upstash_service.is_configured():
                 tasks.append(self._monitor_upstash())
@@ -149,21 +145,6 @@ class UnifiedMonitoringService:
             logger.error(f"Vercel 모니터링 실패: {e}")
             raise
 
-    async def _monitor_atlas(self) -> InfrastructureStatus:
-        """MongoDB Atlas 모니터링"""
-        try:
-            metrics = await self._atlas_service.get_metrics()
-
-            return InfrastructureStatus(
-                infrastructure_type=InfrastructureType.MONGODB_ATLAS,
-                service_name=metrics.cluster_name,
-                status=metrics.status,
-                metrics=metrics,
-            )
-
-        except Exception as e:
-            logger.error(f"MongoDB Atlas 모니터링 실패: {e}")
-            raise
 
     async def _monitor_upstash(self) -> InfrastructureStatus:
         """Upstash Redis 모니터링"""
@@ -283,29 +264,6 @@ class UnifiedMonitoringService:
                                 metrics.core_web_vitals_score
                             )
 
-                    # Atlas 특화 메트릭
-                    elif status.infrastructure_type == InfrastructureType.MONGODB_ATLAS:
-                        if (
-                            hasattr(metrics, "connections_current")
-                            and metrics.connections_current
-                        ):
-                            service_metrics["connections_current"] = (
-                                metrics.connections_current
-                            )
-                        if (
-                            hasattr(metrics, "cpu_usage_percent")
-                            and metrics.cpu_usage_percent
-                        ):
-                            service_metrics["cpu_usage_percent"] = (
-                                metrics.cpu_usage_percent
-                            )
-                        if (
-                            hasattr(metrics, "operations_per_second")
-                            and metrics.operations_per_second
-                        ):
-                            service_metrics["operations_per_second"] = (
-                                metrics.operations_per_second
-                            )
 
                     # Upstash 특화 메트릭
                     elif status.infrastructure_type == InfrastructureType.UPSTASH_REDIS:
@@ -367,9 +325,6 @@ class UnifiedMonitoringService:
                 vercel_health = await self._vercel_service.health_check()
                 checks["vercel"] = vercel_health
 
-            if self._atlas_service.is_configured():
-                atlas_health = await self._atlas_service.health_check()
-                checks["atlas"] = atlas_health
 
             if self._upstash_service.is_configured():
                 upstash_health = await self._upstash_service.health_check()
@@ -406,9 +361,6 @@ class UnifiedMonitoringService:
             elif infrastructure_type == InfrastructureType.VERCEL:
                 if self._vercel_service.is_configured():
                     return await self._vercel_service.get_metrics()
-            elif infrastructure_type == InfrastructureType.MONGODB_ATLAS:
-                if self._atlas_service.is_configured():
-                    return await self._atlas_service.get_metrics()
             elif infrastructure_type == InfrastructureType.UPSTASH_REDIS:
                 if self._upstash_service.is_configured():
                     return await self._upstash_service.get_metrics()
@@ -429,8 +381,6 @@ class UnifiedMonitoringService:
         if self._vercel_service.is_configured():
             configured.append(InfrastructureType.VERCEL)
 
-        if self._atlas_service.is_configured():
-            configured.append(InfrastructureType.MONGODB_ATLAS)
 
         if self._upstash_service.is_configured():
             configured.append(InfrastructureType.UPSTASH_REDIS)

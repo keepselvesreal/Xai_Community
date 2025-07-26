@@ -76,9 +76,25 @@ export default function PropertyInformationDetail() {
   const handleCommentAdded = async () => {
     if (!slug) return;
     
+    console.log('🔄 handleCommentAdded 호출됨 - 댓글 목록 새로고침 시작');
+    
     try {
       // 🚀 2단계: 배치 조회로 댓글과 작성자 정보 함께 로드
       const response = await apiClient.getCommentsBatch(slug);
+      console.log('🔍 getCommentsBatch 전체 응답:', {
+        success: response.success,
+        data: response.data,
+        dataStructure: Object.keys(response.data || {}),
+        hasComments: !!(response.data?.comments),
+        hasPagination: !!(response.data?.pagination),
+        firstComment: response.data?.comments?.[0],
+        // 더 상세한 구조 분석
+        dataDataComments: response.data?.data?.comments,
+        firstDataComment: response.data?.data?.comments?.[0],
+        firstCommentUserReaction: response.data?.data?.comments?.[0]?.user_reaction,
+        allCommentFields: response.data?.data?.comments?.[0] ? Object.keys(response.data.data.comments[0]) : []
+      });
+      
       if (response.success && response.data) {
         // 배치 조회된 댓글 데이터 처리
         let comments = [];
@@ -107,6 +123,11 @@ export default function PropertyInformationDetail() {
         };
         
         const processedComments = processCommentsRecursive(comments);
+        console.log('✅ 댓글 목록 업데이트 완료:', {
+          commentCount: processedComments.length,
+          firstCommentUserReaction: processedComments[0]?.user_reaction,
+          hasUserReactions: processedComments.some(c => c.user_reaction)
+        });
         setComments(processedComments);
         
         // 댓글 수 업데이트
@@ -393,7 +414,7 @@ export default function PropertyInformationDetail() {
 
   if (isLoading) {
     return (
-      <AppLayout title="부동산 정보" user={user} onLogout={logout}>
+      <AppLayout user={user} onLogout={logout}>
         <DetailPageLayout
           post={{} as Post}
           user={user}
@@ -414,7 +435,7 @@ export default function PropertyInformationDetail() {
 
   if (isNotFound || !post) {
     return (
-      <AppLayout title="부동산 정보를 찾을 수 없음" user={user} onLogout={logout}>
+      <AppLayout user={user} onLogout={logout}>
         <DetailPageLayout
           post={null as any}
           user={user}
@@ -474,8 +495,19 @@ export default function PropertyInformationDetail() {
   };
 
   return (
-    <AppLayout title={post.title} user={user} onLogout={logout}>
-      <DetailPageLayout
+    <AppLayout user={user} onLogout={logout}>
+      <div className="max-w-4xl mx-auto">
+        {/* 상단 네비게이션 */}
+        <div className="flex items-center justify-between mb-6">
+          <button 
+            onClick={() => navigate('/info')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            ← 목록으로
+          </button>
+        </div>
+
+        <DetailPageLayout
         post={post}
         user={user}
         comments={comments}
@@ -490,6 +522,7 @@ export default function PropertyInformationDetail() {
         pageType="property_information"
         sections={getPropertyContentSections()}
       />
+      </div>
     </AppLayout>
   );
 }

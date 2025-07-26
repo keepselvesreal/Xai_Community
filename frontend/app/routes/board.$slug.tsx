@@ -448,7 +448,7 @@ export default function PostDetail() {
 
   if (isLoading) {
     return (
-      <AppLayout title="게시글" user={user} onLogout={logout}>
+      <AppLayout user={user} onLogout={logout}>
         <DetailPageLayout
           post={{} as Post}
           user={user}
@@ -469,7 +469,7 @@ export default function PostDetail() {
 
   if (isNotFound || !post) {
     return (
-      <AppLayout title="게시글을 찾을 수 없음" user={user} onLogout={logout}>
+      <AppLayout user={user} onLogout={logout}>
         <DetailPageLayout
           post={null as any}
           user={user}
@@ -489,8 +489,19 @@ export default function PostDetail() {
   }
 
   return (
-    <AppLayout title={post.title} user={user} onLogout={logout}>
-      <DetailPageLayout
+    <AppLayout user={user} onLogout={logout}>
+      <div className="max-w-4xl mx-auto">
+        {/* 상단 네비게이션 */}
+        <div className="flex items-center justify-between mb-6">
+          <button 
+            onClick={() => navigate('/board')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+          >
+            ← 목록으로
+          </button>
+        </div>
+
+        <DetailPageLayout
         post={post}
         user={user}
         comments={comments}
@@ -504,6 +515,7 @@ export default function PostDetail() {
         postSlug={slug}
         pageType="board"
       />
+      </div>
     </AppLayout>
   );
 }

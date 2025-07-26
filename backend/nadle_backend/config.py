@@ -469,19 +469,6 @@ class Settings(BaseSettings):
         default=None, description="Vercel 프로젝트 ID"
     )
 
-    # MongoDB Atlas
-    atlas_public_key: Optional[str] = Field(
-        default=None, description="MongoDB Atlas API 공개키"
-    )
-    atlas_private_key: Optional[str] = Field(
-        default=None, description="MongoDB Atlas API 비밀키"
-    )
-    atlas_group_id: Optional[str] = Field(
-        default=None, description="MongoDB Atlas 그룹(프로젝트) ID"
-    )
-    atlas_cluster_name: Optional[str] = Field(
-        default=None, description="MongoDB Atlas 클러스터 이름"
-    )
 
     # Upstash Redis (추가 - 기존 REST API 외에 Dashboard API)
     upstash_email: Optional[str] = Field(

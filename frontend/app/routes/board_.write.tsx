@@ -126,7 +126,7 @@ export default function BoardWrite() {
           name="category"
           value={formData.category}
           onChange={handleCategoryChange}
-          className="w-full px-4 py-3 bg-var-section border border-var-color rounded-lg text-var-primary focus:outline-none focus:ring-2 focus:ring-accent-primary focus:border-transparent"
+          className="w-full px-4 py-3 bg-var-section border border-[#52C41A] rounded-lg text-var-primary focus:outline-none focus:ring-2 focus:ring-[#52C41A] focus:border-transparent"
         >
           {categories.map((category) => (
             <option key={category.value} value={category.value}>

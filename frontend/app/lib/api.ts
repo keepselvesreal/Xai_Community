@@ -633,9 +633,13 @@ class ApiClient {
           return this.makeRequestWithRetry<T>(endpoint, options, true);
         } else {
           console.log('ApiClient: Token refresh failed, user needs to login again');
-          // 토큰 갱신 실패 시 로그아웃 이벤트 발생
+          // 토큰 갱신 실패 시 즉시 로그아웃 이벤트 발생
           this.notifyTokenExpired();
         }
+      } else if (response.status === 401) {
+        // refresh token이 없거나 재시도인 경우 즉시 토큰 만료 처리
+        console.log('ApiClient: 401 received without refresh capability, notifying token expired');
+        this.notifyTokenExpired();
       }
       
       // 빈 응답 처리

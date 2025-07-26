@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-작업 시간: 2025-07-22 20:43:20 KST
-작업 버전: 게시판 수동 확인용 테스트 데이터 생성기 v2.0 (대폭 개선)
+작업 시간: 2025-07-23 11:30:00 KST
+작업 버전: 게시판 수동 확인용 테스트 데이터 생성기 v3.0 (문제점 해결 및 개선)
 주요 컴포넌트들:
 - BoardManualVerificationDataGenerator: 게시판 수동 확인용 데이터 생성기 (40-800라인)
   - discover_board_categories(): API를 통한 실제 카테고리 동적 조사 (100-150라인)
@@ -11,13 +11,17 @@
   - _create_detailed_reaction_tracking(): 상세한 반응 추적 시스템 (502-600라인)
   - _generate_enhanced_html_guide(): 대폭 개선된 HTML 가이드 (602-800라인)
 
-핵심 기능 (v2.0):
+핵심 기능 (v3.0):
 - API를 통한 실제 게시판 카테고리 동적 조사 및 적용
 - 완전한 댓글/답글 CRUD 시나리오 (생성→수정→삭제)
 - 사용자별 반응 행위 상세 추적 및 변경 이력 기록
+- 답글 삭제, 댓글 싫어요 취소 테스트 추가 구현
+- 필터/검색 기능 정상 동작을 위한 충분한 테스트 데이터 생성
+- 페이지네이션 추가 페이지 이동 테스트 구현
+- 답글 최대 깊이 4단계 완전 테스트
+- 사용자 활동 내역과 실제 테스트 결과 일치성 보장
 - Redis 캐싱 시스템 동작 확인 및 상태 모니터링
 - 삭제된 데이터 정보까지 포함하는 종합적 HTML 가이드
-- 브라우저에서 확인 불가능한 API 레벨 정보 상세 표시
 
 관련 파일들:
 - /scripts/development/testing/pages/board/api_test.py: API 자동화 테스트
@@ -86,19 +90,39 @@ class BoardManualVerificationDataGenerator:
         }
         
         # 실제 게시판 카테고리들 (동적으로 조사될 예정)
-        self.board_categories = ["입주 정보"]  # 기본값, API로 업데이트
+        self.board_categories = ["입주 정보", "생활 정보", "이야기"]  # 기본값, API로 업데이트
         
-        # 샘플 게시글들 (기존 성공 테스트 패턴 기반)
+        # 필터/검색 기능 테스트를 위한 충분한 샘플 게시글들
         self.sample_posts = [
             {
-                "title": "커뮤니티 이용 가이드 - 수동확인용", 
-                "content": "# 커뮤니티 이용 가이드\n\n수동 확인을 위한 테스트 게시글입니다.\n\n## 주요 기능\n- 게시글 작성 및 수정\n- 댓글과 답글 시스템\n- 반응(좋아요) 기능\n- 실시간 통계 업데이트",
+                "title": "커뮤니티 이용 가이드 - 입주정보", 
+                "content": "# 커뮤니티 이용 가이드\n\n입주 관련 정보를 공유하는 게시글입니다.\n\n## 주요 기능\n- 게시글 작성 및 수정\n- 댓글과 답글 시스템\n- 반응(좋아요) 기능\n- 실시간 통계 업데이트",
                 "category": "입주 정보"
             },
             {
-                "title": "게시판 기능 테스트 - 댓글 시스템",
-                "content": "# 댓글 시스템 테스트\n\n이 게시글은 댓글 및 답글 기능을 테스트하기 위해 작성되었습니다.\n\n다음 기능들을 확인해보세요:\n- 댓글 작성\n- 답글 작성\n- 댓글 수정\n- 댓글 삭제",
+                "title": "게시판 기능 테스트 - 생활정보",
+                "content": "# 생활 정보 테스트\n\n이 게시글은 생활 정보 카테고리에서 댓글 및 답글 기능을 테스트하기 위해 작성되었습니다.\n\n다음 기능들을 확인해보세요:\n- 댓글 작성\n- 답글 작성\n- 댓글 수정\n- 댓글 삭제",
                 "category": "생활 정보"
+            },
+            {
+                "title": "일상 이야기 - 커뮤니티 소통",
+                "content": "# 일상 이야기\n\n이야기 카테고리에서 커뮤니티 소통을 위한 게시글입니다.\n\n## 내용\n- 일상적인 이야기 공유\n- 커뮤니티 소통 활성화\n- 다양한 주제 토론",
+                "category": "이야기"
+            },
+            {
+                "title": "필터 검색 테스트용 - 입주 관련 질문",
+                "content": "# 입주 관련 질문\n\n입주 관련해서 궁금한 점들을 질문하는 게시글입니다.\n\n검색 키워드: 입주, 이사, 정착",
+                "category": "입주 정보"
+            },
+            {
+                "title": "페이지네이션 테스트용 - 생활 팁 모음",
+                "content": "# 생활 팁 모음\n\n유용한 생활 팁들을 모아둔 게시글입니다.\n\n검색 키워드: 생활, 팁, 유용한",
+                "category": "생활 정보"
+            },
+            {
+                "title": "검색 기능 테스트용 - 취미 이야기",
+                "content": "# 취미 이야기\n\n다양한 취미에 대한 이야기를 나누는 게시글입니다.\n\n검색 키워드: 취미, 여가, 활동",
+                "category": "이야기"
             },
             {
                 "title": "수동 확인 테스트 - 반응 시스템", 
@@ -710,10 +734,10 @@ class BoardManualVerificationDataGenerator:
                     else:
                         print(f"      ❌ 답글 삭제 실패")
                         
-                # 4. 답글 수정 테스트 (새로운 답글 생성 후 수정)
-                if len(self.created_data["comments"]) > 0 and len(self.created_data["users"]) >= 2:
+                # 4. 답글 수정 테스트 (새로운 답글 생성 후 수정) - 확실히 실행되도록 수정
+                if len(test_comments) > 0 and len(self.created_data["users"]) >= 2:
                     modifier = self.created_data["users"][1]  # 두 번째 사용자가 수정
-                    parent_comment = self.created_data["comments"][0]
+                    parent_comment = test_comments[0]  # 이 게시글의 첫 번째 댓글
                     
                     # 수정용 답글 생성
                     await asyncio.sleep(1.0)
@@ -756,6 +780,11 @@ class BoardManualVerificationDataGenerator:
                                 "content": updated_content,
                                 "reply_id": str(reply_id)
                             })
+                            
+                            # 답글 수정 데이터 추가 (HTML 통계용)
+                            self.detailed_tracking["user_actions"].append(
+                                f"답글 수정 완료: {reply_id} - {modifier['name']}"
+                            )
                         else:
                             print(f"      ❌ 답글 수정 실패")
                     else:
@@ -818,6 +847,8 @@ class BoardManualVerificationDataGenerator:
         
         # CRUD 테스트 결과 업데이트
         self.created_data["statistics"]["total_comments"] += crud_count["created"]
+        self.created_data["crud_statistics"] = crud_count  # HTML에서 사용할 수 있도록 저장
+        
         print(f"\n   📊 CRUD 테스트 결과:")
         print(f"      생성: {crud_count['created']}개")
         print(f"      수정: {crud_count['modified']}개")
@@ -847,6 +878,9 @@ class BoardManualVerificationDataGenerator:
             post_title = post.get("title", "Unknown")[:30]
             
             print(f"\n   🎯 게시글 '{post_title}...'에 확장된 반응 시나리오 적용")
+            
+            # 이 게시글의 댓글들 가져오기
+            post_comments = [c for c in self.created_data["comments"] if str(c.get("post_id", "")) == str(post_id)]
             
             # 시나리오 1: 게시글 좋아요 테스트 (모든 사용자)
             for i, user in enumerate(self.created_data["users"]):
@@ -1106,14 +1140,18 @@ class BoardManualVerificationDataGenerator:
                                 "target": "comment", "title": post_title, "target_id": str(comment_id), "type": "like_cancel"
                             })
                     
-                    # 댓글 싫어요 후 취소 (사용자4)
-                    if len(self.created_data["users"]) >= 4:
-                        user4 = self.created_data["users"][3]
+                    # 댓글 싫어요 후 취소 (사용자3) - 다른 댓글 또는 독립적 테스트로 수정
+                    if len(self.created_data["users"]) >= 3 and len(post_comments) > 0:
+                        user4 = self.created_data["users"][2]  # 3번째 사용자 사용
+                        # 가능하면 다른 댓글 사용, 없으면 첫 번째 댓글 사용 (독립적 테스트)
+                        target_comment = post_comments[1] if len(post_comments) > 1 else post_comments[0]
+                        target_comment_id = str(target_comment.get("id") or target_comment.get("_id"))
+                        
                         await asyncio.sleep(0.5)
                         
                         # 댓글 싫어요
                         comment_dislike_result = await self.api_manager.api_request(
-                            "POST", f"{self.base_url}/api/posts/{post_slug}/comments/{comment_id}/dislike",
+                            "POST", f"{self.base_url}/api/posts/{post_slug}/comments/{target_comment_id}/dislike",
                             user_token=user4["token"]
                         )
                         
@@ -1123,16 +1161,16 @@ class BoardManualVerificationDataGenerator:
                             # 싫어요 취소
                             await asyncio.sleep(0.3)
                             comment_dislike_cancel_result = await self.api_manager.api_request(
-                                "POST", f"{self.base_url}/api/posts/{post_slug}/comments/{comment_id}/dislike",
+                                "POST", f"{self.base_url}/api/posts/{post_slug}/comments/{target_comment_id}/dislike",
                                 user_token=user4["token"]
                             )
                             
                             if comment_dislike_cancel_result["success"]:
                                 reaction_stats["comment_dislike_cancels"] += 1
                                 print(f"      💬❎ {user4['name']} 댓글 싫어요 취소")
-                                self._track_reaction(user4["name"], "comment_dislike_cancel", post_title, str(comment_id), "comment")
+                                self._track_reaction(user4["name"], "comment_dislike_cancel", post_title, str(target_comment_id), "comment")
                                 self._track_user_activity(user4["email"], "reactions", "comment_cancels", {
-                                    "target": "comment", "title": post_title, "target_id": str(comment_id), "type": "dislike_cancel"
+                                    "target": "comment", "title": post_title, "target_id": str(target_comment_id), "type": "dislike_cancel"
                                 })
         
         # 통계 업데이트
@@ -1200,8 +1238,8 @@ class BoardManualVerificationDataGenerator:
             except Exception as e:
                 print(f"   ⚠️ 카테고리 '{category}' 필터 오류: {e}")
         
-        # 2. 검색 기능 테스트
-        search_terms = ["테스트", "Board", "수동", "확인"]
+        # 2. 검색 기능 테스트 (실제 게시글 제목과 내용에 포함된 키워드 사용)
+        search_terms = ["커뮤니티", "이용", "가이드", "생활", "정보", "취미", "이야기", "입주", "팁"]
         for term in search_terms:
             try:
                 await asyncio.sleep(0.5)
@@ -1229,29 +1267,55 @@ class BoardManualVerificationDataGenerator:
             except Exception as e:
                 print(f"   ⚠️ 검색어 '{term}' 오류: {e}")
         
-        # 3. 페이지네이션 테스트
+        # 3. 개선된 페이지네이션 테스트 (여러 페이지 테스트)
+        pagination_results = []
         try:
+            # 첫 번째 페이지 테스트
             await asyncio.sleep(0.5)
-            pagination_result = await self.api_manager.api_request(
-                "GET", f"{self.base_url}/api/posts?page=1&page_size=2"
+            page1_result = await self.api_manager.api_request(
+                "GET", f"{self.base_url}/api/posts?page=1&page_size=3"
             )
             
-            if pagination_result["success"]:
-                posts_data = pagination_result["data"]
+            if page1_result["success"]:
+                posts_data = page1_result["data"]
                 page_info = posts_data.get("pagination", {})
+                pagination_results.append({
+                    "page": 1,
+                    "count": len(posts_data.get("posts", [])),
+                    "total_pages": page_info.get("total_pages", 0),
+                    "success": True
+                })
+                print(f"   📄 1페이지: {len(posts_data.get('posts', []))}개 게시글")
+                
+                # 두 번째 페이지 테스트 (총 페이지가 2 이상인 경우)
+                if page_info.get("total_pages", 0) > 1:
+                    await asyncio.sleep(0.5)
+                    page2_result = await self.api_manager.api_request(
+                        "GET", f"{self.base_url}/api/posts?page=2&page_size=3"
+                    )
+                    
+                    if page2_result["success"]:
+                        page2_data = page2_result["data"]
+                        pagination_results.append({
+                            "page": 2,
+                            "count": len(page2_data.get("posts", [])),
+                            "success": True
+                        })
+                        print(f"   📄 2페이지: {len(page2_data.get('posts', []))}개 게시글")
+                
                 test_results["pagination_test"] = {
                     "tested": True,
-                    "current_page": page_info.get("page", 1),
-                    "page_size": page_info.get("page_size", 2),
-                    "total": page_info.get("total", 0),
-                    "total_pages": page_info.get("total_pages", 0)
+                    "total_pages": page_info.get("total_pages", 0),
+                    "pages_tested": pagination_results,
+                    "multi_page_support": len(pagination_results) > 1
                 }
-                print(f"   📄 페이지네이션: {page_info.get('page', 1)}/{page_info.get('total_pages', 0)} 페이지")
             else:
                 print(f"   ❌ 페이지네이션 테스트 실패")
+                test_results["pagination_test"] = {"tested": False, "results": []}
                 
         except Exception as e:
             print(f"   ⚠️ 페이지네이션 테스트 오류: {e}")
+            test_results["pagination_test"] = {"tested": False, "error": str(e)}
         
         # 결과 저장
         self.created_data["filter_search_tests"] = test_results
@@ -1634,9 +1698,9 @@ class BoardManualVerificationDataGenerator:
                     </ul>
                     <h5>답글</h5>
                     <ul>
-                        <li>✅ 생성 (2개)</li>
-                        <li>❌ 수정 (0개)</li>
-                        <li>✅ 삭제 (2개)</li>
+                        <li>{"✅" if len([d for d in self.detailed_tracking["deleted_data"] if d.get("type") == "deleted_reply"]) > 0 else "❌"} 생성 ({len([d for d in self.detailed_tracking["deleted_data"] if d.get("type") == "deleted_reply"]) + self.created_data.get("crud_statistics", {}).get("created", 0)}개)</li>
+                        <li>{"✅" if self.created_data.get("crud_statistics", {}).get("modified", 0) > 0 else "❌"} 수정 ({self.created_data.get("crud_statistics", {}).get("modified", 0)}개)</li>
+                        <li>{"✅" if len([d for d in self.detailed_tracking["deleted_data"] if d.get("type") == "deleted_reply"]) > 0 else "❌"} 삭제 ({len([d for d in self.detailed_tracking["deleted_data"] if d.get("type") == "deleted_reply"])}개)</li>
                     </ul>
                 </div>
             </div>
@@ -1892,17 +1956,33 @@ class BoardManualVerificationDataGenerator:
     
     def _generate_comment_test_info(self) -> str:
         """댓글 테스트 정보 생성"""
-        # 댓글이 생성된 게시글
-        posts_with_comments = set()
+        # 댓글이 생성된 게시글 (수정됨 - 정확한 링크 생성)
+        posts_with_comments = {}
         for comment in self.created_data["comments"]:
-            route_path = comment.get("metadata", {}).get("route_path", "")
-            if route_path:
-                post_slug = route_path.split("/")[-1]
-                posts_with_comments.add(post_slug)
+            # 게시글 정보 찾기
+            post_info = None
+            comment_post_id = str(comment.get("post_id", ""))
+            
+            for post in self.created_data["posts"]:
+                post_id = str(post.get("id") or post.get("_id"))
+                if post_id == comment_post_id:
+                    post_info = post
+                    break
+            
+            if post_info:
+                post_slug = post_info.get("slug") or post_id
+                post_title = post_info.get("title", "Unknown")[:30]
+                
+                if post_slug not in posts_with_comments:
+                    posts_with_comments[post_slug] = {
+                        "count": 0,
+                        "title": post_title
+                    }
+                posts_with_comments[post_slug]["count"] += 1
         
         comment_posts = ""
-        for slug in posts_with_comments:
-            comment_posts += f'<li><a href="{self.frontend_url}/board/{slug}" target="_blank">게시글 링크</a></li>'
+        for slug, info in posts_with_comments.items():
+            comment_posts += f'<li><a href="{self.frontend_url}/board/{slug}" target="_blank">{info["title"]}... ({info["count"]}개 댓글)</a></li>'
         
         # 수정된 댓글 (임시로 생성)
         updated_comments = '''
@@ -1975,13 +2055,37 @@ class BoardManualVerificationDataGenerator:
         else:
             depth_info = "<h4>🌳 답글 최대 깊이 테스트</h4><p>깊이 테스트가 실행되지 않았습니다.</p>"
         
+        # 답글이 생성된 게시글 실제 데이터 기반 생성
+        posts_with_replies = {}
+        for comment in self.created_data["comments"]:
+            if comment.get("parent_comment_id"):  # 답글인 경우
+                # 게시글 정보 찾기
+                comment_post_id = str(comment.get("post_id", ""))
+                for post in self.created_data["posts"]:
+                    post_id = str(post.get("id") or post.get("_id"))
+                    if post_id == comment_post_id:
+                        post_slug = post.get("slug") or post_id
+                        post_title = post.get("title", "Unknown")[:30]
+                        
+                        if post_slug not in posts_with_replies:
+                            posts_with_replies[post_slug] = {
+                                "count": 0,
+                                "title": post_title
+                            }
+                        posts_with_replies[post_slug]["count"] += 1
+                        break
+        
+        reply_posts = ""
+        if posts_with_replies:
+            for slug, info in posts_with_replies.items():
+                reply_posts += f'<li><a href="{self.frontend_url}/board/{slug}" target="_blank">{info["title"]}... ({info["count"]}개 답글)</a></li>'
+        else:
+            reply_posts = "<li>답글이 생성된 게시글이 없습니다.</li>"
+        
         return f'''
         <div class="reply-test-section">
             <h4>📍 답글이 생성된 게시글</h4>
-            <ul>
-                <li>커뮤니티 이용 가이드... (1개 답글)</li>
-                <li>게시판 기능 테스트... (1개 답글)</li>
-            </ul>
+            <ul>{reply_posts}</ul>
             
             <h4>🗑️ 삭제된 답글</h4>
             <ul>{deleted_replies}</ul>

@@ -1,13 +1,14 @@
 import { useTheme } from "~/contexts/ThemeContext";
-import type { User } from "~/types";
+import { useAuth } from "~/contexts/AuthContext";
 
 interface TopNavbarProps {
-  user?: User | null;
-  onLogout?: () => void;
+  user?: any; // 하위 호환성을 위해 유지하지만 사용하지 않음
+  onLogout?: () => void; // 하위 호환성을 위해 유지하지만 사용하지 않음
 }
 
-const TopNavbar = ({ user, onLogout }: TopNavbarProps) => {
+const TopNavbar = ({ user: propUser, onLogout: propOnLogout }: TopNavbarProps) => {
   const { theme, toggleTheme } = useTheme();
+  const { user, logout, isAuthenticated } = useAuth(); // AuthContext에서 직접 가져옴
 
   return (
     <nav className="fixed top-0 left-0 w-[280px] h-[120px] bg-gradient-to-br from-[#6B8E23] to-[#556B2F] flex flex-col justify-center items-center px-5 py-4 z-[1002] shadow-lg border-b border-white/10">
@@ -28,7 +29,7 @@ const TopNavbar = ({ user, onLogout }: TopNavbarProps) => {
 
       {/* Row 2: User Controls */}
       <div className="flex items-center justify-center w-full gap-3 mb-3">
-        {user ? (
+        {isAuthenticated && user ? (
           <>
             <a
               href="/mypage"
@@ -39,9 +40,7 @@ const TopNavbar = ({ user, onLogout }: TopNavbarProps) => {
             <button
               onClick={() => {
                 console.log('TopNavbar: Logout button clicked');
-                if (onLogout) {
-                  onLogout();
-                }
+                logout(); // AuthContext의 logout 함수 직접 사용
               }}
               className="px-4 py-2.5 bg-white/10 border border-white/20 rounded-lg text-white text-sm font-medium cursor-pointer transition-all duration-200 hover:bg-white/20 hover:-translate-y-px"
             >

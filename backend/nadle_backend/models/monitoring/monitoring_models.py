@@ -1,7 +1,7 @@
 """
 인프라 모니터링을 위한 Pydantic 데이터 모델들
 
-4개 외부 인프라(Cloud Run, Vercel, MongoDB Atlas, Upstash Redis)의
+3개 외부 인프라(Cloud Run, Vercel, Upstash Redis)의
 모니터링 데이터를 정의하는 모델들
 """
 
@@ -26,7 +26,6 @@ class InfrastructureType(str, Enum):
 
     CLOUD_RUN = "cloud_run"
     VERCEL = "vercel"
-    MONGODB_ATLAS = "mongodb_atlas"
     UPSTASH_REDIS = "upstash_redis"
 
 
@@ -90,47 +89,6 @@ class VercelMetrics(BaseMetrics):
     bandwidth_bytes: Optional[int] = Field(None, ge=0)
 
 
-class AtlasMetrics(BaseMetrics):
-    """MongoDB Atlas 메트릭"""
-
-    cluster_name: str
-    cluster_type: Optional[str] = None
-    
-    # 클러스터 기본 정보 (M0 클러스터용)
-    mongodb_version: Optional[str] = None
-    provider_name: Optional[str] = None
-    instance_size: Optional[str] = None
-    
-    # M0 클러스터 제한 메시지
-    metric_limitation_message: Optional[str] = None
-
-    # 연결 정보
-    connections_current: Optional[int] = Field(None, ge=0)
-    connections_available: Optional[int] = Field(None, ge=0)
-    connections_created: Optional[int] = Field(None, ge=0)
-
-    # 성능 메트릭
-    operations_per_second: Optional[float] = Field(None, ge=0)
-    read_operations_per_second: Optional[float] = Field(None, ge=0)
-    write_operations_per_second: Optional[float] = Field(None, ge=0)
-
-    # 지연시간
-    read_latency_ms: Optional[float] = Field(None, ge=0)
-    write_latency_ms: Optional[float] = Field(None, ge=0)
-
-    # 자원 사용량
-    cpu_usage_percent: Optional[float] = Field(None, ge=0, le=100)
-    memory_usage_percent: Optional[float] = Field(None, ge=0, le=100)
-    disk_usage_percent: Optional[float] = Field(None, ge=0, le=100)
-
-    # 저장 공간
-    data_size_bytes: Optional[int] = Field(None, ge=0)
-    storage_size_bytes: Optional[int] = Field(None, ge=0)
-    index_size_bytes: Optional[int] = Field(None, ge=0)
-
-    # 네트워크
-    network_bytes_in: Optional[int] = Field(None, ge=0)
-    network_bytes_out: Optional[int] = Field(None, ge=0)
 
 
 class UpstashMetrics(BaseMetrics):
@@ -178,7 +136,7 @@ class InfrastructureStatus(BaseModel):
     status: ServiceStatus
     last_check: datetime = Field(default_factory=datetime.utcnow)
     metrics: Optional[
-        Union[CloudRunMetrics, VercelMetrics, AtlasMetrics, UpstashMetrics]
+        Union[CloudRunMetrics, VercelMetrics, UpstashMetrics]
     ] = None
 
     class Config:

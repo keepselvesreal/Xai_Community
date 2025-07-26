@@ -54,10 +54,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             setUser(userData);
           } else {
             console.log('AuthContext: Failed to get user - response not successful:', response);
-            // 토큰이 유효하지 않은 경우 - 상태 정리
+            // 토큰이 유효하지 않은 경우 - 즉시 상태 정리 및 강제 리렌더링
             setUser(null);
             setToken(null);
             setRefreshToken(null);
+            setRenderKey(prev => prev + 1); // 강제 리렌더링 추가
             if (typeof window !== 'undefined') {
               localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
               localStorage.removeItem('refreshToken');
@@ -66,10 +67,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           }
         } catch (error) {
           console.error("AuthContext: Failed to get current user - exception caught:", error);
-          // 예외 발생 시 - 상태 정리
+          // 예외 발생 시 - 즉시 상태 정리 및 강제 리렌더링
           setUser(null);
           setToken(null);
           setRefreshToken(null);
+          setRenderKey(prev => prev + 1); // 강제 리렌더링 추가
           if (typeof window !== 'undefined') {
             localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
             localStorage.removeItem('refreshToken');
@@ -104,11 +106,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   useEffect(() => {
     const handleTokenExpired = () => {
       console.log('AuthContext: Token expired event received, logging out...');
-      // 이미 로그아웃 중이거나 사용자가 없으면 중복 처리 방지
-      if (!user || !token) {
-        console.log('AuthContext: Already logged out, skipping token expired handler');
-        return;
-      }
+      // 토큰 만료 시 즉시 UI 상태 정리 (중복 처리 방지 로직 제거)
       setSessionExpiryReason(SESSION_EXPIRY_REASONS.TOKEN_INVALID);
       performLogout();
     };
@@ -116,11 +114,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     const handleSessionExpired = (event: CustomEvent) => {
       const reason = event.detail?.reason || SESSION_EXPIRY_REASONS.TOKEN_INVALID;
       console.log('AuthContext: Session expired event received, reason:', reason);
-      // 이미 로그아웃 중이거나 사용자가 없으면 중복 처리 방지
-      if (!user || !token) {
-        console.log('AuthContext: Already logged out, skipping session expired handler');
-        return;
-      }
+      // 세션 만료 시 즉시 UI 상태 정리 (중복 처리 방지 로직 제거)
       setSessionExpiryReason(reason);
       performLogout();
     };
@@ -217,18 +211,12 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const performLogout = useCallback(() => {
     console.log('AuthContext: Performing logout...');
     
-    // 이미 로그아웃된 상태면 중복 처리 방지
-    if (!user && !token) {
-      console.log('AuthContext: Already logged out, skipping performLogout');
-      return;
-    }
-    
     // 세션 만료 사유를 로그아웃 전에 localStorage에 저장 (알림용)
     if (typeof window !== 'undefined' && sessionExpiryReason) {
       localStorage.setItem('logoutReason', sessionExpiryReason);
     }
     
-    // 상태 즉시 업데이트 - 동기적으로 처리하여 UI 즉시 반영
+    // 상태 즉시 업데이트 - 동기적으로 처리하여 UI 즉시 반영 (중복 처리 방지 로직 제거)
     setUser(null);
     setToken(null);
     setRefreshToken(null);
@@ -255,7 +243,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         window.location.href = '/';
       }, 100); // 상태 업데이트가 완료된 후 리디렉션
     }
-  }, [sessionExpiryReason, user, token]);
+  }, [sessionExpiryReason]);
 
   const logout = useCallback(() => {
     console.log('AuthContext: Manual logout requested');
@@ -325,7 +313,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     logout,
     refreshUser,
     isLoading,
-    isAuthenticated: !!user && !!token && user !== null && token !== null,
+    isAuthenticated: !!user && !!token && user !== null && token !== null && user.id !== undefined,
     // 세션 관리 기능들
     showSessionWarning,
     sessionExpiryReason,

@@ -26,7 +26,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '../../../../backend'))
 
 from nadle_backend.models.core import User, Post, Comment
 from nadle_backend.config import settings
-from nadle_backend.database import init_db
+from nadle_backend.database import database
 
 
 class ServiceProviderTestDataManager:
@@ -386,7 +386,10 @@ async def main():
     
     try:
         # 데이터베이스 연결
-        await init_db()
+        await database.connect()
+        
+        # Beanie 모델 초기화
+        await database.init_beanie_models([User, Post, Comment])
         print("✅ 데이터베이스 연결 완료")
         
         manager = ServiceProviderTestDataManager(args.session)

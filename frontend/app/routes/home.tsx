@@ -13,7 +13,7 @@ import type { Post } from "~/types";
 export const meta: MetaFunction = () => {
   return [
     { title: "XAI 아파트 커뮤니티" },
-    { name: "description", content: "함께 만들어가는 우리 아파트 소통공간" },
+    { name: "description", content: "XAI 아파트 커뮤니티" },
   ];
 };
 
@@ -112,6 +112,13 @@ export default function Home() {
 
   const mainServices = [
     {
+      title: '게시판',
+      description: '자유롭게 소통하는 공간',
+      icon: '💬',
+      href: '/board',
+      color: 'bg-purple-50 hover:bg-purple-100'
+    },
+    {
       title: '정보',
       description: '아파트 관련 유용한 정보',
       icon: 'ℹ️',
@@ -136,25 +143,14 @@ export default function Home() {
 
   return (
     <AppLayout 
-      title="XAI 아파트 커뮤니티" 
-      subtitle="함께 만들어가는 우리 아파트 소통공간"
       user={user}
       onLogout={logout}
     >
-      {/* 환영 메시지 */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          🏠 XAI 아파트 커뮤니티에 오신 것을 환영합니다
-        </h1>
-        <p className="text-xl text-gray-600">
-          우리 아파트의 모든 정보와 소통이 한 곳에
-        </p>
-      </div>
 
       {/* 주요 서비스 */}
       <div className="mb-12">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">📋 주요 서비스</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {mainServices.map((service) => (
             <Link
               key={service.title}
@@ -191,76 +187,7 @@ export default function Home() {
         );
       })()}
 
-      {/* 최근 게시글 */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">📝 최근 게시글</h2>
-          <Link 
-            to="/board" 
-            className="text-blue-600 hover:text-blue-800 font-medium"
-          >
-            모든 게시글 보기 →
-          </Link>
-        </div>
 
-        {postsLoading ? (
-          <PostCardSkeleton count={4} />
-        ) : recentPosts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {recentPosts.map((post, index) => (
-              <Link 
-                key={post.id || post._id || post.slug || index}
-                to={`/board/${post.slug}`}
-                className="block"
-              >
-                <Card className="hover:shadow-md transition-shadow">
-                  <Card.Content>
-                    <h3 className="font-semibold text-gray-900 mb-2 line-clamp-2">
-                      {post.title}
-                    </h3>
-                    <p className="text-gray-600 text-sm mb-3 line-clamp-2">
-                      {post.content}
-                    </p>
-                    <div className="flex items-center justify-between text-xs text-gray-500">
-                      <span>{post.author?.display_name || '익명'}</span>
-                      <span>{new Date(post.created_at).toLocaleDateString()}</span>
-                    </div>
-                  </Card.Content>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <Card.Content className="text-center py-12">
-              <div className="text-4xl mb-4">📝</div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                아직 게시글이 없습니다
-              </h3>
-              <p className="text-gray-600 mb-4">
-                첫 번째 게시글을 작성해보세요!
-              </p>
-              <Link 
-                to="/posts/create"
-                className="inline-block bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                게시글 작성하기
-              </Link>
-            </Card.Content>
-          </Card>
-        )}
-      </div>
-
-      {/* 커뮤니티 정보 */}
-      <div className="bg-gray-50 rounded-xl p-6 text-center">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          💬 함께 소통해요
-        </h3>
-        <p className="text-gray-600">
-          궁금한 것이 있으시면 언제든지 게시판에 올려주세요. 
-          이웃들이 친절하게 답변해드릴게요!
-        </p>
-      </div>
     </AppLayout>
   );
 }
