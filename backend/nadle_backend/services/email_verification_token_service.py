@@ -140,7 +140,7 @@ class EmailVerificationTokenService:
                 email=email_value,
                 token_sent=False,
                 expires_in_minutes=0,
-                message=f"디버그 정보 - {error_info} | 스택: {trace_info[:200]}..."
+                message=f"이메일 전송 실패: {error_info}"
             )
 
     async def verify_token(self, token: str) -> Tuple[bool, str]:
@@ -262,6 +262,16 @@ class EmailVerificationTokenService:
     async def _send_email(self, to_email: str, subject: str, html_content: str) -> bool:
         """Send email using SMTP."""
         try:
+            # Check settings first
+            logger.info(f"🔧 Email Settings Check:")
+            logger.info(f"  - email_mock_mode: {settings.email_mock_mode}")
+            logger.info(f"  - smtp_server: {settings.smtp_server}")
+            logger.info(f"  - smtp_port: {settings.smtp_port}")
+            logger.info(f"  - smtp_username: {settings.smtp_username}")
+            logger.info(f"  - smtp_password: {'***' if settings.smtp_password else 'NOT SET'}")
+            logger.info(f"  - from_email: {settings.from_email}")
+            logger.info(f"  - from_name: {settings.from_name}")
+            
             # Mock mode for development
             if settings.email_mock_mode:
                 logger.info(f"📧 MOCK MODE: Email would be sent to {to_email}")
