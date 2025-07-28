@@ -76,6 +76,16 @@ class Settings(BaseSettings):
             print(f"✅ 환경변수 파일 로드: {env_file}")
 
         super().__init__(**kwargs)
+        
+        # SMTP 환경변수 디버깅
+        print(f"🔍 SMTP 환경변수 디버깅:")
+        print(f"  - SMTP_SERVER 환경변수: {repr(os.getenv('SMTP_SERVER'))}")
+        print(f"  - SMTP_USERNAME 환경변수: {repr(os.getenv('SMTP_USERNAME'))}")
+        print(f"  - FROM_EMAIL 환경변수: {repr(os.getenv('FROM_EMAIL'))}")
+        print(f"🔍 SMTP 최종 설정값:")
+        print(f"  - smtp_server: {repr(self.smtp_server)}")
+        print(f"  - smtp_username: {repr(self.smtp_username)}")
+        print(f"  - from_email: {repr(self.from_email)}")
 
     model_config = SettingsConfigDict(
         env_file=find_env_file(),
