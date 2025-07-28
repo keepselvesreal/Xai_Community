@@ -155,7 +155,7 @@ jobs:
         # Redis Configuration (스테이징)
         UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
         UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-        # Email Configuration (Preview Environment Secrets)
+        # Email Configuration (Repository Secrets - 스테이징/프로덕션 공통)
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
@@ -318,7 +318,7 @@ jobs:
         # Redis Configuration (프로덕션)
         UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
         UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-        # Email Configuration (Production Environment Secrets)
+        # Email Configuration (Repository Secrets - 스테이징/프로덕션 공통)
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
         SMTP_PORT: ${{ secrets.SMTP_PORT }}
         SMTP_USERNAME: ${{ secrets.SMTP_USERNAME }}
