@@ -9,6 +9,32 @@ from ..services.hetrix_monitoring import HealthCheckService
 router = APIRouter(tags=["health"])
 
 
+@router.get("/debug/smtp-env")
+async def debug_smtp_env():
+    """SMTP 환경변수 디버깅용 임시 엔드포인트"""
+    import os
+    from ..config import get_settings
+    
+    settings = get_settings()
+    
+    return {
+        "environment_variables": {
+            "SMTP_SERVER": os.getenv("SMTP_SERVER"),
+            "SMTP_USERNAME": os.getenv("SMTP_USERNAME"), 
+            "FROM_EMAIL": os.getenv("FROM_EMAIL"),
+            "SMTP_PORT": os.getenv("SMTP_PORT"),
+            "SMTP_USE_TLS": os.getenv("SMTP_USE_TLS")
+        },
+        "settings_values": {
+            "smtp_server": settings.smtp_server,
+            "smtp_username": settings.smtp_username,
+            "from_email": settings.from_email,
+            "smtp_port": settings.smtp_port,
+            "smtp_use_tls": settings.smtp_use_tls
+        }
+    }
+
+
 # 의존성 주입
 def get_health_service() -> HealthCheckService:
     """HealthCheckService 의존성 주입"""
